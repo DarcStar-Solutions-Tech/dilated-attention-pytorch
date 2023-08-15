@@ -43,7 +43,7 @@ VANILLA_SEQ_LENGTHS = args.vanilla_seq_lengths  # 8k - 128k
 
 # Dilated attention only
 SEGMENT_LENGTHS = args.segment_lengths  # 8k - 64k
-DILATED_SEQ_LENGTHS = args.dilated_seq_length  # 8k - 64M
+DILATED_SEQ_LENGTHS = args.dilated_seq_lengths  # 8k - 64M
 
 
 class BenchmarkResult(NamedTuple):
