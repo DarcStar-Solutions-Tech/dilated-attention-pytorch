@@ -12,17 +12,38 @@ import xformers.ops as xops
 
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
 
+import argparse
+
+# Create the parser
+parser = argparse.ArgumentParser(description='Benchmarking parameters')
+
+# Add the arguments
+parser.add_argument('--batch_size', type=int, default=1, help='Batch size for benchmarking')
+parser.add_argument('--total_tokens', type=int, default=2**26, help='Total tokens for benchmarking')
+parser.add_argument('--num_heads', type=int, default=4, help='Number of heads for benchmarking')
+parser.add_argument('--embed_dim', type=int, default=8, help='Embedding dimension for benchmarking')
+parser.add_argument('--vanilla_seq_lengths', nargs='+', type=int, default=[2**i for i in range(13, 18)], help='Sequence lengths for vanilla attention')
+parser.add_argument('--segment_lengths', nargs='+', type=int, default=[8192, 16384, 32768, 65536], help='Segment lengths for dilated attention')
+parser.add_argument('--dilated_seq_lengths', nargs='+', type=int, default=[2**i for i in range(13, 27)], help='Sequence lengths for dilated attention')
+
+# Parse the arguments
+args = parser.parse_args()
+
+# Now you can use the arguments as:
+# args.batch_size, args.total_tokens, etc.
+
+
 # Generic benchmarking parameters
-BATCH_SIZE = 1
-TOTAL_TOKENS = 2 ** 26  # 64M
-NUM_HEADS = 4
-EMBED_DIM = 8
+BATCH_SIZE = args.batch_size
+TOTAL_TOKENS = args.total_tokens  # 64M
+NUM_HEADS = args.num_heads
+EMBED_DIM = args.embed_dim
 # Vanilla attention only
-VANILLA_SEQ_LENGTHS = [2 ** i for i in range(13, 18)]  # 8k - 128k
+VANILLA_SEQ_LENGTHS = args.vanilla_seq_lengths  # 8k - 128k
 
 # Dilated attention only
-SEGMENT_LENGTHS = [8192, 16384, 32768, 65536]  # 8k - 64k
-DILATED_SEQ_LENGTHS = [2 ** i for i in range(13, 27)]  # 8k - 64M
+SEGMENT_LENGTHS = args.segment_lengths  # 8k - 64k
+DILATED_SEQ_LENGTHS = args.dilated_seq_length  # 8k - 64M
 
 
 class BenchmarkResult(NamedTuple):
