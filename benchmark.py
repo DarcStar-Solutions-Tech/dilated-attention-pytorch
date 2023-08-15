@@ -5,6 +5,7 @@ from math import ceil
 from timeit import Timer
 from typing import Callable, List, NamedTuple
 
+import datetime
 import plotly.graph_objects as go
 import torch
 import xformers.ops as xops
@@ -13,14 +14,15 @@ from dilated_attention_pytorch.dilated_attention import DilatedAttention
 
 # Generic benchmarking parameters
 BATCH_SIZE = 1
-TOTAL_TOKENS = 2**25  # 32M
+TOTAL_TOKENS = 2 ** 26  # 64M
 NUM_HEADS = 4
 EMBED_DIM = 8
 # Vanilla attention only
-VANILLA_SEQ_LENGTHS = [2**i for i in range(13, 18)]  # 8k - 128k
+VANILLA_SEQ_LENGTHS = [2 ** i for i in range(13, 18)]  # 8k - 128k
+
 # Dilated attention only
-SEGMENT_LENGTHS = [8192, 16384, 32768]  # 8k - 64k
-DILATED_SEQ_LENGTHS = [2**i for i in range(13, 26)]  # 8k - 32M
+SEGMENT_LENGTHS = [8192, 16384, 32768, 65536]  # 8k - 64k
+DILATED_SEQ_LENGTHS = [2 ** i for i in range(13, 27)]  # 8k - 64M
 
 
 class BenchmarkResult(NamedTuple):
@@ -35,11 +37,11 @@ class BenchmarkResult(NamedTuple):
 
 
 def benchmark(
-    fn: Callable,
-    *args,
-    min_total_seconds: float = 1.0,
-    min_iterations: int = 2,
-    **kwargs,
+        fn: Callable,
+        *args,
+        min_total_seconds: float = 1.0,
+        min_iterations: int = 2,
+        **kwargs,
 ) -> BenchmarkResult:
     # Benchmark the runtime of a function and dynamically determine the number of
     # iterations to run.  Continue running the function until *total* runtime
@@ -91,7 +93,7 @@ def get_dilated_attention_for_seq_length(seq_length: int) -> DilatedAttention:
         # We can't use segment lengths larger than the sequence length.
         segment_length = min(segment_length, seq_length)
         exponent = segment_length // SEGMENT_LENGTHS[0] - 1
-        dilation_rate = 2**exponent
+        dilation_rate = 2 ** exponent
 
         segment_lengths.append(segment_length)
         dilation_rates.append(dilation_rate)
@@ -112,7 +114,9 @@ def attention_forward(x: torch.Tensor, attn: Callable):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
-    logging.info("Benchmark vanilla attention...")
+    token_count = f"{ceil(TOTAL_TOKENS / 2 ** 20)}M"
+
+    logging.info(f"Benchmark vanilla attention against {token_count} tokens...")
     vanilla_results: List[BenchmarkResult] = []
     for seq_length in VANILLA_SEQ_LENGTHS:
         torch.cuda.empty_cache()
@@ -127,23 +131,27 @@ if __name__ == "__main__":
         vanilla_results.append(result)
         logging.info(f"Sequence length {seq_length}: {result}")
 
-    logging.info("Benchmark dilated attention...")
+    logging.info(f"Benchmark dilated attention against {token_count} tokens...")
     dilated_results: List[BenchmarkResult] = []
     for seq_length in DILATED_SEQ_LENGTHS:
         torch.cuda.empty_cache()
         batch_size = TOTAL_TOKENS // seq_length
-        x = torch.randn(
-            (batch_size, seq_length, NUM_HEADS, EMBED_DIM),
-            dtype=torch.float16,
-            device="cuda",
-        )
-        attn = get_dilated_attention_for_seq_length(seq_length)
-        fn = partial(attention_forward, attn=attn)
-        result = benchmark(fn, x)
-        dilated_results.append(result)
-        logging.info(f"Sequence length {seq_length}: {result}")
+        if batch_size > 0:
+            x = torch.randn(
+                (batch_size, seq_length, NUM_HEADS, EMBED_DIM),
+                dtype=torch.float16,
+                device="cuda",
+            )
+            attn = get_dilated_attention_for_seq_length(seq_length)
+            fn = partial(attention_forward, attn=attn)
+            result = benchmark(fn, x)
+            dilated_results.append(result)
+            logging.info(f"Sequence length {seq_length}: {result}")
 
-    logging.info("Plotting results...")
+    # Get current date
+    current_date = datetime.date.today()
+
+    logging.info(f"Plotting results for {token_count} tokens...")
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
@@ -170,10 +178,10 @@ if __name__ == "__main__":
         ),
     )
     fig.update_layout(
-        title="Attention Benchmark (Total Tokens = 32M)",
+        title=f"Attention Benchmark on {current_date} (Total Tokens = {token_count})",
         xaxis_title="Sequence Length",
         yaxis_title="Runtime (s)",
         xaxis_type="log",
         yaxis_type="log",
     )
-    fig.write_image(os.path.join("doc", "benchmark.png"))
+    fig.write_image(os.path.join("doc", f"benchmark-{token_count}-tokens-{current_date}.png"))
