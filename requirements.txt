@@ -1,0 +1,5 @@
+torch >= 1.8.0
+torchscale ~= 0.2.0
+plotly >= 5.16
+xformers >= 0.0.20
+einops >= 0.6.1
