@@ -226,7 +226,7 @@ class MultiheadDilatedAttention(nn.Module):
         k = rearrange(k, "b n (h d) -> b n h d", h=self.num_heads)
         v = rearrange(v, "b n (h d) -> b n h d", h=self.num_heads)
         # Apply attention, then fold 'h' attention heads back into 'd'.
-        x = self.attention(q, k, v, is_causal=is_causal)
+        x = self.dilated_attentions(q, k, v, is_causal=is_causal)
         x = rearrange(x, "b n h d -> b n (h d)")
 
         # NOTE: This is different from 'nn.MultiheadAttention'! The LongNet paper
