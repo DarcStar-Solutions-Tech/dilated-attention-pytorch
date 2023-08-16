@@ -1,5 +1,6 @@
 from typing import Optional, Sequence, Tuple, Union
 
+
 import torch
 import xformers.ops as xops
 from einops import rearrange
@@ -168,7 +169,7 @@ class MultiheadDilatedAttention(nn.Module):
         self.v_proj = nn.Linear(
             embed_dim, embed_dim, bias=bias, device=device, dtype=dtype
         )
-        self.attention = DilatedAttention(
+        self.dilated_attentions = DilatedAttention(
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
             attention_dropout=dropout,

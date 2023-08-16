@@ -4,3 +4,4 @@ plotly >= 5.16
 xformers >= 0.0.20
 einops >= 0.6.1
 kaleido >=0.2.0
+lightning >=2.0.0
