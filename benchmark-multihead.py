@@ -125,6 +125,7 @@ def get_dilated_attention_for_seq_length(seq_length: int) -> MultiheadDilatedAtt
         segment_lengths=segment_lengths,
         dilation_rates=dilation_rates,
         op=xops.MemoryEfficientAttentionFlashAttentionOp,
+        device="cuda"
     )
 
 
