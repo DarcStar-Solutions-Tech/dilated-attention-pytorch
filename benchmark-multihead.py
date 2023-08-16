@@ -164,8 +164,8 @@ if __name__ == "__main__":
         batch_size = TOTAL_TOKENS // seq_length
         if batch_size > 0:
             x = torch.randn(
-                batch_size, seq_length, EMBED_DIM,
-                dtype=torch.half,
+                (batch_size, seq_length, NUM_HEADS, EMBED_DIM),
+                dtype=torch.float16,
                 device="cuda",
             )
             attn = get_dilated_attention_for_seq_length(seq_length)
