@@ -132,7 +132,7 @@ def get_dilated_attention_for_seq_length(seq_length: int) -> MultiheadDilatedAtt
 
 def attention_forward(x: torch.Tensor, attn: Callable):
     with torch.no_grad():
-        y = attn(x, x, x, is_causal=False)
+        y = attn(x, x, x)
         print(y.shape)
     torch.cuda.synchronize()
 
