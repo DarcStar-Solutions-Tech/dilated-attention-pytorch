@@ -9,8 +9,9 @@ import datetime
 import plotly.graph_objects as go
 import torch
 import xformers.ops as xops
+from torch import device
 
-from dilated_attention_pytorch.dilated_attention import MultiheadDilatedAttention
+from dilated_attention_pytorch.dilated_attention import MultiheadDilatedAttention, DilatedAttention
 
 import argparse
 
@@ -19,31 +20,35 @@ parser = argparse.ArgumentParser(description='Benchmarking parameters')
 
 # Add the arguments
 parser.add_argument('--batch_size', type=int, default=1, help='Batch size for benchmarking')
-parser.add_argument('--total_tokens', type=int, default=2**26, help='Total tokens for benchmarking, default is 64M(2**26) tokens')
-parser.add_argument('--num_heads', type=int, default=8, help='Number of heads for benchmarking')
-parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension for benchmarking')
-parser.add_argument('--vanilla_seq_lengths', nargs='+', type=int, default=[2**i for i in range(13, 18)], help='Sequence lengths for vanilla attention')
-parser.add_argument('--segment_lengths', nargs='+', type=int, default=[8192, 16384, 32768, 65536], help='Segment lengths for dilated attention')
-parser.add_argument('--dilated_seq_lengths', nargs='+', type=int, default=[2**i for i in range(13, 27)], help='Sequence lengths for dilated attention, default sequence lengths are [2**13,2**27) ')
+parser.add_argument('--total_tokens', type=int, default=26,
+                    help='Exponent for Total tokens for benchmarking, default is 26 which is 64M(2**26) tokens')
+parser.add_argument('--num_heads', type=int, default=8, help='Number of heads for benchmarking, default is 8')
+parser.add_argument('--embed_dim', type=int, default=256, help='Embed dimension for benchmarking, default is 256')
+parser.add_argument('--vanilla_seq_lengths', type=int, default=18,
+                    help='End of Sequence length range for vanilla attention, default is 18 which is 2**18')
+parser.add_argument('--benchmark_vanilla', type=bool, default=True, help='Benchmark vanilla attention, default is True')
+parser.add_argument('--segment_lengths', nargs='+', type=int, default=[8192, 16384, 32768, 65536],
+                    help='Segment lengths for dilated attention')
+parser.add_argument('--dilated_seq_lengths', type=int, default=27,
+                    help='End of Sequence lengths for dilated attention, default is 27 which is 2**27 ')
+parser.add_argument('--benchmark_dilated', type=bool, default=True, help='Benchmark dilated attention, default is True')
+parser.add_argument('--benchmark_multihead', type=bool, default=True,
+                    help='Benchmark multihead dilated attention, default is True')
 
 # Parse the arguments
 args = parser.parse_args()
 
-# Now you can use the arguments as:
-# args.batch_size, args.total_tokens, etc.
-
-
 # Generic benchmarking parameters
-BATCH_SIZE = args.batch_size
-TOTAL_TOKENS = args.total_tokens  # 64M
-NUM_HEADS = args.num_heads
-EMBED_DIM = args.embed_dim
+BATCH_SIZE: int = args.batch_size
+TOTAL_TOKENS: int = 2 ** args.total_tokens  # 64M
+NUM_HEADS: int = args.num_heads
+EMBED_DIM: int = args.embed_dim
 # Vanilla attention only
-VANILLA_SEQ_LENGTHS = args.vanilla_seq_lengths  # 8k - 128k
+VANILLA_SEQ_LENGTHS: List[int] = [2 ** i for i in range(13, args.vanilla_seq_lengths)]  # 8k - 128k
 
 # Dilated attention only
-SEGMENT_LENGTHS = args.segment_lengths  # 8k - 64k
-DILATED_SEQ_LENGTHS = args.dilated_seq_lengths  # 8k - 64M
+SEGMENT_LENGTHS: List[int] = args.segment_lengths  # 8k - 64k
+DILATED_SEQ_LENGTHS: List[int] = [2 ** i for i in args.dilated_seq_lengths]  # 8k - 64M
 
 
 class BenchmarkResult(NamedTuple):
@@ -98,7 +103,35 @@ def benchmark(
     )
 
 
-def get_dilated_attention_for_seq_length(seq_length: int) -> MultiheadDilatedAttention:
+def get_dilated_attention_for_seq_length(seq_length: int) -> DilatedAttention:
+    """This is roughly how benchmarking was described in the paper, except that they
+    were testing in a distributed (multi-GPU) setting.  We use a base segment
+    length of 8192, and include larger segment lengths if possible.  I believe
+    this is the equivalent benchmark for 1 GPU.
+
+    Reference:
+        https://arxiv.org/pdf/2307.02486.pdf, Section 3.1
+    """
+    segment_lengths: List[int] = []
+    dilation_rates: List[int] = []
+
+    for segment_length in SEGMENT_LENGTHS:
+        # We can't use segment lengths larger than the sequence length.
+        segment_length = min(segment_length, seq_length)
+        exponent = segment_length // SEGMENT_LENGTHS[0] - 1
+        dilation_rate = 2 ** exponent
+
+        segment_lengths.append(segment_length)
+        dilation_rates.append(dilation_rate)
+
+    return DilatedAttention(
+        segment_lengths=segment_lengths,
+        dilation_rates=dilation_rates,
+        op=xops.MemoryEfficientAttentionFlashAttentionOp,
+    )
+
+
+def get_multihead_dilated_attention_for_seq_length(seq_length: int) -> MultiheadDilatedAttention:
     """This is roughly how benchmarking was described in the paper, except that they
     were testing in a distributed (multi-GPU) setting.  We use a base segment
     length of 8192, and include larger segment lengths if possible.  I believe
@@ -132,9 +165,46 @@ def get_dilated_attention_for_seq_length(seq_length: int) -> MultiheadDilatedAtt
 
 def attention_forward(x: torch.Tensor, attn: Callable):
     with torch.no_grad():
-        y = attn(x, x, x)
-        print(y.shape)
+        _ = attn(x, x, x)
     torch.cuda.synchronize()
+
+
+def plot_results(seq_lengths: List[int], results: List[BenchmarkResult], name: str):
+    fig.add_trace(
+        go.Scatter(
+            x=seq_lengths,
+            y=[r.mean for r in results],
+            error_y=dict(
+                type="data",
+                array=[r.std for r in results],
+                visible=True,
+            ),
+            name=name,
+        ),
+    )
+
+
+def benchmark_attention(seq_lengths: List[int], device: device | str | None) -> List[BenchmarkResult]:
+    results: List[BenchmarkResult] = []
+    for seq_length in seq_lengths:
+        torch.cuda.empty_cache()
+        batch_size = TOTAL_TOKENS // seq_length
+        if batch_size > 0:
+            x = torch.randn(
+                batch_size, seq_length, EMBED_DIM,
+                dtype=torch.float16,
+                device=device,
+            )
+            logging.info(f"Returned tensor shape {x.shape}")
+            attn = get_multihead_dilated_attention_for_seq_length(seq_length)
+            fn = partial(attention_forward, attn=attn)
+            result = benchmark(fn, x)
+            results.append(result)
+            logging.info(f"Sequence length {seq_length}: {result}")
+        else:
+            logging.info(f"Batch Size 0 reached ending for loop")
+            break
+    return results
 
 
 if __name__ == "__main__":
@@ -142,70 +212,58 @@ if __name__ == "__main__":
 
     token_count = f"{ceil(TOTAL_TOKENS / 2 ** 20)}M"
 
-    logging.info(f"Benchmark vanilla attention against {token_count} tokens...")
     vanilla_results: List[BenchmarkResult] = []
-    for seq_length in VANILLA_SEQ_LENGTHS:
-        torch.cuda.empty_cache()
-        batch_size = TOTAL_TOKENS // seq_length
-        x = torch.randn(
-            (batch_size, seq_length, NUM_HEADS, EMBED_DIM),
-            dtype=torch.float16,
-            device="cuda",
-        )
-        fn = partial(attention_forward, attn=xops.memory_efficient_attention)
-        result = benchmark(fn, x)
-        vanilla_results.append(result)
-        logging.info(f"Sequence length {seq_length}: {result}")
-
-    logging.info(f"Benchmark dilated attention against {token_count} tokens...")
     dilated_results: List[BenchmarkResult] = []
-    for seq_length in DILATED_SEQ_LENGTHS:
-        torch.cuda.empty_cache()
-        batch_size = TOTAL_TOKENS // seq_length
-        if batch_size > 0:
+    multihead_dilated_results: List[BenchmarkResult] = []
+
+    if args.benchmark_vanilla:
+        logging.info(f"Benchmark vanilla attention against {token_count} tokens...")
+        for seq_length in VANILLA_SEQ_LENGTHS:
+            torch.cuda.empty_cache()
+            batch_size = TOTAL_TOKENS // seq_length
             x = torch.randn(
-                batch_size, seq_length, EMBED_DIM,
+                (batch_size, seq_length, NUM_HEADS, EMBED_DIM),
                 dtype=torch.float16,
                 device="cuda",
             )
-            logging.info(f"Returned tensor shape {x.shape}")
-            attn = get_dilated_attention_for_seq_length(seq_length)
-            fn = partial(attention_forward, attn=attn)
+            fn = partial(attention_forward, attn=xops.memory_efficient_attention)
             result = benchmark(fn, x)
-            dilated_results.append(result)
+            vanilla_results.append(result)
             logging.info(f"Sequence length {seq_length}: {result}")
-        else:
-            logging.info(f"Batch Size 0 reached ending for loop")
-            break
+
+    if args.benchmark_dilated:
+        logging.info(f"Benchmark dilated attention against {token_count} tokens...")
+        for seq_length in DILATED_SEQ_LENGTHS:
+            torch.cuda.empty_cache()
+            batch_size = TOTAL_TOKENS // seq_length
+            if batch_size > 0:
+                x = torch.randn(
+                    (batch_size, seq_length, NUM_HEADS, EMBED_DIM),
+                    dtype=torch.float16,
+                    device="cuda",
+                )
+                attn = get_dilated_attention_for_seq_length(seq_length)
+                fn = partial(attention_forward, attn=attn)
+                result = benchmark(fn, x)
+                dilated_results.append(result)
+                logging.info(f"Sequence length {seq_length}: {result}")
+
+    if args.benchmark_multihead:
+        logging.info(f"Benchmark MultiHead Dilated Attention against {token_count} tokens...")
+        multihead_dilated_results: List[BenchmarkResult] = benchmark_attention(DILATED_SEQ_LENGTHS, device="cuda")
+
     # Get current date
     current_date = datetime.date.today()
 
     logging.info(f"Plotting results for {token_count} tokens...")
     fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=VANILLA_SEQ_LENGTHS,
-            y=[r.mean for r in vanilla_results],
-            error_y=dict(
-                type="data",
-                array=[r.std for r in vanilla_results],
-                visible=True,
-            ),
-            name="Vanilla Attention",
-        ),
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=DILATED_SEQ_LENGTHS,
-            y=[r.mean for r in dilated_results],
-            error_y=dict(
-                type="data",
-                array=[r.std for r in dilated_results],
-                visible=True,
-            ),
-            name="Dilated Attention",
-        ),
-    )
+    if args.benchmark_vanilla:
+        plot_results(seq_lengths=VANILLA_SEQ_LENGTHS, results=vanilla_results, name="Vanilla Attention")
+    if args.benchmark_dilated:
+        plot_results(seq_lengths=DILATED_SEQ_LENGTHS, results=dilated_results, name="Dilated Attention")
+    if args.benchmark_multihead:
+        plot_results(seq_lengths=DILATED_SEQ_LENGTHS, results=multihead_dilated_results,
+                     name="MultiHead Dilated Attention")
     fig.update_layout(
         title=f"Attention Benchmark on {current_date} (Total Tokens = {token_count})",
         xaxis_title="Sequence Length",
