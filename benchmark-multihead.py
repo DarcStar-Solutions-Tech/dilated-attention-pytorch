@@ -22,8 +22,8 @@ parser = argparse.ArgumentParser(description='Benchmarking parameters')
 parser.add_argument('--batch_size', type=int, default=1, help='Batch size for benchmarking')
 parser.add_argument('--total_tokens', type=int, default=26,
                     help='Exponent for Total tokens for benchmarking, default is 26 which is 64M(2**26) tokens')
-parser.add_argument('--num_heads', type=int, default=8, help='Number of heads for benchmarking, default is 8')
-parser.add_argument('--embed_dim', type=int, default=256, help='Embed dimension for benchmarking, default is 256')
+parser.add_argument('--num_heads', type=int, default=4, help='Number of heads for benchmarking, default is 8')
+parser.add_argument('--embed_dim', type=int, default=32, help='Embed dimension for benchmarking, default is 256')
 parser.add_argument('--vanilla_seq_lengths', type=int, default=18,
                     help='End of Sequence length range for vanilla attention, default is 18 which is 2**18')
 parser.add_argument('--benchmark_vanilla', type=bool, default=True, help='Benchmark vanilla attention, default is True')
