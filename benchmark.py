@@ -263,11 +263,11 @@ if __name__ == "__main__":
     logging.info(f"Plotting results for {token_count} tokens...")
     fig = go.Figure()
 
-    if args.benchmark_vanilla:
+    if BENCHMARK_VANILLA:
         plot_results(seq_lengths=VANILLA_SEQ_LENGTHS, results=vanilla_results, name="Vanilla Attention")
-    if args.benchmark_dilated:
+    if BENCHMARK_DILATED:
         plot_results(seq_lengths=DILATED_SEQ_LENGTHS, results=dilated_results, name="Dilated Attention")
-    if args.benchmark_multihead:
+    if BENCHMARK_MULTIHEAD:
         plot_results(seq_lengths=DILATED_SEQ_LENGTHS, results=multihead_dilated_results,
                      name="MultiHead Dilated Attention")
     fig.update_layout(
