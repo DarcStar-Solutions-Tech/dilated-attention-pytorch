@@ -215,6 +215,26 @@ def benchmark_attention(seq_lengths: List[int], device: device | str | None) -> 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
+    if not torch.cuda.is_available():  # Check if CUDA is available
+        logging.info("CUDA is not available. Exiting...")
+        exit()
+
+    gpus = torch.cuda.device_count()  # Get total number of GPUs
+    logging.info(f"Number of GPUs: {gpus}")
+    for i in range(gpus):
+        logging.info(f"GPU {i} name: {torch.cuda.get_device_name(i)}")
+        logging.info(f"GPU {i} memory: {torch.cuda.get_device_properties(i).total_memory / 1024 ** 3} GB")
+        logging.info(f"GPU {i} compute capability: {torch.cuda.get_device_capability(i)}")
+
+    logging.info(f"Running benchmark with {TOTAL_TOKENS} tokens...")
+    logging.info(f"Embed Dim = {EMBED_DIM} Num Heads = {NUM_HEADS}")
+    logging.info(f"Benchmarking Vanilla Attention = {BENCHMARK_VANILLA}")
+    logging.info(f"Benchmarking Dilated Attention = {BENCHMARK_DILATED}")
+    logging.info(f"Benchmarking MultiHead Dilated Attention = {BENCHMARK_MULTIHEAD}")
+    logging.info(f"Vanilla Sequence Lengths = {VANILLA_SEQ_LENGTHS}")
+    logging.info(f"Dilated Sequence Lengths = {DILATED_SEQ_LENGTHS}")
+    logging.info(f"Segment Lengths = {SEGMENT_LENGTHS}")
+
     token_count = f"{ceil(TOTAL_TOKENS / 2 ** 20)}M"
 
     vanilla_results: List[BenchmarkResult] = []
