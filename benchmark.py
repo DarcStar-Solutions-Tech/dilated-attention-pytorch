@@ -271,7 +271,8 @@ if __name__ == "__main__":
         plot_results(seq_lengths=DILATED_SEQ_LENGTHS, results=multihead_dilated_results,
                      name="MultiHead Dilated Attention")
     fig.update_layout(
-        title=f"Attention Benchmark on {current_date} (Total Tokens = {token_count}) <br>"
+        title=f"Attention Benchmark on {current_date} <br>"
+              f"(Total Tokens = {token_count}) <br>"
               f"Embed Dim = {EMBED_DIM} Num Heads = {NUM_HEADS}",
         title_x=0.5,
         xaxis_title="Sequence Length",
