@@ -9,6 +9,7 @@ import datetime
 import plotly.graph_objects as go
 import torch
 import xformers.ops as xops
+
 from torch import device
 
 from dilated_attention_pytorch.dilated_attention import MultiheadDilatedAttention, DilatedAttention
@@ -216,6 +217,19 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     token_count = f"{round(TOTAL_TOKENS / 2 ** 20, 2)}M"
+    bench_config = {
+        "batch_size": BATCH_SIZE,
+        "total_tokens": TOTAL_TOKENS,
+        "token_count": token_count,
+        "embed_dim": EMBED_DIM,
+        "heads": NUM_HEADS,
+        "vanilla_seq_lengths": VANILLA_SEQ_LENGTHS,
+        "segment_lengths": SEGMENT_LENGTHS,
+        "dilated_seq_lengths": DILATED_SEQ_LENGTHS,
+        "vanilla": BENCHMARK_VANILLA,
+        "dilated": BENCHMARK_DILATED,
+        "multihead": BENCHMARK_MULTIHEAD
+    }
 
     logging.info(f"Running benchmark with {TOTAL_TOKENS} tokens...({token_count})")
     logging.info(f"Embed Dim = {EMBED_DIM} Num Heads = {NUM_HEADS}")
@@ -230,12 +244,22 @@ if __name__ == "__main__":
         logging.info("CUDA is not available. Exiting...")
         exit()
 
-    gpus = torch.cuda.device_count()  # Get total number of GPUs
-    logging.info(f"Number of GPUs: {gpus}")
-    for i in range(gpus):
+    gpu_count = torch.cuda.device_count()  # Get total number of GPUs
+    logging.info(f"Number of GPUs: {gpu_count}")
+
+    gpu_info = {
+        "gpu_count": gpu_count,
+    }
+
+    for i in range(gpu_count):
+        gpu_info[f"gpu_{i}_name"] = torch.cuda.get_device_name(i)
         logging.info(f"GPU {i} name: {torch.cuda.get_device_name(i)}")
+        gpu_info[f"gpu_{i}_memory"] = round(torch.cuda.get_device_properties(i).total_memory / 1024 ** 3, 2)
         logging.info(f"GPU {i} memory: {round(torch.cuda.get_device_properties(i).total_memory / 1024 ** 3, 2)} GB")
+        gpu_info[f"gpu_{i}_compute_capability"] = torch.cuda.get_device_capability(i)
         logging.info(f"GPU {i} compute capability: {torch.cuda.get_device_capability(i)}")
+
+    bench_config.update(gpu_info)
 
     vanilla_results: List[BenchmarkResult] = []
     dilated_results: List[BenchmarkResult] = []
@@ -304,4 +328,12 @@ if __name__ == "__main__":
         xaxis_type="log",
         yaxis_type="log",
     )
-    fig.write_image(os.path.join("doc", f"{current_date}-benchmark-tokens-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.png"))
+    b_name = f"{current_date}-benchmark"
+    if b_name not in os.listdir("doc"):
+        os.mkdir(os.path.join("doc", b_name))
+
+    b_dir = os.path.join("doc", b_name)
+
+    with open(os.path.join(b_dir, f"config-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"), "w") as f:
+        f.write(str(bench_config))
+    fig.write_image(os.path.join(b_dir, f"tokens-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.png"))
