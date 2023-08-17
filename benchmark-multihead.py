@@ -26,14 +26,16 @@ parser.add_argument('--num_heads', type=int, default=4, help='Number of heads fo
 parser.add_argument('--embed_dim', type=int, default=32, help='Embed dimension for benchmarking, default is 256')
 parser.add_argument('--vanilla_seq_lengths', type=int, default=18,
                     help='End of Sequence length range for vanilla attention, default is 18 which is 2**18')
-parser.add_argument('--benchmark_vanilla', type=bool, default=True, help='Benchmark vanilla attention, default is True')
 parser.add_argument('--segment_lengths', nargs='+', type=int, default=[8192, 16384, 32768, 65536],
                     help='Segment lengths for dilated attention')
 parser.add_argument('--dilated_seq_lengths', type=int, default=27,
                     help='End of Sequence lengths for dilated attention, default is 27 which is 2**27 ')
-parser.add_argument('--benchmark_dilated', type=bool, default=True, help='Benchmark dilated attention, default is True')
-parser.add_argument('--benchmark_multihead', type=bool, default=True,
-                    help='Benchmark multihead dilated attention, default is True')
+parser.add_argument('--benchmark_vanilla', type=bool, default=True, action=argparse.BooleanOptionalAction,
+                    help='Benchmark vanilla attention')
+parser.add_argument('--benchmark_dilated', type=bool, default=True, action=argparse.BooleanOptionalAction,
+                    help='Benchmark dilated attention')
+parser.add_argument('--benchmark_multihead', type=bool, default=True, action=argparse.BooleanOptionalAction,
+                    help='Benchmark multihead dilated attention')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -48,8 +50,11 @@ VANILLA_SEQ_LENGTHS: List[int] = [2 ** i for i in range(13, args.vanilla_seq_len
 
 # Dilated attention only
 SEGMENT_LENGTHS: List[int] = args.segment_lengths  # 8k - 64k
-DILATED_SEQ_LENGTHS: List[int] = [2 ** i for i in args.dilated_seq_lengths]  # 8k - 64M
+DILATED_SEQ_LENGTHS: List[int] = [2 ** i for i in range(13, args.dilated_seq_lengths)]  # 8k - 64M
 
+BENCHMARK_VANILLA: bool =  args.benchmark_vanilla
+BENCHMARK_DILATED: bool = args.benchmark_dilated
+BENCHMARK_MULTIHEAD: bool = args.benchmark_multihead
 
 class BenchmarkResult(NamedTuple):
     mean: float
@@ -216,7 +221,7 @@ if __name__ == "__main__":
     dilated_results: List[BenchmarkResult] = []
     multihead_dilated_results: List[BenchmarkResult] = []
 
-    if args.benchmark_vanilla:
+    if BENCHMARK_VANILLA:
         logging.info(f"Benchmark vanilla attention against {token_count} tokens...")
         for seq_length in VANILLA_SEQ_LENGTHS:
             torch.cuda.empty_cache()
@@ -231,7 +236,7 @@ if __name__ == "__main__":
             vanilla_results.append(result)
             logging.info(f"Sequence length {seq_length}: {result}")
 
-    if args.benchmark_dilated:
+    if BENCHMARK_DILATED:
         logging.info(f"Benchmark dilated attention against {token_count} tokens...")
         for seq_length in DILATED_SEQ_LENGTHS:
             torch.cuda.empty_cache()
@@ -248,7 +253,7 @@ if __name__ == "__main__":
                 dilated_results.append(result)
                 logging.info(f"Sequence length {seq_length}: {result}")
 
-    if args.benchmark_multihead:
+    if BENCHMARK_MULTIHEAD:
         logging.info(f"Benchmark MultiHead Dilated Attention against {token_count} tokens...")
         multihead_dilated_results: List[BenchmarkResult] = benchmark_attention(DILATED_SEQ_LENGTHS, device="cuda")
 
