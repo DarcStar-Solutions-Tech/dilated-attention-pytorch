@@ -304,4 +304,4 @@ if __name__ == "__main__":
         xaxis_type="log",
         yaxis_type="log",
     )
-    fig.write_image(os.path.join("doc", f"{current_date}-tokens-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.png"))
+    fig.write_image(os.path.join("doc", f"{current_date}-benchmark-tokens-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.png"))
