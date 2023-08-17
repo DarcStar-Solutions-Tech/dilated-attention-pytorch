@@ -20,8 +20,8 @@ parser = argparse.ArgumentParser(description='Benchmarking parameters')
 # Add the arguments
 parser.add_argument('--batch_size', type=int, default=1, help='Batch size for benchmarking')
 parser.add_argument('--total_tokens', type=int, default=2**26, help='Total tokens for benchmarking, default is 64M(2**26) tokens')
-parser.add_argument('--num_heads', type=int, default=2, help='Number of heads for benchmarking')
-parser.add_argument('--embed_dim', type=int, default=16, help='Embedding dimension for benchmarking')
+parser.add_argument('--num_heads', type=int, default=8, help='Number of heads for benchmarking')
+parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension for benchmarking')
 parser.add_argument('--vanilla_seq_lengths', nargs='+', type=int, default=[2**i for i in range(13, 18)], help='Sequence lengths for vanilla attention')
 parser.add_argument('--segment_lengths', nargs='+', type=int, default=[8192, 16384, 32768, 65536], help='Segment lengths for dilated attention')
 parser.add_argument('--dilated_seq_lengths', nargs='+', type=int, default=[2**i for i in range(13, 27)], help='Sequence lengths for dilated attention, default sequence lengths are [2**13,2**27) ')
@@ -164,16 +164,19 @@ if __name__ == "__main__":
         batch_size = TOTAL_TOKENS // seq_length
         if batch_size > 0:
             x = torch.randn(
-                (batch_size, seq_length, NUM_HEADS, EMBED_DIM),
+                batch_size, seq_length, EMBED_DIM,
                 dtype=torch.float16,
                 device="cuda",
             )
+            logging.info(f"Returned tensor shape {x.shape}")
             attn = get_dilated_attention_for_seq_length(seq_length)
             fn = partial(attention_forward, attn=attn)
             result = benchmark(fn, x)
             dilated_results.append(result)
             logging.info(f"Sequence length {seq_length}: {result}")
-
+        else:
+            logging.info(f"Batch Size 0 reached ending for loop")
+            break
     # Get current date
     current_date = datetime.date.today()
 
