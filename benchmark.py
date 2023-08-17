@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser(description='Benchmarking parameters')
 
 # Add the arguments
 parser.add_argument('--batch_size', type=int, default=1, help='Batch size for benchmarking')
-parser.add_argument('--total_tokens', type=int, default=26,
+parser.add_argument('--total_tokens', type=int, default=24,
                     help='Exponent for Total tokens for benchmarking, default is 26 which is 64M(2**26) tokens')
 parser.add_argument('--heads', type=int, default=4, help='Number of heads for benchmarking, default is 8')
 parser.add_argument('--embed_dim', type=int, default=32, help='Embed dimension for benchmarking, default is 256')
@@ -215,18 +215,9 @@ def benchmark_attention(seq_lengths: List[int], device: device | str | None) -> 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
-    if not torch.cuda.is_available():  # Check if CUDA is available
-        logging.info("CUDA is not available. Exiting...")
-        exit()
+    token_count = f"{round(TOTAL_TOKENS / 2 ** 20, 2)}M"
 
-    gpus = torch.cuda.device_count()  # Get total number of GPUs
-    logging.info(f"Number of GPUs: {gpus}")
-    for i in range(gpus):
-        logging.info(f"GPU {i} name: {torch.cuda.get_device_name(i)}")
-        logging.info(f"GPU {i} memory: {torch.cuda.get_device_properties(i).total_memory / 1024 ** 3} GB")
-        logging.info(f"GPU {i} compute capability: {torch.cuda.get_device_capability(i)}")
-
-    logging.info(f"Running benchmark with {TOTAL_TOKENS} tokens...")
+    logging.info(f"Running benchmark with {TOTAL_TOKENS} tokens...({token_count})")
     logging.info(f"Embed Dim = {EMBED_DIM} Num Heads = {NUM_HEADS}")
     logging.info(f"Benchmarking Vanilla Attention = {BENCHMARK_VANILLA}")
     logging.info(f"Benchmarking Dilated Attention = {BENCHMARK_DILATED}")
@@ -235,7 +226,16 @@ if __name__ == "__main__":
     logging.info(f"Dilated Sequence Lengths = {DILATED_SEQ_LENGTHS}")
     logging.info(f"Segment Lengths = {SEGMENT_LENGTHS}")
 
-    token_count = f"{ceil(TOTAL_TOKENS / 2 ** 20)}M"
+    if not torch.cuda.is_available():  # Check if CUDA is available
+        logging.info("CUDA is not available. Exiting...")
+        exit()
+
+    gpus = torch.cuda.device_count()  # Get total number of GPUs
+    logging.info(f"Number of GPUs: {gpus}")
+    for i in range(gpus):
+        logging.info(f"GPU {i} name: {torch.cuda.get_device_name(i)}")
+        logging.info(f"GPU {i} memory: {round(torch.cuda.get_device_properties(i).total_memory / 1024 ** 3, 2)} GB")
+        logging.info(f"GPU {i} compute capability: {torch.cuda.get_device_capability(i)}")
 
     vanilla_results: List[BenchmarkResult] = []
     dilated_results: List[BenchmarkResult] = []
@@ -251,6 +251,8 @@ if __name__ == "__main__":
                 dtype=torch.float16,
                 device="cuda",
             )
+            logging.info(f"Returned tensor shape {x.shape}")
+
             fn = partial(attention_forward, attn=xops.memory_efficient_attention)
             result = benchmark(fn, x)
             vanilla_results.append(result)
@@ -267,6 +269,8 @@ if __name__ == "__main__":
                     dtype=torch.float16,
                     device="cuda",
                 )
+                logging.info(f"Returned tensor shape {x.shape}")
+
                 attn = get_dilated_attention_for_seq_length(seq_length)
                 fn = partial(attention_forward, attn=attn)
                 result = benchmark(fn, x)
