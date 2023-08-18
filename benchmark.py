@@ -277,6 +277,8 @@ def bench_and_plot(
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+    # Get current date
+    current_date = datetime.date.today()
 
     token_count = f"{round(TOTAL_TOKENS / 2 ** 20, 2)}M"
     bench_config = {
@@ -290,7 +292,11 @@ if __name__ == "__main__":
         "dilated_seq_lengths": DILATED_SEQ_LENGTHS,
         "vanilla": BENCHMARK_VANILLA,
         "dilated": BENCHMARK_DILATED,
-        "multihead": BENCHMARK_MULTIHEAD
+        "multihead": BENCHMARK_MULTIHEAD,
+        "causal": IS_CAUSAL,
+        "permutation": PERMUTATION,
+        "date": current_date,
+
     }
 
     logging.info(f"Running benchmark with {TOTAL_TOKENS} tokens...({token_count})")
@@ -322,8 +328,6 @@ if __name__ == "__main__":
         logging.info(f"GPU {i} compute capability: {torch.cuda.get_device_capability(i)}")
 
     bench_config.update(gpu_info)
-    # Get current date
-    current_date = datetime.date.today()
 
     b_name = f"{current_date}-benchmark"
     if b_name not in os.listdir("doc"):
@@ -367,7 +371,7 @@ if __name__ == "__main__":
                     attention_type=AttentionType.DILATED
                 )
 
-            if BENCHMARK_MULTIHEAD and num_head > 4 and embed_dim//num_head <= 128:
+            if BENCHMARK_MULTIHEAD and num_head >= 4 and embed_dim//num_head <= 128:
                 mha_results: List[BenchmarkResult] = bench_and_plot(
                     label="MH Dilated Attention",
                     token_count=token_count,
