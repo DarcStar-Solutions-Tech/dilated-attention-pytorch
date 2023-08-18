@@ -40,8 +40,6 @@ parser.add_argument('--multihead', type=bool, default=True, action=argparse.Bool
                     help='Benchmark multihead dilated attention')
 parser.add_argument('--causal', type=bool, default=False, action=argparse.BooleanOptionalAction,
                     help='Causal attention')
-parser.add_argument('--causal', type=bool, default=False, action=argparse.BooleanOptionalAction,
-                    help='Causal attention')
 parser.add_argument('--permutation', type=bool, default=False, action=argparse.BooleanOptionalAction,
                     help='Benchmark permutations for heads and embed_dim')
 
