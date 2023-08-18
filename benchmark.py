@@ -268,7 +268,7 @@ def bench_and_plot(
         )
     )
     logging.info(f"Plotting {label} results for {token_count} tokens...")
-    plot_results(seq_lengths=seq_lengths, results=results, name="Vanilla Attention")
+    plot_results(seq_lengths=seq_lengths, results=results, name=f"{label}-embed_dim-{embed_dim}-heads-{num_heads}")
     return results
 
 
@@ -319,6 +319,17 @@ if __name__ == "__main__":
         logging.info(f"GPU {i} compute capability: {torch.cuda.get_device_capability(i)}")
 
     bench_config.update(gpu_info)
+    # Get current date
+    current_date = datetime.date.today()
+
+    b_name = f"{current_date}-benchmark"
+    if b_name not in os.listdir("doc"):
+        os.mkdir(os.path.join("doc", b_name))
+
+    b_dir = os.path.join("doc", b_name)
+
+    with open(os.path.join(b_dir, f"config-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"), "w") as f:
+        f.write(str(bench_config))
 
     fig = go.Figure()
 
@@ -346,7 +357,7 @@ if __name__ == "__main__":
 
     if BENCHMARK_MULTIHEAD:
         mha_results: List[BenchmarkResult] = bench_and_plot(
-            label="Multihead Dilated Attention",
+            label="MH Dilated Attention",
             token_count=token_count,
             seq_lengths=DILATED_SEQ_LENGTHS,
             device="cuda",
@@ -354,9 +365,6 @@ if __name__ == "__main__":
             num_heads=NUM_HEADS,
             attention_type=AttentionType.MHA
         )
-
-    # Get current date
-    current_date = datetime.date.today()
 
     fig.update_layout(
         title=f"Attention Benchmark on {current_date} <br>"
@@ -369,12 +377,5 @@ if __name__ == "__main__":
         xaxis_type="log",
         yaxis_type="log",
     )
-    b_name = f"{current_date}-benchmark"
-    if b_name not in os.listdir("doc"):
-        os.mkdir(os.path.join("doc", b_name))
 
-    b_dir = os.path.join("doc", b_name)
-
-    with open(os.path.join(b_dir, f"config-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"), "w") as f:
-        f.write(str(bench_config))
     fig.write_image(os.path.join(b_dir, f"tokens-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.png"))
