@@ -260,7 +260,7 @@ def bench_and_plot(
         num_heads: int = NUM_HEADS,
         attention_type: AttentionType = AttentionType.VANILLA
 ) -> List[BenchmarkResult]:
-    logging.info(f"Benchmark {label} against {token_count} tokens...")
+    logging.info(f"Benchmark {label} against {token_count} tokens... with embed_dim {embed_dim} and num_heads {num_heads}")
     results: List[BenchmarkResult] = (
         benchmark_attention(
             seq_lengths=seq_lengths,
@@ -348,6 +348,16 @@ if __name__ == "__main__":
 
     for embed_dim in embed_dims:  #
         for num_head in num_heads:
+
+            if embed_dim % num_head != 0:
+                logging.info(f"embed_dim ({embed_dim}) must be divisible by num_heads ({num_head})")
+                continue
+
+            if embed_dim//num_head % 8 != 0:
+                logging.info(f"head_dim (embed_dim / num_heads = {embed_dim//num_head}) must be divisible by 8")
+                continue
+
+            logging.info(f"Running benchmark with embed_dim {embed_dim} and num_heads {num_head}")
 
             if BENCHMARK_VANILLA:
                 vanilla_results: List[BenchmarkResult] = bench_and_plot(
