@@ -40,6 +40,10 @@ parser.add_argument('--multihead', type=bool, default=True, action=argparse.Bool
                     help='Benchmark multihead dilated attention')
 parser.add_argument('--causal', type=bool, default=False, action=argparse.BooleanOptionalAction,
                     help='Causal attention')
+parser.add_argument('--causal', type=bool, default=False, action=argparse.BooleanOptionalAction,
+                    help='Causal attention')
+parser.add_argument('--permutation', type=bool, default=False, action=argparse.BooleanOptionalAction,
+                    help='Benchmark permutations for heads and embed_dim')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -60,6 +64,7 @@ BENCHMARK_VANILLA: bool = args.vanilla
 BENCHMARK_DILATED: bool = args.dilated
 BENCHMARK_MULTIHEAD: bool = args.multihead
 IS_CAUSAL: bool = args.causal
+PERMUTATION: bool = args.permutation
 
 
 class BenchmarkResult(NamedTuple):
@@ -332,45 +337,53 @@ if __name__ == "__main__":
         f.write(str(bench_config))
 
     fig = go.Figure()
+    if PERMUTATION:
+        embed_dims = [EMBED_DIM // 2**i for i in range(0, EMBED_DIM//16)]
+        num_heads = [NUM_HEADS // 2**i for i in range(0, NUM_HEADS//2)]
+    else:
+        embed_dims = [EMBED_DIM]
+        num_heads = [NUM_HEADS]
 
-    if BENCHMARK_VANILLA:
-        vanilla_results: List[BenchmarkResult] = bench_and_plot(
-            label="Vanilla Attention",
-            token_count=token_count,
-            seq_lengths=VANILLA_SEQ_LENGTHS,
-            device="cuda",
-            embed_dim=EMBED_DIM,
-            num_heads=NUM_HEADS,
-            attention_type=AttentionType.VANILLA
-        )
+    for embed_dim in embed_dims:  #
+        for num_head in num_heads:
 
-    if BENCHMARK_DILATED:
-        dilated_results: List[BenchmarkResult] = bench_and_plot(
-            label="Dilated Attention",
-            token_count=token_count,
-            seq_lengths=DILATED_SEQ_LENGTHS,
-            device="cuda",
-            embed_dim=EMBED_DIM,
-            num_heads=NUM_HEADS,
-            attention_type=AttentionType.DILATED
-        )
+            if BENCHMARK_VANILLA:
+                vanilla_results: List[BenchmarkResult] = bench_and_plot(
+                    label="Vanilla Attention",
+                    token_count=token_count,
+                    seq_lengths=VANILLA_SEQ_LENGTHS,
+                    device="cuda",
+                    embed_dim=embed_dim,
+                    num_heads=num_head,
+                    attention_type=AttentionType.VANILLA
+                )
 
-    if BENCHMARK_MULTIHEAD:
-        mha_results: List[BenchmarkResult] = bench_and_plot(
-            label="MH Dilated Attention",
-            token_count=token_count,
-            seq_lengths=DILATED_SEQ_LENGTHS,
-            device="cuda",
-            embed_dim=EMBED_DIM,
-            num_heads=NUM_HEADS,
-            attention_type=AttentionType.MHA
-        )
+            if BENCHMARK_DILATED:
+                dilated_results: List[BenchmarkResult] = bench_and_plot(
+                    label="Dilated Attention",
+                    token_count=token_count,
+                    seq_lengths=DILATED_SEQ_LENGTHS,
+                    device="cuda",
+                    embed_dim=embed_dim,
+                    num_heads=num_head,
+                    attention_type=AttentionType.DILATED
+                )
+
+            if BENCHMARK_MULTIHEAD and num_head > 4:
+                mha_results: List[BenchmarkResult] = bench_and_plot(
+                    label="MH Dilated Attention",
+                    token_count=token_count,
+                    seq_lengths=DILATED_SEQ_LENGTHS,
+                    device="cuda",
+                    embed_dim=embed_dim,
+                    num_heads=num_head,
+                    attention_type=AttentionType.MHA
+                )
 
     fig.update_layout(
         title=f"Attention Benchmark on {current_date} <br>"
               f"(Total Tokens = {token_count}) <br>"
-              f"Starting Embed Dim = {EMBED_DIM} <br>"
-              f"Starting Num Heads = {NUM_HEADS}",
+              f"Starting Embed Dim = {EMBED_DIM} Starting Num Heads = {NUM_HEADS}",
         title_x=0.5,
         xaxis_title="Sequence Length",
         yaxis_title="Runtime (s)",
