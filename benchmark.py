@@ -358,7 +358,7 @@ if __name__ == "__main__":
                     attention_type=AttentionType.VANILLA
                 )
 
-            if BENCHMARK_DILATED:
+            if BENCHMARK_DILATED and embed_dim <= 128:
                 dilated_results: List[BenchmarkResult] = bench_and_plot(
                     label="Dilated Attention",
                     token_count=token_count,
@@ -369,7 +369,7 @@ if __name__ == "__main__":
                     attention_type=AttentionType.DILATED
                 )
 
-            if BENCHMARK_MULTIHEAD and num_head > 4:
+            if BENCHMARK_MULTIHEAD and num_head > 4 and embed_dim//num_head <= 128:
                 mha_results: List[BenchmarkResult] = bench_and_plot(
                     label="MH Dilated Attention",
                     token_count=token_count,
