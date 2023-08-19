@@ -344,7 +344,7 @@ if __name__ == "__main__":
     fig = go.Figure()
     if PERMUTATION:
         # 4 is the minimum num_heads for dilated attention
-        num_heads = [NUM_HEADS // 2 ** i for i in range(0, NUM_HEADS // 4)]
+        num_heads = [NUM_HEADS // 2 ** i for i in range(0, NUM_HEADS // 2)]
 
         # 8 * the smallest num_head is the minimum embed_dim
         embed_dims = [EMBED_DIM // 2**i for i in range(0, EMBED_DIM//(8*num_heads[-1]))]
