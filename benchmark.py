@@ -307,6 +307,8 @@ if __name__ == "__main__":
     logging.info(f"Vanilla Sequence Lengths = {VANILLA_SEQ_LENGTHS}")
     logging.info(f"Dilated Sequence Lengths = {DILATED_SEQ_LENGTHS}")
     logging.info(f"Segment Lengths = {SEGMENT_LENGTHS}")
+    logging.info(f"Causal Attention = {IS_CAUSAL}")
+    logging.info(f"Permutation = {PERMUTATION}")
 
     if not torch.cuda.is_available():  # Check if CUDA is available
         logging.info("CUDA is not available. Exiting...")
@@ -353,10 +355,6 @@ if __name__ == "__main__":
                 logging.info(f"embed_dim ({embed_dim}) must be divisible by num_heads ({num_head})")
                 continue
 
-            if embed_dim//num_head % 8 != 0:
-                logging.info(f"head_dim (embed_dim / num_heads = {embed_dim//num_head}) must be divisible by 8")
-                continue
-
             logging.info(f"Running benchmark with embed_dim {embed_dim} and num_heads {num_head}")
 
             if BENCHMARK_VANILLA:
@@ -370,7 +368,7 @@ if __name__ == "__main__":
                     attention_type=AttentionType.VANILLA
                 )
 
-            if BENCHMARK_DILATED and embed_dim <= 128:
+            if BENCHMARK_DILATED and num_head >= embed_dim <= 128 :
                 dilated_results: List[BenchmarkResult] = bench_and_plot(
                     label="Dilated Attention",
                     token_count=token_count,
@@ -382,15 +380,19 @@ if __name__ == "__main__":
                 )
 
             if BENCHMARK_MULTIHEAD and num_head >= 4 and embed_dim//num_head <= 128:
-                mha_results: List[BenchmarkResult] = bench_and_plot(
-                    label="MH Dilated Attention",
-                    token_count=token_count,
-                    seq_lengths=DILATED_SEQ_LENGTHS,
-                    device="cuda",
-                    embed_dim=embed_dim,
-                    num_heads=num_head,
-                    attention_type=AttentionType.MHA
-                )
+                if embed_dim // num_head % 8 != 0:
+                    logging.info(f"head_dim (embed_dim / num_heads = {embed_dim // num_head}) must be divisible by 8")
+
+                else:
+                    mha_results: List[BenchmarkResult] = bench_and_plot(
+                        label="MH Dilated Attention",
+                        token_count=token_count,
+                        seq_lengths=DILATED_SEQ_LENGTHS,
+                        device="cuda",
+                        embed_dim=embed_dim,
+                        num_heads=num_head,
+                        attention_type=AttentionType.MHA
+                    )
 
     fig.update_layout(
         title=f"Attention Benchmark on {current_date} <br>"
