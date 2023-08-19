@@ -361,7 +361,7 @@ if __name__ == "__main__":
                 logging.info(f"embed_dim ({embed_dim}) must be divisible by num_heads ({num_head})")
                 continue
 
-            if num_head <= 4:
+            if num_head < 4:
                 logging.info(f"num_heads ({num_head}) must be greater than 4")
                 continue
 
