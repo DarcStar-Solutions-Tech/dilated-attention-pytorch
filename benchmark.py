@@ -345,9 +345,11 @@ if __name__ == "__main__":
     if PERMUTATION:
         # 4 is the minimum num_heads for dilated attention
         num_heads = [NUM_HEADS // 2 ** i for i in range(0, NUM_HEADS // 2)]
+        logging.info(f"Sequence of num_heads: {num_heads}")
 
         # 8 * the smallest num_head is the minimum embed_dim
         embed_dims = [EMBED_DIM // 2**i for i in range(0, EMBED_DIM//(8*num_heads[-1]))]
+        logging.info(f"Sequence of embed_dims: {embed_dims}")
     else:
         embed_dims = [EMBED_DIM]
         num_heads = [NUM_HEADS]
