@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import uuid
 from enum import Enum
@@ -25,7 +26,7 @@ parser = argparse.ArgumentParser(description='Benchmarking parameters')
 parser.add_argument('--batch_size', type=int, default=1, help='Batch size for benchmarking')
 parser.add_argument('--total_tokens', type=int, default=24,
                     help='Exponent for Total tokens for benchmarking, default is 26 which is 64M(2**26) tokens')
-parser.add_argument('--heads', type=int, default=4, help='Number of heads for benchmarking, default is 8')
+parser.add_argument('--heads', type=int, default=4, help='Number of heads for benchmarking, default is 4')
 parser.add_argument('--embed_dim', type=int, default=32, help='Embed dimension for benchmarking, default is 256')
 parser.add_argument('--vanilla_seq_lengths', type=int, default=18,
                     help='End of Sequence length range for vanilla attention, default is 18 which is 2**18')
@@ -344,7 +345,8 @@ if __name__ == "__main__":
     fig = go.Figure()
     if PERMUTATION:
         # 4 is the minimum num_heads for dilated attention
-        num_heads = [NUM_HEADS // 2 ** i for i in range(0, NUM_HEADS, 2)]
+        smallest_head = math.log2(NUM_HEADS//4)
+        num_heads = [NUM_HEADS // 2 ** i for i in range(0, math.ceil(smallest_head))]
         logging.info(f"Sequence of num_heads: {num_heads}")
 
         # 8 * the smallest num_head is the minimum embed_dim
