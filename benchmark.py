@@ -345,12 +345,13 @@ if __name__ == "__main__":
     fig = go.Figure()
     if PERMUTATION:
         # 4 is the minimum num_heads for dilated attention
-        smallest_head = math.log2(NUM_HEADS)-1
-        num_heads = [NUM_HEADS // 2 ** i for i in range(0, math.ceil(smallest_head))]
+        smallest_head = math.ceil(math.log2(NUM_HEADS))-1
+        num_heads = [NUM_HEADS // 2 ** i for i in range(0, smallest_head)]
         logging.info(f"Sequence of num_heads: {num_heads}")
 
-        # 8 * the smallest num_head is the minimum embed_dim
-        embed_dims = [EMBED_DIM // 2**i for i in range(0, EMBED_DIM//(8*num_heads[-1]))]
+        # the minimum embed_dim 32, this calculates the denominator for the largest EMDED_DIM needed to find it
+        smallest_dim = math.ceil(math.log2(EMBED_DIM))-4
+        embed_dims = [EMBED_DIM // 2**i for i in range(0, EMBED_DIM//smallest_dim)]
         logging.info(f"Sequence of embed_dims: {embed_dims}")
     else:
         embed_dims = [EMBED_DIM]
