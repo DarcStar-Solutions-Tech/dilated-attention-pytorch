@@ -1,5 +1,6 @@
 import logging
 import os
+import uuid
 from enum import Enum
 from functools import partial
 from math import ceil
@@ -331,7 +332,7 @@ if __name__ == "__main__":
 
     bench_config.update(gpu_info)
 
-    b_name = f"{current_date}-benchmark"
+    b_name = f"{current_date}-benchmark-{uuid.uuid4()}"
     if b_name not in os.listdir("doc"):
         os.mkdir(os.path.join("doc", b_name))
 
@@ -342,20 +343,38 @@ if __name__ == "__main__":
 
     fig = go.Figure()
     if PERMUTATION:
-        embed_dims = [EMBED_DIM // 2**i for i in range(0, EMBED_DIM//16)]
-        num_heads = [NUM_HEADS // 2**i for i in range(0, NUM_HEADS//2)]
+        # 4 is the minimum num_heads for dilated attention
+        num_heads = [NUM_HEADS // 2 ** i for i in range(0, NUM_HEADS // 4)]
+
+        # 8 * the smallest num_head is the minimum embed_dim
+        embed_dims = [EMBED_DIM // 2**i for i in range(0, EMBED_DIM//(8*num_heads[-1]))]
     else:
         embed_dims = [EMBED_DIM]
         num_heads = [NUM_HEADS]
 
-    for embed_dim in embed_dims:  #
-        for num_head in num_heads:
+    results = []
+
+    for embed_dim in embed_dims:  # loop over embed_dims
+        for num_head in num_heads:  # loop over num_heads
 
             if embed_dim % num_head != 0:
                 logging.info(f"embed_dim ({embed_dim}) must be divisible by num_heads ({num_head})")
                 continue
 
+            if num_head <= 4:
+                logging.info(f"num_heads ({num_head}) must be greater than 4")
+                continue
+
             logging.info(f"Running benchmark with embed_dim {embed_dim} and num_heads {num_head}")
+
+            result_set = {
+                "embed_dim": embed_dim,
+                "num_heads": num_head,
+                "token_count": token_count,
+                "vanilla": None,
+                "dilated": None,
+                "multihead": None,
+            }
 
             if BENCHMARK_VANILLA:
                 vanilla_results: List[BenchmarkResult] = bench_and_plot(
@@ -367,8 +386,9 @@ if __name__ == "__main__":
                     num_heads=num_head,
                     attention_type=AttentionType.VANILLA
                 )
+                result_set["vanilla"] = vanilla_results
 
-            if BENCHMARK_DILATED and num_head >= 4 and embed_dim <= 128 :
+            if BENCHMARK_DILATED and embed_dim <= 128:
                 dilated_results: List[BenchmarkResult] = bench_and_plot(
                     label="Dilated Attention",
                     token_count=token_count,
@@ -378,8 +398,9 @@ if __name__ == "__main__":
                     num_heads=num_head,
                     attention_type=AttentionType.DILATED
                 )
+                result_set["dilated"] = dilated_results
 
-            if BENCHMARK_MULTIHEAD and num_head >= 4 and embed_dim//num_head <= 128:
+            if BENCHMARK_MULTIHEAD and embed_dim//num_head <= 128:
                 if embed_dim // num_head % 8 != 0:
                     logging.info(f"head_dim (embed_dim / num_heads = {embed_dim // num_head}) must be divisible by 8")
 
@@ -393,6 +414,12 @@ if __name__ == "__main__":
                         num_heads=num_head,
                         attention_type=AttentionType.MHA
                     )
+                    result_set["multihead"] = mha_results
+
+            results.append(result_set)
+
+    with open(os.path.join(b_dir, f"results-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"), "w") as f:
+        f.write(str(results))
 
     fig.update_layout(
         title=f"Attention Benchmark on {current_date} <br>"
