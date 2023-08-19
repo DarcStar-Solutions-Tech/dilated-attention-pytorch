@@ -345,7 +345,7 @@ if __name__ == "__main__":
     fig = go.Figure()
     if PERMUTATION:
         # 4 is the minimum num_heads for dilated attention
-        smallest_head = math.log2(NUM_HEADS//4)
+        smallest_head = math.log2(NUM_HEADS)
         num_heads = [NUM_HEADS // 2 ** i for i in range(0, math.ceil(smallest_head))]
         logging.info(f"Sequence of num_heads: {num_heads}")
 
