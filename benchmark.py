@@ -368,7 +368,7 @@ if __name__ == "__main__":
                     attention_type=AttentionType.VANILLA
                 )
 
-            if BENCHMARK_DILATED and num_head >= embed_dim <= 128 :
+            if BENCHMARK_DILATED and num_head >= 4 and embed_dim <= 128 :
                 dilated_results: List[BenchmarkResult] = bench_and_plot(
                     label="Dilated Attention",
                     token_count=token_count,
