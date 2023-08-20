@@ -351,7 +351,6 @@ if __name__ == "__main__":
 
         # the minimum embed_dim 32, this calculates the denominator for the largest EMDED_DIM needed to find it
         smallest_dim = math.ceil(math.log2(EMBED_DIM))-4
-        embed_dims = []
         embed_dims = [EMBED_DIM // 2 ** i for i in range(0, smallest_dim)]
         logging.info(f"Sequence of embed_dims: {embed_dims}")
     else:
