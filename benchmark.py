@@ -58,7 +58,7 @@ VANILLA_SEQ_LENGTHS: List[int] = [2 ** i for i in range(13, args.vanilla_seq_len
 
 # Dilated attention only
 SEGMENT_LENGTHS: List[int] = args.segment_lengths  # 8k - 64k
-DILATED_SEQ_LENGTHS: List[int] = [2 ** i for i in range(18, args.dilated_seq_lengths)]  # 8k - 64M
+DILATED_SEQ_LENGTHS: List[int] = [2 ** i for i in range(13, args.dilated_seq_lengths)]  # 8k - 64M
 
 BENCHMARK_VANILLA: bool = args.vanilla
 BENCHMARK_DILATED: bool = args.dilated
