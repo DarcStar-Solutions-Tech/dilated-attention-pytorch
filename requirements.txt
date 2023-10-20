@@ -1,7 +1,7 @@
 torch >= 1.8.0
 torchscale ~= 0.2.0
 plotly==5.16.1
-xformers==0.0.21
+xformers==0.0.22
 einops >= 0.6.1
 kaleido==0.2.1
 lightning==2.0.7
