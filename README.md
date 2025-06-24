@@ -86,7 +86,8 @@ print(out.shape)
 - Many of the same arguments from `nn.MultiheadAttention`.  See the `MultiheadDilatedAttention` class for more details.
 
 ```python
-from dilated_attention_pytorch.dilated_attention import MultiheadDilatedAttention
+
+from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
 
 device = torch.device("cuda")
 dtype = torch.float16
