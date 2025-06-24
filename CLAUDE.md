@@ -40,42 +40,67 @@ pytest tests/test_dilated_attention.py -v
 ```
 
 ### Dependencies Management
+This project uses modern Python packaging with `pyproject.toml` and Hatch:
+
 ```bash
-# Install from requirements.txt
-pip install -r requirements.txt
+# Recommended: Using uv (fastest Python package manager)
+uv pip install -e .                    # Install package
+uv pip install -e .[dev]               # Install with dev dependencies
+uv pip install -e .[test]              # Install with test dependencies
+uv pip install -e .[benchmark]         # Install with benchmark dependencies
+uv pip install -e .[distributed]       # Install with distributed training dependencies
+uv pip install -e .[all]               # Install with all optional dependencies
 
-# Install development dependencies (from setup.py)
-pip install -e .[dev]
-pip install -e .[test]
-pip install -e .[all]
+# Alternative: Using Hatch (project management)
+hatch shell                            # Enter development environment
+hatch env create                       # Create development environment
+hatch build                            # Build the package
 
-# Using Poetry (if available)
-poetry install
+# Legacy: Using pip
+pip install -e .                       # Install package
+pip install -e .[all]                  # Install with all dependencies
 ```
 
 ### Code Quality
-Based on setup.py, the project supports:
+The project is configured with modern Python tooling via Hatch:
+
 ```bash
-# Code formatting
+# Using Hatch (recommended)
+hatch run test                         # Run tests with coverage
+hatch run test-fast                    # Run tests (exit on first failure)
+hatch run lint                         # Run all linting (black, isort, flake8)
+hatch run format                       # Format code (black, isort)
+hatch run typecheck                    # Type checking (mypy)
+hatch run all                          # Run all checks (format, lint, typecheck, test)
+
+# Using uv + direct tools
+uv run pytest tests/                   # Run tests
+uv run black .                         # Format code
+uv run isort .                         # Sort imports
+uv run flake8 .                        # Lint code
+uv run mypy dilated_attention_pytorch  # Type check
+
+# Legacy approach
 black .
 isort .
-
-# Linting
 flake8 .
 mypy .
-
-# Pre-commit hooks (if configured)
-pre-commit install
-pre-commit run --all-files
+pytest tests/
 ```
 
 ### Benchmarking
 ```bash
-# Run benchmarks with default settings
-python benchmark.py
+# Using Hatch environments (recommended)
+hatch run benchmark:run                # Run benchmarks with default settings
+hatch run benchmark:run --batch_size 2 --total_tokens 26 --heads 8  # Custom parameters
+hatch run benchmark:profile            # Run with profiling
 
-# Custom benchmark parameters
-python benchmark.py --batch_size 2 --total_tokens 26 --heads 8
+# Direct execution
+python benchmark.py                    # Run benchmarks with default settings
+python benchmark.py --batch_size 2 --total_tokens 26 --heads 8      # Custom parameters
+
+# Using uv
+uv run --extra benchmark python benchmark.py  # Run with benchmark dependencies
 ```
 
 ## Implementation Notes
@@ -87,11 +112,18 @@ python benchmark.py --batch_size 2 --total_tokens 26 --heads 8
 - Memory usage scales with sequence length and number of segments
 
 ### Dependencies
-- **torch**: Core PyTorch functionality
-- **xformers**: Efficient attention operations
-- **einops**: Tensor rearrangement utilities
-- **flash-attn**: Flash attention implementation
-- **plotly**: Visualization for benchmarks
+- **torch**: Core PyTorch functionality (>=2.0.0)
+- **xformers**: Efficient attention operations (>=0.0.20)
+- **einops**: Tensor rearrangement utilities (>=0.8.0)
+- **flash-attn**: Flash attention implementation (>=2.8.0, supports FA3)
+- **plotly**: Visualization for benchmarks (>=5.16.0)
+
+### Flash Attention 3 Support
+This project supports Flash Attention 3 for significant performance improvements:
+- 1.5-2.0x faster than Flash Attention 2
+- Up to 75% H100 GPU utilization
+- Automatic detection and optimization
+- See `FLASH_ATTENTION_3_SETUP.md` for detailed installation instructions
 
 ### Code Patterns
 - All attention modules expect `batch_first=True` format

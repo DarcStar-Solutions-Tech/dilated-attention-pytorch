@@ -1,33 +1,19 @@
-# Updated PyTorch – now targeting the latest stable release
-torch==2.7.0
+# Legacy requirements.txt - now managed by pyproject.toml
+# For modern Python development, use:
+#   pip install -e .                    # Install package
+#   pip install -e .[dev]               # Install with dev dependencies  
+#   pip install -e .[all]               # Install with all optional dependencies
+#
+# Or with uv (recommended):
+#   uv pip install -e .
+#   uv pip install -e .[dev]
+#   uv pip install -e .[all]
+#
+# Or with hatch:
+#   hatch shell                         # Enter development environment
+#   hatch run test                      # Run tests
+#   hatch run lint                      # Run linting  
+#   hatch run all                       # Run all checks
 
-# torchscale remains in the 0.2.x series; you can allow patch updates with the “~=” operator
-torchscale~=0.3.0
-
-fairscale==0.4.0
-
-timm==0.6.13
-
-flash-attn==2.7.3
-
-# Allow Plotly to update past 5.16.1 (or pin to a newer stable release if needed)
-plotly>=5.16.1
-
-# Upgraded xformers to a more recent release (if available)
-xformers==0.0.31.dev1053
-
-# Keep einops at or above the required version
-einops>=0.8.1
-
-# Kaleido remains unchanged unless you require a newer version; you can also relax the constraint:
-kaleido==0.2.1
-
-# Since the PyTorch Lightning project has rebranded to “lightning” as of v2,
-# you only need one – here we use “lightning” and drop “pytorch-lightning”
-lightning==2.3.3
-
-# The standard library in Python already includes UUID functionality,
-# so we remove the external “uuid” requirement.
-
-# Upgraded DeepSpeed to a newer stable release
-deepspeed==0.15.1
+# For backwards compatibility, install base dependencies:
+-e .

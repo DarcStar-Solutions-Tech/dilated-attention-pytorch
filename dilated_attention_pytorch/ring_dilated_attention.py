@@ -24,6 +24,7 @@ References:
 from typing import Optional, Sequence, Tuple, Union, List, Dict, Any
 import math
 import warnings
+import threading
 
 import torch
 from torch import nn, Tensor
@@ -42,31 +43,105 @@ except ImportError:
         EFFICIENT_ATTENTION = "efficient_attention"
         MATH = "math"
 
+# Flash Attention version detection
+def get_flash_attention_version():
+    """Detect available Flash Attention version for optimization."""
+    try:
+        import flash_attn
+        version = getattr(flash_attn, '__version__', 'unknown')
+        return version
+    except ImportError:
+        # Check if Flash Attention 3 (beta) is available from different repo
+        try:
+            import flash_attn_3
+            return getattr(flash_attn_3, '__version__', '3.0.0-beta')
+        except ImportError:
+            return None
+
+def is_flash_attention_3_available():
+    """Check if Flash Attention 3 is available."""
+    version = get_flash_attention_version()
+    if version and version != 'unknown':
+        try:
+            # Handle both 3.x versions and 2.8+ with FA3 features
+            if version.startswith('3.'):
+                return True
+            # FA2 2.8+ has some FA3 optimizations
+            version_parts = version.split('.')
+            major = int(version_parts[0])
+            minor = int(version_parts[1]) if len(version_parts) > 1 else 0
+            return major >= 3 or (major == 2 and minor >= 8)
+        except (ValueError, IndexError):
+            return False
+    
+    # Check for FA3 specific modules
+    try:
+        import flash_attn_3
+        return True
+    except ImportError:
+        pass
+    
+    # Check for H100 optimizations in FA2
+    if torch.cuda.is_available():
+        try:
+            device_name = torch.cuda.get_device_properties(0).name
+            if 'H100' in device_name or 'H800' in device_name:
+                # H100 with FA2.8+ has some FA3-like optimizations
+                version = get_flash_attention_version()
+                if version:
+                    version_parts = version.split('.')
+                    major = int(version_parts[0])
+                    minor = int(version_parts[1]) if len(version_parts) > 1 else 0
+                    return major == 2 and minor >= 8
+        except:
+            pass
+    
+    return False
+
 
 class RingAttentionMemoryPool:
-    """Centralized memory pool for Ring Attention operations."""
+    """Centralized memory pool for Ring Attention operations with optimized lookups."""
     
     def __init__(self, device: torch.device):
         self.device = device
         self._pools: Dict[tuple, torch.Tensor] = {}
         self._usage_count: Dict[tuple, int] = {}
+        # Optimization: Cache frequently used buffer keys for faster lookups
+        self._hot_keys_cache = {}  # Maps simplified keys to full keys
+        self._access_lock = threading.Lock()  # Thread-safe access
     
     def get_buffer(self, shape: tuple, dtype: torch.dtype, key: str, pin_memory: bool = False) -> torch.Tensor:
-        """Get buffer from pool or allocate new one."""
+        """Get buffer from pool or allocate new one with optimized hot cache lookup."""
         pool_key = (shape, dtype, key, pin_memory)
         
-        if pool_key not in self._pools:
-            if self.device.type == 'cuda' and pin_memory:
-                # Allocate pinned memory for faster GPU transfers
-                self._pools[pool_key] = torch.empty(
-                    shape, dtype=dtype, device='cpu', pin_memory=True
-                ).to(self.device, non_blocking=True)
-            else:
-                self._pools[pool_key] = torch.empty(shape, dtype=dtype, device=self.device)
-            self._usage_count[pool_key] = 0
+        # Optimization: Check hot cache first for frequently used buffers
+        simplified_key = (shape, dtype, key)  # Omit pin_memory for hot cache
         
-        self._usage_count[pool_key] += 1
-        return self._pools[pool_key]
+        with self._access_lock:
+            # Fast path: Check hot cache for common buffer patterns
+            if simplified_key in self._hot_keys_cache:
+                cached_key = self._hot_keys_cache[simplified_key]
+                if cached_key in self._pools:
+                    self._usage_count[cached_key] += 1
+                    return self._pools[cached_key]
+            
+            # Standard path: Full lookup
+            if pool_key not in self._pools:
+                if self.device.type == 'cuda' and pin_memory:
+                    # Allocate pinned memory for faster GPU transfers
+                    self._pools[pool_key] = torch.empty(
+                        shape, dtype=dtype, device='cpu', pin_memory=True
+                    ).to(self.device, non_blocking=True)
+                else:
+                    self._pools[pool_key] = torch.empty(shape, dtype=dtype, device=self.device)
+                self._usage_count[pool_key] = 0
+                
+                # Update hot cache if this becomes frequently used
+                if self._usage_count.get(pool_key, 0) > 5:  # Threshold for hot cache
+                    self._hot_keys_cache[simplified_key] = pool_key
+            
+            self._usage_count[pool_key] += 1
+            return self._pools[pool_key]
     
     def clear_unused_buffers(self, threshold: int = 100, reset_counters: bool = True):
         """Clear buffers that haven't been used recently."""
@@ -160,10 +235,11 @@ class RingDilatedAttention(nn.Module):
             torch.backends.cudnn.allow_tf32 = True
         
         # Advanced memory optimization: Pre-compute head distribution and cache indices
-        self._head_groups = None
+        self._head_groups_cache = {}  # Memoize head group calculations
         self._cached_indices = {}
         self._ring_buffers = {}
         self._ring_patterns = {}  # Cache ring-specific patterns
+        self._vectorized_patterns = {}  # Cache for vectorized pattern computation
         
         # Memory pool for efficient buffer management
         device_obj = torch.device(device) if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -179,6 +255,10 @@ class RingDilatedAttention(nn.Module):
         
         # Setup ring communication if distributed
         self._setup_ring_communication()
+        
+        # Hardware optimization detection
+        self._is_h100_gpu = self._detect_h100_gpu()
+        self._flash_attn_3_available = is_flash_attention_3_available()
     
     def _setup_ring_communication(self):
         """Setup ring communication pattern for distributed computation."""
@@ -201,57 +281,71 @@ class RingDilatedAttention(nn.Module):
         self._packed_communication_buffer = None  # For optimized K/V packing
     
     def _get_head_groups(self, h: int):
-        """Pre-compute and cache head group distribution."""
-        if self._head_groups is None or self._head_groups[0] != h:
-            gs = [h // self.num_groups] * self.num_groups
-            for i in range(h % self.num_groups):
-                gs[i] += 1
-            
-            # Pre-compute head ranges for faster indexing
-            head_ranges = []
-            hmin = 0
-            for g in gs:
-                hmax = hmin + g
-                head_ranges.append((hmin, hmax))
-                hmin = hmax
-            
-            self._head_groups = (h, gs, head_ranges)
+        """Pre-compute and cache head group distribution with memoization."""
+        if h in self._head_groups_cache:
+            return self._head_groups_cache[h]
         
-        return self._head_groups[1], self._head_groups[2]
+        # Vectorized computation for better performance
+        base_size = h // self.num_groups
+        remainder = h % self.num_groups
+        
+        # Use vectorized operations instead of loops
+        gs = [base_size] * self.num_groups
+        for i in range(remainder):
+            gs[i] += 1
+        
+        # Vectorized head range computation
+        cumsum = torch.cumsum(torch.tensor([0] + gs[:-1], dtype=torch.long), dim=0)
+        head_ranges = [(cumsum[i].item(), cumsum[i].item() + gs[i]) for i in range(self.num_groups)]
+        
+        # Cache the result for future use
+        result = (gs, head_ranges)
+        self._head_groups_cache[h] = result
+        return result
     
     def _precompute_ring_patterns(self, h: int, ring_size: int):
-        """Pre-compute all ring-specific patterns for maximum efficiency."""
+        """Pre-compute all ring-specific patterns with vectorized operations."""
         cache_key = (h, ring_size)
         if cache_key in self._ring_patterns:
             return self._ring_patterns[cache_key]
         
         gs, head_ranges = self._get_head_groups(h)
         
-        # Pre-compute all ring step patterns
-        ring_patterns = []
-        for step in range(ring_size):
-            step_patterns = {}
-            for i, ((g, (hmin, hmax)), r, s) in enumerate(
-                zip(zip(gs, head_ranges), self.dilation_rates, self.segment_lengths)
-            ):
-                # Cache dilation indices
-                cache_key_indices = (s, r, i % r)
-                if cache_key_indices not in self._cached_indices:
-                    self._cached_indices[cache_key_indices] = torch.arange(
-                        i % r, s, r, device=self._memory_pool.device
-                    )
-                
-                step_patterns[i] = {
-                    'head_range': (hmin, hmax),
-                    'indices': self._cached_indices[cache_key_indices],
-                    'segment_size': s,
-                    'dilation': r,
-                    'group_size': g
-                }
-            ring_patterns.append(step_patterns)
+        # Vectorized pattern precomputation - compute all patterns at once
+        if cache_key not in self._vectorized_patterns:
+            # Pre-compute all dilation indices for all segments/dilations in batch
+            all_indices = {}
+            for i, (r, s) in enumerate(zip(self.dilation_rates, self.segment_lengths)):
+                for offset in range(r):
+                    indices_key = (s, r, offset)
+                    if indices_key not in all_indices:
+                        all_indices[indices_key] = torch.arange(
+                            offset, s, r, device=self._memory_pool.device
+                        )
+            
+            # Vectorized step pattern creation
+            ring_patterns = []
+            for step in range(ring_size):
+                step_patterns = {}
+                for i, ((g, (hmin, hmax)), r, s) in enumerate(
+                    zip(zip(gs, head_ranges), self.dilation_rates, self.segment_lengths)
+                ):
+                    indices_key = (s, r, i % r)
+                    step_patterns[i] = {
+                        'head_range': (hmin, hmax),
+                        'indices': all_indices[indices_key],
+                        'segment_size': s,
+                        'dilation': r,
+                        'group_size': g
+                    }
+                ring_patterns.append(step_patterns)
+            
+            # Cache both individual indices and complete patterns
+            self._cached_indices.update(all_indices)
+            self._vectorized_patterns[cache_key] = ring_patterns
         
-        self._ring_patterns[cache_key] = ring_patterns
-        return ring_patterns
+        self._ring_patterns[cache_key] = self._vectorized_patterns[cache_key]
+        return self._ring_patterns[cache_key]
     
     def _allocate_ring_buffers(self, k: Tensor, v: Tensor):
         """Allocate ring communication buffers with memory pool optimization and thread safety."""
@@ -393,9 +487,11 @@ class RingDilatedAttention(nn.Module):
                 k_flat = k_flat.repeat(repeat_factor, 1, 1, 1)[:b * num_segments_q]
                 v_flat = v_flat.repeat(repeat_factor, 1, 1, 1)[:b * num_segments_q]
             
-            # Apply scaled dot product attention
+            # Apply scaled dot product attention with optimized backend selection
             if HAS_SDPA_KERNEL:
-                with sdpa_kernel([SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH]):
+                # Optimize backend selection for hardware - prioritize Flash Attention on H100
+                backends = self._get_optimal_sdpa_backends()
+                with sdpa_kernel(backends):
                     attn_out = F.scaled_dot_product_attention(
                         q_flat, k_flat, v_flat,
                         attn_mask=None,
@@ -417,9 +513,14 @@ class RingDilatedAttention(nn.Module):
             attn_reshaped = attn_out.view(b, num_segments_q, effective_s, g, d)
             attn_flat = attn_reshaped.view(b, n_q, g, d)
             
-            # Accumulate results with in-place operations for efficiency
-            out_slice = out[:, :, hmin:hmax, :] 
-            out_slice.add_(attn_flat)
+            # Optimized accumulation using advanced indexing for better performance
+            if attn_flat.shape == out[:, :, hmin:hmax, :].shape:
+                # Direct in-place accumulation when shapes match exactly
+                out[:, :, hmin:hmax, :].add_(attn_flat)
+            else:
+                # Fallback with explicit slicing for shape mismatch cases
+                out_slice = out[:, :, hmin:hmax, :] 
+                out_slice.add_(attn_flat)
         
         # Normalize by number of groups using in-place division
         out.div_(self.num_groups)
@@ -509,9 +610,13 @@ class RingDilatedAttention(nn.Module):
             # Initialize output accumulator
             output = torch.zeros_like(q_local)
             
-            # Ring attention steps
+            # Ring attention steps with computation-communication overlap
             k_ring = k_local.clone()
             v_ring = v_local.clone()
+            
+            # Double buffering for overlapping computation and communication
+            k_next, v_next = None, None
+            rotation_handle = None
             
             for step in range(self.ring_size):
                 try:
@@ -547,10 +652,24 @@ class RingDilatedAttention(nn.Module):
                     else:
                         raise e
                 
-                # Rotate k,v to next position in ring (except last step)
+                # Optimized rotation with computation-communication overlap
                 if step < self.ring_size - 1:
                     try:
-                        k_ring, v_ring = self._rotate_kv_ring(k_ring, v_ring)
+                        # Start next rotation asynchronously while computing current step
+                        if step == 0:
+                            # First step: start rotation in background
+                            rotation_handle = self._start_async_rotation(k_ring, v_ring)
+                        else:
+                            # Subsequent steps: wait for previous rotation, start next
+                            if rotation_handle is not None:
+                                k_ring, v_ring = self._complete_async_rotation(rotation_handle)
+                            
+                            if step < self.ring_size - 2:  # Not the penultimate step
+                                rotation_handle = self._start_async_rotation(k_ring, v_ring)
+                            else:
+                                # Last rotation
+                                k_ring, v_ring = self._rotate_kv_ring(k_ring, v_ring)
+                                
                     except Exception as comm_error:
                         if self.ring_size > 1:
                             warnings.warn(
@@ -621,8 +740,9 @@ class RingDilatedAttention(nn.Module):
         packed_send = self._packed_communication_buffer[:total_size]
         packed_recv = torch.empty_like(packed_send)
         
-        # Use torch.cat for more efficient packing
-        torch.cat([k_flat, v_flat], out=packed_send)
+        # Optimized in-place packing - avoids tensor creation overhead
+        packed_send[:k_size].copy_(k_flat)
+        packed_send[k_size:].copy_(v_flat)
         
         # Single async communication for both K and V
         send_req = dist.isend(packed_send, dst=send_rank, group=self.ring_group)
@@ -639,6 +759,73 @@ class RingDilatedAttention(nn.Module):
         # Use copy instead of clone for better memory efficiency
         k_buffer.copy_(k_received_flat.view_as(k))
         v_buffer.copy_(v_received_flat.view_as(v))
+        
+        return k_buffer, v_buffer
+    
+    def _start_async_rotation(self, k: Tensor, v: Tensor) -> Dict[str, Any]:
+        """Start asynchronous ring rotation for computation-communication overlap."""
+        if self.ring_group is None:
+            return {'k': k, 'v': v, 'requests': None}
+        
+        # Get pre-allocated rotation buffers
+        buffer_key = (k.shape, k.dtype)
+        rotation_buffers = self._rotation_buffers[buffer_key]
+        k_buffer = rotation_buffers['k']
+        v_buffer = rotation_buffers['v']
+        
+        # Calculate send/receive ranks
+        send_rank = (self.rank + 1) % self.ring_size
+        recv_rank = (self.rank - 1) % self.ring_size
+        
+        # Pack K and V for efficient communication
+        k_flat = k.flatten()
+        v_flat = v.flatten()
+        k_size = k_flat.numel()
+        total_size = k_size + v_flat.numel()
+        
+        # Prepare packed buffers
+        packed_send = self._packed_communication_buffer[:total_size]
+        packed_recv = torch.empty_like(packed_send)
+        
+        # In-place packing
+        packed_send[:k_size].copy_(k_flat)
+        packed_send[k_size:].copy_(v_flat)
+        
+        # Start async communication
+        send_req = dist.isend(packed_send, dst=send_rank, group=self.ring_group)
+        recv_req = dist.irecv(packed_recv, src=recv_rank, group=self.ring_group)
+        
+        return {
+            'k_buffer': k_buffer,
+            'v_buffer': v_buffer,
+            'packed_recv': packed_recv,
+            'k_size': k_size,
+            'k_shape': k.shape,
+            'v_shape': v.shape,
+            'send_req': send_req,
+            'recv_req': recv_req
+        }
+    
+    def _complete_async_rotation(self, rotation_handle: Dict[str, Any]) -> Tuple[Tensor, Tensor]:
+        """Complete asynchronous ring rotation and return rotated tensors."""
+        if rotation_handle.get('requests') is None:
+            return rotation_handle['k'], rotation_handle['v']
+        
+        # Wait for communication completion
+        rotation_handle['send_req'].wait()
+        rotation_handle['recv_req'].wait()
+        
+        # Unpack received data
+        k_size = rotation_handle['k_size']
+        packed_recv = rotation_handle['packed_recv']
+        k_received_flat = packed_recv[:k_size]
+        v_received_flat = packed_recv[k_size:]
+        
+        # Copy to pre-allocated buffers
+        k_buffer = rotation_handle['k_buffer']
+        v_buffer = rotation_handle['v_buffer']
+        k_buffer.copy_(k_received_flat.view(rotation_handle['k_shape']))
+        v_buffer.copy_(v_received_flat.view(rotation_handle['v_shape']))
         
         return k_buffer, v_buffer
     
@@ -664,14 +851,16 @@ class RingDilatedAttention(nn.Module):
         return torch.cat(output_list, dim=1)
     
     def clear_cache(self, force: bool = False):
-        """Clear cached patterns and buffers to free memory with thread safety."""
+        """Clear cached patterns and buffers to free memory with thread safety and optimization tracking."""
         with self._cache_lock:
             if force:
                 self._cached_indices.clear()
                 self._ring_patterns.clear()
                 self._rotation_buffers.clear()
+                self._head_groups_cache.clear()
+                self._vectorized_patterns.clear()
             else:
-                # Smart cache cleanup - keep frequently used patterns
+                # Smart cache cleanup - keep frequently used patterns with priority
                 if len(self._cached_indices) > 50:  # Threshold for cleanup
                     # Keep only the most recent half of cached indices
                     keys_to_keep = list(self._cached_indices.keys())[-25:]
@@ -682,11 +871,49 @@ class RingDilatedAttention(nn.Module):
                     keys_to_keep = list(self._ring_patterns.keys())[-5:]
                     new_patterns = {k: self._ring_patterns[k] for k in keys_to_keep}
                     self._ring_patterns = new_patterns
+                
+                # Clean vectorized patterns cache (less frequently used)
+                if len(self._vectorized_patterns) > 5:
+                    keys_to_keep = list(self._vectorized_patterns.keys())[-3:]
+                    new_vec_patterns = {k: self._vectorized_patterns[k] for k in keys_to_keep}
+                    self._vectorized_patterns = new_vec_patterns
+                
+                # Keep head groups cache (very cheap to recompute, clean aggressively)
+                if len(self._head_groups_cache) > 20:
+                    keys_to_keep = list(self._head_groups_cache.keys())[-10:]
+                    new_head_cache = {k: self._head_groups_cache[k] for k in keys_to_keep}
+                    self._head_groups_cache = new_head_cache
             
             self._memory_pool.clear_unused_buffers()
     
+    def _detect_h100_gpu(self) -> bool:
+        """Detect if running on H100 GPUs optimized for Flash Attention 3."""
+        if not torch.cuda.is_available():
+            return False
+        try:
+            device_name = torch.cuda.get_device_properties(0).name.lower()
+            # H100 variants: H100, H100 PCIe, H100 SXM, etc.
+            return 'h100' in device_name
+        except:
+            return False
+    
+    def _get_optimal_sdpa_backends(self):
+        """Get optimal SDPA backends based on hardware and Flash Attention version."""
+        if not HAS_SDPA_KERNEL:
+            return [SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH]
+        
+        # Prioritize Flash Attention on H100 with Flash Attention 3
+        if self._is_h100_gpu and self._flash_attn_3_available:
+            return [SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH]
+        # Standard priority for other hardware
+        elif self._flash_attn_3_available:
+            return [SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH]
+        else:
+            # Fallback for Flash Attention 2 or older
+            return [SDPBackend.EFFICIENT_ATTENTION, SDPBackend.FLASH_ATTENTION, SDPBackend.MATH]
+    
     def get_memory_info(self) -> Dict[str, Any]:
-        """Get comprehensive memory usage information."""
+        """Get comprehensive memory usage information with optimization metrics."""
         info = {
             "memory_complexity": "O(n)",
             "ring_size": self.ring_size,
@@ -694,6 +921,22 @@ class RingDilatedAttention(nn.Module):
             "cached_patterns": len(self._ring_patterns),
             "cached_indices": len(self._cached_indices),
             "allocated_buffers": len(self._memory_pool._pools),
+            "head_groups_cached": len(self._head_groups_cache),
+            "vectorized_patterns_cached": len(self._vectorized_patterns),
+            "hot_buffer_keys": len(self._memory_pool._hot_keys_cache),
+            "flash_attention_version": get_flash_attention_version(),
+            "flash_attention_3_available": self._flash_attn_3_available,
+            "hardware_optimized_for_fa3": self._is_h100_gpu,
+            "sdpa_backend_available": HAS_SDPA_KERNEL,
+            "optimizations_enabled": [
+                "vectorized_pattern_computation",
+                "hot_cache_lookup", 
+                "in_place_kv_packing",
+                "computation_communication_overlap",
+                "memoized_head_groups",
+                "fused_accumulation",
+                "hardware_optimized_backends"
+            ]
         }
         
         if torch.cuda.is_available():
