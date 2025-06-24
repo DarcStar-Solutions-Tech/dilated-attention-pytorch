@@ -27,6 +27,7 @@ import logging
 from contextlib import nullcontext
 import time
 import os
+import threading
 
 import torch
 from torch import nn, Tensor
@@ -194,6 +195,8 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         self.num_heads = num_heads
         self.layer_norm = layer_norm
         self.gamma_init = gamma_init
+        self._segment_lengths = list(segment_lengths)
+        self._dilation_rates = list(dilation_rates)
         
         # Distributed configuration
         self.model_parallel = model_parallel and HAS_FAIRSCALE
@@ -229,13 +232,19 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         # Setup logging
         self._setup_logging(log_level)
         
+        # Initialize thread safety mechanisms
+        self._gradient_lock = threading.Lock()
+        self._monitoring_lock = threading.Lock()
+        
         # Validation
         self._validate_configuration()
         
         # Initialize core attention components
         if self.model_parallel:
             self._init_model_parallel_components(
-                embed_dim, num_heads, bias, device, dtype
+                embed_dim, num_heads, segment_lengths, dilation_rates,
+                dropout, bias, block_size, ring_size, use_checkpointing,
+                use_tf32, device, dtype
             )
         else:
             self._init_standard_components(
@@ -302,6 +311,20 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
                 f"head_dim ({head_dim}) must be <= 128"
             )
         
+        # Validate segment lengths and dilation rates
+        if not hasattr(self, '_segment_lengths') or not hasattr(self, '_dilation_rates'):
+            raise ValueError("segment_lengths and dilation_rates must be provided")
+            
+        if len(self._segment_lengths) != len(self._dilation_rates):
+            raise ValueError(
+                f"len(segment_lengths) ({len(self._segment_lengths)}) must equal "
+                f"len(dilation_rates) ({len(self._dilation_rates)})"
+            )
+        
+        # Validate ZeRO stage
+        if hasattr(self, 'zero_stage') and self.zero_stage not in [1, 2, 3]:
+            raise ValueError(f"zero_stage must be 1, 2, or 3, got {self.zero_stage}")
+        
         if self.use_deepspeed and not HAS_DEEPSPEED:
             raise ValueError("DeepSpeed requested but not available")
         
@@ -309,7 +332,9 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
             raise ValueError("Model parallelism requested but FairScale not available")
     
     def _init_model_parallel_components(
-        self, embed_dim, num_heads, bias, device, dtype
+        self, embed_dim, num_heads, segment_lengths, dilation_rates,
+        dropout, bias, block_size, ring_size, use_checkpointing,
+        use_tf32, device, dtype
     ):
         """Initialize components with model parallelism."""
         self.logger.info("Initializing with model parallelism")
@@ -334,7 +359,7 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         
         # Ring attention (handles its own parallelism)
         self.ring_attention = RingDilatedAttention(
-            segment_lengths=self.segment_lengths,
+            segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
             dropout=dropout,
             use_tf32=use_tf32,
@@ -385,9 +410,96 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         
         self.logger.info(f"Setting up DeepSpeed ZeRO stage {self.zero_stage}")
         
-        # DeepSpeed configuration will be handled by the training script
-        # This method sets up any module-specific DeepSpeed features
-        pass
+        # Configure ZeRO parameter partitioning hints
+        if HAS_DEEPSPEED:
+            self._deepspeed_config = {
+                "zero_optimization": {
+                    "stage": self.zero_stage,
+                    "offload_optimizer": {
+                        "device": "cpu" if self.cpu_offload else "none",
+                        "pin_memory": True
+                    },
+                    "offload_param": {
+                        "device": "cpu" if self.cpu_offload else "none",
+                        "pin_memory": True
+                    },
+                    "overlap_comm": self.overlap_communication,
+                    "contiguous_gradients": True,
+                    "sub_group_size": 1e9,
+                    "reduce_bucket_size": self.bucket_size * 1024 * 1024,
+                    "stage3_prefetch_bucket_size": self.bucket_size * 1024 * 1024,
+                    "stage3_param_persistence_threshold": 1e4,
+                    "stage3_max_live_parameters": 1e9,
+                    "stage3_max_reuse_distance": 1e9,
+                }
+            }
+            
+            # Add NVMe offloading if requested
+            if self.nvme_offload:
+                self._deepspeed_config["zero_optimization"]["offload_param"]["nvme_path"] = "/tmp/deepspeed_nvme"
+                self._deepspeed_config["zero_optimization"]["offload_optimizer"]["nvme_path"] = "/tmp/deepspeed_nvme"
+            
+            # Store configuration for external access
+            self.deepspeed_config = self._deepspeed_config
+            
+            # Apply DeepSpeed-specific optimizations to attention modules
+            self._apply_deepspeed_optimizations()
+    
+    def _apply_deepspeed_optimizations(self):
+        """Apply DeepSpeed-specific optimizations to attention modules."""
+        if not HAS_DEEPSPEED:
+            return
+        
+        # Mark large parameter groups for ZeRO partitioning
+        if hasattr(self, 'attention_core'):
+            # Mark attention parameters as high-priority for offloading
+            for name, param in self.attention_core.named_parameters():
+                if param.numel() > 1e6:  # Large parameters (>1M elements)
+                    param._deepspeed_offload = True
+                    
+        # Configure gradient compression if enabled
+        if self.use_gradient_compression:
+            self._setup_gradient_compression()
+    
+    def _setup_gradient_compression(self):
+        """Setup gradient compression for communication optimization."""
+        if not HAS_DEEPSPEED:
+            self.logger.warning("Gradient compression requested but DeepSpeed not available")
+            return
+        
+        # This would typically be configured in the training script
+        # Here we set up module-level hints
+        self._gradient_compression_config = {
+            "compression_training": {
+                "weight_quantization": {
+                    "shared_parameters": {
+                        "enabled": True,
+                        "quantizer_kernel": True,
+                        "schedule_offset": 1000,
+                        "quantize_groups": 1,
+                        "quantize_verbose": False,
+                        "quantization_type": "symmetric",
+                        "quantize_weight_in_forward": False,
+                        "rounding": "nearest",
+                        "fp16_mixed_quantize": {
+                            "enabled": False,
+                            "quantize_change_ratio": 0.001
+                        }
+                    }
+                },
+                "activation_quantization": {
+                    "shared_parameters": {
+                        "enabled": True,
+                        "quantization_type": "symmetric",
+                        "quantize_dtype": "int8",
+                        "range_calibration": "dynamic",
+                        "schedule_offset": 1000
+                    }
+                }
+            }
+        }
+        
+        self.logger.info("Gradient compression configuration prepared")
     
     def _setup_fault_tolerance(self):
         """Setup fault tolerance and checkpointing."""
@@ -431,6 +543,7 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
                         'zero_stage': self.zero_stage,
                     }
                 )
+                self._wandb_initialized = True
             except Exception as e:
                 self.logger.warning(f"Failed to initialize wandb: {e}")
     
@@ -482,28 +595,30 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
                     param.register_hook(gradient_hook)
     
     def _async_gradient_reduction(self, grad: Tensor) -> Tensor:
-        """Optimized asynchronous gradient reduction with communication bucketing."""
+        """Thread-safe asynchronous gradient reduction with communication bucketing."""
         if not dist.is_initialized() or self.world_size <= 1:
             return grad
         
-        # Initialize gradient communication state
-        if not hasattr(self, '_gradient_handles'):
-            self._gradient_handles = []
-            self._gradient_buckets = []
-            self._bucket_size_bytes = self.bucket_size * 1024 * 1024  # Convert MB to bytes
-            self._current_bucket = []
-            self._current_bucket_size = 0
-        
-        # Calculate gradient size in bytes
-        grad_size_bytes = grad.numel() * grad.element_size()
-        
-        # Add to current bucket
-        self._current_bucket.append(grad)
-        self._current_bucket_size += grad_size_bytes
-        
-        # If bucket is full, start async reduction
-        if self._current_bucket_size >= self._bucket_size_bytes:
-            self._flush_gradient_bucket()
+        with self._gradient_lock:
+            # Initialize gradient communication state
+            if not hasattr(self, '_gradient_handles'):
+                self._gradient_handles = []
+                self._gradient_buckets = []
+                self._bucket_size_bytes = self.bucket_size * 1024 * 1024  # Convert MB to bytes
+                self._current_bucket = []
+                self._current_bucket_size = 0
+            
+            # Calculate gradient size in bytes
+            grad_size_bytes = grad.numel() * grad.element_size()
+            
+            # Add to current bucket
+            self._current_bucket.append(grad)
+            self._current_bucket_size += grad_size_bytes
+            
+            # If bucket is full or we have too many small tensors, start async reduction
+            if (self._current_bucket_size >= self._bucket_size_bytes or 
+                len(self._current_bucket) >= 32):  # Prevent too many small tensors
+                self._flush_gradient_bucket()
         
         return grad
     
@@ -530,44 +645,46 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         self._current_bucket_size = 0
     
     def _synchronize_gradients(self):
-        """Optimized gradient synchronization with bucket reconstruction."""
-        if not hasattr(self, '_gradient_handles'):
-            return
-        
-        # Flush any remaining gradients in current bucket
-        if hasattr(self, '_current_bucket') and self._current_bucket:
-            self._flush_gradient_bucket()
-        
-        # Wait for all async operations and reconstruct gradients
-        for handle, bucket_flat, original_grads in self._gradient_handles:
-            handle.wait()
+        """Thread-safe gradient synchronization with bucket reconstruction."""
+        with self._gradient_lock:
+            if not hasattr(self, '_gradient_handles'):
+                return
             
-            # Reconstruct individual gradients from flattened bucket
-            offset = 0
-            for grad in original_grads:
-                grad_size = grad.numel()
-                grad.copy_(bucket_flat[offset:offset + grad_size].view_as(grad))
-                offset += grad_size
-        
-        self._gradient_handles.clear()
+            # Flush any remaining gradients in current bucket
+            if hasattr(self, '_current_bucket') and self._current_bucket:
+                self._flush_gradient_bucket()
+            
+            # Wait for all async operations and reconstruct gradients
+            for handle, bucket_flat, original_grads in self._gradient_handles:
+                handle.wait()
+                
+                # Reconstruct individual gradients from flattened bucket
+                offset = 0
+                for grad in original_grads:
+                    grad_size = grad.numel()
+                    grad.copy_(bucket_flat[offset:offset + grad_size].view_as(grad))
+                    offset += grad_size
+            
+            self._gradient_handles.clear()
     
     def _monitor_performance(self, forward_time: float, memory_usage: int):
-        """Monitor and log performance metrics."""
+        """Thread-safe performance monitoring and logging."""
         if not self.enable_monitoring:
             return
         
-        self._monitoring_state['forward_times'].append(forward_time)
-        self._monitoring_state['memory_usage'].append(memory_usage)
-        self._monitoring_state['step_count'] += 1
+        with self._monitoring_lock:
+            self._monitoring_state['forward_times'].append(forward_time)
+            self._monitoring_state['memory_usage'].append(memory_usage)
+            self._monitoring_state['step_count'] += 1
+            step_count = self._monitoring_state['step_count']  # Capture under lock
         
-        # Log to wandb periodically
-        if (HAS_WANDB and self.rank == 0 and 
-            self._monitoring_state['step_count'] % 100 == 0):
+        # Log to wandb periodically (outside lock to avoid blocking)
+        if (HAS_WANDB and self.rank == 0 and step_count % 100 == 0):
             try:
                 wandb.log({
                     'forward_time_ms': forward_time * 1000,
                     'memory_usage_mb': memory_usage / 1024**2,
-                    'step': self._monitoring_state['step_count'],
+                    'step': step_count,
                 })
             except Exception as e:
                 self.logger.warning(f"Failed to log to wandb: {e}")
@@ -653,6 +770,14 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         
         if not hasattr(self, '_model_parallel_buffers'):
             self._model_parallel_buffers = {}
+            self._buffer_access_counts = {}
+            self._buffer_access_order = []
+            self._max_buffer_cache_size = 20  # Reasonable limit for production
+        
+        # Implement LRU eviction if cache is full
+        if buffer_key not in self._model_parallel_buffers:
+            if len(self._model_parallel_buffers) >= self._max_buffer_cache_size:
+                self._evict_least_used_buffer()
         
         if buffer_key not in self._model_parallel_buffers:
             self._model_parallel_buffers[buffer_key] = {
@@ -665,6 +790,9 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
                 )
             }
         
+        # Update access tracking for LRU
+        self._update_buffer_access(buffer_key)
+        
         buffers = self._model_parallel_buffers[buffer_key]
         
         # Optimized QKV projection with smart input detection
@@ -675,27 +803,47 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
             qkv = self.qkv_proj(query)
             
             # Split QKV accounting for column parallelism
-            local_embed_dim = self.embed_dim // dist.get_world_size()
+            local_embed_dim = self.embed_dim // self.world_size
             
             # Use view and copy for efficiency
             q_view = qkv[:, :, :local_embed_dim].view(target_shape)
             k_view = qkv[:, :, local_embed_dim:2*local_embed_dim].view(target_shape)
             v_view = qkv[:, :, 2*local_embed_dim:].view(target_shape)
             
-            buffers['q'].copy_(q_view)
-            buffers['k'].copy_(k_view)
-            buffers['v'].copy_(v_view)
+            # Optimized buffer assignment: avoid copy when possible
+            if (q_view.is_contiguous() and buffers['q'].is_contiguous() and 
+                q_view.stride() == buffers['q'].stride()):
+                # Use views when memory layout is compatible
+                buffers['q'] = q_view
+                buffers['k'] = k_view  
+                buffers['v'] = v_view
+            else:
+                # Fallback to copy when necessary
+                buffers['q'].copy_(q_view)
+                buffers['k'].copy_(k_view)
+                buffers['v'].copy_(v_view)
         else:
             # Separate projections for cross-attention
             qkv_query = self.qkv_proj(query)
             qkv_key = self.qkv_proj(key)
             qkv_value = self.qkv_proj(value)
             
-            local_embed_dim = self.embed_dim // dist.get_world_size()
+            local_embed_dim = self.embed_dim // self.world_size
             
-            buffers['q'].copy_(qkv_query[:, :, :local_embed_dim].view(target_shape))
-            buffers['k'].copy_(qkv_key[:, :, local_embed_dim:2*local_embed_dim].view(target_shape))
-            buffers['v'].copy_(qkv_value[:, :, 2*local_embed_dim:].view(target_shape))
+            # Optimized cross-attention buffer assignment
+            q_view = qkv_query[:, :, :local_embed_dim].view(target_shape)
+            k_view = qkv_key[:, :, local_embed_dim:2*local_embed_dim].view(target_shape)
+            v_view = qkv_value[:, :, 2*local_embed_dim:].view(target_shape)
+            
+            if (q_view.is_contiguous() and buffers['q'].is_contiguous() and 
+                q_view.stride() == buffers['q'].stride()):
+                buffers['q'] = q_view
+                buffers['k'] = k_view
+                buffers['v'] = v_view
+            else:
+                buffers['q'].copy_(q_view)
+                buffers['k'].copy_(k_view)
+                buffers['v'].copy_(v_view)
         
         # Apply ring attention
         attn_output = self.ring_attention(buffers['q'], buffers['k'], buffers['v'], is_causal)
@@ -711,6 +859,31 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         
         return output, None
     
+    def _update_buffer_access(self, buffer_key):
+        """Update buffer access tracking for LRU eviction."""
+        # Update access count
+        self._buffer_access_counts[buffer_key] = self._buffer_access_counts.get(buffer_key, 0) + 1
+        
+        # Update access order (move to end for most recent)
+        if buffer_key in self._buffer_access_order:
+            self._buffer_access_order.remove(buffer_key)
+        self._buffer_access_order.append(buffer_key)
+    
+    def _evict_least_used_buffer(self):
+        """Evict the least recently used buffer to make space."""
+        if not self._buffer_access_order:
+            return
+        
+        # Find least recently used (first in access order)
+        lru_key = self._buffer_access_order[0]
+        
+        # Remove from all tracking structures
+        del self._model_parallel_buffers[lru_key]
+        del self._buffer_access_counts[lru_key]
+        self._buffer_access_order.remove(lru_key)
+        
+        self.logger.debug(f"Evicted LRU buffer: {lru_key}")
+    
     def _handle_forward_failure(
         self, 
         error: Exception, 
@@ -719,57 +892,119 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         value: Tensor, 
         is_causal: bool
     ) -> Tuple[Tensor, Optional[Tensor]]:
-        """Handle forward pass failures with fault tolerance."""
+        """Improved fault-tolerant error recovery with multiple strategies."""
         self.logger.warning(f"Handling forward failure: {error}")
         
-        self._fault_tolerance_state['failure_count'] += 1
+        if hasattr(self, '_fault_tolerance_state'):
+            self._fault_tolerance_state['failure_count'] += 1
+            failure_count = self._fault_tolerance_state['failure_count']
+        else:
+            failure_count = 1
         
-        # Try to recover by reducing memory usage
+        # Strategy 1: Memory recovery for OOM errors
         if "out of memory" in str(error).lower():
-            self.logger.info("Attempting memory recovery")
-            torch.cuda.empty_cache()
+            self.logger.info(f"Attempting memory recovery (attempt {failure_count})")
             
-            # Retry with gradient checkpointing
-            original_checkpointing = self.activation_checkpointing
-            self.activation_checkpointing = True
+            # Clear all caches first
+            self.clear_cache()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
             
-            try:
-                if hasattr(self, 'attention_core'):
-                    output, weights = self.attention_core(
-                        query, key, value, is_causal, False, None
+            # Try with reduced batch size if possible
+            batch_size = query.size(0)
+            if batch_size > 1 and failure_count < 3:
+                self.logger.info(f"Attempting batch size reduction: {batch_size} -> {batch_size // 2}")
+                try:
+                    # Split batch and process separately
+                    mid = batch_size // 2
+                    output1, _ = self._safe_forward_chunk(
+                        query[:mid], key[:mid], value[:mid], is_causal
                     )
-                else:
-                    output, weights = self._model_parallel_forward(
-                        query, key, value, is_causal, False, None
+                    output2, _ = self._safe_forward_chunk(
+                        query[mid:], key[mid:], value[mid:], is_causal
                     )
-                
-                self.logger.info("Recovery successful")
-                return output, weights
-                
-            finally:
-                self.activation_checkpointing = original_checkpointing
+                    output = torch.cat([output1, output2], dim=0)
+                    self.logger.info("Batch splitting recovery successful")
+                    return output, None
+                except Exception as e:
+                    self.logger.warning(f"Batch splitting failed: {e}")
+            
+            # Try with different precision
+            if query.dtype == torch.float32 and failure_count < 2:
+                self.logger.info("Attempting half precision recovery")
+                try:
+                    query_half = query.half()
+                    key_half = key.half() 
+                    value_half = value.half()
+                    
+                    output, weights = self._safe_forward_chunk(
+                        query_half, key_half, value_half, is_causal
+                    )
+                    output = output.float()  # Convert back
+                    self.logger.info("Half precision recovery successful")
+                    return output, weights
+                except Exception as e:
+                    self.logger.warning(f"Half precision recovery failed: {e}")
         
-        # If recovery fails, re-raise the original error
+        # Strategy 2: Distributed communication errors
+        elif "nccl" in str(error).lower() or "distributed" in str(error).lower():
+            self.logger.info("Attempting distributed communication recovery")
+            try:
+                # Fallback to single device computation
+                if hasattr(self, 'attention_core'):
+                    # Temporarily disable ring attention
+                    original_ring_size = self.attention_core.ring_attention.ring_size
+                    self.attention_core.ring_attention.ring_size = 1
+                    try:
+                        output, weights = self.attention_core(
+                            query, key, value, is_causal, False, None
+                        )
+                        self.logger.info("Single device fallback successful")
+                        return output, weights
+                    finally:
+                        self.attention_core.ring_attention.ring_size = original_ring_size
+            except Exception as e:
+                self.logger.warning(f"Distributed recovery failed: {e}")
+        
+        # If all recovery strategies fail, re-raise the original error
+        self.logger.error(f"All recovery strategies failed after {failure_count} attempts")
         raise error
+    
+    def _safe_forward_chunk(
+        self, query: Tensor, key: Tensor, value: Tensor, is_causal: bool
+    ) -> Tuple[Tensor, Optional[Tensor]]:
+        """Safe forward pass for error recovery with minimal features."""
+        if hasattr(self, 'attention_core'):
+            return self.attention_core(query, key, value, is_causal, False, None)
+        else:
+            return self._model_parallel_forward(query, key, value, is_causal, False, None)
     
     def clear_cache(self):
         """Clear all cached buffers and patterns to free memory."""
-        # Clear model parallel buffers
-        if hasattr(self, '_model_parallel_buffers'):
-            self._model_parallel_buffers.clear()
+        # Thread-safe cache clearing
+        with getattr(self, '_gradient_lock', nullcontext()):
+            # Clear model parallel buffers and tracking
+            if hasattr(self, '_model_parallel_buffers'):
+                self._model_parallel_buffers.clear()
+            if hasattr(self, '_buffer_access_counts'):
+                self._buffer_access_counts.clear()
+            if hasattr(self, '_buffer_access_order'):
+                self._buffer_access_order.clear()
+            
+            # Clear gradient communication state
+            if hasattr(self, '_gradient_handles'):
+                self._gradient_handles.clear()
+            if hasattr(self, '_current_bucket'):
+                self._current_bucket.clear()
+                self._current_bucket_size = 0
         
-        # Clear gradient communication state
-        if hasattr(self, '_gradient_handles'):
-            self._gradient_handles.clear()
-        if hasattr(self, '_current_bucket'):
-            self._current_bucket.clear()
-            self._current_bucket_size = 0
-        
-        # Clear monitoring state
-        if hasattr(self, '_monitoring_state'):
-            for key in ['forward_times', 'memory_usage', 'communication_times']:
-                if key in self._monitoring_state:
-                    self._monitoring_state[key].clear()
+        # Clear monitoring state with its own lock
+        with getattr(self, '_monitoring_lock', nullcontext()):
+            if hasattr(self, '_monitoring_state'):
+                for key in ['forward_times', 'memory_usage', 'communication_times']:
+                    if key in self._monitoring_state:
+                        self._monitoring_state[key].clear()
         
         # Clear attention core cache if available
         if hasattr(self, 'attention_core') and hasattr(self.attention_core, 'clear_cache'):
@@ -786,6 +1021,8 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         # Clear CUDA cache if available
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+            
+        self.logger.debug("Cache cleared successfully")
     
     def get_memory_info(self) -> Dict[str, Any]:
         """Get comprehensive memory usage information with advanced metrics."""
@@ -829,6 +1066,22 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
             })
         
         return info
+    
+    def cleanup(self):
+        """Clean up resources including WandB connections."""
+        # Close WandB if it was initialized
+        if HAS_WANDB and hasattr(self, '_wandb_initialized'):
+            try:
+                wandb.finish()
+            except Exception as e:
+                self.logger.warning(f"Failed to close wandb: {e}")
+        
+        # Clear all caches
+        self.clear_cache()
+        
+        # Log cleanup
+        if hasattr(self, 'logger'):
+            self.logger.info("RingAdvancedDistributedDilatedAttention cleanup completed")
     
     def extra_repr(self) -> str:
         """String representation for debugging."""

@@ -3,6 +3,17 @@ from typing import Sequence, Optional, Union, Tuple
 import torch
 from torch import nn, Tensor
 
+# Handle xformers availability
+try:
+    import xformers.ops as xops
+    HAS_XFORMERS = True
+except ImportError:
+    HAS_XFORMERS = False
+    # Create dummy xops for type hints
+    class xops:
+        class AttentionOp:
+            pass
+
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
 
 

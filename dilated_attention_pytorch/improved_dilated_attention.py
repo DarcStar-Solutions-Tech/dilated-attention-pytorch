@@ -4,7 +4,18 @@ import torch
 from einops import rearrange
 from torch import nn
 import torch.nn.functional as F
-from torch.nn.attention import sdpa_kernel, SDPBackend
+
+# Handle torch.nn.attention availability
+try:
+    from torch.nn.attention import sdpa_kernel, SDPBackend
+    HAS_SDPA_KERNEL = True
+except ImportError:
+    HAS_SDPA_KERNEL = False
+    # Fallback for older PyTorch versions
+    class SDPBackend:
+        FLASH_ATTENTION = "flash_attention"
+        EFFICIENT_ATTENTION = "efficient_attention"
+        MATH = "math"
 
 class ImprovedDilatedAttention(nn.Module):
     def __init__(self, segment_lengths, dilation_rates,
@@ -84,14 +95,24 @@ class ImprovedDilatedAttention(nn.Module):
             v_flat = v_slice.view(bn, dilated_s, g, d)
 
             # Optimized attention computation
-            with sdpa_kernel([SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH]):
+            if HAS_SDPA_KERNEL:
+                with sdpa_kernel([SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH]):
+                    x = F.scaled_dot_product_attention(
+                        q_flat, k_flat, v_flat,
+                        attn_mask=None,
+                        dropout_p=self.drop if self.training else 0.0,
+                        is_causal=is_causal,
+                        scale=None,
+                        enable_gqa=False
+                    )
+            else:
+                # Fallback for older PyTorch versions
                 x = F.scaled_dot_product_attention(
                     q_flat, k_flat, v_flat,
                     attn_mask=None,
                     dropout_p=self.drop if self.training else 0.0,
                     is_causal=is_causal,
                     scale=None,
-                    enable_gqa=False
                 )
 
             # Reshape back and add to output in-place
@@ -112,5 +133,6 @@ class ImprovedDilatedAttention(nn.Module):
         return out
 
 # Optionally compile for further fusion:
-ImprovedDilatedAttention = torch.compile(ImprovedDilatedAttention, fullgraph=True)
+# Note: Disabled by default due to compatibility issues. 
+# To enable: ImprovedDilatedAttention = torch.compile(ImprovedDilatedAttention, fullgraph=True)
 

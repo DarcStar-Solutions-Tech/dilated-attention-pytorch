@@ -29,7 +29,18 @@ import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
 import torch.distributed as dist
-from torch.nn.attention import sdpa_kernel, SDPBackend
+
+# Handle torch.nn.attention availability
+try:
+    from torch.nn.attention import sdpa_kernel, SDPBackend
+    HAS_SDPA_KERNEL = True
+except ImportError:
+    HAS_SDPA_KERNEL = False
+    # Fallback for older PyTorch versions
+    class SDPBackend:
+        FLASH_ATTENTION = "flash_attention"
+        EFFICIENT_ATTENTION = "efficient_attention"
+        MATH = "math"
 
 
 class RingAttentionMemoryPool:
@@ -40,19 +51,37 @@ class RingAttentionMemoryPool:
         self._pools: Dict[tuple, torch.Tensor] = {}
         self._usage_count: Dict[tuple, int] = {}
     
-    def get_buffer(self, shape: tuple, dtype: torch.dtype, key: str) -> torch.Tensor:
+    def get_buffer(self, shape: tuple, dtype: torch.dtype, key: str, pin_memory: bool = False) -> torch.Tensor:
         """Get buffer from pool or allocate new one."""
-        pool_key = (shape, dtype, key)
+        pool_key = (shape, dtype, key, pin_memory)
         
         if pool_key not in self._pools:
-            self._pools[pool_key] = torch.empty(shape, dtype=dtype, device=self.device)
+            if self.device.type == 'cuda' and pin_memory:
+                # Allocate pinned memory for faster GPU transfers
+                self._pools[pool_key] = torch.empty(
+                    shape, dtype=dtype, device='cpu', pin_memory=True
+                ).to(self.device, non_blocking=True)
+            else:
+                self._pools[pool_key] = torch.empty(shape, dtype=dtype, device=self.device)
             self._usage_count[pool_key] = 0
         
         self._usage_count[pool_key] += 1
         return self._pools[pool_key]
     
-    def clear_unused_buffers(self, threshold: int = 100):
+    def clear_unused_buffers(self, threshold: int = 100, reset_counters: bool = True):
         """Clear buffers that haven't been used recently."""
+        if not self._usage_count:
+            return
+        
+        # Use adaptive threshold based on memory pressure
+        if torch.cuda.is_available():
+            memory_free = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated()
+            memory_ratio = memory_free / torch.cuda.get_device_properties(0).total_memory
+            if memory_ratio < 0.1:  # Low memory, be more aggressive
+                threshold = max(1, threshold // 4)
+            elif memory_ratio > 0.5:  # High memory, be more conservative  
+                threshold = threshold * 2
+        
         keys_to_remove = [
             key for key, count in self._usage_count.items() 
             if count < threshold
@@ -60,6 +89,12 @@ class RingAttentionMemoryPool:
         for key in keys_to_remove:
             del self._pools[key]
             del self._usage_count[key]
+        
+        # Reset counters to prevent overflow and provide fair chance for new buffers
+        if reset_counters:
+            min_count = min(self._usage_count.values()) if self._usage_count else 0
+            for key in self._usage_count:
+                self._usage_count[key] = max(0, self._usage_count[key] - min_count)
 
 class RingDilatedAttention(nn.Module):
     """
@@ -138,6 +173,10 @@ class RingDilatedAttention(nn.Module):
         self._rotation_buffers = {}
         self._communication_buffers = {}
         
+        # Thread safety for concurrent operations
+        self._buffer_lock = threading.Lock()
+        self._cache_lock = threading.Lock()
+        
         # Setup ring communication if distributed
         self._setup_ring_communication()
     
@@ -215,7 +254,7 @@ class RingDilatedAttention(nn.Module):
         return ring_patterns
     
     def _allocate_ring_buffers(self, k: Tensor, v: Tensor):
-        """Allocate ring communication buffers with memory pool optimization."""
+        """Allocate ring communication buffers with memory pool optimization and thread safety."""
         if self.ring_group is None:
             return
         
@@ -225,31 +264,33 @@ class RingDilatedAttention(nn.Module):
         local_seq_len = n // self.ring_size
         buffer_shape = (b, local_seq_len, h, d)
         
-        # Use memory pool for efficient buffer allocation
-        if (self._kv_send_buffer is None or 
-            self._kv_send_buffer.shape != buffer_shape or
-            self._kv_send_buffer.dtype != k.dtype):
+        # Thread-safe buffer allocation
+        with self._buffer_lock:
+            # Use memory pool for efficient buffer allocation
+            if (self._kv_send_buffer is None or 
+                self._kv_send_buffer.shape != buffer_shape or
+                self._kv_send_buffer.dtype != k.dtype):
+                
+                self._kv_send_buffer = self._memory_pool.get_buffer(
+                    buffer_shape, k.dtype, "kv_send"
+                )
+                self._kv_recv_buffer = self._memory_pool.get_buffer(
+                    buffer_shape, k.dtype, "kv_recv"
+                )
+                
+                # Allocate optimized packed communication buffer
+                packed_size = 2 * b * local_seq_len * h * d  # K + V
+                self._packed_communication_buffer = self._memory_pool.get_buffer(
+                    (packed_size,), k.dtype, "packed_comm"
+                )
             
-            self._kv_send_buffer = self._memory_pool.get_buffer(
-                buffer_shape, k.dtype, "kv_send"
-            )
-            self._kv_recv_buffer = self._memory_pool.get_buffer(
-                buffer_shape, k.dtype, "kv_recv"
-            )
-            
-            # Allocate optimized packed communication buffer
-            packed_size = 2 * b * local_seq_len * h * d  # K + V
-            self._packed_communication_buffer = self._memory_pool.get_buffer(
-                (packed_size,), k.dtype, "packed_comm"
-            )
-        
-        # Pre-allocate rotation buffers for in-place operations
-        buffer_key = (buffer_shape, k.dtype)
-        if buffer_key not in self._rotation_buffers:
-            self._rotation_buffers[buffer_key] = {
-                'k': self._memory_pool.get_buffer(buffer_shape, k.dtype, "rot_k"),
-                'v': self._memory_pool.get_buffer(buffer_shape, k.dtype, "rot_v")
-            }
+            # Pre-allocate rotation buffers for in-place operations
+            buffer_key = (buffer_shape, k.dtype)
+            if buffer_key not in self._rotation_buffers:
+                self._rotation_buffers[buffer_key] = {
+                    'k': self._memory_pool.get_buffer(buffer_shape, k.dtype, "rot_k"),
+                    'v': self._memory_pool.get_buffer(buffer_shape, k.dtype, "rot_v")
+                }
     
     def _ring_attention_step(
         self, 
@@ -353,7 +394,17 @@ class RingDilatedAttention(nn.Module):
                 v_flat = v_flat.repeat(repeat_factor, 1, 1, 1)[:b * num_segments_q]
             
             # Apply scaled dot product attention
-            with sdpa_kernel([SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH]):
+            if HAS_SDPA_KERNEL:
+                with sdpa_kernel([SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH]):
+                    attn_out = F.scaled_dot_product_attention(
+                        q_flat, k_flat, v_flat,
+                        attn_mask=None,
+                        dropout_p=self.dropout if self.training else 0.0,
+                        is_causal=is_causal and ring_step == 0,  # Only causal for current ring position
+                        scale=None,
+                    )
+            else:
+                # Fallback for older PyTorch versions
                 attn_out = F.scaled_dot_product_attention(
                     q_flat, k_flat, v_flat,
                     attn_mask=None,
@@ -425,7 +476,7 @@ class RingDilatedAttention(nn.Module):
     
     def _ring_forward(self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool = False) -> Tensor:
         """
-        Ring attention forward pass for distributed computation.
+        Ring attention forward pass for distributed computation with enhanced error recovery.
         
         This implements the core ring attention algorithm where each device
         processes a local portion of queries while keys/values are rotated
@@ -434,55 +485,94 @@ class RingDilatedAttention(nn.Module):
         b, n, h, d = q.shape
         device = q.device
         
-        # Calculate local sequence lengths
-        local_seq_len = n // self.ring_size
-        start_idx = self.rank * local_seq_len
-        end_idx = start_idx + local_seq_len
-        
-        # Handle remainder
-        if self.rank == self.ring_size - 1:
-            end_idx = n
-            local_seq_len = end_idx - start_idx
-        
-        # Get local query segment
-        q_local = q[:, start_idx:end_idx]  # [b, local_seq_len, h, d]
-        
-        # Get local key/value segments  
-        k_local = k[:, start_idx:end_idx]  # [b, local_seq_len, h, d]
-        v_local = v[:, start_idx:end_idx]  # [b, local_seq_len, h, d]
-        
-        # Allocate ring communication buffers
-        self._allocate_ring_buffers(k_local, v_local)
-        
-        # Initialize output accumulator
-        output = torch.zeros_like(q_local)
-        
-        # Ring attention steps
-        k_ring = k_local.clone()
-        v_ring = v_local.clone()
-        
-        for step in range(self.ring_size):
-            # Compute attention with current k/v ring segment
-            if self.use_checkpointing:
-                step_output = torch.utils.checkpoint.checkpoint(
-                    self._ring_attention_step,
-                    q_local, k_ring, v_ring, is_causal, step,
-                    use_reentrant=False
-                )
-            else:
-                step_output = self._ring_attention_step(q_local, k_ring, v_ring, is_causal, step)
+        try:
+            # Calculate local sequence lengths
+            local_seq_len = n // self.ring_size
+            start_idx = self.rank * local_seq_len
+            end_idx = start_idx + local_seq_len
             
-            # Accumulate results
-            output.add_(step_output)
+            # Handle remainder
+            if self.rank == self.ring_size - 1:
+                end_idx = n
+                local_seq_len = end_idx - start_idx
             
-            # Rotate k,v to next position in ring (except last step)
-            if step < self.ring_size - 1:
-                k_ring, v_ring = self._rotate_kv_ring(k_ring, v_ring)
-        
-        # Gather results from all devices
-        output_gathered = self._gather_ring_outputs(output, local_seq_len)
-        
-        return output_gathered
+            # Get local query segment
+            q_local = q[:, start_idx:end_idx]  # [b, local_seq_len, h, d]
+            
+            # Get local key/value segments  
+            k_local = k[:, start_idx:end_idx]  # [b, local_seq_len, h, d]
+            v_local = v[:, start_idx:end_idx]  # [b, local_seq_len, h, d]
+            
+            # Allocate ring communication buffers
+            self._allocate_ring_buffers(k_local, v_local)
+            
+            # Initialize output accumulator
+            output = torch.zeros_like(q_local)
+            
+            # Ring attention steps
+            k_ring = k_local.clone()
+            v_ring = v_local.clone()
+            
+            for step in range(self.ring_size):
+                try:
+                    # Compute attention with current k/v ring segment
+                    if self.use_checkpointing:
+                        step_output = torch.utils.checkpoint.checkpoint(
+                            self._ring_attention_step,
+                            q_local, k_ring, v_ring, is_causal, step,
+                            use_reentrant=False
+                        )
+                    else:
+                        step_output = self._ring_attention_step(q_local, k_ring, v_ring, is_causal, step)
+                    
+                    # Accumulate results
+                    output.add_(step_output)
+                    
+                except RuntimeError as e:
+                    if "out of memory" in str(e).lower():
+                        # Memory recovery strategy
+                        torch.cuda.empty_cache()
+                        self.clear_cache(force=True)
+                        
+                        # Retry with checkpointing enabled
+                        if not self.use_checkpointing:
+                            step_output = torch.utils.checkpoint.checkpoint(
+                                self._ring_attention_step,
+                                q_local, k_ring, v_ring, is_causal, step,
+                                use_reentrant=False
+                            )
+                            output.add_(step_output)
+                        else:
+                            raise e  # Re-raise if already using checkpointing
+                    else:
+                        raise e
+                
+                # Rotate k,v to next position in ring (except last step)
+                if step < self.ring_size - 1:
+                    try:
+                        k_ring, v_ring = self._rotate_kv_ring(k_ring, v_ring)
+                    except Exception as comm_error:
+                        if self.ring_size > 1:
+                            warnings.warn(
+                                f"Ring communication failed at step {step}: {comm_error}. "
+                                f"Falling back to single device computation."
+                            )
+                            # Fall back to single device computation
+                            return self._single_device_forward(q, k, v, is_causal)
+                        else:
+                            raise comm_error
+            
+            # Gather results from all devices
+            output_gathered = self._gather_ring_outputs(output, local_seq_len)
+            
+            return output_gathered
+            
+        except Exception as e:
+            # Final fallback: single device computation
+            warnings.warn(
+                f"Ring attention failed: {e}. Falling back to single device computation."
+            )
+            return self._single_device_forward(q, k, v, is_causal)
     
     def _rotate_kv_ring(self, k: Tensor, v: Tensor) -> Tuple[Tensor, Tensor]:
         """
@@ -510,14 +600,29 @@ class RingDilatedAttention(nn.Module):
         k_flat = k.flatten()
         v_flat = v.flatten()
         k_size = k_flat.numel()
+        total_size = k_size + v_flat.numel()
+        
+        # Ensure communication buffer is large enough with bounds checking
+        if self._packed_communication_buffer.numel() < total_size:
+            # Validate buffer size is reasonable (prevent excessive memory allocation)
+            max_reasonable_size = 1024 * 1024 * 1024  # 1GB max buffer size
+            if total_size > max_reasonable_size:
+                raise RuntimeError(
+                    f"Requested communication buffer size ({total_size / (1024*1024):.1f}MB) "
+                    f"exceeds maximum reasonable size ({max_reasonable_size / (1024*1024):.1f}MB). "
+                    f"Consider reducing sequence length or ring size."
+                )
+            
+            self._packed_communication_buffer = self._memory_pool.get_buffer(
+                (total_size,), k.dtype, "packed_comm_resized"
+            )
         
         # Create packed buffer view
-        packed_send = self._packed_communication_buffer[:k_size + v_flat.numel()]
+        packed_send = self._packed_communication_buffer[:total_size]
         packed_recv = torch.empty_like(packed_send)
         
-        # Pack data
-        packed_send[:k_size].copy_(k_flat)
-        packed_send[k_size:].copy_(v_flat)
+        # Use torch.cat for more efficient packing
+        torch.cat([k_flat, v_flat], out=packed_send)
         
         # Single async communication for both K and V
         send_req = dist.isend(packed_send, dst=send_rank, group=self.ring_group)
@@ -558,12 +663,27 @@ class RingDilatedAttention(nn.Module):
         # Concatenate to form full sequence
         return torch.cat(output_list, dim=1)
     
-    def clear_cache(self):
-        """Clear cached patterns and buffers to free memory."""
-        self._cached_indices.clear()
-        self._ring_patterns.clear()
-        self._rotation_buffers.clear()
-        self._memory_pool.clear_unused_buffers()
+    def clear_cache(self, force: bool = False):
+        """Clear cached patterns and buffers to free memory with thread safety."""
+        with self._cache_lock:
+            if force:
+                self._cached_indices.clear()
+                self._ring_patterns.clear()
+                self._rotation_buffers.clear()
+            else:
+                # Smart cache cleanup - keep frequently used patterns
+                if len(self._cached_indices) > 50:  # Threshold for cleanup
+                    # Keep only the most recent half of cached indices
+                    keys_to_keep = list(self._cached_indices.keys())[-25:]
+                    new_cache = {k: self._cached_indices[k] for k in keys_to_keep}
+                    self._cached_indices = new_cache
+                
+                if len(self._ring_patterns) > 10:  # Ring patterns are expensive to recompute
+                    keys_to_keep = list(self._ring_patterns.keys())[-5:]
+                    new_patterns = {k: self._ring_patterns[k] for k in keys_to_keep}
+                    self._ring_patterns = new_patterns
+            
+            self._memory_pool.clear_unused_buffers()
     
     def get_memory_info(self) -> Dict[str, Any]:
         """Get comprehensive memory usage information."""

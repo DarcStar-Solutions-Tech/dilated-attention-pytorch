@@ -22,6 +22,7 @@ This implementation combines:
 
 from typing import Optional, Sequence, Union, Tuple, Dict, Any
 import warnings
+import threading
 
 import torch
 from torch import nn, Tensor
@@ -164,6 +165,10 @@ class RingMultiheadDilatedAttention(nn.Module):
         self._qkv_output_buffers = {}
         self._output_projection_cache = {}
         
+        # Thread safety for buffer management
+        self._buffer_lock = threading.Lock()
+        self._cache_lock = threading.Lock()
+        
         # Initialize parameters
         self._reset_parameters()
         
@@ -236,21 +241,61 @@ class RingMultiheadDilatedAttention(nn.Module):
         head_dim = self.embed_dim // self.num_heads
         target_shape = (batch_size, seq_len, self.num_heads, head_dim)
         
-        # Pre-allocate output buffers for efficient memory usage
+        # Thread-safe buffer allocation
         buffer_key = (target_shape, query.dtype, query.device)
-        if buffer_key not in self._qkv_output_buffers:
-            self._qkv_output_buffers[buffer_key] = {
-                'q': torch.empty(target_shape, dtype=query.dtype, device=query.device),
-                'k': torch.empty(target_shape, dtype=query.dtype, device=query.device),
-                'v': torch.empty(target_shape, dtype=query.dtype, device=query.device)
-            }
+        with self._buffer_lock:
+            # Pre-allocate output buffers for efficient memory usage
+            if buffer_key not in self._qkv_output_buffers:
+                self._qkv_output_buffers[buffer_key] = {
+                    'q': torch.empty(target_shape, dtype=query.dtype, device=query.device),
+                    'k': torch.empty(target_shape, dtype=query.dtype, device=query.device),
+                    'v': torch.empty(target_shape, dtype=query.dtype, device=query.device)
+                }
         
-        # Ensure buffers match current input dimensions
+        # Ensure buffers match current input dimensions - use resize for efficiency
         buffers = self._qkv_output_buffers[buffer_key]
         if buffers['q'].shape != target_shape:
-            buffers['q'] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
-            buffers['k'] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
-            buffers['v'] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
+            # Validate target shape is reasonable before allocation
+            total_elements = 1
+            for dim in target_shape:
+                total_elements *= dim
+            
+            max_reasonable_elements = 100 * 1024 * 1024  # 100M elements max
+            if total_elements > max_reasonable_elements:
+                raise RuntimeError(
+                    f"Requested buffer size ({total_elements} elements, "
+                    f"~{total_elements * 4 / (1024*1024):.1f}MB) exceeds maximum reasonable size. "
+                    f"Consider reducing batch size or sequence length."
+                )
+            
+            # Resize existing buffers instead of recreating
+            try:
+                buffers['q'].resize_(target_shape)
+                buffers['k'].resize_(target_shape) 
+                buffers['v'].resize_(target_shape)
+            except RuntimeError as resize_error:
+                # Enhanced fallback with error recovery
+                try:
+                    # Clear old buffers first
+                    del buffers['q'], buffers['k'], buffers['v']
+                    torch.cuda.empty_cache() if torch.cuda.is_available() else None
+                    
+                    # Recreate buffers
+                    buffers['q'] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
+                    buffers['k'] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
+                    buffers['v'] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
+                    self._qkv_output_buffers[buffer_key] = buffers
+                except RuntimeError as alloc_error:
+                    # Ultimate fallback: use smaller batch processing
+                    if batch_size > 1:
+                        warnings.warn(
+                            f"Buffer allocation failed ({alloc_error}). "
+                            f"Consider reducing batch size from {batch_size}."
+                        )
+                    raise RuntimeError(
+                        f"Failed to allocate QKV buffers: resize failed ({resize_error}), "
+                        f"recreation failed ({alloc_error})"
+                    )
         
         # Optimized projection handling
         is_self_attention = (torch.equal(query, key) and torch.equal(key, value))
@@ -335,15 +380,44 @@ class RingMultiheadDilatedAttention(nn.Module):
         else:
             q, k, v = self._apply_fused_qkv_projection(query, key, value)
         
-        # Apply Ring Dilated Attention
-        if self.use_checkpointing and self.training:
-            attn_output = torch.utils.checkpoint.checkpoint(
-                self.ring_attention,
-                q, k, v, is_causal,
-                use_reentrant=False
-            )
-        else:
-            attn_output = self.ring_attention(q, k, v, is_causal)
+        # Apply Ring Dilated Attention with error recovery
+        try:
+            if self.use_checkpointing and self.training:
+                attn_output = torch.utils.checkpoint.checkpoint(
+                    self.ring_attention,
+                    q, k, v, is_causal,
+                    use_reentrant=False
+                )
+            else:
+                attn_output = self.ring_attention(q, k, v, is_causal)
+                
+        except RuntimeError as e:
+            if "out of memory" in str(e).lower():
+                # Memory recovery strategy
+                torch.cuda.empty_cache() if torch.cuda.is_available() else None
+                self.clear_cache()
+                
+                # Retry with checkpointing enabled if not already
+                if not self.use_checkpointing:
+                    warnings.warn(
+                        f"OOM detected, retrying with gradient checkpointing enabled"
+                    )
+                    attn_output = torch.utils.checkpoint.checkpoint(
+                        self.ring_attention,
+                        q, k, v, is_causal,
+                        use_reentrant=False
+                    )
+                else:
+                    # If already using checkpointing, suggest reducing inputs
+                    if batch_size > 1:
+                        raise RuntimeError(
+                            f"Out of memory even with checkpointing. "
+                            f"Consider reducing batch size from {batch_size} or sequence length."
+                        ) from e
+                    else:
+                        raise e
+            else:
+                raise e
         
         # Optimized reshape: use view for zero-copy operation
         attn_flat = attn_output.view(batch_size, seq_len, self.embed_dim)
@@ -352,22 +426,23 @@ class RingMultiheadDilatedAttention(nn.Module):
         if self.layer_norm and self.norm is not None:
             attn_flat = self.norm(attn_flat)
         
-        # Cache output projection buffer for efficiency
+        # Thread-safe output buffer caching
         output_shape = (batch_size, seq_len, self.embed_dim)
         cache_key = (output_shape, attn_flat.dtype, attn_flat.device)
         
-        if cache_key not in self._output_projection_cache:
-            self._output_projection_cache[cache_key] = torch.empty(
-                output_shape, dtype=attn_flat.dtype, device=attn_flat.device
-            )
-        
-        # Ensure cache buffer matches current dimensions
-        output_buffer = self._output_projection_cache[cache_key]
-        if output_buffer.shape != output_shape:
-            output_buffer = torch.empty(
-                output_shape, dtype=attn_flat.dtype, device=attn_flat.device
-            )
-            self._output_projection_cache[cache_key] = output_buffer
+        with self._buffer_lock:
+            if cache_key not in self._output_projection_cache:
+                self._output_projection_cache[cache_key] = torch.empty(
+                    output_shape, dtype=attn_flat.dtype, device=attn_flat.device
+                )
+            
+            # Ensure cache buffer matches current dimensions
+            output_buffer = self._output_projection_cache[cache_key]
+            if output_buffer.shape != output_shape:
+                output_buffer = torch.empty(
+                    output_shape, dtype=attn_flat.dtype, device=attn_flat.device
+                )
+                self._output_projection_cache[cache_key] = output_buffer
         
         # Apply output projection
         output = self.out_proj(attn_flat)
@@ -385,11 +460,12 @@ class RingMultiheadDilatedAttention(nn.Module):
         )
     
     def clear_cache(self):
-        """Clear cached buffers to free memory."""
-        self._qkv_output_buffers.clear()
-        self._output_projection_cache.clear()
-        if hasattr(self.ring_attention, 'clear_cache'):
-            self.ring_attention.clear_cache()
+        """Clear cached buffers to free memory with thread safety."""
+        with self._cache_lock:
+            self._qkv_output_buffers.clear()
+            self._output_projection_cache.clear()
+            if hasattr(self.ring_attention, 'clear_cache'):
+                self.ring_attention.clear_cache()
     
     def get_memory_info(self) -> Dict[str, Any]:
         """
