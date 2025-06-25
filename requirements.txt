@@ -1,3 +1,4 @@
+
 # Legacy requirements.txt - now managed by pyproject.toml
 # For modern Python development, use:
 #   pip install -e .                    # Install package
@@ -14,6 +15,17 @@
 #   hatch run test                      # Run tests
 #   hatch run lint                      # Run linting  
 #   hatch run all                       # Run all checks
+=======
+torch >= 1.8.0
+torchscale ~= 0.2.0
+plotly==5.16.1
+xformers==0.0.22
+einops >= 0.6.1
+kaleido==0.2.1
+lightning==2.0.7
+pytorch-lightning==2.0.7
+uuid >=1.30
+deepspeed==0.4.1
 
 # For backwards compatibility, install base dependencies:
 -e .
