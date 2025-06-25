@@ -15,7 +15,8 @@ import xformers.ops as xops
 
 from torch import device
 
-from dilated_attention_pytorch.dilated_attention import MultiheadDilatedAttention, DilatedAttention
+from dilated_attention_pytorch.dilated_attention import DilatedAttention
+from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
 
 import argparse
 
@@ -27,7 +28,7 @@ parser.add_argument('--batch_size', type=int, default=1, help='Batch size for be
 parser.add_argument('--total_tokens', type=int, default=24,
                     help='Exponent for Total tokens for benchmarking, default is 26 which is 64M(2**26) tokens')
 parser.add_argument('--heads', type=int, default=4, help='Number of heads for benchmarking, default is 4')
-parser.add_argument('--embed_dim', type=int, default=32, help='Embed dimension for benchmarking, default is 256')
+parser.add_argument('--embed_dim', type=int, default=32, help='Embed dimension for benchmarking, default is 32')
 parser.add_argument('--vanilla_seq_lengths', type=int, default=18,
                     help='End of Sequence length range for vanilla attention, default is 18 which is 2**18')
 parser.add_argument('--segment_lengths', nargs='+', type=int, default=[8192, 16384, 32768, 65536],
@@ -36,6 +37,8 @@ parser.add_argument('--dilated_seq_lengths', type=int, default=27,
                     help='End of Sequence lengths for dilated attention, default is 27 which is 2**27 ')
 parser.add_argument('--vanilla', type=bool, default=True, action=argparse.BooleanOptionalAction,
                     help='Benchmark vanilla attention')
+parser.add_argument('--improved', type=bool, default=True, action=argparse.BooleanOptionalAction,
+                    help='Benchmark improved attention')
 parser.add_argument('--dilated', type=bool, default=True, action=argparse.BooleanOptionalAction,
                     help='Benchmark dilated attention')
 parser.add_argument('--multihead', type=bool, default=True, action=argparse.BooleanOptionalAction,
@@ -63,6 +66,7 @@ DILATED_SEQ_LENGTHS: List[int] = [2 ** i for i in range(13, args.dilated_seq_len
 BENCHMARK_VANILLA: bool = args.vanilla
 BENCHMARK_DILATED: bool = args.dilated
 BENCHMARK_MULTIHEAD: bool = args.multihead
+BENCHMARK_IMPROVED: bool = args.improved
 IS_CAUSAL: bool = args.causal
 PERMUTATION: bool = args.permutation
 
@@ -137,6 +141,7 @@ class AttentionType(Enum):
     DILATED = "dilated"
     MHA = "mha"
     VANILLA = "vanilla"
+    IMPROVED = "improved"
 
 
 def get_attention_for_seq_length(

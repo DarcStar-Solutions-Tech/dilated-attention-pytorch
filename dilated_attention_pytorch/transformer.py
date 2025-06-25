@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 from torch.nn.modules.transformer import _get_activation_fn
 
-from dilated_attention_pytorch.dilated_attention import MultiheadDilatedAttention
+from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
 
 
 class DilatedTransformerEncoderLayer(nn.Module):
