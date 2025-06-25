@@ -434,6 +434,23 @@ class UnifiedMemoryPool:
         except Exception:
             pass
 
+    def __getstate__(self):
+        """Support for pickling - exclude unpickleable objects."""
+        state = self.__dict__.copy()
+        # Remove the unpickleable locks
+        state['_lock'] = None
+        # Clear the pools to avoid pickling large tensors
+        state['_pools'] = {}
+        state['_hot_cache'] = {}
+        state['_active_buffers'] = {}
+        return state
+
+    def __setstate__(self, state):
+        """Support for unpickling - recreate locks."""
+        self.__dict__.update(state)
+        # Recreate the lock
+        self._lock = threading.RLock()
+
 
 # Global memory pool instance (created lazily)
 _GLOBAL_POOL: Optional[UnifiedMemoryPool] = None

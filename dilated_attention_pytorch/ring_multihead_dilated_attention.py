@@ -130,16 +130,16 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             dtype=dtype,
         )
         
-        # Initialize base class
-        super().__init__(multihead_config, attention_config)
-        
-        # Store additional attributes
+        # Store additional attributes before super().__init__
         self.use_flash_attention = use_flash_attention
         self.compile_model = compile_model
         self.use_checkpointing = use_checkpointing
         
         # Fused QKV projection for maximum memory efficiency
         self.use_fused_qkv = True
+        
+        # Initialize base class
+        super().__init__(multihead_config, attention_config)
         if self.use_fused_qkv:
             factory_kwargs = {'device': self.device, 'dtype': self.dtype}
             self.qkv_proj = nn.Linear(

@@ -36,7 +36,7 @@ class TestValidationMixin:
         mixin.validate_segment_dilation_match([1, 2, 3], [4, 5, 6])
         
         # Invalid case
-        with pytest.raises(ValueError, match="must have same length"):
+        with pytest.raises(ValueError, match="must have the same length"):
             mixin.validate_segment_dilation_match([1, 2], [3, 4, 5])
     
     def test_validate_positive_values(self):
@@ -100,7 +100,7 @@ class TestConfigurations:
         assert config.max_segment_length == 4096
         
         # Invalid segment/dilation mismatch
-        with pytest.raises(ValueError, match="must have same length"):
+        with pytest.raises(ValueError, match="must have the same length"):
             DilatedAttentionConfig(
                 segment_lengths=[2048],
                 dilation_rates=[1, 2]

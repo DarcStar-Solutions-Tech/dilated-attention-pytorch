@@ -753,6 +753,8 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
     """
     
     def __init__(self,
+                 embed_dim: int,
+                 num_heads: int,
                  segment_lengths: Sequence[int],
                  dilation_rates: Sequence[int],
                  distributed_config: Optional[DistributedSparseConfig] = None,
@@ -764,6 +766,8 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
         Initialize Block-Sparse Ring Distributed Dilated Attention.
         
         Args:
+            embed_dim: Total embedding dimension
+            num_heads: Number of attention heads
             segment_lengths: Sequence of segment lengths for dilated attention
             dilation_rates: Corresponding dilation rates
             distributed_config: Configuration for distributed sparse patterns
@@ -772,7 +776,7 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
             monitoring_interval: Interval for performance monitoring
             **kwargs: Additional arguments for base class
         """
-        super().__init__(segment_lengths, dilation_rates, **kwargs)
+        super().__init__(embed_dim, num_heads, segment_lengths, dilation_rates, **kwargs)
         
         # Distributed configuration
         self.distributed_config = distributed_config or DistributedSparseConfig()

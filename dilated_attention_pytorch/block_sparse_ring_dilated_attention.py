@@ -211,6 +211,11 @@ class SparsePatternConfig:
     adaptation_rate: float = 0.1  # For adaptive patterns
     min_sparsity: float = 0.05  # Minimum sparsity to maintain
     max_sparsity: float = 0.95  # Maximum sparsity to maintain
+    
+    def __post_init__(self):
+        """Validate configuration parameters."""
+        if self.block_size <= 0:
+            raise ValueError(f"block_size must be positive, got {self.block_size}")
 
 
 class SparsePatternGenerator:
@@ -359,6 +364,10 @@ class SparsePatternGenerator:
         
     def _enforce_target_sparsity(self, pattern: torch.Tensor, target_sparsity: float) -> torch.Tensor:
         """Ensure pattern meets target sparsity ratio"""
+        # Handle empty patterns
+        if pattern.numel() == 0:
+            return pattern
+            
         current_sparsity = pattern.float().mean().item()
         
         # Small tolerance to avoid unnecessary adjustments
@@ -727,8 +736,16 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
                                    return_attention_weights: bool) -> Tuple[Tensor, Optional[Tensor]]:
         """Execute block-sparse ring attention computation"""
         batch, seq_len, num_heads, head_dim = q.shape
-        num_blocks = seq_len // self.sparse_config.block_size
         block_size = self.sparse_config.block_size
+        
+        # Handle case where sequence is shorter than block size
+        if seq_len < block_size:
+            # Treat entire sequence as one block
+            num_blocks = 1
+            effective_block_size = seq_len
+        else:
+            num_blocks = seq_len // block_size
+            effective_block_size = block_size
         
         # Check for Flash Attention 3 optimization
         if self.has_fa3 and HAS_FLASH_ATTN and not return_attention_weights:
@@ -746,9 +763,15 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
             attention_weights_full.zero_()
             
         # Reshape inputs to blocks
-        q_blocks = q.view(batch, num_blocks, block_size, num_heads, head_dim)
-        k_blocks = k.view(batch, num_blocks, block_size, num_heads, head_dim)
-        v_blocks = v.view(batch, num_blocks, block_size, num_heads, head_dim)
+        if seq_len < block_size:
+            # Don't reshape if sequence is shorter than block size
+            q_blocks = q.unsqueeze(1)  # Add block dimension
+            k_blocks = k.unsqueeze(1)
+            v_blocks = v.unsqueeze(1)
+        else:
+            q_blocks = q.view(batch, num_blocks, block_size, num_heads, head_dim)
+            k_blocks = k.view(batch, num_blocks, block_size, num_heads, head_dim)
+            v_blocks = v.view(batch, num_blocks, block_size, num_heads, head_dim)
         
         # Process each ring step
         for ring_step in range(self.ring_size):

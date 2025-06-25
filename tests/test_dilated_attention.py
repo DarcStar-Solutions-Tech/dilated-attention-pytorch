@@ -73,11 +73,8 @@ def test_multihead_dilated_attention(
     )
     x = torch.randn(1, SEQ_LEN, embed_dim, device=DEVICE, dtype=DTYPE)
 
-    # Causal attention is not implemented on CPU for 'xformers'.
-    if is_causal and DEVICE == torch.device("cpu"):
-        with pytest.raises(NotImplementedError):
-            mhda(x, x, x, is_causal=is_causal)
-        return
+    # Causal attention now works on CPU (using standard attention fallback)
+    # No longer need to check for NotImplementedError
 
     out = mhda(x, x, x, is_causal=is_causal)  # default: causal=False
     assert out.size(0) == 1

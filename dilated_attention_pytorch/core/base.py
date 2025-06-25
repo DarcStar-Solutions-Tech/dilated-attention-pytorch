@@ -242,6 +242,23 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
             f"dropout={self.dropout}"
         )
 
+    def __getstate__(self):
+        """Support for pickling - exclude unpickleable objects."""
+        state = self.__dict__.copy()
+        # Remove the unpickleable lock
+        state['_cache_lock'] = None
+        # Clear caches to reduce pickle size
+        state['_head_groups_cache'] = {}
+        state['_pattern_cache'] = {}
+        state['_indices_cache'] = {}
+        return state
+
+    def __setstate__(self, state):
+        """Support for unpickling - recreate lock."""
+        self.__dict__.update(state)
+        # Recreate the lock
+        self._cache_lock = threading.RLock()
+
 
 class BaseMultiheadDilatedAttention(nn.Module, ValidationMixin, ABC):
     """
