@@ -20,7 +20,7 @@ The advanced distributed implementation has been **completely transformed** from
 
 | File | Purpose | 2025 New Features |
 |------|---------|-------------------|
-| [`ring_advanced_distributed_dilated_attention.py`](../dilated_attention_pytorch/ring_advanced_distributed_dilated_attention.py) | **🔥 Production-ready implementation** | Thread safety, bounded memory, multi-strategy error recovery, complete DeepSpeed integration |
+| [`ring_improved_distributed_dilated_attention.py`](../dilated_attention_pytorch/ring_improved_distributed_dilated_attention.py) | **🔥 Production-ready implementation** | Thread safety, bounded memory, multi-strategy error recovery, complete DeepSpeed integration |
 | [`ring_dilated_attention.py`](../dilated_attention_pytorch/ring_dilated_attention.py) | Core O(n) ring attention engine | Adaptive memory pools, optimized communication, smart cache management |
 | [`ring_multihead_dilated_attention.py`](../dilated_attention_pytorch/ring_multihead_dilated_attention.py) | Complete multihead attention wrapper | Fused QKV projections, buffer reuse optimization, MAGNETO architecture |
 | [`distributed_training_example.py`](../examples/distributed_training_example.py) | Complete training example | Updated for enterprise features, monitoring integration |

@@ -99,7 +99,7 @@ for seq_len in sequence_lengths:
 **Works with**: Multi-node clusters, enterprise environments
 
 ```python
-from dilated_attention_pytorch.ring_advanced_distributed_dilated_attention import RingAdvancedDistributedDilatedAttention
+from dilated_attention_pytorch.ring_improved_distributed_dilated_attention import RingAdvancedDistributedDilatedAttention
 
 # Enterprise-grade Ring Attention with advanced features
 enterprise_attention = RingAdvancedDistributedDilatedAttention(
@@ -1024,7 +1024,7 @@ ring_attention = RingMultiheadDilatedAttention(
 **🎯 Advanced (Multi-GPU)**:
 ```python
 # For extreme scale (1B+ token contexts)
-from dilated_attention_pytorch.advanced_distributed_dilated_attention import DistributedImprovedDilatedAttention
+from dilated_attention_pytorch.improved_distributed_dilated_attention import DistributedImprovedDilatedAttention
 
 distributed_attention = DistributedImprovedDilatedAttention(
     segment_lengths=[2048, 4096, 8192],

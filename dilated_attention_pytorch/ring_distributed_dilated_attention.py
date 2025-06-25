@@ -1,10 +1,10 @@
 """
-Ring Advanced Distributed Dilated Attention implementation.
+Ring Distributed Dilated Attention implementation.
 
-This module implements the most advanced distributed attention system combining:
+This module implements a distributed attention system combining:
 - Ring Attention (O(n) memory complexity)
 - Dilated Attention (efficient long-range dependencies)
-- Advanced distributed training features (DeepSpeed, FairScale, etc.)
+- Distributed training features (DeepSpeed, FairScale, etc.)
 - Enterprise-grade optimizations and monitoring
 
 This represents the state-of-the-art in distributed attention mechanisms,
@@ -16,7 +16,7 @@ Key Features:
 - Multi-level parallelism (ring, model, data, sequence)
 - DeepSpeed ZeRO integration for extreme memory efficiency
 - Fault tolerance and automatic recovery
-- Advanced monitoring and profiling
+- Monitoring and profiling
 - Production-ready enterprise features
 """
 
@@ -35,7 +35,7 @@ import torch.nn.functional as F
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-# Advanced distributed training libraries
+# Distributed training libraries
 try:
     import deepspeed
     from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
@@ -64,19 +64,19 @@ from .ring_dilated_attention import RingDilatedAttention
 from .ring_multihead_dilated_attention import RingMultiheadDilatedAttention
 
 
-class RingAdvancedDistributedDilatedAttention(nn.Module):
+class RingDistributedDilatedAttention(nn.Module):
     """
-    Most advanced distributed attention system with Ring Attention and enterprise features.
+    Distributed attention system with Ring Attention and enterprise features.
     
     This implementation represents the pinnacle of distributed attention technology,
-    combining Ring Attention's O(n) memory complexity with advanced distributed
+    combining Ring Attention's O(n) memory complexity with distributed
     training techniques to enable trillion-token contexts on massive clusters.
     
     Key innovations:
     - Multi-level parallelism hierarchy (ring → model → data)
     - Dynamic load balancing across heterogeneous clusters
     - Fault tolerance with automatic failure recovery
-    - Advanced memory management with CPU/NVMe offloading
+    - Memory management with CPU/NVMe offloading
     - Real-time monitoring and adaptive optimization
     - Production-grade reliability and observability
     """
@@ -98,7 +98,7 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         ring_size: Optional[int] = None,
         use_checkpointing: bool = True,
         
-        # Advanced distributed parameters
+        # Distributed parameters
         model_parallel: bool = False,
         sequence_parallel: bool = True,
         data_parallel: bool = True,
@@ -139,7 +139,7 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         dtype: Optional[torch.dtype] = None,
     ):
         """
-        Initialize Ring Advanced Distributed Dilated Attention.
+        Initialize Ring Distributed Dilated Attention.
         
         Args:
             embed_dim: Total dimension of the model
@@ -255,7 +255,7 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
                 device, dtype
             )
         
-        # Setup advanced distributed features
+        # Setup distributed features
         self._setup_deepspeed_integration()
         self._setup_fault_tolerance()
         self._setup_monitoring()
@@ -267,7 +267,7 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         self._setup_communication_optimization()
         
         # Log initialization
-        self.logger.info(f"Initialized RingAdvancedDistributedDilatedAttention: "
+        self.logger.info(f"Initialized RingDistributedDilatedAttention: "
                         f"embed_dim={embed_dim}, num_heads={num_heads}, "
                         f"ring_size={getattr(self, 'ring_size', 'N/A')}, "
                         f"world_size={self.world_size}")
@@ -404,7 +404,7 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         self.ring_size = self.attention_core.ring_attention.ring_size
     
     def _setup_deepspeed_integration(self):
-        """Setup DeepSpeed integration for advanced memory optimization."""
+        """Setup DeepSpeed integration for memory optimization."""
         if not self.use_deepspeed:
             return
         
@@ -699,7 +699,7 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         attn_mask: Optional[Tensor] = None,
     ) -> Tuple[Tensor, Optional[Tensor]]:
         """
-        Forward pass through Ring Advanced Distributed Dilated Attention.
+        Forward pass through Ring Distributed Dilated Attention.
         
         Args:
             query: Query tensor [batch, seq_len, embed_dim]
@@ -760,7 +760,7 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         need_weights: bool = False,
         attn_mask: Optional[Tensor] = None,
     ) -> Tuple[Tensor, Optional[Tensor]]:
-        """Optimized forward pass with model parallelism and advanced memory management."""
+        """Optimized forward pass with model parallelism and memory management."""
         batch_size, seq_len, _ = query.shape
         head_dim = self.embed_dim // self.num_heads
         
@@ -892,8 +892,11 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         value: Tensor, 
         is_causal: bool
     ) -> Tuple[Tensor, Optional[Tensor]]:
-        """Improved fault-tolerant error recovery with multiple strategies."""
+        """Improved fault-tolerant error recovery with multiple strategies and cleanup."""
         self.logger.warning(f"Handling forward failure: {error}")
+        
+        # First, clean up any resources
+        self._emergency_cleanup()
         
         if hasattr(self, '_fault_tolerance_state'):
             self._fault_tolerance_state['failure_count'] += 1
@@ -1025,7 +1028,7 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         self.logger.debug("Cache cleared successfully")
     
     def get_memory_info(self) -> Dict[str, Any]:
-        """Get comprehensive memory usage information with advanced metrics."""
+        """Get comprehensive memory usage information with metrics."""
         info = {
             "memory_complexity": "O(n)",
             "ring_size": getattr(self, 'ring_size', self.world_size),
@@ -1081,7 +1084,48 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
         
         # Log cleanup
         if hasattr(self, 'logger'):
-            self.logger.info("RingAdvancedDistributedDilatedAttention cleanup completed")
+            self.logger.info("RingDistributedDilatedAttention cleanup completed")
+    
+    def _emergency_cleanup(self):
+        """Emergency cleanup for error recovery - faster than full cleanup."""
+        try:
+            # Cancel any pending gradient communications
+            if hasattr(self, '_gradient_handles'):
+                for handle in self._gradient_handles:
+                    try:
+                        if hasattr(handle, 'cancel'):
+                            handle.cancel()
+                    except Exception:
+                        pass
+                self._gradient_handles.clear()
+            
+            # Clear gradient buckets
+            if hasattr(self, '_gradient_buckets'):
+                self._gradient_buckets.clear()
+                self._current_bucket_size = 0
+            
+            # Return model parallel buffers to pool
+            if hasattr(self, '_model_parallel_buffers'):
+                for key, buffers in self._model_parallel_buffers.items():
+                    if isinstance(buffers, dict):
+                        for buf in buffers.values():
+                            if buf is not None and hasattr(buf, 'data'):
+                                # Just clear the data, don't deallocate
+                                buf.data = torch.empty(0, device=buf.device)
+            
+            # Clear any pending communications
+            if hasattr(self, 'ring_attention'):
+                self.ring_attention._cleanup_ring_communication()
+            
+            # Quick memory recovery
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
+                torch.cuda.empty_cache()
+                
+        except Exception as e:
+            # Don't let cleanup errors propagate
+            if hasattr(self, 'logger'):
+                self.logger.debug(f"Error during emergency cleanup: {e}")
     
     def extra_repr(self) -> str:
         """String representation for debugging."""
@@ -1095,8 +1139,8 @@ class RingAdvancedDistributedDilatedAttention(nn.Module):
 
 
 # Enable torch.compile for maximum optimization (optional)
-# RingAdvancedDistributedDilatedAttention = torch.compile(
-#     RingAdvancedDistributedDilatedAttention,
+# RingDistributedDilatedAttention = torch.compile(
+#     RingDistributedDilatedAttention,
 #     mode='max-autotune',
 #     fullgraph=True
 # )

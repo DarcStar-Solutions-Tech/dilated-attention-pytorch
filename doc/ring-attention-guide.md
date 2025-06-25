@@ -84,7 +84,7 @@ output, _ = attention(query, key, value, is_causal=True)
 *Enterprise-grade distributed attention system*
 
 ```python
-from dilated_attention_pytorch.ring_advanced_distributed_dilated_attention import RingAdvancedDistributedDilatedAttention
+from dilated_attention_pytorch.ring_improved_distributed_dilated_attention import RingAdvancedDistributedDilatedAttention
 
 # Most advanced distributed attention available
 attention = RingAdvancedDistributedDilatedAttention(

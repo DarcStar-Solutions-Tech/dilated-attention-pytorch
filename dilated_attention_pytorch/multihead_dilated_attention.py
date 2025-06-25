@@ -2,6 +2,7 @@ from typing import Sequence, Optional, Union, Tuple
 
 import torch
 from torch import nn, Tensor
+from einops import rearrange
 
 # Handle xformers availability
 try:
@@ -117,6 +118,32 @@ class MultiheadDilatedAttention(nn.Module):
         #   d - embedding dimension
         #
         # Input shape: (b, n, d)
+        # Validate input shapes
+        if query.dim() != 3 or key.dim() != 3 or value.dim() != 3:
+            raise ValueError(
+                f"Expected 3D tensors (batch, seq_len, embed_dim), got shapes: "
+                f"query={query.shape}, key={key.shape}, value={value.shape}"
+            )
+        
+        b, n, d = query.shape
+        if key.shape != (b, n, d) or value.shape != (b, n, d):
+            raise ValueError(
+                f"query, key, and value must have the same shape, got: "
+                f"query={query.shape}, key={key.shape}, value={value.shape}"
+            )
+        
+        if d != self.q_proj.in_features:
+            raise ValueError(
+                f"Input embedding dimension ({d}) doesn't match expected ({self.q_proj.in_features})"
+            )
+        
+        # Validate sequence length is compatible with largest segment length
+        max_segment = max(self.dilated_attentions.segment_lengths)
+        if n % max_segment != 0:
+            raise ValueError(
+                f"Sequence length ({n}) must be divisible by the largest segment length ({max_segment})"
+            )
+        
         q = self.q_proj(query)
         k = self.k_proj(key)
         v = self.v_proj(value)

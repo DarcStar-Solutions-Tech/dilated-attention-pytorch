@@ -30,6 +30,20 @@ class DilatedAttention(nn.Module):
             raise ValueError(
                 "segment_lengths and dilation_rates must have the same length"
             )
+        
+        # Validate segment lengths and dilation rates
+        if not segment_lengths:
+            raise ValueError("segment_lengths cannot be empty")
+        
+        for i, (seg_len, dil_rate) in enumerate(zip(segment_lengths, dilation_rates)):
+            if seg_len <= 0:
+                raise ValueError(f"segment_lengths[{i}] must be positive, got {seg_len}")
+            if dil_rate <= 0:
+                raise ValueError(f"dilation_rates[{i}] must be positive, got {dil_rate}")
+        
+        # Validate dropout
+        if not 0.0 <= attention_dropout <= 1.0:
+            raise ValueError(f"attention_dropout must be between 0 and 1, got {attention_dropout}")
 
         self.segment_lengths = segment_lengths
         self.dilation_rates = dilation_rates
@@ -50,7 +64,27 @@ class DilatedAttention(nn.Module):
         #   g - group size (i.e. number of heads per segment length)
         #
         # Input shape of query, key, value: (b, n, h, d)
-        b, _, h, _ = query.shape
+        # Validate input shapes
+        if query.dim() != 4 or key.dim() != 4 or value.dim() != 4:
+            raise ValueError(
+                f"Expected 4D tensors (batch, seq_len, heads, dim), got shapes: "
+                f"query={query.shape}, key={key.shape}, value={value.shape}"
+            )
+        
+        b, n, h, d = query.shape
+        if key.shape != (b, n, h, d) or value.shape != (b, n, h, d):
+            raise ValueError(
+                f"query, key, and value must have the same shape, got: "
+                f"query={query.shape}, key={key.shape}, value={value.shape}"
+            )
+        
+        # Validate sequence length is compatible with largest segment length
+        max_segment = max(self.segment_lengths)
+        if n % max_segment != 0:
+            raise ValueError(
+                f"Sequence length ({n}) must be divisible by the largest segment length ({max_segment})"
+            )
+        
         out = torch.zeros_like(query)
 
         # *** NOTE ***
@@ -72,6 +106,13 @@ class DilatedAttention(nn.Module):
         for i in range(h % num_groups):
             group_sizes[i] += 1
 
+        # Calculate correct head ranges for unequal group sizes
+        head_ranges = []
+        cumsum = 0
+        for g in group_sizes:
+            head_ranges.append((cumsum, cumsum + g))
+            cumsum += g
+
         for i, (g, r, s) in enumerate(
             zip(group_sizes, self.dilation_rates, self.segment_lengths)
         ):
@@ -81,8 +122,7 @@ class DilatedAttention(nn.Module):
             v = rearrange(value, "b (n s) h d -> b n s h d", s=s)
             # Apply dilation and segment offset
             offset = i % r
-            hmin = i * g
-            hmax = (i + 1) * g
+            hmin, hmax = head_ranges[i]
             q = q[:, :, offset::r, hmin:hmax, :]
             k = k[:, :, offset::r, hmin:hmax, :]
             v = v[:, :, offset::r, hmin:hmax, :]
@@ -100,18 +140,13 @@ class DilatedAttention(nn.Module):
             )
             # Unfold 'n' segments back out of the batch dimension.
             x = rearrange(x, "(b n) s h d -> b n s h d", b=b)
-            # Normalize attention outputs across the sequence length dimension. This
-            # is necessary because the attention outputs from each dilation rate /
-            # segment length are summed together.
-            x = x / x.sum(dim=(1, 2), keepdim=True)
 
             # Gather the attention outputs from each dilation rate / segment length.
             out = rearrange(out, "b (n s) h d -> b n s h d", s=s)
             out[:, :, offset::r, hmin:hmax, :] += x
             out = rearrange(out, "b n s h d -> b (n s) h d", s=s)
 
-        # We have already normalized each attention output across the sequence length.
-        # Now, normalize across all attention outputs by dividing by the number of
+        # Normalize across all attention outputs by dividing by the number of
         # attention groups.  See: https://arxiv.org/pdf/2307.02486.pdf, Eq. 10
         return out / num_groups
 

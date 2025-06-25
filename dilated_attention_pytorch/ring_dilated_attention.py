@@ -102,13 +102,16 @@ def is_flash_attention_3_available():
 class RingAttentionMemoryPool:
     """Centralized memory pool for Ring Attention operations with optimized lookups."""
     
-    def __init__(self, device: torch.device):
+    def __init__(self, device: torch.device, max_pool_size: int = 100, max_cache_size: int = 20):
         self.device = device
+        self.max_pool_size = max_pool_size
+        self.max_cache_size = max_cache_size
         self._pools: Dict[tuple, torch.Tensor] = {}
         self._usage_count: Dict[tuple, int] = {}
         # Optimization: Cache frequently used buffer keys for faster lookups
         self._hot_keys_cache = {}  # Maps simplified keys to full keys
         self._access_lock = threading.Lock()  # Thread-safe access
+        self._access_order = []  # Track access order for LRU eviction
     
     def get_buffer(self, shape: tuple, dtype: torch.dtype, key: str, pin_memory: bool = False) -> torch.Tensor:
         """Get buffer from pool or allocate new one with optimized hot cache lookup."""
@@ -127,6 +130,10 @@ class RingAttentionMemoryPool:
             
             # Standard path: Full lookup
             if pool_key not in self._pools:
+                # Check if we need to evict before allocating
+                if len(self._pools) >= self.max_pool_size:
+                    self._evict_lru_buffer()
+                
                 if self.device.type == 'cuda' and pin_memory:
                     # Allocate pinned memory for faster GPU transfers
                     self._pools[pool_key] = torch.empty(
@@ -138,38 +145,76 @@ class RingAttentionMemoryPool:
                 
                 # Update hot cache if this becomes frequently used
                 if self._usage_count.get(pool_key, 0) > 5:  # Threshold for hot cache
+                    # Limit hot cache size
+                    if len(self._hot_keys_cache) >= self.max_cache_size:
+                        # Remove oldest entry
+                        oldest_key = next(iter(self._hot_keys_cache))
+                        del self._hot_keys_cache[oldest_key]
                     self._hot_keys_cache[simplified_key] = pool_key
+            
+            # Update access order for LRU
+            if pool_key in self._access_order:
+                self._access_order.remove(pool_key)
+            self._access_order.append(pool_key)
             
             self._usage_count[pool_key] += 1
             return self._pools[pool_key]
     
+    def _evict_lru_buffer(self):
+        """Evict least recently used buffer."""
+        if not self._access_order:
+            # Fallback to evicting buffer with lowest usage count
+            if self._usage_count:
+                lru_key = min(self._usage_count.items(), key=lambda x: x[1])[0]
+            else:
+                # Last resort: evict any buffer
+                lru_key = next(iter(self._pools.keys()))
+        else:
+            lru_key = self._access_order[0]
+            self._access_order.remove(lru_key)
+        
+        # Remove from all data structures
+        if lru_key in self._pools:
+            del self._pools[lru_key]
+        if lru_key in self._usage_count:
+            del self._usage_count[lru_key]
+        # Remove from hot cache if present
+        for simple_key, full_key in list(self._hot_keys_cache.items()):
+            if full_key == lru_key:
+                del self._hot_keys_cache[simple_key]
+                break
+    
     def clear_unused_buffers(self, threshold: int = 100, reset_counters: bool = True):
         """Clear buffers that haven't been used recently."""
-        if not self._usage_count:
-            return
-        
-        # Use adaptive threshold based on memory pressure
-        if torch.cuda.is_available():
-            memory_free = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated()
-            memory_ratio = memory_free / torch.cuda.get_device_properties(0).total_memory
-            if memory_ratio < 0.1:  # Low memory, be more aggressive
-                threshold = max(1, threshold // 4)
-            elif memory_ratio > 0.5:  # High memory, be more conservative  
-                threshold = threshold * 2
-        
-        keys_to_remove = [
-            key for key, count in self._usage_count.items() 
-            if count < threshold
-        ]
-        for key in keys_to_remove:
-            del self._pools[key]
-            del self._usage_count[key]
-        
-        # Reset counters to prevent overflow and provide fair chance for new buffers
-        if reset_counters:
-            min_count = min(self._usage_count.values()) if self._usage_count else 0
-            for key in self._usage_count:
-                self._usage_count[key] = max(0, self._usage_count[key] - min_count)
+        with self._access_lock:
+            if not self._usage_count:
+                return
+            
+            # Use adaptive threshold based on memory pressure
+            if torch.cuda.is_available():
+                memory_free = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated()
+                memory_ratio = memory_free / torch.cuda.get_device_properties(0).total_memory
+                if memory_ratio < 0.1:  # Low memory, be more aggressive
+                    threshold = max(1, threshold // 4)
+                elif memory_ratio > 0.5:  # High memory, be more conservative  
+                    threshold = threshold * 2
+            
+            keys_to_remove = [
+                key for key, count in self._usage_count.items() 
+                if count < threshold
+            ]
+            for key in keys_to_remove:
+                del self._pools[key]
+                del self._usage_count[key]
+            
+            # Reset counters to prevent overflow and provide fair chance for new buffers
+            if reset_counters and self._usage_count:
+                min_count = min(self._usage_count.values())
+                for key in self._usage_count:
+                    self._usage_count[key] = max(0, self._usage_count[key] - min_count)
+            
+            # Update access order list to remove deleted keys
+            self._access_order = [key for key in self._access_order if key in self._pools]
 
 class RingDilatedAttention(nn.Module):
     """
@@ -212,10 +257,26 @@ class RingDilatedAttention(nn.Module):
         super().__init__()
         
         # Validate inputs
-        assert len(segment_lengths) == len(dilation_rates)
-        assert all(s > 0 for s in segment_lengths), "Segment lengths must be positive"
-        assert all(r > 0 for r in dilation_rates), "Dilation rates must be positive"
-        assert block_size > 0, "Block size must be positive"
+        if len(segment_lengths) != len(dilation_rates):
+            raise ValueError(
+                f"segment_lengths and dilation_rates must have the same length, "
+                f"got {len(segment_lengths)} and {len(dilation_rates)}"
+            )
+        
+        if not segment_lengths:
+            raise ValueError("segment_lengths cannot be empty")
+        
+        for i, (seg_len, dil_rate) in enumerate(zip(segment_lengths, dilation_rates)):
+            if seg_len <= 0:
+                raise ValueError(f"segment_lengths[{i}] must be positive, got {seg_len}")
+            if dil_rate <= 0:
+                raise ValueError(f"dilation_rates[{i}] must be positive, got {dil_rate}")
+        
+        if block_size <= 0:
+            raise ValueError(f"block_size must be positive, got {block_size}")
+        
+        if not 0.0 <= dropout <= 1.0:
+            raise ValueError(f"dropout must be between 0 and 1, got {dropout}")
         
         self.segment_lengths = list(segment_lengths)
         self.dilation_rates = list(dilation_rates)
@@ -358,33 +419,42 @@ class RingDilatedAttention(nn.Module):
         local_seq_len = n // self.ring_size
         buffer_shape = (b, local_seq_len, h, d)
         
-        # Thread-safe buffer allocation
-        with self._buffer_lock:
-            # Use memory pool for efficient buffer allocation
-            if (self._kv_send_buffer is None or 
-                self._kv_send_buffer.shape != buffer_shape or
-                self._kv_send_buffer.dtype != k.dtype):
-                
-                self._kv_send_buffer = self._memory_pool.get_buffer(
-                    buffer_shape, k.dtype, "kv_send"
-                )
-                self._kv_recv_buffer = self._memory_pool.get_buffer(
-                    buffer_shape, k.dtype, "kv_recv"
-                )
-                
-                # Allocate optimized packed communication buffer
-                packed_size = 2 * b * local_seq_len * h * d  # K + V
-                self._packed_communication_buffer = self._memory_pool.get_buffer(
-                    (packed_size,), k.dtype, "packed_comm"
-                )
+        # Double-checked locking pattern for thread safety
+        # First check without lock for performance
+        if (self._kv_send_buffer is None or 
+            self._kv_send_buffer.shape != buffer_shape or
+            self._kv_send_buffer.dtype != k.dtype):
             
-            # Pre-allocate rotation buffers for in-place operations
-            buffer_key = (buffer_shape, k.dtype)
-            if buffer_key not in self._rotation_buffers:
-                self._rotation_buffers[buffer_key] = {
-                    'k': self._memory_pool.get_buffer(buffer_shape, k.dtype, "rot_k"),
-                    'v': self._memory_pool.get_buffer(buffer_shape, k.dtype, "rot_v")
-                }
+            # Acquire lock and check again to ensure atomicity
+            with self._buffer_lock:
+                # Check again inside lock to prevent race condition
+                if (self._kv_send_buffer is None or 
+                    self._kv_send_buffer.shape != buffer_shape or
+                    self._kv_send_buffer.dtype != k.dtype):
+                    
+                    self._kv_send_buffer = self._memory_pool.get_buffer(
+                        buffer_shape, k.dtype, "kv_send"
+                    )
+                    self._kv_recv_buffer = self._memory_pool.get_buffer(
+                        buffer_shape, k.dtype, "kv_recv"
+                    )
+                    
+                    # Allocate optimized packed communication buffer
+                    packed_size = 2 * b * local_seq_len * h * d  # K + V
+                    self._packed_communication_buffer = self._memory_pool.get_buffer(
+                        (packed_size,), k.dtype, "packed_comm"
+                    )
+        
+        # Pre-allocate rotation buffers for in-place operations
+        buffer_key = (buffer_shape, k.dtype)
+        if buffer_key not in self._rotation_buffers:
+            with self._buffer_lock:
+                # Check again inside lock
+                if buffer_key not in self._rotation_buffers:
+                    self._rotation_buffers[buffer_key] = {
+                        'k': self._memory_pool.get_buffer(buffer_shape, k.dtype, "rot_k"),
+                        'v': self._memory_pool.get_buffer(buffer_shape, k.dtype, "rot_v")
+                    }
     
     def _ring_attention_step(
         self, 
@@ -671,6 +741,9 @@ class RingDilatedAttention(nn.Module):
                                 k_ring, v_ring = self._rotate_kv_ring(k_ring, v_ring)
                                 
                     except Exception as comm_error:
+                        # Clean up any pending communications
+                        self._cleanup_ring_communication()
+                        
                         if self.ring_size > 1:
                             warnings.warn(
                                 f"Ring communication failed at step {step}: {comm_error}. "
@@ -687,6 +760,9 @@ class RingDilatedAttention(nn.Module):
             return output_gathered
             
         except Exception as e:
+            # Clean up resources before fallback
+            self._cleanup_ring_communication()
+            
             # Final fallback: single device computation
             warnings.warn(
                 f"Ring attention failed: {e}. Falling back to single device computation."
@@ -911,6 +987,58 @@ class RingDilatedAttention(nn.Module):
         else:
             # Fallback for Flash Attention 2 or older
             return [SDPBackend.EFFICIENT_ATTENTION, SDPBackend.FLASH_ATTENTION, SDPBackend.MATH]
+    
+    def _cleanup_ring_communication(self):
+        """Clean up any pending ring communications and resources."""
+        # Clean up communication buffers
+        if hasattr(self, '_kv_send_buffer'):
+            self._kv_send_buffer = None
+        if hasattr(self, '_kv_recv_buffer'):
+            self._kv_recv_buffer = None
+        
+        # Cancel any pending async operations
+        if hasattr(self, '_pending_sends'):
+            for handle in getattr(self, '_pending_sends', []):
+                try:
+                    if hasattr(handle, 'wait'):
+                        # Try to complete the operation
+                        handle.wait()
+                except Exception:
+                    # Ignore errors during cleanup
+                    pass
+            self._pending_sends = []
+        
+        if hasattr(self, '_pending_recvs'):
+            for handle in getattr(self, '_pending_recvs', []):
+                try:
+                    if hasattr(handle, 'wait'):
+                        handle.wait()
+                except Exception:
+                    pass
+            self._pending_recvs = []
+        
+        # Return any temporary buffers to pool
+        if hasattr(self, '_temp_buffers'):
+            for buffer in getattr(self, '_temp_buffers', []):
+                try:
+                    if self._memory_pool and buffer is not None:
+                        # Check if buffer is still valid before returning
+                        if buffer.device.type == self.device.type:
+                            self._return_buffer(buffer)
+                except Exception:
+                    pass
+            self._temp_buffers = []
+        
+        # Clear any intermediate results
+        if hasattr(self, '_intermediate_outputs'):
+            self._intermediate_outputs = None
+        
+        # Synchronize device to ensure all operations complete
+        if self.device.type == 'cuda':
+            try:
+                torch.cuda.synchronize(self.device)
+            except Exception:
+                pass
     
     def get_memory_info(self) -> Dict[str, Any]:
         """Get comprehensive memory usage information with optimization metrics."""

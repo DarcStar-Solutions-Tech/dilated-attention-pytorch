@@ -41,7 +41,7 @@ from torch.cuda.amp import autocast, GradScaler
 # Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from dilated_attention_pytorch.advanced_distributed_dilated_attention import (
+from dilated_attention_pytorch.improved_distributed_dilated_attention import (
     DistributedImprovedMultiheadDilatedAttention,
     DeepSpeedDilatedAttentionEngine,
     create_distributed_model,

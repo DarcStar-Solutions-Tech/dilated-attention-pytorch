@@ -58,7 +58,7 @@ The advanced distributed implementation provides:
 ### Basic Distributed Training
 
 ```python
-from dilated_attention_pytorch.advanced_distributed_dilated_attention import (
+from dilated_attention_pytorch.improved_distributed_dilated_attention import (
     DistributedImprovedMultiheadDilatedAttention,
     create_distributed_model
 )
@@ -403,7 +403,7 @@ import torch
 import torch.distributed as dist
 from torch.utils.data import DataLoader, DistributedSampler
 
-from dilated_attention_pytorch.advanced_distributed_dilated_attention import (
+from dilated_attention_pytorch.improved_distributed_dilated_attention import (
     create_distributed_model,
     DeepSpeedDilatedAttentionEngine
 )

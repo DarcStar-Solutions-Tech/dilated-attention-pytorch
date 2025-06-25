@@ -146,14 +146,53 @@ The project includes advanced Ring Attention implementations that provide O(n) m
 
 - **RingDilatedAttention** (`dilated_attention_pytorch/ring_dilated_attention.py`): Core ring attention with dilated patterns and memory pool optimization
 - **RingMultiheadDilatedAttention** (`dilated_attention_pytorch/ring_multihead_dilated_attention.py`): Multi-head wrapper with fused QKV projections and buffer reuse
-- **RingAdvancedDistributedDilatedAttention** (`dilated_attention_pytorch/ring_advanced_distributed_dilated_attention.py`): Enterprise-grade distributed implementation with DeepSpeed integration
+- **RingDistributedDilatedAttention** (`dilated_attention_pytorch/ring_distributed_dilated_attention.py`): Enterprise-grade distributed implementation with DeepSpeed integration
+
+## Block-Sparse Attention Implementation
+
+### Block-Sparse Attention Classes
+
+The project includes revolutionary Block-Sparse Attention implementations that combine O(n) memory complexity with 5-50x additional speedup:
+
+- **BlockSparseRingDilatedAttention** (`dilated_attention_pytorch/block_sparse_ring_dilated_attention.py`): Core block-sparse ring attention with multiple pattern types
+- **BlockSparseRingMultiheadDilatedAttention** (`dilated_attention_pytorch/block_sparse_ring_multihead_dilated_attention.py`): Drop-in replacement for nn.MultiheadAttention with block-sparse optimization
+- **BlockSparseRingDistributedDilatedAttention** (`dilated_attention_pytorch/block_sparse_ring_distributed_dilated_attention.py`): Enterprise distributed implementation with hierarchical sparsity
+
+### Sparse Pattern Types
+
+1. **Local Window**: Each position attends to nearby positions only
+2. **Dilated Sparse**: Multi-scale attention with different dilation rates
+3. **Global-Local**: Combination of global tokens and local windows
+4. **Content-Adaptive**: Neural network learns optimal sparsity patterns
+
+### Usage Example
+
+```python
+# Quick block-sparse attention
+from dilated_attention_pytorch import create_block_sparse_multihead_attention
+
+attention = create_block_sparse_multihead_attention(
+    embed_dim=768,
+    num_heads=12,
+    sparsity_ratio=0.1,  # 90% sparse = 10x speedup
+    pattern_type='dilated_sparse'
+)
+
+# Adaptive sparse attention
+from dilated_attention_pytorch import create_adaptive_sparse_multihead_attention
+
+adaptive = create_adaptive_sparse_multihead_attention(
+    embed_dim=768,
+    num_heads=12
+)
+```
 
 ### Recent Optimizations (Latest Update)
 
 #### **Errors Fixed:**
-1. **Critical Syntax Error** (ring_advanced_distributed_dilated_attention.py:337): Fixed incomplete parameter `ring_advancex` → `segment_lengths`
+1. **Critical Syntax Error** (ring_distributed_dilated_attention.py:337): Fixed incomplete parameter `ring_advancex` → `segment_lengths`
 2. **Import Compatibility** (ring_dilated_attention.py): Added fallback for `torch.nn.attention` module in older PyTorch versions
-3. **Dependencies**: Addressed protobuf compatibility issues in advanced distributed class
+3. **Dependencies**: Addressed protobuf compatibility issues in distributed class
 
 #### **Performance Optimizations Implemented:**
 
@@ -202,14 +241,18 @@ The project includes advanced Ring Attention implementations that provide O(n) m
 
 ```
 dilated_attention_pytorch/
-├── __init__.py              # Empty package init
+├── __init__.py              # Package init with exports
 ├── dilated_attention.py     # Core dilated attention
 ├── multihead_dilated_attention.py  # Multi-head wrapper
 ├── improved_dilated_attention.py   # Enhanced version
 ├── distributed_dilated_attention.py # Multi-GPU support
 ├── ring_dilated_attention.py       # Ring attention core (O(n) memory)
 ├── ring_multihead_dilated_attention.py # Ring multi-head wrapper
-├── ring_advanced_distributed_dilated_attention.py # Enterprise ring attention
+├── ring_distributed_dilated_attention.py # Enterprise ring attention
+├── block_sparse_ring_dilated_attention.py # Block-sparse ring attention
+├── block_sparse_ring_multihead_dilated_attention.py # Block-sparse multihead
+├── block_sparse_ring_distributed_dilated_attention.py # Distributed block-sparse
+├── sparse_pattern_utils.py  # Sparse pattern generation and optimization
 ├── transformer.py           # Transformer with dilated attention
 └── long_net.py             # Full LongNet architecture
 
@@ -220,6 +263,7 @@ tests/
 ├── test_improved_multihead.py # Improved multihead attention tests
 ├── test_memory_optimizations.py # Memory optimization tests
 ├── test_ring_attention.py   # Ring attention tests
+├── test_block_sparse_attention.py # Block-sparse attention tests
 ├── compare_implementations.py # Implementation comparison benchmarks
 ├── detailed_memory_analysis.py # Detailed memory profiling
 ├── memory_estimation.py     # Memory usage estimation utilities
@@ -227,6 +271,7 @@ tests/
 └── simple_comparison.py     # Simple performance comparisons
 
 benchmark.py                 # Performance benchmarking
-requirements.txt            # Python dependencies
-setup.py                    # Package configuration
+pyproject.toml              # Modern Python package configuration
+requirements.txt            # Python dependencies (points to pyproject.toml)
+setup.py                    # Legacy package configuration
 ```
