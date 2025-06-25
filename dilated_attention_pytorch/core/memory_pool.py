@@ -133,9 +133,10 @@ class UnifiedMemoryPool:
                 buffer = pool[key]
                 # Move to end for LRU
                 pool.move_to_end(key)
+                # Update stats first so promotion logic sees the correct count
+                self._update_stats(key, buffer)
                 # Promote to hot cache if frequently accessed
                 self._maybe_promote_to_hot_cache(key, buffer)
-                self._update_stats(key, buffer)
                 return buffer
 
             # Try to find a compatible buffer
@@ -150,6 +151,7 @@ class UnifiedMemoryPool:
             # Add to pool
             pool[key] = buffer
             self._track_buffer(key, buffer)
+            self._update_stats(key, buffer)
 
             # Check memory pressure and clean if needed
             self._maybe_cleanup()
