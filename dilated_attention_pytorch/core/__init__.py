@@ -67,18 +67,15 @@ __all__ = [
     # Base classes
     "BaseDilatedAttention",
     "BaseMultiheadDilatedAttention",
-    
     # Configurations
     "DilatedAttentionConfig",
     "MultiheadConfig",
-    "RingAttentionConfig", 
+    "RingAttentionConfig",
     "SparseAttentionConfig",
     "DistributedConfig",
     "MemoryPoolConfig",
-    
     # Mixins
     "ValidationMixin",
-    
     # Feature detection
     "HAS_SDPA",
     "HAS_SDPA_KERNEL",
@@ -88,24 +85,20 @@ __all__ = [
     "HAS_DEEPSPEED",
     "HAS_FAIRSCALE",
     "HAS_APEX",
-    
     # Version info
     "TORCH_VERSION",
     "FLASH_ATTN_VERSION",
-    "XFORMERS_VERSION", 
+    "XFORMERS_VERSION",
     "DEEPSPEED_VERSION",
     "FAIRSCALE_VERSION",
     "APEX_VERSION",
-    
     # Hardware detection
     "GPU_TYPE",
     "CURRENT_OPTIMAL_SETTINGS",
-    
     # Memory pool
     "UnifiedMemoryPool",
     "get_global_memory_pool",
     "reset_global_memory_pool",
-    
     # Attention utilities
     "compute_attention_scores",
     "apply_dilated_attention_pattern",
@@ -118,7 +111,6 @@ __all__ = [
     "apply_rotary_embeddings",
     "merge_attention_heads",
     "split_attention_heads",
-    
     # Factory functions
     "register_attention",
     "register_multihead_attention",
