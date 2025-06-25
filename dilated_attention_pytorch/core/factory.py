@@ -193,7 +193,8 @@ def create_multihead_dilated_attention(
     # Filter out config objects from kwargs to avoid duplication
     remaining_kwargs = {k: v for k, v in kwargs.items() 
                        if k not in ["multihead_config", "attention_config", "bias", "layer_norm", 
-                                    "layer_norm_eps", "gamma_init", "device", "dtype"]}
+                                    "layer_norm_eps", "gamma_init", "device", "dtype", "dropout", 
+                                    "segment_lengths", "dilation_rates", "embed_dim", "num_heads"]}
 
     # Create and return module
     cls = _MULTIHEAD_REGISTRY[multihead_type]
