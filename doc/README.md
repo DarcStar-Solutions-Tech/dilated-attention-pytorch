@@ -2,6 +2,21 @@
 
 This directory contains comprehensive documentation for the dilated attention implementations, including performance analysis, memory optimization, and practical usage guides.
 
+## 🎉 New in v0.2.0: Core Architecture Refactoring
+
+### Core Architecture Documentation
+- **[Migration Guide v0.2.0](migration-guide-v0.2.md)** - Upgrade from v0.1.x with full backward compatibility
+- **[Factory Pattern Guide](factory-pattern-guide.md)** - Learn the new simplified API with auto-selection
+- **[Refactoring Complete Summary](refactoring-complete-2024.md)** - Details of the 50-60% code reduction
+- **[Defect Analysis and Fixes](defect-analysis-and-fixes-2024.md)** - All defects fixed during refactoring
+
+### Key Improvements
+- **Factory Pattern**: Simple API with automatic implementation selection
+- **Type-Safe Configuration**: Validated dataclasses for all parameters
+- **Unified Memory Management**: Adaptive memory pool with intelligent cleanup
+- **Shared Base Classes**: 50-60% code reduction through inheritance
+- **Better Error Messages**: Clear, actionable error reporting
+
 ## Documentation Overview
 
 ### 🌟 [Ring Attention Guide](ring-attention-guide.md) **🔥 PRODUCTION READY 2025 + ALGORITHMIC BREAKTHROUGH**
@@ -258,20 +273,36 @@ With all optimizations enabled:
 
 ## Common Workflows
 
-### Research & Experimentation
+### Research & Experimentation (v0.2.0 Factory Pattern)
 ```python
-# Maximum token capacity
-from dilated_attention_pytorch.improved_dilated_attention import ImprovedDilatedAttention
-attention = ImprovedDilatedAttention(segments, dilations, use_tf32=True)
+# Maximum token capacity with auto-selection
+from dilated_attention_pytorch.core import create_dilated_attention
+attention = create_dilated_attention("auto", 
+    segment_lengths=segments, 
+    dilation_rates=dilations, 
+    use_tf32=True
+)
 model.gradient_checkpointing_enable()
 ```
 
-### Production Deployment
+### Production Deployment (v0.2.0 Factory Pattern)
 ```python
-# Balanced performance and usability
-from dilated_attention_pytorch.improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttention
-attention = ImprovedMultiheadDilatedAttention(embed_dim, num_heads, segments, dilations)
+# Balanced performance and usability with auto-selection
+from dilated_attention_pytorch.core import create_multihead_dilated_attention
+attention = create_multihead_dilated_attention("auto",
+    embed_dim=embed_dim, 
+    num_heads=num_heads, 
+    segment_lengths=segments, 
+    dilation_rates=dilations
+)
 model = torch.compile(model, mode='max-autotune')
+```
+
+### Legacy Direct Import (Still Supported)
+```python
+# Direct imports continue to work for backward compatibility
+from dilated_attention_pytorch.improved_dilated_attention import ImprovedDilatedAttention
+from dilated_attention_pytorch.improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttention
 ```
 
 ### Memory-Constrained Training
@@ -291,12 +322,35 @@ When adding new documentation:
 4. Reference other documentation sections appropriately
 5. Update this README with new content
 
+## Core Architecture (v0.2.0)
+
+The refactored architecture provides a clean, maintainable codebase:
+
+### Core Module Structure
+- **`core/base.py`**: Abstract base classes for all implementations
+- **`core/config.py`**: Type-safe configuration dataclasses
+- **`core/factory.py`**: Factory functions for creating attention modules
+- **`core/memory_pool.py`**: Unified memory management with adaptive cleanup
+- **`core/constants.py`**: Hardware detection and optimization settings
+
+### Utils Module
+- **`utils/attention_utils.py`**: Common attention computation utilities
+- **`utils/validation.py`**: Input validation and error checking
+- **`utils/sparse_pattern_utils.py`**: Sparse pattern generation and optimization
+
+### Benefits
+- **50-60% code reduction** through shared base classes
+- **Automatic optimization** based on hardware detection
+- **Type-safe configuration** with validation at creation time
+- **Unified memory pool** prevents memory bloat
+- **Better error messages** with actionable feedback
+
 ## Support
 
 For implementation issues:
 - Check [Practical Usage Guide](practical-usage-guide.md) for examples
-- Review [Optimization Recommendations](optimization-recommendations.md) for performance issues
-- See troubleshooting sections in individual guides
+- Review [Factory Pattern Guide](factory-pattern-guide.md) for v0.2.0 features
+- See [Migration Guide](migration-guide-v0.2.md) for upgrading
 
 For memory issues:
 - Start with [Memory Analysis](memory-analysis.md)

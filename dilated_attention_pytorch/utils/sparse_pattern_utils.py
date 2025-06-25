@@ -171,13 +171,23 @@ class SparsePatternGenerator:
         """Generate dilated sparse attention pattern"""
         pattern = torch.zeros(num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device)
         
+        # Calculate how many connections to keep based on sparsity ratio
+        total_connections = num_blocks * num_blocks
+        target_connections = int(total_connections * (1 - self.config.sparsity_ratio))
+        
         for h in range(num_heads):
-            for dilation in self.config.dilation_rates:
-                for i in range(num_blocks):
-                    # Dilated positions
-                    for j in range(0, num_blocks, dilation):
-                        if abs(i - j) <= num_blocks * self.config.sparsity_ratio:
-                            pattern[h, i, j] = True
+            # Use different dilation rates for different heads
+            dilation_idx = h % len(self.config.dilation_rates)
+            dilation = self.config.dilation_rates[dilation_idx]
+            
+            # Create dilated pattern
+            for i in range(num_blocks):
+                # Connect to positions at multiples of dilation
+                for offset in range(-target_connections // (2 * num_blocks), 
+                                  target_connections // (2 * num_blocks) + 1):
+                    j = i + offset * dilation
+                    if 0 <= j < num_blocks:
+                        pattern[h, i, j] = True
                             
         return pattern
         
@@ -244,8 +254,8 @@ class SparsePatternGenerator:
         dilated_pattern = self._generate_dilated_sparse_pattern(num_blocks, num_heads, device)
         global_pattern = self._generate_global_local_pattern(num_blocks, num_heads, device)
         
-        # Weighted combination
-        pattern = (local_pattern * 0.6 + dilated_pattern * 0.3 + global_pattern * 0.1) > 0.5
+        # Logical OR combination of patterns
+        pattern = local_pattern | dilated_pattern | global_pattern
         
         return pattern
         
@@ -262,6 +272,8 @@ class SparsePatternGenerator:
             active_indices = torch.nonzero(pattern, as_tuple=False)
             
             if len(active_indices) > num_remove:
+                # Create a copy to avoid in-place modification issues
+                pattern = pattern.clone()
                 remove_indices = torch.randperm(len(active_indices))[:num_remove]
                 for idx in remove_indices:
                     pattern[tuple(active_indices[idx])] = False
@@ -272,6 +284,8 @@ class SparsePatternGenerator:
             inactive_indices = torch.nonzero(~pattern, as_tuple=False)
             
             if len(inactive_indices) > num_add:
+                # Create a copy to avoid in-place modification issues
+                pattern = pattern.clone()
                 add_indices = torch.randperm(len(inactive_indices))[:num_add]
                 for idx in add_indices:
                     pattern[tuple(inactive_indices[idx])] = True
@@ -568,7 +582,7 @@ class PatternVisualizer:
                          pattern: torch.Tensor,
                          title: str = "Sparse Attention Pattern",
                          save_path: Optional[str] = None,
-                         show: bool = True) -> Optional[plt.Figure]:
+                         show: bool = True) -> Optional[Any]:
         """
         Visualize sparse attention pattern as heatmap.
         
@@ -628,7 +642,7 @@ class PatternVisualizer:
     def compare_patterns(self,
                         patterns: Dict[str, torch.Tensor],
                         save_path: Optional[str] = None,
-                        show: bool = True) -> Optional[plt.Figure]:
+                        show: bool = True) -> Optional[Any]:
         """
         Compare multiple sparse patterns side by side.
         
@@ -684,7 +698,7 @@ class PatternVisualizer:
 
 
 # Utility functions
-def save_pattern(pattern: torch.Tensor, filepath: str, compress: bool = True):
+def save_sparse_pattern(pattern: torch.Tensor, filepath: str, compress: bool = True):
     """Save sparse pattern to file"""
     pattern_data = {
         'pattern': pattern.cpu(),
@@ -702,7 +716,7 @@ def save_pattern(pattern: torch.Tensor, filepath: str, compress: bool = True):
             pickle.dump(pattern_data, f)
             
 
-def load_pattern(filepath: str) -> torch.Tensor:
+def load_sparse_pattern(filepath: str) -> torch.Tensor:
     """Load sparse pattern from file"""
     try:
         # Try compressed format first
@@ -717,7 +731,7 @@ def load_pattern(filepath: str) -> torch.Tensor:
     return pattern_data['pattern']
 
 
-def pattern_statistics(pattern: torch.Tensor) -> Dict[str, float]:
+def analyze_pattern_statistics(pattern: torch.Tensor) -> Dict[str, float]:
     """Calculate comprehensive statistics for sparse pattern"""
     stats = {}
     
@@ -744,6 +758,88 @@ def pattern_statistics(pattern: torch.Tensor) -> Dict[str, float]:
             stats['diagonal_density'] = diag.float().mean().item()
             
     return stats
+
+
+def optimize_pattern_for_hardware(
+    pattern: torch.Tensor, 
+    hardware: str = "auto",
+    block_size: int = 16
+) -> torch.Tensor:
+    """
+    Optimize sparse pattern for specific hardware architectures.
+    
+    Args:
+        pattern: Input sparse pattern
+        hardware: Target hardware ("auto", "a100", "h100", "v100", "cpu")
+        block_size: Block size for block-sparse optimizations
+        
+    Returns:
+        Optimized sparse pattern
+    """
+    if hardware == "auto":
+        # Detect hardware automatically
+        if torch.cuda.is_available():
+            device_name = torch.cuda.get_device_name()
+            if "A100" in device_name:
+                hardware = "a100"
+            elif "H100" in device_name:
+                hardware = "h100"
+            elif "V100" in device_name:
+                hardware = "v100"
+            else:
+                hardware = "gpu"
+        else:
+            hardware = "cpu"
+    
+    # Apply hardware-specific optimizations
+    if hardware in ["a100", "h100"]:
+        # Align to tensor core block sizes (16x16)
+        pattern = _align_to_blocks(pattern, block_size=16)
+    elif hardware == "v100":
+        # V100 prefers 8x8 blocks
+        pattern = _align_to_blocks(pattern, block_size=8)
+    elif hardware == "cpu":
+        # CPU prefers larger blocks for cache efficiency
+        pattern = _align_to_blocks(pattern, block_size=32)
+    else:
+        # Default block alignment
+        pattern = _align_to_blocks(pattern, block_size=block_size)
+    
+    return pattern
+
+
+def _align_to_blocks(pattern: torch.Tensor, block_size: int) -> torch.Tensor:
+    """Align sparse pattern to block boundaries for hardware efficiency."""
+    # Ensure pattern dimensions are compatible with block size
+    h, w = pattern.shape[-2:]
+    
+    # Pad if necessary
+    pad_h = (block_size - h % block_size) % block_size
+    pad_w = (block_size - w % block_size) % block_size
+    
+    if pad_h > 0 or pad_w > 0:
+        pattern = F.pad(pattern, (0, pad_w, 0, pad_h), value=False)
+    
+    # Convert to block representation
+    blocks = pattern.view(
+        *pattern.shape[:-2],
+        pattern.shape[-2] // block_size, block_size,
+        pattern.shape[-1] // block_size, block_size
+    )
+    
+    # If any element in a block is True, make the whole block True
+    block_pattern = blocks.any(dim=-1).any(dim=-2)
+    
+    # Expand back to full pattern
+    optimized = block_pattern.unsqueeze(-1).unsqueeze(-1)
+    optimized = optimized.repeat(1, 1, block_size, 1, block_size)
+    optimized = optimized.view(*pattern.shape)
+    
+    # Remove padding if we added any
+    if pad_h > 0 or pad_w > 0:
+        optimized = optimized[..., :h, :w]
+    
+    return optimized
 
 
 # Export main classes and functions

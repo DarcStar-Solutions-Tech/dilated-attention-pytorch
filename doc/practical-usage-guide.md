@@ -2,22 +2,103 @@
 
 This guide provides practical examples and best practices for using dilated attention implementations in real-world projects, from simple integration to production deployment.
 
+## 🎉 New in v0.2.0: Factory Pattern
+
+The easiest way to use dilated attention is through our new factory pattern that automatically selects the best implementation:
+
+```python
+from dilated_attention_pytorch.core import create_multihead_dilated_attention
+
+# Auto-select best implementation for your hardware
+attention = create_multihead_dilated_attention("auto",
+    embed_dim=768,
+    num_heads=12,
+    segment_lengths=[2048, 4096, 8192],
+    dilation_rates=[1, 2, 4],
+    dropout=0.1
+)
+
+# Use it like nn.MultiheadAttention
+x = torch.randn(2, 8192, 768, device="cuda", dtype=torch.float16)
+output = attention(x, x, x, is_causal=True)
+```
+
 ## Quick Start Examples
+
+### Using the Factory Pattern (Recommended)
+
+#### **Auto-Selection Based on Context**
+```python
+from dilated_attention_pytorch.core import create_multihead_dilated_attention
+
+def create_optimal_attention(seq_len, num_gpus=1):
+    """Auto-select best implementation based on context."""
+    if seq_len > 100_000:
+        impl = "ring"  # Use ring attention for very long sequences
+    elif seq_len > 50_000 and num_gpus > 1:
+        impl = "distributed"  # Use distributed for multi-GPU
+    else:
+        impl = "auto"  # Let factory decide
+    
+    return create_multihead_dilated_attention(impl,
+        embed_dim=768,
+        num_heads=12,
+        segment_lengths=[2048, 4096, 8192],
+        dilation_rates=[1, 2, 4]
+    )
+
+# For 10K tokens on single GPU - likely selects "improved"
+attention_10k = create_optimal_attention(10_000, num_gpus=1)
+
+# For 1M tokens - selects "ring" for O(n) memory
+attention_1m = create_optimal_attention(1_000_000, num_gpus=1)
+```
+
+#### **Type-Safe Configuration**
+```python
+from dilated_attention_pytorch.core import (
+    DilatedAttentionConfig,
+    MultiheadConfig,
+    create_multihead_dilated_attention
+)
+
+# Create reusable configurations
+attention_config = DilatedAttentionConfig(
+    segment_lengths=[2048, 4096, 8192],
+    dilation_rates=[1, 2, 4],
+    dropout=0.1,
+    use_tf32=True  # Enable TF32 optimization
+)
+
+multihead_config = MultiheadConfig(
+    embed_dim=768,
+    num_heads=12,
+    bias=True,
+    layer_norm=True,
+    gamma_init=1.0  # MAGNETO initialization
+)
+
+# Create attention module
+attention = create_multihead_dilated_attention(
+    "improved",  # or "auto", "ring", "distributed"
+    multihead_config=multihead_config,
+    attention_config=attention_config
+)
+```
 
 ### 🌟 Ring Attention (O(n) Memory Complexity) **REVOLUTIONARY**
 
 Ring Attention enables unlimited context windows with linear memory scaling:
 
-#### **Basic Ring Attention**
+#### **Basic Ring Attention - Factory Pattern**
 ```python
-from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
+from dilated_attention_pytorch.core import create_dilated_attention
 
-# O(n) memory complexity attention
-ring_attention = RingDilatedAttention(
+# Create ring attention using factory
+ring_attention = create_dilated_attention("ring",
     segment_lengths=[2048, 4096, 8192],
     dilation_rates=[1, 2, 4],
     dropout=0.1,
-    block_size=1024,
     ring_size=8,  # 8 devices for distributed computation
     use_checkpointing=True
 )
@@ -34,12 +115,12 @@ with torch.no_grad():
     print(f"Processed {seq_len:,} tokens with O(n) memory!")
 ```
 
-#### **Ring Multihead Attention (Drop-in Replacement)**
+#### **Ring Multihead Attention - Factory Pattern**
 ```python
-from dilated_attention_pytorch.ring_multihead_dilated_attention import RingMultiheadDilatedAttention
+from dilated_attention_pytorch.core import create_multihead_dilated_attention
 
-# Unlimited context multihead attention
-ring_multihead = RingMultiheadDilatedAttention(
+# Create ring multihead attention using factory
+ring_multihead = create_multihead_dilated_attention("ring",
     embed_dim=768,
     num_heads=12,
     segment_lengths=[2048, 4096, 8192],
@@ -56,9 +137,23 @@ batch_size, seq_len, embed_dim = 1, 10_000_000, 768  # 10M tokens!
 x = torch.randn(batch_size, seq_len, embed_dim)
 
 with torch.no_grad():
-    output, _ = ring_multihead(x, x, x, is_causal=True)
+    output = ring_multihead(x, x, x, is_causal=True)
     print(f"Output shape: {output.shape}")  # [1, 10_000_000, 768]
     print("Memory usage: Constant per device regardless of sequence length!")
+```
+
+#### **Direct Import (Backward Compatible)**
+```python
+# Still works for backward compatibility
+from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
+from dilated_attention_pytorch.ring_multihead_dilated_attention import RingMultiheadDilatedAttention
+
+# Traditional instantiation
+ring_attention = RingDilatedAttention(
+    segment_lengths=[2048, 4096, 8192],
+    dilation_rates=[1, 2, 4],
+    dropout=0.1
+)
 ```
 
 #### **Enterprise Ring Attention**
@@ -251,7 +346,7 @@ with torch.no_grad():
 ```python
 import torch
 import torch.nn as nn
-from dilated_attention_pytorch.improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttention
+from dilated_attention_pytorch.core import create_multihead_dilated_attention
 
 class DilatedTransformerBlock(nn.Module):
     """Custom transformer block with dilated attention."""
@@ -264,15 +359,17 @@ class DilatedTransformerBlock(nn.Module):
         dilation_rates: list,
         feedforward_dim: int = None,
         dropout: float = 0.1,
-        activation: str = "gelu"
+        activation: str = "gelu",
+        attention_type: str = "auto"  # New: choose implementation
     ):
         super().__init__()
         
         if feedforward_dim is None:
             feedforward_dim = 4 * embed_dim
         
-        # Dilated attention layer
-        self.attention = ImprovedMultiheadDilatedAttention(
+        # Dilated attention layer using factory pattern
+        self.attention = create_multihead_dilated_attention(
+            attention_type,  # auto-select or specify
             embed_dim=embed_dim,
             num_heads=num_heads,
             segment_lengths=segment_lengths,

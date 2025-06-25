@@ -1,5 +1,5 @@
 """
-Ring Multihead Dilated Attention implementation.
+Ring Multihead Dilated Attention implementation using the refactored core architecture.
 
 This module implements a multihead attention wrapper around Ring Dilated Attention,
 providing a drop-in replacement for standard multihead attention with O(n) memory
@@ -28,10 +28,17 @@ import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
 
+from .core import (
+    BaseMultiheadDilatedAttention,
+    MultiheadConfig,
+    RingAttentionConfig,
+    split_attention_heads,
+    merge_attention_heads,
+)
 from .ring_dilated_attention import RingDilatedAttention
 
 
-class RingMultiheadDilatedAttention(nn.Module):
+class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
     """
     Ring-based Multihead Dilated Attention with O(n) memory complexity.
     
@@ -99,118 +106,120 @@ class RingMultiheadDilatedAttention(nn.Module):
             device: Device to place parameters on
             dtype: Data type for parameters
         """
-        super().__init__()
+        # Create configurations
+        multihead_config = MultiheadConfig(
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            bias=bias,
+            layer_norm=layer_norm,
+            layer_norm_eps=layer_norm_eps,
+            gamma_init=gamma_init,
+            device=device,
+            dtype=dtype,
+        )
         
-        # Store configuration
-        self.embed_dim = embed_dim
-        self.num_heads = num_heads
-        self.layer_norm = layer_norm
-        self.gamma_init = gamma_init
-        self.use_checkpointing = use_checkpointing
-        self.compile_model = compile_model
-        
-        # Validation
-        if not embed_dim % num_heads == 0:
-            raise ValueError(
-                f"embed_dim ({embed_dim}) must be divisible by "
-                f"num_heads ({num_heads})"
-            )
-        
-        if len(segment_lengths) != len(dilation_rates):
-            raise ValueError(
-                f"len(segment_lengths) ({len(segment_lengths)}) must equal "
-                f"len(dilation_rates) ({len(dilation_rates)})"
-            )
-        
-        head_dim = embed_dim // num_heads
-        if not head_dim % 8 == 0:
-            raise ValueError(
-                f"head_dim (embed_dim / num_heads = {head_dim}) must be divisible by 8"
-            )
-        if not head_dim <= 128:
-            raise ValueError(
-                f"head_dim (embed_dim / num_heads = {head_dim}) must be <= 128"
-            )
-        
-        # Initialize Ring Dilated Attention core
-        self.ring_attention = RingDilatedAttention(
-            segment_lengths=segment_lengths,
-            dilation_rates=dilation_rates,
+        attention_config = RingAttentionConfig(
+            segment_lengths=list(segment_lengths),
+            dilation_rates=list(dilation_rates),
             dropout=dropout,
             use_tf32=use_tf32,
             block_size=block_size,
             ring_size=ring_size,
             use_checkpointing=use_checkpointing,
             device=device,
+            dtype=dtype,
         )
+        
+        # Initialize base class
+        super().__init__(multihead_config, attention_config)
+        
+        # Store additional attributes
+        self.use_flash_attention = use_flash_attention
+        self.compile_model = compile_model
+        self.use_checkpointing = use_checkpointing
         
         # Fused QKV projection for maximum memory efficiency
-        self.qkv_proj = nn.Linear(
-            embed_dim, 3 * embed_dim, bias=bias, device=device, dtype=dtype
-        )
-        
-        # Optional layer norm (MAGNETO architecture)
-        self.norm: Optional[nn.LayerNorm] = None
-        if layer_norm:
-            self.norm = nn.LayerNorm(
-                embed_dim, eps=layer_norm_eps, device=device, dtype=dtype
+        self.use_fused_qkv = True
+        if self.use_fused_qkv:
+            factory_kwargs = {'device': self.device, 'dtype': self.dtype}
+            self.qkv_proj = nn.Linear(
+                embed_dim, 3 * embed_dim, bias=bias, **factory_kwargs
             )
         
-        # Output projection
-        self.out_proj = nn.Linear(
-            embed_dim, embed_dim, bias=bias, device=device, dtype=dtype
-        )
+        # Create ring attention module
+        self.attention = self._create_attention_module()
         
         # Advanced memory optimization: Pre-allocate QKV output buffers
         self._qkv_output_buffers = {}
         self._output_projection_cache = {}
         
-        # Thread safety for buffer management
+        # Thread safety for buffer management (in addition to base class)
         self._buffer_lock = threading.Lock()
-        self._cache_lock = threading.Lock()
-        
-        # Initialize parameters
-        self._reset_parameters()
         
         # Optional compilation for additional optimization
         if compile_model:
             self._enable_compilation()
     
+    def _create_attention_module(self) -> RingDilatedAttention:
+        """Create the underlying ring dilated attention module."""
+        return RingDilatedAttention(
+            segment_lengths=self.attention_config.segment_lengths,
+            dilation_rates=self.attention_config.dilation_rates,
+            dropout=self.attention_config.dropout,
+            use_tf32=self.attention_config.use_tf32,
+            block_size=self.attention_config.block_size,
+            ring_size=self.attention_config.ring_size,
+            use_checkpointing=self.attention_config.use_checkpointing,
+            device=self.device,
+            dtype=self.dtype,
+        )
+    
+    def _init_qkv_projections(self, factory_kwargs: dict):
+        """Initialize fused QKV projection for ring attention efficiency."""
+        if self.use_fused_qkv:
+            # Fused projection already initialized in __init__
+            # Skip base class initialization
+            return
+        else:
+            # Fallback to separate projections
+            super()._init_qkv_projections(factory_kwargs)
+    
     def _reset_parameters(self):
         """Initialize parameters following MAGNETO architecture guidelines."""
-        embed_dim = self.embed_dim
-        
-        # Initialize fused QKV projection with proper gains
-        q_weight = self.qkv_proj.weight[:embed_dim, :]
-        k_weight = self.qkv_proj.weight[embed_dim:2*embed_dim, :]
-        v_weight = self.qkv_proj.weight[2*embed_dim:, :]
-        
-        # Standard Xavier for Q and K
-        nn.init.xavier_normal_(q_weight)
-        nn.init.xavier_normal_(k_weight)
-        
-        # MAGNETO initialization for V with gain
-        nn.init.xavier_normal_(v_weight, gain=self.gamma_init)
-        
-        # Initialize bias if present
-        if self.qkv_proj.bias is not None:
-            nn.init.constant_(self.qkv_proj.bias, 0)
-        
-        # MAGNETO initialization for output projection
-        nn.init.xavier_normal_(self.out_proj.weight, gain=self.gamma_init)
-        if self.out_proj.bias is not None:
-            nn.init.constant_(self.out_proj.bias, 0)
+        if self.use_fused_qkv and hasattr(self, 'qkv_proj'):
+            embed_dim = self.embed_dim
+            
+            # Initialize fused QKV projection with proper gains
+            q_weight = self.qkv_proj.weight[:embed_dim, :]
+            k_weight = self.qkv_proj.weight[embed_dim:2*embed_dim, :]
+            v_weight = self.qkv_proj.weight[2*embed_dim:, :]
+            
+            # Standard Xavier for Q and K
+            nn.init.xavier_normal_(q_weight)
+            nn.init.xavier_normal_(k_weight)
+            
+            # MAGNETO initialization for V with gain
+            nn.init.xavier_normal_(v_weight, gain=self.multihead_config.gamma_init)
+            
+            # Initialize bias if present
+            if self.qkv_proj.bias is not None:
+                nn.init.constant_(self.qkv_proj.bias, 0)
+        else:
+            # Use base class initialization
+            super()._reset_parameters()
     
     def _enable_compilation(self):
         """Enable torch.compile optimization for additional performance."""
         try:
-            self.ring_attention = torch.compile(
-                self.ring_attention, 
+            self.attention = torch.compile(
+                self.attention, 
                 mode='max-autotune',
                 fullgraph=True
             )
-            self.qkv_proj = torch.compile(self.qkv_proj, mode='max-autotune')
-            self.out_proj = torch.compile(self.out_proj, mode='max-autotune')
+            if hasattr(self, 'qkv_proj'):
+                self.qkv_proj = torch.compile(self.qkv_proj, mode='max-autotune')
+            if hasattr(self, 'out_proj'):
+                self.out_proj = torch.compile(self.out_proj, mode='max-autotune')
         except Exception as e:
             warnings.warn(f"torch.compile failed: {e}")
     
@@ -330,36 +339,38 @@ class RingMultiheadDilatedAttention(nn.Module):
     def forward(
         self,
         query: Tensor,
-        key: Tensor,
-        value: Tensor,
-        is_causal: bool = False,
+        key: Optional[Tensor] = None,
+        value: Optional[Tensor] = None,
+        key_padding_mask: Optional[Tensor] = None,
         need_weights: bool = False,
         attn_mask: Optional[Tensor] = None,
-    ) -> Tuple[Tensor, Optional[Tensor]]:
+        is_causal: bool = False,
+        average_attn_weights: bool = True,
+    ) -> Union[Tensor, Tuple[Tensor, Optional[Tensor]]]:
         """
         Forward pass through Ring Multihead Dilated Attention.
         
         Args:
             query: Query tensor [batch, seq_len, embed_dim]
-            key: Key tensor [batch, seq_len, embed_dim]  
-            value: Value tensor [batch, seq_len, embed_dim]
-            is_causal: Whether to apply causal masking (default: False)
-            need_weights: Whether to return attention weights (default: False)
-            attn_mask: Optional attention mask (not supported with ring attention)
+            key: Key tensor (uses query if None)
+            value: Value tensor (uses query if None)
+            key_padding_mask: Not supported with ring attention
+            need_weights: Whether to return attention weights (not supported)
+            attn_mask: Not supported with ring attention
+            is_causal: Whether to apply causal masking
+            average_attn_weights: Whether to average attention weights (unused)
             
         Returns:
-            Tuple of (attention_output, attention_weights) where:
-            - attention_output: [batch, seq_len, embed_dim]
-            - attention_weights: None (not computed for ring attention)
-            
-        Note:
-            Ring attention does not support attention masks or weight computation
-            due to the distributed nature of the algorithm.
+            If need_weights is False:
+                Attention output [batch, seq_len, embed_dim]
+            If need_weights is True:
+                Tuple of (output, None) - weights not supported
         """
-        if attn_mask is not None:
+        # Handle ring attention limitations
+        if attn_mask is not None or key_padding_mask is not None:
             warnings.warn(
                 "Attention masks are not supported with Ring Attention. "
-                "The mask will be ignored."
+                "Masks will be ignored."
             )
         
         if need_weights:
@@ -368,28 +379,49 @@ class RingMultiheadDilatedAttention(nn.Module):
                 "Returning None for weights."
             )
         
+        # Handle self-attention case
+        if key is None:
+            key = query
+        if value is None:
+            value = query
+        
+        # Validate inputs
+        if query.dim() != 3 or key.dim() != 3 or value.dim() != 3:
+            raise ValueError(
+                f"Expected 3D tensors (batch, seq_len, embed_dim), got shapes: "
+                f"query={query.shape}, key={key.shape}, value={value.shape}"
+            )
+        
         batch_size, seq_len, _ = query.shape
         
         # Apply fused QKV projections
-        if self.use_checkpointing and self.training:
-            q, k, v = torch.utils.checkpoint.checkpoint(
-                self._apply_fused_qkv_projection,
-                query, key, value,
-                use_reentrant=False
-            )
-        else:
+        if self.use_fused_qkv and hasattr(self, 'qkv_proj'):
+            # Use fused projection with caching
             q, k, v = self._apply_fused_qkv_projection(query, key, value)
+        else:
+            # Use base class projections
+            q = self.q_proj(query)
+            k = self.k_proj(key)
+            v = self.v_proj(value)
+            
+            # Apply layer normalization if enabled
+            q, k = self._apply_layer_norm(q, k)
+            
+            # Split into heads
+            q = split_attention_heads(q, self.num_heads)
+            k = split_attention_heads(k, self.num_heads)
+            v = split_attention_heads(v, self.num_heads)
         
         # Apply Ring Dilated Attention with error recovery
         try:
             if self.use_checkpointing and self.training:
                 attn_output = torch.utils.checkpoint.checkpoint(
-                    self.ring_attention,
-                    q, k, v, is_causal,
+                    self.attention.forward,
+                    q, k, v, is_causal, None,
                     use_reentrant=False
                 )
             else:
-                attn_output = self.ring_attention(q, k, v, is_causal)
+                attn_output = self.attention(q, k, v, is_causal, None)
                 
         except RuntimeError as e:
             if "out of memory" in str(e).lower():
@@ -397,75 +429,60 @@ class RingMultiheadDilatedAttention(nn.Module):
                 torch.cuda.empty_cache() if torch.cuda.is_available() else None
                 self.clear_cache()
                 
-                # Retry with checkpointing enabled if not already
+                # Retry with checkpointing
                 if not self.use_checkpointing:
-                    warnings.warn(
-                        f"OOM detected, retrying with gradient checkpointing enabled"
-                    )
+                    warnings.warn("OOM detected, retrying with gradient checkpointing")
                     attn_output = torch.utils.checkpoint.checkpoint(
-                        self.ring_attention,
-                        q, k, v, is_causal,
+                        self.attention.forward,
+                        q, k, v, is_causal, None,
                         use_reentrant=False
                     )
                 else:
-                    # If already using checkpointing, suggest reducing inputs
-                    if batch_size > 1:
-                        raise RuntimeError(
-                            f"Out of memory even with checkpointing. "
-                            f"Consider reducing batch size from {batch_size} or sequence length."
-                        ) from e
-                    else:
-                        raise e
+                    raise RuntimeError(
+                        f"Out of memory even with checkpointing. "
+                        f"Consider reducing batch size or sequence length."
+                    ) from e
             else:
                 raise e
         
-        # Optimized reshape: use view for zero-copy operation
-        attn_flat = attn_output.view(batch_size, seq_len, self.embed_dim)
+        # Merge heads back
+        attn_output = attn_output.view(batch_size, seq_len, self.embed_dim)
         
-        # Apply layer norm if enabled (MAGNETO architecture)
-        if self.layer_norm and self.norm is not None:
-            attn_flat = self.norm(attn_flat)
+        # Apply post-attention layer norm if enabled (MAGNETO style)
+        if self.multihead_config.layer_norm and hasattr(self, 'q_ln'):
+            attn_output = self.q_ln(attn_output)
         
-        # Thread-safe output buffer caching
-        output_shape = (batch_size, seq_len, self.embed_dim)
-        cache_key = (output_shape, attn_flat.dtype, attn_flat.device)
+        # Output projection
+        output = self.out_proj(attn_output)
         
-        with self._buffer_lock:
-            if cache_key not in self._output_projection_cache:
-                self._output_projection_cache[cache_key] = torch.empty(
-                    output_shape, dtype=attn_flat.dtype, device=attn_flat.device
-                )
-            
-            # Ensure cache buffer matches current dimensions
-            output_buffer = self._output_projection_cache[cache_key]
-            if output_buffer.shape != output_shape:
-                output_buffer = torch.empty(
-                    output_shape, dtype=attn_flat.dtype, device=attn_flat.device
-                )
-                self._output_projection_cache[cache_key] = output_buffer
-        
-        # Apply output projection
-        output = self.out_proj(attn_flat)
-        
-        # Return tuple for compatibility with nn.MultiheadAttention interface
-        return output, None
+        if need_weights:
+            return output, None
+        else:
+            return output
     
     def extra_repr(self) -> str:
         """String representation for debugging."""
-        return (
-            f"embed_dim={self.embed_dim}, num_heads={self.num_heads}, "
-            f"layer_norm={self.layer_norm}, gamma_init={self.gamma_init}, "
-            f"ring_size={self.ring_attention.ring_size}, "
-            f"block_size={self.ring_attention.block_size}"
-        )
+        repr_str = super().extra_repr()
+        repr_str += f", ring_size={self.attention.ring_size}"
+        repr_str += f", block_size={self.attention.block_size}"
+        repr_str += f", use_fused_qkv={self.use_fused_qkv}"
+        if self.compile_model:
+            repr_str += ", compiled=True"
+        return repr_str
     
     def clear_cache(self):
         """Clear cached buffers to free memory with thread safety."""
-        with self._cache_lock:
+        # Clear base class cache first
+        super().clear_cache()
+        
+        # Clear ring-specific caches
+        with self._buffer_lock:
             self._qkv_output_buffers.clear()
             self._output_projection_cache.clear()
-            if hasattr(self.ring_attention, 'clear_cache'):
-                self.ring_attention.clear_cache()
+            
+        # Clear attention module cache
+        if hasattr(self.attention, 'clear_cache'):
+            self.attention.clear_cache()
     
     def get_memory_info(self) -> Dict[str, Any]:
         """
@@ -474,20 +491,24 @@ class RingMultiheadDilatedAttention(nn.Module):
         Returns:
             Dictionary with memory statistics and theoretical complexity.
         """
-        info = {
+        # Get base class info
+        info = super().get_memory_info()
+        
+        # Add ring-specific info
+        info.update({
             "memory_complexity": "O(n)",
-            "ring_size": self.ring_attention.ring_size,
-            "block_size": self.ring_attention.block_size,
+            "ring_size": self.attention.ring_size,
+            "block_size": self.attention.block_size,
             "supports_infinite_context": True,
             "max_sequence_length": "unlimited (distributed)",
-            "memory_per_device": f"O(n / {self.ring_attention.ring_size})",
+            "memory_per_device": f"O(n / {self.attention.ring_size})",
             "qkv_buffers_cached": len(self._qkv_output_buffers),
             "output_buffers_cached": len(self._output_projection_cache),
-        }
+        })
         
         # Include ring attention memory info if available
-        if hasattr(self.ring_attention, 'get_memory_info'):
-            ring_info = self.ring_attention.get_memory_info()
+        if hasattr(self.attention, 'get_memory_info'):
+            ring_info = self.attention.get_memory_info()
             info.update({f"ring_{k}": v for k, v in ring_info.items()})
         
         return info

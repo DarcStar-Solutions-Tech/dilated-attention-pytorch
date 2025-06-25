@@ -15,7 +15,7 @@
 #   hatch run test                      # Run tests
 #   hatch run lint                      # Run linting  
 #   hatch run all                       # Run all checks
-=======
+
 torch >= 1.8.0
 torchscale ~= 0.2.0
 plotly==5.16.1

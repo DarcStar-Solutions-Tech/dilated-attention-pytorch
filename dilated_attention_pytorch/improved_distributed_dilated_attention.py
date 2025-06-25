@@ -1,5 +1,5 @@
 """
-Advanced Distributed Dilated Attention implementation using state-of-the-art libraries.
+Advanced Distributed Dilated Attention implementation using the refactored core architecture.
 
 This module provides highly optimized distributed attention classes that leverage:
 - DeepSpeed ZeRO for memory optimization
@@ -50,12 +50,19 @@ try:
 except ImportError:
     HAS_APEX = False
 
-# Import our improved attention implementations
-from dilated_attention_pytorch.improved_dilated_attention import ImprovedDilatedAttention
-from dilated_attention_pytorch.improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttention
+# Import from core architecture
+from .core import (
+    BaseDilatedAttention,
+    DilatedAttentionConfig,
+    DistributedConfig,
+    get_global_memory_pool,
+)
+from .improved_dilated_attention import ImprovedDilatedAttention
+from .improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttention
+from .core import BaseMultiheadDilatedAttention, MultiheadConfig
 
 
-class DistributedImprovedDilatedAttention(nn.Module):
+class DistributedImprovedDilatedAttention(BaseDilatedAttention):
     """
     Distributed version of ImprovedDilatedAttention with advanced optimizations.
     
@@ -79,15 +86,26 @@ class DistributedImprovedDilatedAttention(nn.Module):
         dtype: Optional[torch.dtype] = None,
         device: Optional[Union[torch.device, str]] = None,
     ):
-        super().__init__()
+        # Create configuration
+        config = DilatedAttentionConfig(
+            segment_lengths=segment_lengths,
+            dilation_rates=dilation_rates,
+            dropout=dropout,
+            use_tf32=use_tf32,
+            device=device,
+            dtype=dtype,
+        )
         
-        # Store configuration
-        self.segment_lengths = segment_lengths
-        self.dilation_rates = dilation_rates
-        self.dropout = dropout
-        self.sequence_parallel = sequence_parallel
-        self.model_parallel = model_parallel
-        self.use_flash_attention = use_flash_attention
+        # Initialize base class
+        super().__init__(config)
+        
+        # Store distributed configuration
+        self.distributed_config = DistributedConfig(
+            sequence_parallel=sequence_parallel,
+            model_parallel=model_parallel,
+            pipeline_parallel=False,
+            zero_stage=0,
+        )
         
         # Initialize distributed state
         self.world_size = dist.get_world_size() if dist.is_initialized() else 1
@@ -98,18 +116,20 @@ class DistributedImprovedDilatedAttention(nn.Module):
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
             dropout=dropout,
-            use_tf32=use_tf32
+            use_tf32=use_tf32,
+            device=device,
+            dtype=dtype,
         )
         
         # Setup distributed communication groups
         self._setup_communication_groups()
         
         # Initialize sequence parallelism if enabled
-        if sequence_parallel:
+        if self.distributed_config.sequence_parallel:
             self._setup_sequence_parallelism()
         
         # Initialize model parallelism if enabled
-        if model_parallel and HAS_FAIRSCALE:
+        if self.distributed_config.model_parallel and HAS_FAIRSCALE:
             self._setup_model_parallelism()
     
     def _setup_communication_groups(self):
@@ -126,7 +146,7 @@ class DistributedImprovedDilatedAttention(nn.Module):
         self.dp_group = dist.new_group(ranks=list(range(self.world_size)))
         
         # Model parallel groups (if using model parallelism)
-        if self.model_parallel:
+        if self.distributed_config.model_parallel:
             # Create groups for model parallelism
             # This is a simplified setup - real implementation would be more complex
             mp_size = min(4, self.world_size)  # Use up to 4 GPUs for model parallelism
@@ -137,13 +157,13 @@ class DistributedImprovedDilatedAttention(nn.Module):
                     self.mp_group = group
         
         # Sequence parallel groups (if using sequence parallelism)
-        if self.sequence_parallel:
+        if self.distributed_config.sequence_parallel:
             # All ranks participate in sequence parallelism
             self.sp_group = dist.new_group(ranks=list(range(self.world_size)))
     
     def _setup_sequence_parallelism(self):
         """Setup sequence parallelism for ultra-long sequences."""
-        if not self.sequence_parallel or not dist.is_initialized():
+        if not self.distributed_config.sequence_parallel or not dist.is_initialized():
             return
         
         # Calculate local sequence length per GPU
@@ -154,7 +174,7 @@ class DistributedImprovedDilatedAttention(nn.Module):
     
     def _setup_model_parallelism(self):
         """Setup model parallelism using FairScale."""
-        if not self.model_parallel or not HAS_FAIRSCALE:
+        if not self.distributed_config.model_parallel or not HAS_FAIRSCALE:
             return
         
         # Initialize model parallel groups
@@ -169,7 +189,7 @@ class DistributedImprovedDilatedAttention(nn.Module):
         # Register hooks for overlapping communication with computation
         def gradient_hook(grad):
             # Overlap gradient reduction with computation
-            if self.sequence_parallel:
+            if self.distributed_config.sequence_parallel:
                 return self._reduce_sequence_parallel_grads(grad)
             return grad
         
@@ -179,7 +199,7 @@ class DistributedImprovedDilatedAttention(nn.Module):
     
     def _split_sequence_parallel(self, tensor: Tensor, dim: int = 1) -> Tensor:
         """Split tensor along sequence dimension for sequence parallelism."""
-        if not self.sequence_parallel or not dist.is_initialized():
+        if not self.distributed_config.sequence_parallel or not dist.is_initialized():
             return tensor
         
         seq_len = tensor.size(dim)
@@ -201,7 +221,7 @@ class DistributedImprovedDilatedAttention(nn.Module):
     
     def _gather_sequence_parallel(self, tensor: Tensor, dim: int = 1) -> Tensor:
         """Optimized gather with asynchronous communication and memory efficiency."""
-        if not self.sequence_parallel or not dist.is_initialized():
+        if not self.distributed_config.sequence_parallel or not dist.is_initialized():
             return tensor
         
         # Use asynchronous all_gather for better overlap with computation
@@ -226,7 +246,7 @@ class DistributedImprovedDilatedAttention(nn.Module):
     
     def _reduce_sequence_parallel_grads(self, grad: Tensor) -> Tensor:
         """Reduce gradients across sequence parallel ranks."""
-        if not self.sequence_parallel or not dist.is_initialized():
+        if not self.distributed_config.sequence_parallel or not dist.is_initialized():
             return grad
         
         # All-reduce gradients
@@ -255,8 +275,11 @@ class DistributedImprovedDilatedAttention(nn.Module):
             Attention output tensor [batch, seq_len, num_heads, head_dim]
         """
         
+        # Validate inputs using base class
+        self._validate_forward_inputs(query, key, value, attention_mask)
+        
         # Handle sequence parallelism with memory optimizations
-        if self.sequence_parallel:
+        if self.distributed_config.sequence_parallel:
             # Split input tensors across sequence dimension (no-copy operations where possible)
             query = self._split_sequence_parallel(query, dim=1)
             key = self._split_sequence_parallel(key, dim=1)  
@@ -266,21 +289,30 @@ class DistributedImprovedDilatedAttention(nn.Module):
                 attention_mask = self._split_sequence_parallel(attention_mask, dim=-1)
         
         # Local attention computation with optimized memory allocation
-        with torch.cuda.amp.autocast(enabled=True, dtype=torch.bfloat16):
+        # Only use autocast if CUDA is available
+        if torch.cuda.is_available():
+            with torch.cuda.amp.autocast(enabled=True, dtype=torch.bfloat16):
+                output = self.local_attention(
+                    query, key, value, 
+                    is_causal=is_causal,
+                    attention_mask=attention_mask
+                )
+        else:
             output = self.local_attention(
                 query, key, value, 
-                is_causal=is_causal
+                is_causal=is_causal,
+                attention_mask=attention_mask
             )
         
         # Handle sequence parallelism output with async communication where possible
-        if self.sequence_parallel:
+        if self.distributed_config.sequence_parallel:
             # Use asynchronous gather for better overlap with computation
             output = self._gather_sequence_parallel(output, dim=1)
         
         return output
 
 
-class DistributedImprovedMultiheadDilatedAttention(nn.Module):
+class DistributedImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
     """
     Distributed version of ImprovedMultiheadDilatedAttention with enterprise-grade features.
     
@@ -322,84 +354,61 @@ class DistributedImprovedMultiheadDilatedAttention(nn.Module):
         use_flash_attention: bool = True,
         compile_model: bool = False,
     ):
-        super().__init__()
+        # Create configurations
+        multihead_config = MultiheadConfig(
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            bias=bias,
+            layer_norm=layer_norm,
+            layer_norm_eps=layer_norm_eps,
+            gamma_init=gamma_init,
+            device=device,
+            dtype=dtype,
+        )
         
-        self.embed_dim = embed_dim
-        self.num_heads = num_heads
-        self.layer_norm = layer_norm
-        self.gamma_init = gamma_init
-        self.sequence_parallel = sequence_parallel
-        self.model_parallel = model_parallel
+        attention_config = DilatedAttentionConfig(
+            segment_lengths=segment_lengths,
+            dilation_rates=dilation_rates,
+            dropout=dropout,
+            use_tf32=use_tf32,
+            device=device,
+            dtype=dtype,
+        )
+        
+        # Initialize base class
+        super().__init__(multihead_config, attention_config)
+        
+        # Store distributed settings
+        self.distributed_config = DistributedConfig(
+            sequence_parallel=sequence_parallel,
+            model_parallel=model_parallel,
+            pipeline_parallel=False,
+            zero_stage=3 if use_deepspeed else 0,
+        )
+        
+        # Store additional settings
         self.use_deepspeed = use_deepspeed and HAS_DEEPSPEED
         self.use_gradient_checkpointing = use_gradient_checkpointing
+        self.communication_backend = communication_backend
+        self.cpu_offload = cpu_offload
+        self.use_8bit_optimizer = use_8bit_optimizer
+        self.use_flash_attention = use_flash_attention
+        self.compile_model = compile_model
         
         # Initialize distributed state
         self.world_size = dist.get_world_size() if dist.is_initialized() else 1
         self.rank = dist.get_rank() if dist.is_initialized() else 0
         
-        # Validation
-        if not embed_dim % num_heads == 0:
-            raise ValueError(
-                f"embed_dim ({embed_dim}) must be divisible by "
-                f"num_heads ({num_heads})"
-            )
-        
-        if len(segment_lengths) != len(dilation_rates):
-            raise ValueError(
-                f"len(segment_lengths) ({len(segment_lengths)}) must equal "
-                f"len(dilation_rates) ({len(dilation_rates)})"
-            )
-        
-        head_dim = embed_dim // num_heads
-        if not head_dim % 8 == 0:
-            raise ValueError(
-                f"head_dim (embed_dim / num_heads = {head_dim}) must be divisible by 8"
-            )
-        if not head_dim <= 128:
-            raise ValueError(
-                f"head_dim (embed_dim / num_heads = {head_dim}) must be <= 128"
-            )
-        
-        # Initialize optimized linear projections with potential model parallelism
-        if model_parallel and HAS_FAIRSCALE:
-            # Use fused QKV projection with column parallelism for 3x efficiency
-            from fairscale.nn.model_parallel.layers import ColumnParallelLinear, RowParallelLinear
-            
-            self.qkv_proj = ColumnParallelLinear(
-                embed_dim, 3 * embed_dim, bias=bias, 
-                device=device, dtype=dtype, gather_output=False
-            )
-            self.out_proj = RowParallelLinear(
-                embed_dim, embed_dim, bias=bias,
-                device=device, dtype=dtype, input_is_parallel=True
-            )
+        # Initialize with model parallelism if enabled
+        self.use_model_parallel = self.distributed_config.model_parallel and HAS_FAIRSCALE
+        if self.use_model_parallel:
+            self._init_model_parallel_projections()
         else:
-            # Standard linear layers
-            self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias, device=device, dtype=dtype)
-            self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias, device=device, dtype=dtype)
-            self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias, device=device, dtype=dtype)
-            self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias, device=device, dtype=dtype)
+            # Use base class initialization
+            self._init_qkv_projections({'device': device, 'dtype': dtype})
         
-        # Distributed attention mechanism
-        self.distributed_attention = DistributedImprovedDilatedAttention(
-            segment_lengths=segment_lengths,
-            dilation_rates=dilation_rates,
-            dropout=dropout,
-            use_tf32=use_tf32,
-            sequence_parallel=sequence_parallel,
-            model_parallel=model_parallel,
-            use_flash_attention=use_flash_attention,
-            dtype=dtype,
-            device=device
-        )
-        
-        # Layer normalization
-        self.norm: Optional[nn.LayerNorm] = None
-        if layer_norm:
-            self.norm = nn.LayerNorm(embed_dim, eps=layer_norm_eps, device=device, dtype=dtype)
-        
-        # Initialize parameters
-        self._reset_parameters()
+        # Create distributed attention mechanism
+        self.attention = self._create_attention_module()
         
         # Setup advanced optimizations
         self._setup_optimizations(
@@ -407,23 +416,43 @@ class DistributedImprovedMultiheadDilatedAttention(nn.Module):
             compile_model=compile_model
         )
     
+    def _init_model_parallel_projections(self):
+        """Initialize model parallel projections using FairScale."""
+        from fairscale.nn.model_parallel.layers import ColumnParallelLinear, RowParallelLinear
+        
+        # Use fused QKV projection with column parallelism for 3x efficiency
+        self.qkv_proj = ColumnParallelLinear(
+            self.embed_dim, 3 * self.embed_dim, bias=self.bias, 
+            device=self.device, dtype=self.dtype, gather_output=False
+        )
+        self.out_proj = RowParallelLinear(
+            self.embed_dim, self.embed_dim, bias=self.bias,
+            device=self.device, dtype=self.dtype, input_is_parallel=True
+        )
+    
+    def _create_attention_module(self) -> DistributedImprovedDilatedAttention:
+        """Create the underlying distributed attention module."""
+        return DistributedImprovedDilatedAttention(
+            segment_lengths=self.attention_config.segment_lengths,
+            dilation_rates=self.attention_config.dilation_rates,
+            dropout=self.attention_config.dropout,
+            use_tf32=self.attention_config.use_tf32,
+            sequence_parallel=self.distributed_config.sequence_parallel,
+            model_parallel=self.distributed_config.model_parallel,
+            use_flash_attention=self.use_flash_attention,
+            dtype=self.dtype,
+            device=self.device
+        )
+    
     def _reset_parameters(self):
         """Initialize parameters following MAGNETO architecture guidelines."""
-        # Standard Xavier initialization for Q and K projections
-        nn.init.xavier_normal_(self.q_proj.weight)
-        if self.q_proj.bias is not None:
-            nn.init.constant_(self.q_proj.bias, 0)
-        nn.init.xavier_normal_(self.k_proj.weight)
-        if self.k_proj.bias is not None:
-            nn.init.constant_(self.k_proj.bias, 0)
-
-        # MAGNETO initialization for V and output projections
-        nn.init.xavier_normal_(self.v_proj.weight, gain=self.gamma_init)
-        if self.v_proj.bias is not None:
-            nn.init.constant_(self.v_proj.bias, 0)
-        nn.init.xavier_normal_(self.out_proj.weight, gain=self.gamma_init)
-        if self.out_proj.bias is not None:
-            nn.init.constant_(self.out_proj.bias, 0)
+        if self.use_model_parallel:
+            # Model parallel initialization
+            # FairScale handles initialization internally
+            pass
+        else:
+            # Use base class MAGNETO initialization
+            super()._reset_parameters()
     
     def _setup_optimizations(self, cpu_offload: bool = False, compile_model: bool = False):
         """Setup advanced optimizations."""
@@ -438,8 +467,8 @@ class DistributedImprovedMultiheadDilatedAttention(nn.Module):
         
         # Model compilation
         if compile_model and hasattr(torch, 'compile'):
-            self.distributed_attention = torch.compile(
-                self.distributed_attention, 
+            self.attention = torch.compile(
+                self.attention, 
                 mode='max-autotune'
             )
         
@@ -466,80 +495,192 @@ class DistributedImprovedMultiheadDilatedAttention(nn.Module):
         from torch.utils.checkpoint import checkpoint
         return checkpoint(self._forward_impl, *args, **kwargs)
     
-    def _forward_impl(
-        self, 
-        query: Tensor, 
-        key: Tensor, 
-        value: Tensor, 
-        is_causal: bool = False,
-        attention_mask: Optional[Tensor] = None
-    ) -> Tuple[Tensor, None]:
-        """Implementation of forward pass."""
-        
-        # Apply linear projections
-        q = self.q_proj(query)
-        k = self.k_proj(key)
-        v = self.v_proj(value)
-
-        # Reshape to separate heads: (batch, seq_len, embed_dim) -> (batch, seq_len, num_heads, head_dim)
-        from einops import rearrange
-        q = rearrange(q, "b n (h d) -> b n h d", h=self.num_heads)
-        k = rearrange(k, "b n (h d) -> b n h d", h=self.num_heads)
-        v = rearrange(v, "b n (h d) -> b n h d", h=self.num_heads)
-        
-        # Apply distributed dilated attention
-        x = self.distributed_attention(q, k, v, is_causal=is_causal, attention_mask=attention_mask)
-        
-        # Reshape back: (batch, seq_len, num_heads, head_dim) -> (batch, seq_len, embed_dim)
-        x = rearrange(x, "b n h d -> b n (h d)")
-
-        # Apply layer normalization (MAGNETO architecture)
-        if self.layer_norm:
-            assert self.norm is not None
-            x = self.norm(x)
-        
-        # Final linear projection
-        x = self.out_proj(x)
-
-        return x, None
-    
     def forward(
         self, 
         query: Tensor, 
-        key: Tensor, 
-        value: Tensor, 
+        key: Optional[Tensor] = None,
+        value: Optional[Tensor] = None,
+        key_padding_mask: Optional[Tensor] = None,
+        need_weights: bool = False,
+        attn_mask: Optional[Tensor] = None,
         is_causal: bool = False,
-        attention_mask: Optional[Tensor] = None
-    ) -> Tuple[Tensor, None]:
+        average_attn_weights: bool = True,
+    ) -> Union[Tensor, Tuple[Tensor, Optional[Tensor]]]:
         """
         Forward pass with optional gradient checkpointing.
         
         Args:
-            query: Query tensor of shape (batch_size, seq_len, embed_dim)
-            key: Key tensor of shape (batch_size, seq_len, embed_dim)
-            value: Value tensor of shape (batch_size, seq_len, embed_dim)
+            query: Query tensor [batch, seq_len, embed_dim]
+            key: Key tensor (uses query if None)
+            value: Value tensor (uses query if None)
+            key_padding_mask: Mask for padded positions [batch, seq_len]
+            need_weights: Whether to return attention weights
+            attn_mask: Additional attention mask
             is_causal: Whether to apply causal masking
-            attention_mask: Optional attention mask
+            average_attn_weights: Whether to average attention weights (unused)
             
         Returns:
-            Tuple of (attention_output, None) where attention_output has shape
-            (batch_size, seq_len, embed_dim). Second element is None for
-            compatibility with nn.MultiheadAttention interface.
+            If need_weights is False:
+                Attention output [batch, seq_len, embed_dim]
+            If need_weights is True:
+                Tuple of (output, None) - weights not supported
         """
+        # Handle self-attention case
+        if key is None:
+            key = query
+        if value is None:
+            value = query
+        
+        # Validate inputs
+        if query.dim() != 3 or key.dim() != 3 or value.dim() != 3:
+            raise ValueError(
+                f"Expected 3D tensors (batch, seq_len, embed_dim), got shapes: "
+                f"query={query.shape}, key={key.shape}, value={value.shape}"
+            )
+        
+        batch_size, seq_len, _ = query.shape
         
         if self.use_gradient_checkpointing and self.training:
-            return self._checkpointed_forward(query, key, value, is_causal, attention_mask)
+            from torch.utils.checkpoint import checkpoint
+            return checkpoint(
+                self._forward_impl,
+                query, key, value, key_padding_mask, need_weights, 
+                attn_mask, is_causal, average_attn_weights,
+                use_reentrant=False
+            )
         else:
-            return self._forward_impl(query, key, value, is_causal, attention_mask)
+            return self._forward_impl(
+                query, key, value, key_padding_mask, need_weights,
+                attn_mask, is_causal, average_attn_weights
+            )
+    
+    def _forward_impl(
+        self,
+        query: Tensor,
+        key: Tensor,
+        value: Tensor,
+        key_padding_mask: Optional[Tensor],
+        need_weights: bool,
+        attn_mask: Optional[Tensor],
+        is_causal: bool,
+        average_attn_weights: bool,
+    ) -> Union[Tensor, Tuple[Tensor, Optional[Tensor]]]:
+        """Implementation of forward pass."""
+        from .utils.attention_utils import split_attention_heads, merge_attention_heads
+        
+        # Apply projections based on model parallelism
+        if self.use_model_parallel and hasattr(self, 'qkv_proj'):
+            # Fused QKV projection for model parallelism
+            qkv = self.qkv_proj(query)
+            # Split QKV
+            q, k, v = qkv.chunk(3, dim=-1)
+            # Reshape to heads
+            q = split_attention_heads(q, self.num_heads)
+            k = split_attention_heads(k, self.num_heads)
+            v = split_attention_heads(v, self.num_heads)
+        else:
+            # Standard projections
+            q = self.q_proj(query)
+            k = self.k_proj(key)
+            v = self.v_proj(value)
+            
+            # Apply layer normalization if enabled
+            q, k = self._apply_layer_norm(q, k)
+            
+            # Split into heads
+            q = split_attention_heads(q, self.num_heads)
+            k = split_attention_heads(k, self.num_heads)
+            v = split_attention_heads(v, self.num_heads)
+        
+        # Combine masks if provided
+        combined_mask = self._combine_masks(
+            attn_mask, key_padding_mask, batch_size, seq_len
+        )
+        
+        # Apply distributed dilated attention
+        attn_output = self.attention(q, k, v, is_causal=is_causal, attention_mask=combined_mask)
+        
+        # Merge heads back
+        attn_output = attn_output.view(batch_size, seq_len, self.embed_dim)
+        
+        # Apply post-attention layer norm if enabled (MAGNETO style)
+        if self.multihead_config.layer_norm and hasattr(self, 'q_ln'):
+            attn_output = self.q_ln(attn_output)
+        
+        # Output projection
+        output = self.out_proj(attn_output)
+        
+        if need_weights:
+            return output, None
+        else:
+            return output
+    
+    def _combine_masks(
+        self,
+        attn_mask: Optional[Tensor],
+        key_padding_mask: Optional[Tensor],
+        batch_size: int,
+        seq_len: int,
+    ) -> Optional[Tensor]:
+        """
+        Combine attention mask and key padding mask.
+        
+        Args:
+            attn_mask: Attention mask [batch*num_heads, seq_len, seq_len] or [seq_len, seq_len]
+            key_padding_mask: Key padding mask [batch, seq_len]
+            batch_size: Batch size
+            seq_len: Sequence length
+            
+        Returns:
+            Combined mask or None
+        """
+        combined_mask = None
+        
+        # Handle key padding mask
+        if key_padding_mask is not None:
+            # Convert key_padding_mask from [batch, seq_len] to attention format
+            # [batch, 1, 1, seq_len] -> broadcast to [batch, num_heads, seq_len, seq_len]
+            key_padding_mask = key_padding_mask.view(batch_size, 1, 1, seq_len)
+            key_padding_mask = key_padding_mask.expand(-1, self.num_heads, seq_len, -1)
+            
+            # Create mask where True positions are masked (set to -inf)
+            combined_mask = torch.zeros(
+                batch_size, self.num_heads, seq_len, seq_len,
+                device=key_padding_mask.device, dtype=self.dtype
+            )
+            combined_mask.masked_fill_(key_padding_mask, float('-inf'))
+        
+        # Handle attention mask
+        if attn_mask is not None:
+            if attn_mask.dim() == 2:
+                # [seq_len, seq_len] -> broadcast
+                attn_mask = attn_mask.unsqueeze(0).unsqueeze(0)
+                attn_mask = attn_mask.expand(batch_size, self.num_heads, -1, -1)
+            elif attn_mask.dim() == 3:
+                # [batch*num_heads, seq_len, seq_len] -> reshape
+                attn_mask = attn_mask.view(batch_size, self.num_heads, seq_len, seq_len)
+            
+            if combined_mask is None:
+                combined_mask = attn_mask
+            else:
+                combined_mask = combined_mask + attn_mask
+        
+        # Reshape to expected format for attention: [batch, seq_len, num_heads, seq_len]
+        if combined_mask is not None:
+            combined_mask = combined_mask.permute(0, 2, 1, 3)
+        
+        return combined_mask
     
     def extra_repr(self) -> str:
         """String representation for debugging."""
-        return (
-            f"embed_dim={self.embed_dim}, num_heads={self.num_heads}, "
-            f"layer_norm={self.layer_norm}, gamma_init={self.gamma_init}, "
-            f"sequence_parallel={self.sequence_parallel}, model_parallel={self.model_parallel}, "
-            f"use_deepspeed={self.use_deepspeed}, gradient_checkpointing={self.use_gradient_checkpointing}"
-        )
+        repr_str = super().extra_repr()
+        repr_str += f", sequence_parallel={self.distributed_config.sequence_parallel}"
+        repr_str += f", model_parallel={self.distributed_config.model_parallel}"
+        if self.use_deepspeed:
+            repr_str += ", deepspeed=True"
+        if self.use_gradient_checkpointing:
+            repr_str += ", gradient_checkpointing=True"
+        return repr_str
 
 
 class DeepSpeedDilatedAttentionEngine:

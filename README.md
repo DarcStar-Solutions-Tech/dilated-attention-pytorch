@@ -2,6 +2,40 @@
 
 (Unofficial) Implementation of `DilatedAttention` from *[LongNet: Scaling Transformers to 1,000,000,000 Tokens](https://arxiv.org/abs/2307.02486)* in PyTorch.
 
+## 🎉 New in v0.2.0: Core Architecture Refactoring
+
+We've completely refactored the codebase to reduce duplication and improve maintainability:
+
+- **50-60% code reduction** through shared base classes and utilities
+- **Factory pattern** for easy module creation with auto-selection
+- **Type-safe configuration** system for all attention modules
+- **Unified memory management** with adaptive cleanup
+- **Backward compatible** - all existing code continues to work
+
+### Quick Start with New Factory Pattern
+
+```python
+from dilated_attention_pytorch.core import create_multihead_dilated_attention
+
+# Auto-select best implementation based on your hardware
+attention = create_multihead_dilated_attention("auto",
+    embed_dim=768,
+    num_heads=12,
+    segment_lengths=[2048, 4096, 8192],
+    dilation_rates=[1, 2, 4]
+)
+
+# Or choose a specific implementation
+attention = create_multihead_dilated_attention("ring",  # or "improved", "distributed"
+    embed_dim=768,
+    num_heads=12,
+    segment_lengths=[2048, 4096, 8192],
+    dilation_rates=[1, 2, 4]
+)
+```
+
+See the [Migration Guide](doc/migration-guide-v0.2.md) for upgrading from v0.1.x.
+
 ## 🚀 Revolutionary Update: Block-Sparse Ring Attention
 
 **NEW: Improved block-sparse ring attention makes 1T parameter training extremely feasible!**
@@ -54,6 +88,38 @@ See: [benchmark.py](./benchmark.py)
 
 ## Usage
 
+### Quick Start: Factory Pattern (Recommended)
+
+The easiest way to use dilated attention is through our factory functions:
+
+```python
+import torch
+from dilated_attention_pytorch.core import create_multihead_dilated_attention
+
+# Auto-select best implementation for your hardware
+attention = create_multihead_dilated_attention("auto",
+    embed_dim=768,
+    num_heads=12,
+    segment_lengths=[2048, 4096, 8192],
+    dilation_rates=[1, 2, 4],
+    dropout=0.1,
+    device="cuda",
+    dtype=torch.float16
+)
+
+# Use it like nn.MultiheadAttention
+x = torch.randn(2, 8192, 768, device="cuda", dtype=torch.float16)
+output = attention(x, x, x, is_causal=True)
+```
+
+Available implementations:
+- `"auto"` - Automatically selects best implementation
+- `"standard"` - Basic dilated attention
+- `"improved"` - Optimized with Flash Attention support
+- `"ring"` - Ring attention for extreme sequence lengths
+- `"distributed"` - Multi-GPU distributed attention
+- `"block_sparse"` - Block-sparse attention (5-50x speedup)
+
 ### `DilatedAttention`
 
 The LongNet paper introduces a new attention mechanism called `DilatedAttention`.  It is a drop-in replacement (see below) for "vanilla" attention that allows for much longer sequences to be processed.
@@ -64,7 +130,26 @@ The LongNet paper introduces a new attention mechanism called `DilatedAttention`
 - `segment_lengths` (required, `list[int]`): Length of each attention segment.  This is usually a geometric sequence increasing in powers of 2, such as `[2048, 4096, 8192]`.
 - `dilation_rates` (required, `list[int]`): Dilation rate for each segment.  Like with `segment_lengths`, this is usually a geometric sequence increasing in powers of 2, such as `[1, 2, 4]`.
 
+#### Using Factory Pattern (Recommended):
+```python
+import torch
+from dilated_attention_pytorch.core import create_dilated_attention
 
+# Create dilated attention using factory
+dilated_attention = create_dilated_attention("improved",
+    segment_lengths=[2048, 4096, 8192],
+    dilation_rates=[1, 2, 4],
+)
+
+# shape: (batch_size, seq_len, num_heads, embed_dim)
+query = torch.randn(1, 8192, 8, 64, device="cuda", dtype=torch.float16)
+key = torch.randn(1, 8192, 8, 64, device="cuda", dtype=torch.float16)
+value = torch.randn(1, 8192, 8, 64, device="cuda", dtype=torch.float16)
+
+out = dilated_attention(query, key, value, is_causal=False)
+```
+
+#### Direct Import (Backward Compatible):
 ```python
 import torch
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
@@ -98,6 +183,25 @@ print(out.shape)
 - `dilation_rates` (required, `list[int]`): Dilation rate for each segment.  Like with `segment_lengths`, this is usually a geometric sequence increasing in powers of 2, such as `[1, 2, 4]`.
 - Many of the same arguments from `nn.MultiheadAttention`.  See the `MultiheadDilatedAttention` class for more details.
 
+#### Using Factory Pattern (Recommended):
+```python
+from dilated_attention_pytorch.core import create_multihead_dilated_attention
+
+# Auto-select best implementation
+mhda = create_multihead_dilated_attention("auto",
+    embed_dim=512,
+    num_heads=8,
+    segment_lengths=[2048, 4096, 8192],
+    dilation_rates=[1, 2, 4],
+    device="cuda",
+    dtype=torch.float16
+)
+
+x = torch.randn(1, 8192, 512, device="cuda", dtype=torch.float16)
+y = mhda(x, x, x, is_causal=False)
+```
+
+#### Direct Import (Backward Compatible):
 ```python
 
 from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
@@ -124,6 +228,40 @@ print(y.shape)
 # torch.Size([1, 8192, 512])
 ```
 
+
+### Type-Safe Configuration
+
+The new architecture uses type-safe configuration dataclasses for better validation and cleaner APIs:
+
+```python
+from dilated_attention_pytorch.core import (
+    DilatedAttentionConfig,
+    MultiheadConfig,
+    create_multihead_dilated_attention
+)
+
+# Create configurations
+attention_config = DilatedAttentionConfig(
+    segment_lengths=[2048, 4096, 8192],
+    dilation_rates=[1, 2, 4],
+    dropout=0.1
+)
+
+multihead_config = MultiheadConfig(
+    embed_dim=768,
+    num_heads=12,
+    bias=True,
+    layer_norm=True,
+    gamma_init=1.0  # MAGNETO initialization
+)
+
+# Use with factory
+attention = create_multihead_dilated_attention(
+    "improved",
+    multihead_config=multihead_config,
+    attention_config=attention_config
+)
+```
 
 ### `LongNet`
 

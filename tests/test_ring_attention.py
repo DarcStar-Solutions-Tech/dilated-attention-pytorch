@@ -22,7 +22,7 @@ import tracemalloc
 import argparse
 import sys
 import os
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -30,7 +30,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
     from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
     from dilated_attention_pytorch.ring_multihead_dilated_attention import RingMultiheadDilatedAttention
-    from dilated_attention_pytorch.ring_advanced_distributed_dilated_attention import RingAdvancedDistributedDilatedAttention
+    # from dilated_attention_pytorch.ring_advanced_distributed_dilated_attention import RingAdvancedDistributedDilatedAttention  # Not implemented yet
     from dilated_attention_pytorch.improved_dilated_attention import ImprovedDilatedAttention
     from dilated_attention_pytorch.improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttention
     IMPORTS_AVAILABLE = True
