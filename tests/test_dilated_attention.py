@@ -82,7 +82,7 @@ def test_multihead_dilated_attention(
             mhda(x, x, x, is_causal=is_causal)
         return
 
-    out, _ = mhda(x, x, x, is_causal=is_causal)  # default: causal=False
+    out = mhda(x, x, x, is_causal=is_causal)  # default: causal=False
     assert out.size(0) == 1
     assert out.size(1) == SEQ_LEN
     assert out.size(2) == embed_dim

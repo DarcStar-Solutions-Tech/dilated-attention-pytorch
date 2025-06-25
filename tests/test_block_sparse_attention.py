@@ -32,13 +32,13 @@ from dilated_attention_pytorch.block_sparse_ring_distributed_dilated_attention i
     DistributedSparsePattern,
     HierarchicalSparsePatternGenerator
 )
-from dilated_attention_pytorch.sparse_pattern_utils import (
+from dilated_attention_pytorch.utils.sparse_pattern_utils import (
     PatternType,
     PatternConfig,
     SparsePatternGenerator as UtilsSparsePatternGenerator,
     PatternQualityAnalyzer,
     PatternOptimizer,
-    pattern_statistics
+    analyze_pattern_statistics
 )
 
 # Test configurations

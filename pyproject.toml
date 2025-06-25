@@ -45,11 +45,13 @@ dependencies = [
     "torch>=2.0.0",
     "einops>=0.8.0",
     "torchscale>=0.3.0",
-    "xformers>=0.0.20",
-    "flash-attn>=2.8.0,<4.0.0",  # Support latest FA2 and upcoming FA3
 ]
 
 [project.optional-dependencies]
+cuda = [
+    "xformers>=0.0.20",
+    "flash-attn>=2.8.0,<4.0.0",  # Support latest FA2 and upcoming FA3
+]
 test = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",

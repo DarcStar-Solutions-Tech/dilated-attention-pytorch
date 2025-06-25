@@ -1,5 +1,5 @@
 """
-Ring Attention implementation for Dilated Attention.
+Ring Attention implementation for Dilated Attention using the refactored core architecture.
 
 This module implements Ring Attention pattern for dilated attention, enabling 
 O(n) memory scaling instead of O(n²) for arbitrarily long sequences through
@@ -31,6 +31,16 @@ from torch import nn, Tensor
 import torch.nn.functional as F
 import torch.distributed as dist
 
+from .core import (
+    BaseDilatedAttention,
+    RingAttentionConfig,
+    get_global_memory_pool,
+    optimize_attention_computation,
+    HAS_FLASH_ATTN_3,
+    GPU_TYPE,
+    HAS_FLASH_ATTN,
+)
+
 # Handle torch.nn.attention availability
 try:
     from torch.nn.attention import sdpa_kernel, SDPBackend
@@ -43,60 +53,21 @@ except ImportError:
         EFFICIENT_ATTENTION = "efficient_attention"
         MATH = "math"
 
-# Flash Attention version detection
-def get_flash_attention_version():
-    """Detect available Flash Attention version for optimization."""
+
+def get_flash_attention_version() -> Optional[str]:
+    """Get the version of Flash Attention if available."""
+    if not HAS_FLASH_ATTN:
+        return None
     try:
         import flash_attn
-        version = getattr(flash_attn, '__version__', 'unknown')
-        return version
-    except ImportError:
-        # Check if Flash Attention 3 (beta) is available from different repo
-        try:
-            import flash_attn_3
-            return getattr(flash_attn_3, '__version__', '3.0.0-beta')
-        except ImportError:
-            return None
+        return flash_attn.__version__
+    except:
+        return None
 
-def is_flash_attention_3_available():
+
+def is_flash_attention_3_available() -> bool:
     """Check if Flash Attention 3 is available."""
-    version = get_flash_attention_version()
-    if version and version != 'unknown':
-        try:
-            # Handle both 3.x versions and 2.8+ with FA3 features
-            if version.startswith('3.'):
-                return True
-            # FA2 2.8+ has some FA3 optimizations
-            version_parts = version.split('.')
-            major = int(version_parts[0])
-            minor = int(version_parts[1]) if len(version_parts) > 1 else 0
-            return major >= 3 or (major == 2 and minor >= 8)
-        except (ValueError, IndexError):
-            return False
-    
-    # Check for FA3 specific modules
-    try:
-        import flash_attn_3
-        return True
-    except ImportError:
-        pass
-    
-    # Check for H100 optimizations in FA2
-    if torch.cuda.is_available():
-        try:
-            device_name = torch.cuda.get_device_properties(0).name
-            if 'H100' in device_name or 'H800' in device_name:
-                # H100 with FA2.8+ has some FA3-like optimizations
-                version = get_flash_attention_version()
-                if version:
-                    version_parts = version.split('.')
-                    major = int(version_parts[0])
-                    minor = int(version_parts[1]) if len(version_parts) > 1 else 0
-                    return major == 2 and minor >= 8
-        except:
-            pass
-    
-    return False
+    return HAS_FLASH_ATTN_3
 
 
 class RingAttentionMemoryPool:
@@ -216,7 +187,7 @@ class RingAttentionMemoryPool:
             # Update access order list to remove deleted keys
             self._access_order = [key for key in self._access_order if key in self._pools]
 
-class RingDilatedAttention(nn.Module):
+class RingDilatedAttention(BaseDilatedAttention):
     """
     Ring Attention implementation for Dilated Attention with O(n) memory complexity.
     
@@ -240,6 +211,7 @@ class RingDilatedAttention(nn.Module):
         ring_size: Optional[int] = None,
         use_checkpointing: bool = True,
         device: Optional[Union[torch.device, str]] = None,
+        dtype: Optional[torch.dtype] = None,
     ):
         """
         Initialize Ring Dilated Attention.
@@ -253,58 +225,44 @@ class RingDilatedAttention(nn.Module):
             ring_size: Number of devices in ring (auto-detected if None)
             use_checkpointing: Enable gradient checkpointing (default: True)
             device: Device to place tensors on
+            dtype: Data type for parameters
         """
-        super().__init__()
+        # Create configuration
+        config = RingAttentionConfig(
+            segment_lengths=list(segment_lengths),
+            dilation_rates=list(dilation_rates),
+            dropout=dropout,
+            use_tf32=use_tf32,
+            block_size=block_size,
+            ring_size=ring_size,
+            use_checkpointing=use_checkpointing,
+            device=device,
+            dtype=dtype,
+        )
         
-        # Validate inputs
-        if len(segment_lengths) != len(dilation_rates):
-            raise ValueError(
-                f"segment_lengths and dilation_rates must have the same length, "
-                f"got {len(segment_lengths)} and {len(dilation_rates)}"
-            )
+        # Initialize base class
+        super().__init__(config)
         
-        if not segment_lengths:
-            raise ValueError("segment_lengths cannot be empty")
-        
-        for i, (seg_len, dil_rate) in enumerate(zip(segment_lengths, dilation_rates)):
-            if seg_len <= 0:
-                raise ValueError(f"segment_lengths[{i}] must be positive, got {seg_len}")
-            if dil_rate <= 0:
-                raise ValueError(f"dilation_rates[{i}] must be positive, got {dil_rate}")
-        
-        if block_size <= 0:
-            raise ValueError(f"block_size must be positive, got {block_size}")
-        
-        if not 0.0 <= dropout <= 1.0:
-            raise ValueError(f"dropout must be between 0 and 1, got {dropout}")
-        
-        self.segment_lengths = list(segment_lengths)
-        self.dilation_rates = list(dilation_rates)
-        self.dropout = dropout
-        self.block_size = block_size
-        self.use_checkpointing = use_checkpointing
-        self.num_groups = len(self.segment_lengths)
+        # Store ring-specific attributes
+        self.block_size = self.config.block_size
+        self.use_checkpointing = self.config.use_checkpointing
         
         # Ring attention configuration
         self.world_size = dist.get_world_size() if dist.is_initialized() else 1
         self.rank = dist.get_rank() if dist.is_initialized() else 0
-        self.ring_size = ring_size or self.world_size
+        self.ring_size = self.config.ring_size or self.world_size
         
-        # Optimization settings
-        if use_tf32 and torch.cuda.is_available():
-            torch.backends.cuda.matmul.allow_tf32 = True
-            torch.backends.cudnn.allow_tf32 = True
-        
-        # Advanced memory optimization: Pre-compute head distribution and cache indices
-        self._head_groups_cache = {}  # Memoize head group calculations
-        self._cached_indices = {}
+        # Ring-specific caches and buffers
+        self._cached_indices = {}  # Cache for dilation indices
         self._ring_buffers = {}
         self._ring_patterns = {}  # Cache ring-specific patterns
         self._vectorized_patterns = {}  # Cache for vectorized pattern computation
         
-        # Memory pool for efficient buffer management
-        device_obj = torch.device(device) if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self._memory_pool = RingAttentionMemoryPool(device_obj)
+        # Memory pool from core module
+        self.memory_pool = get_global_memory_pool()
+        
+        # Create ring-specific memory pool wrapper
+        self._ring_memory_pool = RingAttentionMemoryPool(self.device)
         
         # Pre-allocated rotation buffers
         self._rotation_buffers = {}
@@ -312,14 +270,13 @@ class RingDilatedAttention(nn.Module):
         
         # Thread safety for concurrent operations
         self._buffer_lock = threading.Lock()
-        self._cache_lock = threading.Lock()
         
         # Setup ring communication if distributed
         self._setup_ring_communication()
         
         # Hardware optimization detection
-        self._is_h100_gpu = self._detect_h100_gpu()
-        self._flash_attn_3_available = is_flash_attention_3_available()
+        self._is_h100_gpu = GPU_TYPE == "h100"
+        self._flash_attn_3_available = HAS_FLASH_ATTN_3
     
     def _setup_ring_communication(self):
         """Setup ring communication pattern for distributed computation."""
@@ -341,28 +298,6 @@ class RingDilatedAttention(nn.Module):
         self._kv_recv_buffer = None
         self._packed_communication_buffer = None  # For optimized K/V packing
     
-    def _get_head_groups(self, h: int):
-        """Pre-compute and cache head group distribution with memoization."""
-        if h in self._head_groups_cache:
-            return self._head_groups_cache[h]
-        
-        # Vectorized computation for better performance
-        base_size = h // self.num_groups
-        remainder = h % self.num_groups
-        
-        # Use vectorized operations instead of loops
-        gs = [base_size] * self.num_groups
-        for i in range(remainder):
-            gs[i] += 1
-        
-        # Vectorized head range computation
-        cumsum = torch.cumsum(torch.tensor([0] + gs[:-1], dtype=torch.long), dim=0)
-        head_ranges = [(cumsum[i].item(), cumsum[i].item() + gs[i]) for i in range(self.num_groups)]
-        
-        # Cache the result for future use
-        result = (gs, head_ranges)
-        self._head_groups_cache[h] = result
-        return result
     
     def _precompute_ring_patterns(self, h: int, ring_size: int):
         """Pre-compute all ring-specific patterns with vectorized operations."""
@@ -381,7 +316,7 @@ class RingDilatedAttention(nn.Module):
                     indices_key = (s, r, offset)
                     if indices_key not in all_indices:
                         all_indices[indices_key] = torch.arange(
-                            offset, s, r, device=self._memory_pool.device
+                            offset, s, r, device=self._ring_memory_pool.device
                         )
             
             # Vectorized step pattern creation
@@ -402,8 +337,9 @@ class RingDilatedAttention(nn.Module):
                 ring_patterns.append(step_patterns)
             
             # Cache both individual indices and complete patterns
-            self._cached_indices.update(all_indices)
-            self._vectorized_patterns[cache_key] = ring_patterns
+            with self._cache_lock:
+                self._cached_indices.update(all_indices)
+                self._vectorized_patterns[cache_key] = ring_patterns
         
         self._ring_patterns[cache_key] = self._vectorized_patterns[cache_key]
         return self._ring_patterns[cache_key]
@@ -432,16 +368,16 @@ class RingDilatedAttention(nn.Module):
                     self._kv_send_buffer.shape != buffer_shape or
                     self._kv_send_buffer.dtype != k.dtype):
                     
-                    self._kv_send_buffer = self._memory_pool.get_buffer(
+                    self._kv_send_buffer = self._ring_memory_pool.get_buffer(
                         buffer_shape, k.dtype, "kv_send"
                     )
-                    self._kv_recv_buffer = self._memory_pool.get_buffer(
+                    self._kv_recv_buffer = self._ring_memory_pool.get_buffer(
                         buffer_shape, k.dtype, "kv_recv"
                     )
                     
                     # Allocate optimized packed communication buffer
                     packed_size = 2 * b * local_seq_len * h * d  # K + V
-                    self._packed_communication_buffer = self._memory_pool.get_buffer(
+                    self._packed_communication_buffer = self._ring_memory_pool.get_buffer(
                         (packed_size,), k.dtype, "packed_comm"
                     )
         
@@ -452,8 +388,8 @@ class RingDilatedAttention(nn.Module):
                 # Check again inside lock
                 if buffer_key not in self._rotation_buffers:
                     self._rotation_buffers[buffer_key] = {
-                        'k': self._memory_pool.get_buffer(buffer_shape, k.dtype, "rot_k"),
-                        'v': self._memory_pool.get_buffer(buffer_shape, k.dtype, "rot_v")
+                        'k': self._ring_memory_pool.get_buffer(buffer_shape, k.dtype, "rot_k"),
+                        'v': self._ring_memory_pool.get_buffer(buffer_shape, k.dtype, "rot_v")
                     }
     
     def _ring_attention_step(
@@ -583,14 +519,8 @@ class RingDilatedAttention(nn.Module):
             attn_reshaped = attn_out.view(b, num_segments_q, effective_s, g, d)
             attn_flat = attn_reshaped.view(b, n_q, g, d)
             
-            # Optimized accumulation using advanced indexing for better performance
-            if attn_flat.shape == out[:, :, hmin:hmax, :].shape:
-                # Direct in-place accumulation when shapes match exactly
-                out[:, :, hmin:hmax, :].add_(attn_flat)
-            else:
-                # Fallback with explicit slicing for shape mismatch cases
-                out_slice = out[:, :, hmin:hmax, :] 
-                out_slice.add_(attn_flat)
+            # Accumulate results - slicing creates a view, so this modifies 'out' in-place
+            out[:, :, hmin:hmax, :].add_(attn_flat)
         
         # Normalize by number of groups using in-place division
         out.div_(self.num_groups)
@@ -619,19 +549,32 @@ class RingDilatedAttention(nn.Module):
         num_segments = (total_len + segment_size - 1) // segment_size
         return x[:, :num_segments * segment_size].view(b, num_segments, segment_size, h, d)
     
-    def forward(self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool = False) -> Tensor:
+    def forward(
+        self, 
+        query: Tensor, 
+        key: Tensor, 
+        value: Tensor, 
+        is_causal: bool = False,
+        attention_mask: Optional[Tensor] = None
+    ) -> Tensor:
         """
         Forward pass with Ring Attention for O(n) memory complexity.
         
         Args:
-            q: Query tensor [batch, seq_len, num_heads, head_dim]
-            k: Key tensor [batch, seq_len, num_heads, head_dim]
-            v: Value tensor [batch, seq_len, num_heads, head_dim]
+            query: Query tensor [batch, seq_len, num_heads, head_dim]
+            key: Key tensor [batch, seq_len, num_heads, head_dim]
+            value: Value tensor [batch, seq_len, num_heads, head_dim]
             is_causal: Whether to apply causal masking
+            attention_mask: Optional attention mask (not supported in ring mode)
             
         Returns:
             Attention output [batch, seq_len, num_heads, head_dim]
         """
+        # Validate inputs using base class method
+        self._validate_forward_inputs(query, key, value, attention_mask)
+        
+        # Use consistent naming
+        q, k, v = query, key, value
         b, n, h, d = q.shape
         
         # Single device case - fall back to standard dilated attention
@@ -808,7 +751,7 @@ class RingDilatedAttention(nn.Module):
                     f"Consider reducing sequence length or ring size."
                 )
             
-            self._packed_communication_buffer = self._memory_pool.get_buffer(
+            self._packed_communication_buffer = self._ring_memory_pool.get_buffer(
                 (total_size,), k.dtype, "packed_comm_resized"
             )
         
@@ -928,12 +871,15 @@ class RingDilatedAttention(nn.Module):
     
     def clear_cache(self, force: bool = False):
         """Clear cached patterns and buffers to free memory with thread safety and optimization tracking."""
+        # Clear base class cache first
+        super().clear_cache(force)
+        
+        # Clear ring-specific caches
         with self._cache_lock:
             if force:
                 self._cached_indices.clear()
                 self._ring_patterns.clear()
                 self._rotation_buffers.clear()
-                self._head_groups_cache.clear()
                 self._vectorized_patterns.clear()
             else:
                 # Smart cache cleanup - keep frequently used patterns with priority
@@ -953,25 +899,9 @@ class RingDilatedAttention(nn.Module):
                     keys_to_keep = list(self._vectorized_patterns.keys())[-3:]
                     new_vec_patterns = {k: self._vectorized_patterns[k] for k in keys_to_keep}
                     self._vectorized_patterns = new_vec_patterns
-                
-                # Keep head groups cache (very cheap to recompute, clean aggressively)
-                if len(self._head_groups_cache) > 20:
-                    keys_to_keep = list(self._head_groups_cache.keys())[-10:]
-                    new_head_cache = {k: self._head_groups_cache[k] for k in keys_to_keep}
-                    self._head_groups_cache = new_head_cache
             
-            self._memory_pool.clear_unused_buffers()
+            self._ring_memory_pool.clear_unused_buffers()
     
-    def _detect_h100_gpu(self) -> bool:
-        """Detect if running on H100 GPUs optimized for Flash Attention 3."""
-        if not torch.cuda.is_available():
-            return False
-        try:
-            device_name = torch.cuda.get_device_properties(0).name.lower()
-            # H100 variants: H100, H100 PCIe, H100 SXM, etc.
-            return 'h100' in device_name
-        except:
-            return False
     
     def _get_optimal_sdpa_backends(self):
         """Get optimal SDPA backends based on hardware and Flash Attention version."""
@@ -1021,10 +951,11 @@ class RingDilatedAttention(nn.Module):
         if hasattr(self, '_temp_buffers'):
             for buffer in getattr(self, '_temp_buffers', []):
                 try:
-                    if self._memory_pool and buffer is not None:
+                    if self._ring_memory_pool and buffer is not None:
                         # Check if buffer is still valid before returning
                         if buffer.device.type == self.device.type:
-                            self._return_buffer(buffer)
+                            # Ring memory pool handles cleanup internally
+                            pass
                 except Exception:
                     pass
             self._temp_buffers = []
@@ -1048,11 +979,11 @@ class RingDilatedAttention(nn.Module):
             "supports_infinite_context": True,
             "cached_patterns": len(self._ring_patterns),
             "cached_indices": len(self._cached_indices),
-            "allocated_buffers": len(self._memory_pool._pools),
-            "head_groups_cached": len(self._head_groups_cache),
+            "allocated_buffers": len(self._ring_memory_pool._pools),
+            "head_groups_cached": len(self._head_groups_cache) if hasattr(self, '_head_groups_cache') else 0,
             "vectorized_patterns_cached": len(self._vectorized_patterns),
-            "hot_buffer_keys": len(self._memory_pool._hot_keys_cache),
-            "flash_attention_version": get_flash_attention_version(),
+            "hot_buffer_keys": len(self._ring_memory_pool._hot_keys_cache),
+            "flash_attention_version": None,  # Use core detection
             "flash_attention_3_available": self._flash_attn_3_available,
             "hardware_optimized_for_fa3": self._is_h100_gpu,
             "sdpa_backend_available": HAS_SDPA_KERNEL,

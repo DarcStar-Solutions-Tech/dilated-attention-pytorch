@@ -15,6 +15,12 @@ import xformers.ops as xops
 
 from torch import device
 
+# Import factory functions (v0.2.0+)
+from dilated_attention_pytorch import (
+    create_dilated_attention,
+    create_multihead_dilated_attention,
+)
+# For backward compatibility
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
 from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
 
@@ -39,6 +45,8 @@ parser.add_argument('--vanilla', type=bool, default=True, action=argparse.Boolea
                     help='Benchmark vanilla attention')
 parser.add_argument('--improved', type=bool, default=True, action=argparse.BooleanOptionalAction,
                     help='Benchmark improved attention')
+parser.add_argument('--factory', type=bool, default=True, action=argparse.BooleanOptionalAction,
+                    help='Use factory pattern for creation')
 parser.add_argument('--dilated', type=bool, default=True, action=argparse.BooleanOptionalAction,
                     help='Benchmark dilated attention')
 parser.add_argument('--multihead', type=bool, default=True, action=argparse.BooleanOptionalAction,
@@ -69,6 +77,7 @@ BENCHMARK_MULTIHEAD: bool = args.multihead
 BENCHMARK_IMPROVED: bool = args.improved
 IS_CAUSAL: bool = args.causal
 PERMUTATION: bool = args.permutation
+USE_FACTORY: bool = args.factory
 
 
 class BenchmarkResult(NamedTuple):
@@ -164,22 +173,55 @@ def get_attention_for_seq_length(
 
     dilation_rates, segment_lengths = calculate_segments_and_dilation_rates(seq_length)
 
-    if attention_type == AttentionType.DILATED:
-        return DilatedAttention(
-            segment_lengths=segment_lengths,
-            dilation_rates=dilation_rates,
-            op=op,
-        )
-    elif attention_type == AttentionType.MHA:
-        return MultiheadDilatedAttention(
-            embed_dim=embed_dim,
-            num_heads=num_heads,
-            segment_lengths=segment_lengths,
-            dilation_rates=dilation_rates,
-            op=op,
-            device=device,
-            dtype=dtype,
-        )
+    if USE_FACTORY:
+        # Use factory pattern (v0.2.0+)
+        if attention_type == AttentionType.DILATED:
+            return create_dilated_attention(
+                "standard",  # Use standard for benchmarking consistency
+                segment_lengths=segment_lengths,
+                dilation_rates=dilation_rates,
+                device=device,
+                dtype=dtype,
+            )
+        elif attention_type == AttentionType.MHA:
+            return create_multihead_dilated_attention(
+                "standard",  # Use standard for benchmarking consistency
+                embed_dim=embed_dim,
+                num_heads=num_heads,
+                segment_lengths=segment_lengths,
+                dilation_rates=dilation_rates,
+                device=device,
+                dtype=dtype,
+            )
+    else:
+        # Legacy direct instantiation
+        if attention_type == AttentionType.DILATED:
+            return DilatedAttention(
+                segment_lengths=segment_lengths,
+                dilation_rates=dilation_rates,
+                op=op,
+            )
+        elif attention_type == AttentionType.MHA:
+            return MultiheadDilatedAttention(
+                embed_dim=embed_dim,
+                num_heads=num_heads,
+                segment_lengths=segment_lengths,
+                dilation_rates=dilation_rates,
+                op=op,
+                device=device,
+                dtype=dtype,
+            )
+        elif attention_type == AttentionType.IMPROVED:
+            # Benchmark improved implementation  
+            return create_multihead_dilated_attention(
+                "improved",
+                embed_dim=embed_dim,
+                num_heads=num_heads,
+                segment_lengths=segment_lengths,
+                dilation_rates=dilation_rates,
+                device=device,
+                dtype=dtype,
+            )
     else:
         raise ValueError(f"Invalid attention type: {attention_type}")
 
