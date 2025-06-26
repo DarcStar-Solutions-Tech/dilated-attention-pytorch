@@ -3,7 +3,6 @@ Optimized implementation of block sparse attention processing
 """
 
 import math
-from typing import Optional, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -34,9 +33,7 @@ def optimized_process_sparse_blocks(
     # Handle different pattern shapes
     if sparse_pattern.dim() == 2:
         # Expand pattern for all batches and heads
-        sparse_pattern = (
-            sparse_pattern.unsqueeze(0).unsqueeze(0).expand(batch, num_heads, -1, -1)
-        )
+        sparse_pattern = sparse_pattern.unsqueeze(0).unsqueeze(0).expand(batch, num_heads, -1, -1)
     elif sparse_pattern.dim() == 3:
         # Assume [batch, num_blocks, num_blocks], expand for heads
         sparse_pattern = sparse_pattern.unsqueeze(1).expand(-1, num_heads, -1, -1)
@@ -79,9 +76,7 @@ def optimized_process_sparse_blocks(
 
         # Softmax and output computation
         attn_weights = F.softmax(scores, dim=-1)
-        block_outputs = torch.bmm(
-            attn_weights, v_active
-        )  # [num_active, block_size, head_dim]
+        block_outputs = torch.bmm(attn_weights, v_active)  # [num_active, block_size, head_dim]
 
         # Scatter results back to output tensor
         # This is the key optimization - we accumulate all results at once
@@ -125,7 +120,9 @@ if __name__ == "__main__":
     import time
 
     from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-        SparsePatternConfig, SparsePatternGenerator)
+        SparsePatternConfig,
+        SparsePatternGenerator,
+    )
 
     # Setup
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -138,15 +135,9 @@ if __name__ == "__main__":
     block_size = 32
 
     # Create inputs
-    q = torch.randn(
-        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-    )
-    k = torch.randn(
-        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-    )
-    v = torch.randn(
-        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-    )
+    q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
 
     # Create sparse pattern
     sparse_config = SparsePatternConfig(
@@ -172,4 +163,4 @@ if __name__ == "__main__":
 
     print(f"Optimized version took: {elapsed:.2f}ms")
     print(f"Output shape: {output.shape}")
-    print(f"Expected speedup: ~100-1000x over loop-based implementation")
+    print("Expected speedup: ~100-1000x over loop-based implementation")

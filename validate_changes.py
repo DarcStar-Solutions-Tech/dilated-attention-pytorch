@@ -50,13 +50,9 @@ def validate_error_recovery():
         "BlockSparseRingDistributedDilatedAttention",
         "_cleanup_resources",
     ):
-        print(
-            "✓ BlockSparseRingDistributedDilatedAttention._cleanup_resources() exists"
-        )
+        print("✓ BlockSparseRingDistributedDilatedAttention._cleanup_resources() exists")
     else:
-        print(
-            "✗ BlockSparseRingDistributedDilatedAttention._cleanup_resources() missing"
-        )
+        print("✗ BlockSparseRingDistributedDilatedAttention._cleanup_resources() missing")
 
 
 def validate_memory_limits():

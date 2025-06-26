@@ -12,7 +12,9 @@ sys.stdout.flush()
 
 try:
     from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-        BlockSparseRingDilatedAttention, SparsePatternConfig)
+        BlockSparseRingDilatedAttention,
+        SparsePatternConfig,
+    )
 
     print("2. Import successful")
     sys.stdout.flush()

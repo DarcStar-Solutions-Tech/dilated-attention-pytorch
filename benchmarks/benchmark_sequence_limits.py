@@ -4,28 +4,27 @@ Comprehensive benchmark to find maximum sequence lengths for each implementation
 
 import gc
 import time
-import traceback
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
 
 import GPUtil
 import psutil
 import torch
 
 # Import all implementations
-from dilated_attention_pytorch import (DilatedAttention,
-                                       ImprovedDilatedAttention,
-                                       MultiheadDilatedAttention)
+from dilated_attention_pytorch import (
+    DilatedAttention,
+    ImprovedDilatedAttention,
+    MultiheadDilatedAttention,
+)
 from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention, SparsePatternConfig)
-from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import \
-    BlockSparseRingMultiheadDilatedAttention
-from dilated_attention_pytorch.improved_multihead_dilated_attention import \
-    ImprovedMultiheadDilatedAttention
-from dilated_attention_pytorch.ring_dilated_attention import \
-    RingDilatedAttention
-from dilated_attention_pytorch.ring_multihead_dilated_attention import \
-    RingMultiheadDilatedAttention
+    BlockSparseRingDilatedAttention,
+    SparsePatternConfig,
+)
+from dilated_attention_pytorch.improved_multihead_dilated_attention import (
+    ImprovedMultiheadDilatedAttention,
+)
+from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
+from dilated_attention_pytorch.ring_multihead_dilated_attention import RingMultiheadDilatedAttention
 
 
 @dataclass
@@ -39,16 +38,16 @@ class BenchmarkResult:
     memory_gb: float
     throughput_tokens_per_sec: float
     success: bool
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class SequenceLengthBenchmark:
     def __init__(self, device="cuda", dtype=torch.float16):
         self.device = torch.device(device if torch.cuda.is_available() else "cpu")
         self.dtype = dtype
-        self.results: List[BenchmarkResult] = []
+        self.results: list[BenchmarkResult] = []
 
-    def get_gpu_memory_info(self) -> Tuple[float, float]:
+    def get_gpu_memory_info(self) -> tuple[float, float]:
         """Get current GPU memory usage in GB"""
         if self.device.type == "cuda":
             allocated = torch.cuda.memory_allocated() / 1024**3
@@ -208,7 +207,7 @@ class SequenceLengthBenchmark:
         self,
         name: str,
         module_factory,
-        seq_lengths: List[int],
+        seq_lengths: list[int],
         batch_size: int = 1,
         num_heads: int = 8,
         head_dim: int = 64,
@@ -445,9 +444,7 @@ class SequenceLengthBenchmark:
         print("SUMMARY: Maximum Sequence Lengths")
         print("=" * 80)
 
-        for name, max_len in sorted(
-            max_lengths.items(), key=lambda x: x[1], reverse=True
-        ):
+        for name, max_len in sorted(max_lengths.items(), key=lambda x: x[1], reverse=True):
             if max_len > 0:
                 print(f"{name:30} {max_len:>10,} tokens")
             else:
@@ -456,7 +453,7 @@ class SequenceLengthBenchmark:
         # Print use case recommendations
         self.print_use_case_recommendations(max_lengths)
 
-    def print_use_case_recommendations(self, max_lengths: Dict[str, int]):
+    def print_use_case_recommendations(self, max_lengths: dict[str, int]):
         """Print recommendations for different use cases"""
 
         print("\n" + "=" * 80)

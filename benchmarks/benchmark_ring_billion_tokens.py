@@ -8,12 +8,10 @@ to demonstrate how Ring Attention enables processing of very long sequences.
 import gc
 import time
 from dataclasses import dataclass
-from typing import List, Tuple
 
 import torch
 
-from dilated_attention_pytorch.ring_dilated_attention import \
-    RingDilatedAttention
+from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
 
 
 @dataclass
@@ -97,9 +95,7 @@ def benchmark_ring_attention(
         chunk_times = []
         start_total = time.time()
 
-        for chunk_idx in range(
-            min(ring_size, 4)
-        ):  # Process max 4 chunks for benchmarking
+        for chunk_idx in range(min(ring_size, 4)):  # Process max 4 chunks for benchmarking
             start_chunk = time.time()
 
             # Create chunk tensors
@@ -128,7 +124,7 @@ def benchmark_ring_attention(
             # Clean up
             del q_chunk, k_chunk, v_chunk, output_chunk
 
-            print(f"    Chunk {chunk_idx+1}: {chunk_time*1000:.1f}ms")
+            print(f"    Chunk {chunk_idx + 1}: {chunk_time * 1000:.1f}ms")
 
         total_time = time.time() - start_total
         avg_chunk_time = sum(chunk_times) / len(chunk_times)
@@ -141,8 +137,8 @@ def benchmark_ring_attention(
         if device.type == "cuda":
             peak_memory_gb = torch.cuda.max_memory_allocated() / (1024**3)
 
-        print(f"  ✓ Success!")
-        print(f"  Average chunk time: {avg_chunk_time*1000:.1f}ms")
+        print("  ✓ Success!")
+        print(f"  Average chunk time: {avg_chunk_time * 1000:.1f}ms")
         print(f"  Estimated total time: {estimated_total_time:.1f}s")
         print(f"  Peak memory: {peak_memory_gb:.2f}GB")
 
@@ -159,7 +155,7 @@ def benchmark_ring_attention(
     except Exception as e:
         error_msg = str(e)
         if "out of memory" in error_msg.lower():
-            print(f"  ✗ OOM - need larger ring_size")
+            print("  ✗ OOM - need larger ring_size")
         else:
             print(f"  ✗ Error: {error_msg[:100]}")
 
@@ -196,9 +192,7 @@ def run_scaling_benchmark():
     else:
         print("WARNING: Running on CPU - this will be very slow!")
 
-    print(
-        "\nNote: Using float16 precision and batch_size=1 for maximum sequence length"
-    )
+    print("\nNote: Using float16 precision and batch_size=1 for maximum sequence length")
 
     # Test configurations: (seq_len, ring_size)
     # Start small and scale up, adjusting ring_size as needed
@@ -226,15 +220,13 @@ def run_scaling_benchmark():
         (1_073_741_824, 65536),  # 1B tokens!
     ]
 
-    results: List[BenchmarkResult] = []
+    results: list[BenchmarkResult] = []
 
     for seq_len, ring_size in test_configs:
         # Skip if sequence is too large for available memory
         est_memory = estimate_memory_usage(seq_len, 1, 8, 64, ring_size)
         if torch.cuda.is_available() and est_memory > gpu_memory_gb * 0.8:
-            print(
-                f"\nSkipping seq_len={seq_len:,} (estimated {est_memory:.1f}GB > available)"
-            )
+            print(f"\nSkipping seq_len={seq_len:,} (estimated {est_memory:.1f}GB > available)")
             continue
 
         result = benchmark_ring_attention(seq_len, ring_size)
@@ -256,13 +248,11 @@ def run_scaling_benchmark():
     for r in results:
         if r.success:
             print(
-                f"{r.seq_len:>15,} {r.ring_size:>10} {r.time_per_chunk*1000:>10.1f}ms "
+                f"{r.seq_len:>15,} {r.ring_size:>10} {r.time_per_chunk * 1000:>10.1f}ms "
                 f"{r.total_time:>10.1f}s {r.peak_memory_gb:>8.1f}GB {'✓':>10}"
             )
         else:
-            print(
-                f"{r.seq_len:>15,} {r.ring_size:>10} {'--':>12} {'--':>12} {'--':>10} {'✗':>10}"
-            )
+            print(f"{r.seq_len:>15,} {r.ring_size:>10} {'--':>12} {'--':>12} {'--':>10} {'✗':>10}")
 
     # Analysis
     successful_results = [r for r in results if r.success]
@@ -270,9 +260,9 @@ def run_scaling_benchmark():
         largest = max(successful_results, key=lambda x: x.seq_len)
         print(f"\nLargest successful sequence: {largest.seq_len:,} tokens")
         print(f"Ring size used: {largest.ring_size}")
-        print(f"Time per chunk: {largest.time_per_chunk*1000:.1f}ms")
+        print(f"Time per chunk: {largest.time_per_chunk * 1000:.1f}ms")
         print(
-            f"Estimated total time: {largest.total_time:.1f}s ({largest.total_time/60:.1f} minutes)"
+            f"Estimated total time: {largest.total_time:.1f}s ({largest.total_time / 60:.1f} minutes)"
         )
         print(f"Peak memory usage: {largest.peak_memory_gb:.2f}GB")
 

@@ -8,7 +8,8 @@ and shared functionality for all dilated attention implementations.
 import threading
 from abc import ABC, abstractmethod
 from collections import OrderedDict
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from collections.abc import Callable
+from typing import Any
 
 import torch
 from torch import Tensor, nn
@@ -67,9 +68,7 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
 
         # Initialize caches for frequently computed values with size limits
         self._max_cache_size = 100  # Configurable cache size limit
-        self._head_groups_cache: dict[int, tuple[list[int], list[tuple[int, int]]]] = (
-            OrderedDict()
-        )
+        self._head_groups_cache: dict[int, tuple[list[int], list[tuple[int, int]]]] = OrderedDict()
         self._pattern_cache: dict[Any, Tensor] = OrderedDict()
         self._indices_cache: dict[Any, tuple[Tensor, Tensor]] = OrderedDict()
 
@@ -104,9 +103,7 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
         """
         pass
 
-    def _get_head_groups(
-        self, num_heads: int
-    ) -> tuple[list[int], list[tuple[int, int]]]:
+    def _get_head_groups(self, num_heads: int) -> tuple[list[int], list[tuple[int, int]]]:
         """
         Get cached head group distribution.
 
@@ -336,9 +333,7 @@ class BaseMultiheadDilatedAttention(nn.Module, ValidationMixin, ABC):
         self._init_qkv_projections(factory_kwargs)
 
         # Output projection
-        self.out_proj = nn.Linear(
-            self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs
-        )
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs)
 
         # Layer normalization if enabled
         if multihead_config.layer_norm:

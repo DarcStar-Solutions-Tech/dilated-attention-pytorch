@@ -39,15 +39,9 @@ def test_optimization():
         dilation_rates = [1, 2, 4]
 
         # Create inputs
-        q = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
-        k = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
-        v = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
+        q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+        k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+        v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
 
         implementations = [
             ("DilatedAttention", DilatedAttention(segments, dilation_rates, 0.0)),
@@ -126,12 +120,8 @@ def analyze_offset_distribution():
     zero_offsets = sum(1 for i, r in enumerate(dilation_rates) if i % r == 0)
     percentage = zero_offsets / num_groups * 100
 
-    print(
-        f"\nDirect slicing applicable: {zero_offsets}/{num_groups} groups ({percentage:.0f}%)"
-    )
-    print(
-        "This means the optimization applies to a significant portion of computations!"
-    )
+    print(f"\nDirect slicing applicable: {zero_offsets}/{num_groups} groups ({percentage:.0f}%)")
+    print("This means the optimization applies to a significant portion of computations!")
 
 
 if __name__ == "__main__":

@@ -122,9 +122,7 @@ def test_forward_compatibility():
         if output.shape == expected_shape:
             print("✓ Output shape is correct")
         else:
-            print(
-                f"✗ Output shape mismatch. Expected {expected_shape}, got {output.shape}"
-            )
+            print(f"✗ Output shape mismatch. Expected {expected_shape}, got {output.shape}")
             return False
 
         if attn_weights is None:

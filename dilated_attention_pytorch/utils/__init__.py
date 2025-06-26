@@ -7,21 +7,28 @@ the main dilated attention implementations but are not core architectural compon
 
 # Validation utilities
 # Attention computation utilities
-from .attention_utils import (apply_head_specific_masks,
-                              compute_position_embeddings,
-                              create_4d_causal_mask,
-                              get_attention_backend_info,
-                              merge_attention_heads,
-                              optimize_attention_computation,
-                              split_attention_heads)
+from .attention_utils import (
+    apply_head_specific_masks,
+    compute_position_embeddings,
+    create_4d_causal_mask,
+    get_attention_backend_info,
+    merge_attention_heads,
+    optimize_attention_computation,
+    split_attention_heads,
+)
+
 # Sparse pattern utilities
-from .sparse_pattern_utils import (PatternOptimizer, PatternQualityAnalyzer,
-                                   PatternType, PatternVisualizer,
-                                   SparsePatternGenerator,
-                                   analyze_pattern_statistics,
-                                   load_sparse_pattern,
-                                   optimize_pattern_for_hardware,
-                                   save_sparse_pattern)
+from .sparse_pattern_utils import (
+    PatternOptimizer,
+    PatternQualityAnalyzer,
+    PatternType,
+    PatternVisualizer,
+    SparsePatternGenerator,
+    analyze_pattern_statistics,
+    load_sparse_pattern,
+    optimize_pattern_for_hardware,
+    save_sparse_pattern,
+)
 from .validation import ValidationMixin
 
 __all__ = [

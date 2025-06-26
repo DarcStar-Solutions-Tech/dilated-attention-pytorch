@@ -20,7 +20,6 @@ from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
     SparsePatternGenerator,
 )
 from dilated_attention_pytorch.block_sparse_ring_distributed_dilated_attention import (
-    BlockSparseRingDistributedDilatedAttention,
     DistributedSparseConfig,
     DistributedSparsePattern,
     HierarchicalSparsePatternGenerator,
@@ -500,7 +499,9 @@ class TestBlockSparseAdvancedDistributedAttention:
         )
 
         # Skip this test - BlockSparseRingDistributedDilatedAttention has initialization issues
-        pytest.skip("BlockSparseRingDistributedDilatedAttention initialization is incompatible with parent class")
+        pytest.skip(
+            "BlockSparseRingDistributedDilatedAttention initialization is incompatible with parent class"
+        )
 
         batch = config["batch_size"]
         seq_len = config["seq_len"]

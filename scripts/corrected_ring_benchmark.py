@@ -7,12 +7,10 @@ billion-token sequence processing with Ring Attention.
 
 import gc
 import time
-from typing import Optional, Tuple
 
 import torch
 
-from dilated_attention_pytorch.ring_dilated_attention import \
-    RingDilatedAttention
+from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
 
 
 def test_corrected_ring_attention():
@@ -87,15 +85,9 @@ def test_corrected_ring_attention():
             ).to(device, dtype)
 
             # Test with a single chunk
-            q = torch.randn(
-                batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype
-            )
-            k = torch.randn(
-                batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype
-            )
-            v = torch.randn(
-                batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype
-            )
+            q = torch.randn(batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
+            k = torch.randn(batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
+            v = torch.randn(batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
 
             # Time the computation
             torch.cuda.synchronize() if device.type == "cuda" else None
@@ -118,8 +110,8 @@ def test_corrected_ring_attention():
                 memory_gb = torch.cuda.max_memory_allocated() / (1024**3)
                 torch.cuda.reset_peak_memory_stats()
 
-            print(f"  ✓ Success!")
-            print(f"    Chunk time: {chunk_time*1000:.1f}ms")
+            print("  ✓ Success!")
+            print(f"    Chunk time: {chunk_time * 1000:.1f}ms")
             print(f"    Chunk throughput: {tokens_per_second:,.0f} tokens/s")
             print(f"    Est. total time: {total_time_estimate:.1f}s")
             print(f"    Est. total throughput: {total_tokens_per_second:,.0f} tokens/s")
@@ -143,7 +135,7 @@ def test_corrected_ring_attention():
         except Exception as e:
             error_msg = str(e)
             if "out of memory" in error_msg.lower():
-                print(f"  ✗ OOM")
+                print("  ✗ OOM")
             else:
                 print(f"  ✗ Error: {error_msg[:80]}...")
 
@@ -175,20 +167,18 @@ def test_corrected_ring_attention():
             print("🎉 BILLION-TOKEN MILESTONE ACHIEVED! 🎉")
 
         # Theoretical scaling
-        print(f"\nTHEORETICAL SCALING:")
+        print("\nTHEORETICAL SCALING:")
         print(f"With {largest['ring_size']} devices:")
         print(f"  - Processing {largest['seq_len']:,} tokens")
         print(f"  - Each device handles {largest['chunk_size']:,} tokens")
-        print(
-            f"  - Total throughput: {largest['tokens_per_second']:,.0f} tokens/second"
-        )
+        print(f"  - Total throughput: {largest['tokens_per_second']:,.0f} tokens/second")
 
         # Extrapolate to even larger sequences
         max_chunk_size = largest["chunk_size"]
         billion_ring_size = 1_000_000_000 // max_chunk_size
         trillion_ring_size = 1_000_000_000_000 // max_chunk_size
 
-        print(f"\nEXTRAPOLATION:")
+        print("\nEXTRAPOLATION:")
         print(f"For 1 billion tokens: need {billion_ring_size:,} devices")
         print(f"For 1 trillion tokens: need {trillion_ring_size:,} devices")
         print(f"Memory per device: {largest['memory_gb']:.2f}GB")

@@ -19,8 +19,12 @@ except ImportError:
     HAS_XFORMERS = False
     xops = None
 
-from .core import (BaseDilatedAttention, DilatedAttentionConfig,
-                   get_global_memory_pool, optimize_attention_computation)
+from .core import (
+    BaseDilatedAttention,
+    DilatedAttentionConfig,
+    get_global_memory_pool,
+    optimize_attention_computation,
+)
 
 
 class DilatedAttention(BaseDilatedAttention):

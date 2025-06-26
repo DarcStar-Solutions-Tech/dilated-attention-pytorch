@@ -5,7 +5,8 @@ Analyze the sparsity pattern to understand the bottleneck
 import torch
 
 from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention, SparsePatternConfig)
+    SparsePatternConfig,
+)
 
 
 def analyze_sparsity():
@@ -24,8 +25,7 @@ def analyze_sparsity():
     )
 
     # Create pattern generator
-    from dilated_attention_pytorch.block_sparse_ring_dilated_attention import \
-        SparsePatternGenerator
+    from dilated_attention_pytorch.block_sparse_ring_dilated_attention import SparsePatternGenerator
 
     generator = SparsePatternGenerator(sparse_config)
 
@@ -48,10 +48,10 @@ def analyze_sparsity():
         total_blocks = pattern[0, 0].numel()
         active_blocks = pattern[0, 0].sum().item()
 
-    print(f"\nSparsity Analysis:")
+    print("\nSparsity Analysis:")
     print(f"Total block pairs: {total_blocks}")
     print(f"Active block pairs: {active_blocks}")
-    print(f"Sparsity: {(1 - active_blocks/total_blocks) * 100:.1f}%")
+    print(f"Sparsity: {(1 - active_blocks / total_blocks) * 100:.1f}%")
 
     # Estimate iterations in nonzero loop
     if pattern.dim() == 4:  # [batch, heads, blocks, blocks]

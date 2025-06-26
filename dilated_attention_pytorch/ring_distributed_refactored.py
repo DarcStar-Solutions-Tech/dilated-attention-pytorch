@@ -7,17 +7,19 @@ using the new configuration system and base classes.
 
 import logging
 import warnings
-from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from dataclasses import dataclass
 
-import torch
 import torch.distributed as dist
-from torch import Tensor, nn
+from torch import Tensor
 
-from .core import (BaseMultiheadDilatedAttention, DistributedConfig,
-                   MultiheadConfig, RingAttentionConfig,
-                   create_multihead_dilated_attention)
-from .ring_multihead_dilated_attention import RingMultiheadDilatedAttention
+from .core import (
+    BaseMultiheadDilatedAttention,
+    DistributedConfig,
+    MultiheadConfig,
+    RingAttentionConfig,
+    create_multihead_dilated_attention,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -63,10 +65,10 @@ class RingDistributedDilatedAttention(BaseMultiheadDilatedAttention):
 
     def __init__(
         self,
-        config: Optional[RingDistributedConfig] = None,
-        multihead_config: Optional[MultiheadConfig] = None,
-        ring_config: Optional[RingAttentionConfig] = None,
-        distributed_config: Optional[DistributedConfig] = None,
+        config: RingDistributedConfig | None = None,
+        multihead_config: MultiheadConfig | None = None,
+        ring_config: RingAttentionConfig | None = None,
+        distributed_config: DistributedConfig | None = None,
         **kwargs,
     ):
         """
@@ -122,9 +124,7 @@ class RingDistributedDilatedAttention(BaseMultiheadDilatedAttention):
                 enable_deepspeed=kwargs.get("enable_deepspeed", True),
                 enable_fairscale=kwargs.get("enable_fairscale", True),
                 enable_monitoring=kwargs.get("enable_monitoring", False),
-                gradient_accumulation_steps=kwargs.get(
-                    "gradient_accumulation_steps", 1
-                ),
+                gradient_accumulation_steps=kwargs.get("gradient_accumulation_steps", 1),
             )
 
         self.config = config
@@ -175,9 +175,7 @@ class RingDistributedDilatedAttention(BaseMultiheadDilatedAttention):
         ring_size = self.ring_size
 
         if ring_size > world_size:
-            raise ValueError(
-                f"ring_size ({ring_size}) cannot exceed world_size ({world_size})"
-            )
+            raise ValueError(f"ring_size ({ring_size}) cannot exceed world_size ({world_size})")
 
         # Create ring groups
         self.ring_groups = []
@@ -214,12 +212,12 @@ class RingDistributedDilatedAttention(BaseMultiheadDilatedAttention):
         query: Tensor,
         key: Tensor,
         value: Tensor,
-        key_padding_mask: Optional[Tensor] = None,
+        key_padding_mask: Tensor | None = None,
         need_weights: bool = False,
-        attn_mask: Optional[Tensor] = None,
+        attn_mask: Tensor | None = None,
         average_attn_weights: bool = True,
         is_causal: bool = False,
-    ) -> Union[Tensor, Tuple[Tensor, Optional[Tensor]]]:
+    ) -> Tensor | tuple[Tensor, Tensor | None]:
         """
         Forward pass through distributed ring attention.
 
@@ -257,7 +255,7 @@ class RingDistributedDilatedAttention(BaseMultiheadDilatedAttention):
 
         return output
 
-    def _log_metrics(self, output: Union[Tensor, Tuple[Tensor, Optional[Tensor]]]):
+    def _log_metrics(self, output: Tensor | tuple[Tensor, Tensor | None]):
         """Log metrics to monitoring service."""
         if isinstance(output, tuple):
             output_tensor = output[0]
@@ -288,7 +286,7 @@ def create_ring_distributed_attention(
     num_heads: int = 12,
     segment_lengths: Sequence[int] = (2048, 4096, 8192),
     dilation_rates: Sequence[int] = (1, 2, 4),
-    ring_size: Optional[int] = None,
+    ring_size: int | None = None,
     **kwargs,
 ) -> RingDistributedDilatedAttention:
     """
@@ -319,11 +317,7 @@ def create_ring_distributed_attention(
         segment_lengths=list(segment_lengths),
         dilation_rates=list(dilation_rates),
         ring_size=ring_size,
-        **{
-            k: v
-            for k, v in kwargs.items()
-            if k in ["dropout", "block_size", "use_checkpointing"]
-        },
+        **{k: v for k, v in kwargs.items() if k in ["dropout", "block_size", "use_checkpointing"]},
     )
 
     distributed_config = DistributedConfig(

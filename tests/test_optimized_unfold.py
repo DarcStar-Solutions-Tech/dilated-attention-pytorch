@@ -41,20 +41,12 @@ def benchmark_all_implementations():
         print(f"\n{size_name} ({seq_len:,} tokens):")
 
         # Create inputs
-        q = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
-        k = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
-        v = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
+        q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+        k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+        v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
 
         # Create modules
-        orig_module = RingDilatedAttention(segments, dilations, 0.0, ring_size=1).to(
-            device, dtype
-        )
+        orig_module = RingDilatedAttention(segments, dilations, 0.0, ring_size=1).to(device, dtype)
         opt_unfold_module = OptimizedUnfoldRingDilatedAttention(
             segments, dilations, 0.0, ring_size=1
         ).to(device, dtype)
@@ -121,10 +113,8 @@ def benchmark_all_implementations():
                 _ = opt_unfold_module(q, k, v)
             opt_memory = torch.cuda.max_memory_allocated() / (1024**2)
 
-            print(
-                f"  Memory - Original: {orig_memory:.1f}MB, Optimized: {opt_memory:.1f}MB"
-            )
-            print(f"  Memory reduction: {(1 - opt_memory/orig_memory)*100:.1f}%")
+            print(f"  Memory - Original: {orig_memory:.1f}MB, Optimized: {opt_memory:.1f}MB")
+            print(f"  Memory reduction: {(1 - opt_memory / orig_memory) * 100:.1f}%")
 
         # Cleanup
         del q, k, v, orig_module, opt_unfold_module
@@ -162,15 +152,11 @@ def test_specific_optimizations():
     segments = [256, 512, 1024]
     dilations = [1, 2, 4]  # offset will be 0 for first group
 
-    q = torch.randn(
-        1, 1024, 3, 64, device=device, dtype=dtype
-    )  # 3 heads = 1 head per group
+    q = torch.randn(1, 1024, 3, 64, device=device, dtype=dtype)  # 3 heads = 1 head per group
     k = torch.randn(1, 1024, 3, 64, device=device, dtype=dtype)
     v = torch.randn(1, 1024, 3, 64, device=device, dtype=dtype)
 
-    opt_module = OptimizedUnfoldRingDilatedAttention(segments, dilations, 0.0).to(
-        device, dtype
-    )
+    opt_module = OptimizedUnfoldRingDilatedAttention(segments, dilations, 0.0).to(device, dtype)
 
     # Time just the dilated attention block
     torch.cuda.synchronize()
@@ -200,7 +186,7 @@ def test_specific_optimizations():
     time_offset_nonzero = (time.time() - start) / 100 * 1000
 
     print(f"  Time with non-zero offset: {time_offset_nonzero:.2f}ms")
-    print(f"  Offset=0 is {time_offset_nonzero/time_offset0:.2f}x faster")
+    print(f"  Offset=0 is {time_offset_nonzero / time_offset0:.2f}x faster")
 
 
 if __name__ == "__main__":

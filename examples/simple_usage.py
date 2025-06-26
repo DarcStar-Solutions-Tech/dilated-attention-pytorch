@@ -11,8 +11,7 @@ from torch import nn
 
 # Import the factory function (v0.2.0+ recommended approach)
 # For backward compatibility, you can still use direct imports
-from dilated_attention_pytorch import (MultiheadDilatedAttention,
-                                       create_multihead_dilated_attention)
+from dilated_attention_pytorch import MultiheadDilatedAttention, create_multihead_dilated_attention
 
 
 def main():

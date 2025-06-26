@@ -5,16 +5,15 @@ This module provides transformer encoder and decoder layers that use
 dilated attention, with support for the factory pattern and configuration system.
 """
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Callable, Optional, Sequence, Union
 
 import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
 from torch.nn.modules.transformer import _get_activation_fn
 
-from .core import (DilatedAttentionConfig, MultiheadConfig,
-                   create_multihead_dilated_attention)
+from .core import DilatedAttentionConfig, MultiheadConfig, create_multihead_dilated_attention
 
 
 @dataclass
@@ -27,12 +26,12 @@ class TransformerLayerConfig:
     dilation_rates: Sequence[int]
     dim_feedforward: int = 2048
     dropout: float = 0.1
-    activation: Union[str, Callable[[Tensor], Tensor]] = F.relu
+    activation: str | Callable[[Tensor], Tensor] = F.relu
     layer_norm_eps: float = 1e-5
     gamma_init: float = 1.0
     attention_type: str = "auto"  # For factory pattern
-    device: Optional[Union[torch.device, str]] = None
-    dtype: Optional[torch.dtype] = None
+    device: torch.device | str | None = None
+    dtype: torch.dtype | None = None
 
     def __post_init__(self):
         """Validate and process configuration."""
@@ -58,7 +57,7 @@ class DilatedTransformerEncoderLayer(nn.Module):
     - Configuration-based initialization
     """
 
-    def __init__(self, config: Optional[TransformerLayerConfig] = None, **kwargs):
+    def __init__(self, config: TransformerLayerConfig | None = None, **kwargs):
         """
         Initialize encoder layer.
 
@@ -195,7 +194,7 @@ class DilatedTransformerDecoderLayer(nn.Module):
     - Separate self-attention and cross-attention
     """
 
-    def __init__(self, config: Optional[TransformerLayerConfig] = None, **kwargs):
+    def __init__(self, config: TransformerLayerConfig | None = None, **kwargs):
         """
         Initialize decoder layer.
 

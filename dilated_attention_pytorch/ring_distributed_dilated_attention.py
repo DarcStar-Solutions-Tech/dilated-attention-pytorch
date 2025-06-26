@@ -46,8 +46,7 @@ except ImportError:
 try:
     import fairscale
     from fairscale.nn import ShardedDataParallel as ShardedDDP
-    from fairscale.nn.model_parallel.layers import (ColumnParallelLinear,
-                                                    RowParallelLinear)
+    from fairscale.nn.model_parallel.layers import ColumnParallelLinear, RowParallelLinear
     from fairscale.optim.oss import OSS
 
     HAS_FAIRSCALE = True
@@ -323,9 +322,7 @@ class RingDistributedDilatedAttention(nn.Module):
             raise ValueError(f"head_dim ({head_dim}) must be <= 128")
 
         # Validate segment lengths and dilation rates
-        if not hasattr(self, "_segment_lengths") or not hasattr(
-            self, "_dilation_rates"
-        ):
+        if not hasattr(self, "_segment_lengths") or not hasattr(self, "_dilation_rates"):
             raise ValueError("segment_lengths and dilation_rates must be provided")
 
         if len(self._segment_lengths) != len(self._dilation_rates):
@@ -480,12 +477,12 @@ class RingDistributedDilatedAttention(nn.Module):
 
             # Add NVMe offloading if requested
             if self.nvme_offload:
-                self._deepspeed_config["zero_optimization"]["offload_param"][
-                    "nvme_path"
-                ] = "/tmp/deepspeed_nvme"
-                self._deepspeed_config["zero_optimization"]["offload_optimizer"][
-                    "nvme_path"
-                ] = "/tmp/deepspeed_nvme"
+                self._deepspeed_config["zero_optimization"]["offload_param"]["nvme_path"] = (
+                    "/tmp/deepspeed_nvme"
+                )
+                self._deepspeed_config["zero_optimization"]["offload_optimizer"]["nvme_path"] = (
+                    "/tmp/deepspeed_nvme"
+                )
 
             # Store configuration for external access
             self.deepspeed_config = self._deepspeed_config
@@ -512,9 +509,7 @@ class RingDistributedDilatedAttention(nn.Module):
     def _setup_gradient_compression(self):
         """Setup gradient compression for communication optimization."""
         if not HAS_DEEPSPEED:
-            self.logger.warning(
-                "Gradient compression requested but DeepSpeed not available"
-            )
+            self.logger.warning("Gradient compression requested but DeepSpeed not available")
             return
 
         # This would typically be configured in the training script
@@ -655,9 +650,7 @@ class RingDistributedDilatedAttention(nn.Module):
             if not hasattr(self, "_gradient_handles"):
                 self._gradient_handles = []
                 self._gradient_buckets = []
-                self._bucket_size_bytes = (
-                    self.bucket_size * 1024 * 1024
-                )  # Convert MB to bytes
+                self._bucket_size_bytes = self.bucket_size * 1024 * 1024  # Convert MB to bytes
                 self._current_bucket = []
                 self._current_bucket_size = 0
 
@@ -793,12 +786,8 @@ class RingDistributedDilatedAttention(nn.Module):
             # Monitor performance
             if self.enable_monitoring:
                 end_time = time.perf_counter()
-                end_memory = (
-                    torch.cuda.memory_allocated() if torch.cuda.is_available() else 0
-                )
-                self._monitor_performance(
-                    end_time - start_time, end_memory - start_memory
-                )
+                end_memory = torch.cuda.memory_allocated() if torch.cuda.is_available() else 0
+                self._monitor_performance(end_time - start_time, end_memory - start_memory)
 
             return output, weights
 
@@ -894,9 +883,7 @@ class RingDistributedDilatedAttention(nn.Module):
 
             # Optimized cross-attention buffer assignment
             q_view = qkv_query[:, :, :local_embed_dim].view(target_shape)
-            k_view = qkv_key[:, :, local_embed_dim : 2 * local_embed_dim].view(
-                target_shape
-            )
+            k_view = qkv_key[:, :, local_embed_dim : 2 * local_embed_dim].view(target_shape)
             v_view = qkv_value[:, :, 2 * local_embed_dim :].view(target_shape)
 
             if (
@@ -913,9 +900,7 @@ class RingDistributedDilatedAttention(nn.Module):
                 buffers["v"].copy_(v_view)
 
         # Apply ring attention
-        attn_output = self.ring_attention(
-            buffers["q"], buffers["k"], buffers["v"], is_causal
-        )
+        attn_output = self.ring_attention(buffers["q"], buffers["k"], buffers["v"], is_causal)
 
         # Optimized reshape and layer norm
         attn_flat = attn_output.view(batch_size, seq_len, self.embed_dim)
@@ -931,9 +916,7 @@ class RingDistributedDilatedAttention(nn.Module):
     def _update_buffer_access(self, buffer_key):
         """Update buffer access tracking for LRU eviction."""
         # Update access count
-        self._buffer_access_counts[buffer_key] = (
-            self._buffer_access_counts.get(buffer_key, 0) + 1
-        )
+        self._buffer_access_counts[buffer_key] = self._buffer_access_counts.get(buffer_key, 0) + 1
 
         # Update access order (move to end for most recent)
         if buffer_key in self._buffer_access_order:
@@ -1039,16 +1022,12 @@ class RingDistributedDilatedAttention(nn.Module):
                         self.logger.info("Single device fallback successful")
                         return output, weights
                     finally:
-                        self.attention_core.ring_attention.ring_size = (
-                            original_ring_size
-                        )
+                        self.attention_core.ring_attention.ring_size = original_ring_size
             except Exception as e:
                 self.logger.warning(f"Distributed recovery failed: {e}")
 
         # If all recovery strategies fail, re-raise the original error
-        self.logger.error(
-            f"All recovery strategies failed after {failure_count} attempts"
-        )
+        self.logger.error(f"All recovery strategies failed after {failure_count} attempts")
         raise error
 
     def _safe_forward_chunk(
@@ -1058,9 +1037,7 @@ class RingDistributedDilatedAttention(nn.Module):
         if hasattr(self, "attention_core"):
             return self.attention_core(query, key, value, is_causal, False, None)
         else:
-            return self._model_parallel_forward(
-                query, key, value, is_causal, False, None
-            )
+            return self._model_parallel_forward(query, key, value, is_causal, False, None)
 
     def clear_cache(self):
         """Clear all cached buffers and patterns to free memory."""
@@ -1089,15 +1066,11 @@ class RingDistributedDilatedAttention(nn.Module):
                         self._monitoring_state[key].clear()
 
         # Clear attention core cache if available
-        if hasattr(self, "attention_core") and hasattr(
-            self.attention_core, "clear_cache"
-        ):
+        if hasattr(self, "attention_core") and hasattr(self.attention_core, "clear_cache"):
             self.attention_core.clear_cache()
 
         # Clear ring attention cache if available
-        if hasattr(self, "ring_attention") and hasattr(
-            self.ring_attention, "clear_cache"
-        ):
+        if hasattr(self, "ring_attention") and hasattr(self.ring_attention, "clear_cache"):
             self.ring_attention.clear_cache()
 
         # Force garbage collection
@@ -1138,9 +1111,7 @@ class RingDistributedDilatedAttention(nn.Module):
             info["monitoring_steps"] = self._monitoring_state.get("step_count", 0)
 
         # Include attention core memory info
-        if hasattr(self, "attention_core") and hasattr(
-            self.attention_core, "get_memory_info"
-        ):
+        if hasattr(self, "attention_core") and hasattr(self.attention_core, "get_memory_info"):
             core_info = self.attention_core.get_memory_info()
             info.update({f"core_{k}": v for k, v in core_info.items()})
 
@@ -1152,8 +1123,7 @@ class RingDistributedDilatedAttention(nn.Module):
                     "gpu_memory_reserved_gb": torch.cuda.memory_reserved() / 1024**3,
                     "gpu_memory_cached_gb": torch.cuda.memory_cached() / 1024**3,
                     "gpu_utilization_percent": (
-                        torch.cuda.memory_allocated()
-                        / max(torch.cuda.memory_reserved(), 1)
+                        torch.cuda.memory_allocated() / max(torch.cuda.memory_reserved(), 1)
                     )
                     * 100,
                 }

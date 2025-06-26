@@ -146,9 +146,7 @@ class OptimizedUnfoldRingDilatedAttention(RingDilatedAttention):
 
             # Handle segment count mismatch
             if num_segments_q != num_segments_kv:
-                repeat_factor = (
-                    num_segments_q + num_segments_kv - 1
-                ) // num_segments_kv
+                repeat_factor = (num_segments_q + num_segments_kv - 1) // num_segments_kv
                 k_flat = k_flat.repeat(repeat_factor, 1, 1, 1)[: b * num_segments_q]
                 v_flat = v_flat.repeat(repeat_factor, 1, 1, 1)[: b * num_segments_q]
 

@@ -7,7 +7,9 @@ import time
 import torch
 
 from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention, SparsePatternConfig)
+    BlockSparseRingDilatedAttention,
+    SparsePatternConfig,
+)
 
 
 def profile_block_sparse():
@@ -35,15 +37,9 @@ def profile_block_sparse():
     ).to(device, dtype)
 
     # Create inputs
-    query = torch.randn(
-        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-    )
-    key = torch.randn(
-        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-    )
-    value = torch.randn(
-        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-    )
+    query = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    key = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    value = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
 
     # Profile different parts
     print("Profiling Block Sparse Ring Dilated Attention")
@@ -57,9 +53,7 @@ def profile_block_sparse():
     torch.cuda.synchronize()
     print(f"   Pattern generation took: {(time.time() - start) * 1000:.2f}ms")
     print(f"   Pattern shape: {pattern.shape}")
-    print(
-        f"   Pattern sparsity: {(pattern.sum().item() / pattern.numel() * 100):.1f}% non-zero"
-    )
+    print(f"   Pattern sparsity: {(pattern.sum().item() / pattern.numel() * 100):.1f}% non-zero")
 
     # Test forward pass with torch profiler
     print("\n2. Profiling forward pass...")
@@ -95,9 +89,7 @@ def profile_block_sparse():
     # Test pattern generator create_pattern
     start = time.time()
     with torch.no_grad():
-        test_pattern = module.pattern_generator.create_pattern(
-            seq_len, num_heads, device
-        )
+        test_pattern = module.pattern_generator.create_pattern(seq_len, num_heads, device)
     torch.cuda.synchronize()
     print(f"   Pattern generator create_pattern: {(time.time() - start) * 1000:.2f}ms")
 

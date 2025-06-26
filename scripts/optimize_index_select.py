@@ -64,7 +64,7 @@ def benchmark_dilation_methods():
             result2 = x[:, :, ::dilation_rate, :, :]
         torch.cuda.synchronize()
         time2 = (time.time() - start) * 1000
-        print(f"2. Direct slicing [::r]: {time2:.2f}ms (speedup: {time1/time2:.1f}x)")
+        print(f"2. Direct slicing [::r]: {time2:.2f}ms (speedup: {time1 / time2:.1f}x)")
 
     # Method 3: Advanced indexing with pre-computed indices
     torch.cuda.synchronize()
@@ -73,21 +73,17 @@ def benchmark_dilation_methods():
         result3 = x[:, :, idx, :, :]
     torch.cuda.synchronize()
     time3 = (time.time() - start) * 1000
-    print(
-        f"3. Advanced indexing [..., idx, ...]: {time3:.2f}ms (speedup: {time1/time3:.1f}x)"
-    )
+    print(f"3. Advanced indexing [..., idx, ...]: {time3:.2f}ms (speedup: {time1 / time3:.1f}x)")
 
     # Method 4: Gather (more flexible but potentially slower)
-    idx_expanded = idx.view(1, 1, -1, 1, 1).expand(
-        batch, num_segments, -1, num_heads, head_dim
-    )
+    idx_expanded = idx.view(1, 1, -1, 1, 1).expand(batch, num_segments, -1, num_heads, head_dim)
     torch.cuda.synchronize()
     start = time.time()
     for _ in range(iterations):
         result4 = torch.gather(x, 2, idx_expanded)
     torch.cuda.synchronize()
     time4 = (time.time() - start) * 1000
-    print(f"4. torch.gather: {time4:.2f}ms (speedup: {time1/time4:.1f}x)")
+    print(f"4. torch.gather: {time4:.2f}ms (speedup: {time1 / time4:.1f}x)")
 
     # Method 5: Unfold (for regular strides)
     if offset == 0:
@@ -98,7 +94,7 @@ def benchmark_dilation_methods():
             result5 = x.unfold(2, 1, dilation_rate).squeeze(-1)
         torch.cuda.synchronize()
         time5 = (time.time() - start) * 1000
-        print(f"5. unfold + squeeze: {time5:.2f}ms (speedup: {time1/time5:.1f}x)")
+        print(f"5. unfold + squeeze: {time5:.2f}ms (speedup: {time1 / time5:.1f}x)")
 
     # Method 6: Pre-allocated output with scatter
     output_shape = (batch, num_segments, dilated_size, num_heads, head_dim)
@@ -110,7 +106,7 @@ def benchmark_dilation_methods():
             output[:, :, i, :, :] = x[:, :, src_idx, :, :]
     torch.cuda.synchronize()
     time6 = (time.time() - start) * 1000
-    print(f"6. Loop with pre-alloc: {time6:.2f}ms (speedup: {time1/time6:.1f}x)")
+    print(f"6. Loop with pre-alloc: {time6:.2f}ms (speedup: {time1 / time6:.1f}x)")
 
     # Verify all methods produce same result
     print("\nVerifying correctness...")
@@ -145,9 +141,7 @@ def create_optimized_dilation():
             return tensor
         else:
             # Use advanced indexing instead of index_select
-            idx = torch.arange(
-                offset, tensor.size(2), dilation_rate, device=tensor.device
-            )
+            idx = torch.arange(offset, tensor.size(2), dilation_rate, device=tensor.device)
             return tensor[:, :, idx, :, :]
 
     # Benchmark the optimized function
@@ -188,7 +182,7 @@ def create_optimized_dilation():
         time_opt = (time.time() - start) * 1000
 
         print(f"  index_select: {time_orig:.2f}ms")
-        print(f"  optimized: {time_opt:.2f}ms (speedup: {time_orig/time_opt:.1f}x)")
+        print(f"  optimized: {time_opt:.2f}ms (speedup: {time_orig / time_opt:.1f}x)")
 
         # Verify correctness
         if not torch.allclose(result_orig, result_opt, rtol=1e-3):

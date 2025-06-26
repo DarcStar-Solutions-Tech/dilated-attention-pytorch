@@ -30,7 +30,9 @@ from torch import Tensor, nn
 
 # Import base implementations
 from .block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention, SparsePatternConfig)
+    BlockSparseRingDilatedAttention,
+    SparsePatternConfig,
+)
 
 
 class FusedQKVProjection(nn.Module):
@@ -63,14 +65,10 @@ class FusedQKVProjection(nn.Module):
             )
 
         # Fused QKV projection for better memory efficiency
-        self.qkv_proj = nn.Linear(
-            embed_dim, 3 * embed_dim, bias=bias, device=device, dtype=dtype
-        )
+        self.qkv_proj = nn.Linear(embed_dim, 3 * embed_dim, bias=bias, device=device, dtype=dtype)
 
         # Output projection
-        self.out_proj = nn.Linear(
-            embed_dim, embed_dim, bias=bias, device=device, dtype=dtype
-        )
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias, device=device, dtype=dtype)
 
         # Dropout layer
         if dropout > 0.0:
@@ -448,8 +446,7 @@ class PerformanceMonitor:
 
             return {
                 "total_forwards": self.total_forwards,
-                "avg_forward_time_ms": sum(self.forward_times)
-                / len(self.forward_times),
+                "avg_forward_time_ms": sum(self.forward_times) / len(self.forward_times),
                 "min_forward_time_ms": min(self.forward_times),
                 "max_forward_time_ms": max(self.forward_times),
                 "avg_memory_mb": (

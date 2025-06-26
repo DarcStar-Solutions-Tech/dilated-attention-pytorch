@@ -7,7 +7,9 @@ from torch import Tensor, nn
 from torchscale.component.xpos_relative_position import XPOS
 
 from dilated_attention_pytorch.transformer import (
-    DilatedTransformerDecoderLayer, DilatedTransformerEncoderLayer)
+    DilatedTransformerDecoderLayer,
+    DilatedTransformerEncoderLayer,
+)
 
 
 class LongNet(nn.Module):
@@ -34,9 +36,7 @@ class LongNet(nn.Module):
         # The 'gamma_init' parameters are different for the encoder and decoder,
         # and depend on the number of encoder/decoder layers.  See MAGNETO paper:
         # https://arxiv.org/pdf/2210.06423.pdf, Figure 2
-        encoder_gamma_init = (
-            log(3 * num_decoder_layers) * log(2 * num_encoder_layers) / 3
-        ) ** 0.5
+        encoder_gamma_init = (log(3 * num_decoder_layers) * log(2 * num_encoder_layers) / 3) ** 0.5
         decoder_gamma_init = log(3 * num_decoder_layers) ** 0.5
 
         self.encoder = nn.TransformerEncoder(
@@ -117,9 +117,7 @@ class LongNetLM(nn.Module):
         dtype: torch.dtype | None = None,
     ):
         super().__init__()
-        self.token_embedding = nn.Embedding(
-            num_tokens, d_model, device=device, dtype=dtype
-        )
+        self.token_embedding = nn.Embedding(num_tokens, d_model, device=device, dtype=dtype)
         self.pos_embedding = XPOS(d_model).to(device=device, dtype=dtype)
         self.long_net = LongNet(
             d_model=d_model,
@@ -135,9 +133,7 @@ class LongNetLM(nn.Module):
             device=device,
             dtype=dtype,
         )
-        self.norm = nn.LayerNorm(
-            d_model, eps=layer_norm_eps, device=device, dtype=dtype
-        )
+        self.norm = nn.LayerNorm(d_model, eps=layer_norm_eps, device=device, dtype=dtype)
         self.out = nn.Linear(d_model, num_tokens, device=device, dtype=dtype)
 
     def _reset_parameters(self):

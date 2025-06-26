@@ -54,9 +54,7 @@ def test_multihead_dilated_attention(
 ):
     if len(segment_lengths) != len(dilation_rates):
         with pytest.raises(ValueError):
-            MultiheadDilatedAttention(
-                embed_dim, num_heads, segment_lengths, dilation_rates
-            )
+            MultiheadDilatedAttention(embed_dim, num_heads, segment_lengths, dilation_rates)
         return
 
     mhda = MultiheadDilatedAttention(
