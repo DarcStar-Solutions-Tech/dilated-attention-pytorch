@@ -21,6 +21,21 @@ from dilated_attention_pytorch import (
     RingMultiheadDilatedAttention,
 )
 
+# Import block sparse implementations
+try:
+    from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
+        BlockSparseRingDilatedAttention,
+        SparsePatternConfig,
+    )
+    from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import (
+        BlockSparseRingMultiheadDilatedAttention,
+    )
+
+    HAS_BLOCK_SPARSE = True
+except ImportError:
+    HAS_BLOCK_SPARSE = False
+    print("Note: Block sparse implementations not available")
+
 # Import ImprovedMultiheadDilatedAttention directly from module
 try:
     from dilated_attention_pytorch.improved_multihead_dilated_attention import (
@@ -31,8 +46,6 @@ try:
 except ImportError:
     HAS_IMPROVED_MHA = False
     print("Note: ImprovedMultiheadDilatedAttention not available")
-
-# Note: Distributed and block-sparse implementations can be added here if needed
 
 
 class BenchmarkRunner:
@@ -212,6 +225,28 @@ class BenchmarkRunner:
                     ),
                 ]
 
+                # Add block sparse implementations if available
+                if HAS_BLOCK_SPARSE:
+                    # Test with different sparsity ratios
+                    for sparsity_ratio in [0.1, 0.25, 0.5]:  # 90%, 75%, 50% sparse
+                        sparse_config = SparsePatternConfig(
+                            pattern_type='dilated_sparse',
+                            sparsity_ratio=sparsity_ratio,
+                            block_size=32,
+                        )
+                        implementations.append(
+                            (
+                                f"BlockSparseRingDilated_{int(sparsity_ratio * 100)}%",
+                                BlockSparseRingDilatedAttention(
+                                    segment_lengths=adjusted_segments,
+                                    dilation_rates=dilation_rates,
+                                    sparse_config=sparse_config,
+                                    dropout=dropout,
+                                ),
+                                False,
+                            )
+                        )
+
                 # Multihead implementations
                 embed_dim = num_heads * head_dim
                 multihead_implementations = [
@@ -258,6 +293,27 @@ class BenchmarkRunner:
                         True,
                     )
                 )
+
+                # Add block sparse multihead implementations if available
+                if HAS_BLOCK_SPARSE:
+                    # Test with 25% sparsity (75% sparse) for multihead
+                    sparse_config = SparsePatternConfig(
+                        pattern_type='dilated_sparse', sparsity_ratio=0.25, block_size=32
+                    )
+                    multihead_implementations.append(
+                        (
+                            "BlockSparseRingMultihead_25%",
+                            BlockSparseRingMultiheadDilatedAttention(
+                                embed_dim=embed_dim,
+                                num_heads=num_heads,
+                                segment_lengths=adjusted_segments,
+                                dilation_rates=dilation_rates,
+                                sparse_config=sparse_config,
+                                dropout=dropout,
+                            ),
+                            True,
+                        )
+                    )
 
                 # Run benchmarks
                 all_implementations = implementations + multihead_implementations
