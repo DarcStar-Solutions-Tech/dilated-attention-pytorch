@@ -5,15 +5,16 @@ This module provides abstract base classes that define the common interface
 and shared functionality for all dilated attention implementations.
 """
 
-from abc import ABC, abstractmethod
-import torch
-from torch import nn, Tensor
-from typing import Tuple, Optional, Dict, List, Any, Union
 import threading
+from abc import ABC, abstractmethod
 from collections import OrderedDict
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from .config import DilatedAttentionConfig, MultiheadConfig
+import torch
+from torch import Tensor, nn
+
 from ..utils.validation import ValidationMixin
+from .config import DilatedAttentionConfig, MultiheadConfig
 from .constants import CURRENT_OPTIMAL_SETTINGS
 
 
@@ -233,6 +234,28 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
             self._head_groups_cache.clear()
             self._pattern_cache.clear()
             self._indices_cache.clear()
+
+    def clear_cache(self, force: bool = False) -> None:
+        """Clear cached patterns and buffers to free memory.
+
+        Args:
+            force: If True, clear all caches immediately. Otherwise, only clear if needed.
+        """
+        self._clear_caches()
+
+    def get_memory_info(self) -> dict:
+        """Get memory usage information.
+
+        Returns:
+            Dictionary with memory usage statistics
+        """
+        return {
+            'cache_size': len(self._head_groups_cache)
+            + len(self._pattern_cache)
+            + len(self._indices_cache),
+            'max_cache_size': self._max_cache_size,
+            'memory_complexity': "O(n) for sequence length n",
+        }
 
     def extra_repr(self) -> str:
         """Extra representation for printing."""

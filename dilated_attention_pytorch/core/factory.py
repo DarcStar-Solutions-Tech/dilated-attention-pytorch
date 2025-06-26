@@ -96,7 +96,21 @@ def create_dilated_attention(
 
     # Create and return module
     cls = _ATTENTION_REGISTRY[attention_type]
-    module = cls(config)
+
+    # Handle legacy constructors that don't accept config objects
+    if attention_type in ["block_sparse_ring", "block_sparse_ring_distributed"]:
+        # These implementations expect individual parameters
+        module = cls(
+            segment_lengths=config.segment_lengths,
+            dilation_rates=config.dilation_rates,
+            dropout=config.dropout,
+            use_tf32=config.use_tf32,
+            device=config.device,
+            dtype=config.dtype,
+            **kwargs,  # Pass through remaining kwargs
+        )
+    else:
+        module = cls(config)
 
     logger.info(f"Created {attention_type} dilated attention module")
     return module
@@ -235,6 +249,22 @@ def create_multihead_dilated_attention(
             num_heads=multihead_config.num_heads,
             dilation_rates=attention_config.dilation_rates,
             segment_lengths=attention_config.segment_lengths,
+            dropout=attention_config.dropout,
+            bias=multihead_config.bias,
+            layer_norm=multihead_config.layer_norm,
+            layer_norm_eps=multihead_config.layer_norm_eps,
+            gamma_init=multihead_config.gamma_init,
+            device=multihead_config.device,
+            dtype=multihead_config.dtype,
+            **remaining_kwargs,  # Pass through any extra kwargs
+        )
+    elif attention_type == "ring":
+        # Ring attention expects individual parameters
+        module = cls(
+            embed_dim=multihead_config.embed_dim,
+            num_heads=multihead_config.num_heads,
+            segment_lengths=attention_config.segment_lengths,
+            dilation_rates=attention_config.dilation_rates,
             dropout=attention_config.dropout,
             bias=multihead_config.bias,
             layer_norm=multihead_config.layer_norm,
