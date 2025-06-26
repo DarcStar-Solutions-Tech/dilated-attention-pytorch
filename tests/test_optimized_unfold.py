@@ -63,7 +63,7 @@ def benchmark_all_implementations():
         iterations = 10
         for _ in range(iterations):
             with torch.no_grad():
-                orig_out = orig_module(q, k, v)
+                _ = orig_module(q, k, v)
         torch.cuda.synchronize()
         orig_time = (time.time() - start) / iterations * 1000
 
@@ -72,7 +72,7 @@ def benchmark_all_implementations():
         start = time.time()
         for _ in range(iterations):
             with torch.no_grad():
-                opt_out = opt_unfold_module(q, k, v)
+                _ = opt_unfold_module(q, k, v)
         torch.cuda.synchronize()
         opt_time = (time.time() - start) / iterations * 1000
 

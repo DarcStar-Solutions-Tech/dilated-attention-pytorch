@@ -158,7 +158,7 @@ def test_feature_compatibility():
         )
 
         # Test TF32 option
-        model_tf32 = ImprovedMultiheadDilatedAttention(
+        ImprovedMultiheadDilatedAttention(
             embed_dim=128,
             num_heads=4,
             segment_lengths=[64, 128],
@@ -168,7 +168,7 @@ def test_feature_compatibility():
         features_tested.append("✓ TF32 option works")
 
         # Test layer norm option
-        model_no_norm = ImprovedMultiheadDilatedAttention(
+        ImprovedMultiheadDilatedAttention(
             embed_dim=128,
             num_heads=4,
             segment_lengths=[64, 128],
@@ -178,7 +178,7 @@ def test_feature_compatibility():
         features_tested.append("✓ Layer norm option works")
 
         # Test bias option
-        model_no_bias = ImprovedMultiheadDilatedAttention(
+        ImprovedMultiheadDilatedAttention(
             embed_dim=128,
             num_heads=4,
             segment_lengths=[64, 128],
@@ -189,7 +189,7 @@ def test_feature_compatibility():
 
         # Test device/dtype options
         if torch.cuda.is_available():
-            model_cuda = ImprovedMultiheadDilatedAttention(
+            ImprovedMultiheadDilatedAttention(
                 embed_dim=128,
                 num_heads=4,
                 segment_lengths=[64, 128],
@@ -202,7 +202,7 @@ def test_feature_compatibility():
             features_tested.append("⚠ CUDA not available for device test")
 
         # Test gamma_init option
-        model_gamma = ImprovedMultiheadDilatedAttention(
+        ImprovedMultiheadDilatedAttention(
             embed_dim=128,
             num_heads=4,
             segment_lengths=[64, 128],

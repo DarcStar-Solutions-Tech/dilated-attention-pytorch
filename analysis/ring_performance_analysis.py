@@ -73,7 +73,7 @@ def benchmark_operations():
     start = time.time()
     for _ in range(1000):
         x_cont = x.contiguous()
-        x_seg = x_cont.view(b, n // 2048, 2048, h, d)
+        _ = x_cont.view(b, n // 2048, 2048, h, d)
     torch.cuda.synchronize()
     manual_time = (time.time() - start) * 1000
     print(f"   contiguous + view: {manual_time:.2f}ms")
@@ -96,7 +96,7 @@ def benchmark_operations():
     torch.cuda.synchronize()
     start = time.time()
     for _ in range(1000):
-        x_dil = x.index_select(1, idx)
+        _ = x.index_select(1, idx)
     torch.cuda.synchronize()
     index_time = (time.time() - start) * 1000
     print(f"   index_select: {index_time:.2f}ms")
@@ -159,7 +159,7 @@ def compare_implementations():
 
             for _ in range(10):
                 with torch.no_grad():
-                    output = module(q, k, v)
+                    _ = module(q, k, v)
 
             torch.cuda.synchronize()
             elapsed = (time.time() - start) / 10 * 1000

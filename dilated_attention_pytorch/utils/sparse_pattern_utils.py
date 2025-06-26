@@ -598,8 +598,6 @@ class PatternOptimizer:
         num_heads, num_blocks, _ = pattern.shape
 
         # Add some random long-range connections
-        num_global = max(1, num_blocks // 8)
-
         for h in range(num_heads):
             for i in range(num_blocks):
                 # Add a few random long-range connections

@@ -600,8 +600,6 @@ class RingDistributedDilatedAttention(nn.Module):
 
     def _reset_model_parallel_parameters(self):
         """Initialize parameters for model parallel components."""
-        embed_dim = self.embed_dim
-
         # Initialize fused QKV projection (column parallel)
         # Note: Column parallel layers handle their own initialization
 

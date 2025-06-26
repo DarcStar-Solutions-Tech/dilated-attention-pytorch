@@ -331,10 +331,8 @@ class TestMemoryLimits:
         generator = SparsePatternGenerator(config, max_cache_size=3)
 
         # Generate patterns to fill cache
-        patterns = []
         for seq_len in [512, 1024, 2048, 4096]:
-            pattern = generator.create_pattern(seq_len, num_heads=8)
-            patterns.append(pattern)
+            _ = generator.create_pattern(seq_len, num_heads=8)
 
         # Cache should not exceed limit
         assert len(generator.pattern_cache) <= 3

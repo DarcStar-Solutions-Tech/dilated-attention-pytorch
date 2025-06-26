@@ -459,7 +459,6 @@ class ContentAdaptiveSparsity(nn.Module):
         k_importance = self.importance_predictor(k_block_avg)
 
         # Predict block-pair interactions
-        num_pairs = num_blocks * num_blocks
         q_expanded = q_block_avg.unsqueeze(2).expand(-1, -1, num_blocks, -1, -1)
         k_expanded = k_block_avg.unsqueeze(1).expand(-1, num_blocks, -1, -1, -1)
 

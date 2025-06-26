@@ -592,8 +592,6 @@ class OptimizedGradientCommunicator:
 
     def _compress_bucket(self, bucket: list[tuple[str, torch.Tensor]]) -> dict[str, Any]:
         """Compress gradient bucket using top-k sparsification."""
-        compressed_grads = []
-        indices_list = []
         shapes_list = []
 
         total_elements = sum(grad.numel() for _, grad in bucket)
@@ -1244,7 +1242,6 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
             # Check cache first
             if name in self._buffer_cache:
                 cached_buffer = self._buffer_cache[name]
-                cached_shape = cached_buffer.shape
 
                 # Try to reuse with resize if possible
                 if cached_buffer.numel() == torch.prod(torch.tensor(shape)):

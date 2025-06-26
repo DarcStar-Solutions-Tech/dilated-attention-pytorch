@@ -85,7 +85,7 @@ class TestUnifiedMemoryPool:
         pool = UnifiedMemoryPool(config)
 
         # Allocate large buffer
-        buffer1 = pool.get_buffer((1000,), torch.float32)
+        _ = pool.get_buffer((1000,), torch.float32)
 
         # Request smaller buffer
         buffer2 = pool.get_buffer((500,), torch.float32)
@@ -103,7 +103,7 @@ class TestUnifiedMemoryPool:
         # Access buffer multiple times
         # Need 4 accesses because promotion happens AFTER incrementing count to 3
         for _ in range(4):
-            buffer = pool.get_buffer(shape, torch.float32)
+            _ = pool.get_buffer(shape, torch.float32)
 
         # Should be in hot cache now
         key = (shape, torch.float32, None, False, "default")
@@ -314,7 +314,7 @@ class TestMemoryPoolEdgeCases:
 
         # Access buffer multiple times
         for i in range(5):
-            buffer = pool.get_buffer(shape, torch.float32)
+            _ = pool.get_buffer(shape, torch.float32)
             time.sleep(0.01)  # Small delay
 
         # Check statistics
