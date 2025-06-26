@@ -5,17 +5,16 @@ This module provides an optimized multihead wrapper with fused QKV projections
 and enhanced performance characteristics.
 """
 
-from typing import Sequence, Optional, Union, Tuple
+from collections.abc import Sequence
+
 import torch
-from torch import nn, Tensor
-from einops import rearrange
+from torch import Tensor, nn
 
 from .core import (
     BaseMultiheadDilatedAttention,
-    MultiheadConfig,
     DilatedAttentionConfig,
+    MultiheadConfig,
     split_attention_heads,
-    merge_attention_heads,
 )
 from .improved_dilated_attention import ImprovedDilatedAttention
 
@@ -23,17 +22,17 @@ from .improved_dilated_attention import ImprovedDilatedAttention
 class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
     """
     Improved multihead dilated attention with optimizations.
-    
+
     This implementation leverages the performance optimizations from
     ImprovedDilatedAttention and adds:
     - Fused QKV projections for 3x memory efficiency
     - Optimized tensor reshaping patterns
     - TF32 and SDPA backend optimizations
     - MAGNETO-style initialization and layer normalization
-    
+
     This is a drop-in replacement for MultiheadDilatedAttention with
     better performance characteristics.
-    
+
     Args:
         embed_dim: Total embedding dimension
         num_heads: Number of attention heads
@@ -47,7 +46,7 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         device: Device to place parameters on
         dtype: Data type for parameters
         use_tf32: Whether to enable TF32 optimization (default: True)
-        
+
     Example:
         >>> attention = ImprovedMultiheadDilatedAttention(
         ...     embed_dim=768,
@@ -56,7 +55,7 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         ...     segment_lengths=[2048, 4096, 8192]
         ... )
     """
-    
+
     def __init__(
         self,
         embed_dim: int,
@@ -68,8 +67,8 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         layer_norm: bool = True,
         layer_norm_eps: float = 1e-5,
         gamma_init: float = 1.0,
-        device: Optional[Union[torch.device, str]] = None,
-        dtype: Optional[torch.dtype] = None,
+        device: torch.device | str | None = None,
+        dtype: torch.dtype | None = None,
         use_tf32: bool = True,
     ):
         # Create configurations
@@ -83,7 +82,7 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             device=device,
             dtype=dtype,
         )
-        
+
         attention_config = DilatedAttentionConfig(
             segment_lengths=list(segment_lengths),
             dilation_rates=list(dilation_rates),
@@ -92,21 +91,21 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             device=device,
             dtype=dtype,
         )
-        
+
         # Store whether to use fused QKV (before super init)
         self.use_fused_qkv = True
-        
+
         # Initialize base class
         super().__init__(multihead_config, attention_config)
-        
+
         # Create improved attention module
         self.attention = self._create_attention_module()
-        
+
     @property
     def gamma_init(self) -> float:
         """Get gamma_init value for backward compatibility."""
         return self.multihead_config.gamma_init
-        
+
     def _create_attention_module(self) -> ImprovedDilatedAttention:
         """Create the underlying improved dilated attention module."""
         return ImprovedDilatedAttention(
@@ -117,83 +116,71 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             device=self.device,
             dtype=self.dtype,
         )
-    
+
     def _init_qkv_projections(self, factory_kwargs):
         """Initialize fused QKV projection for memory efficiency."""
         if self.use_fused_qkv:
             # Create fused QKV projection (3x more memory efficient)
             self.qkv_proj = nn.Linear(
-                self.embed_dim,
-                3 * self.embed_dim,
-                bias=self.bias,
-                **factory_kwargs
+                self.embed_dim, 3 * self.embed_dim, bias=self.bias, **factory_kwargs
             )
         else:
             # Fallback to separate projections
             self.q_proj = nn.Linear(
-                self.embed_dim,
-                self.embed_dim,
-                bias=self.bias,
-                **factory_kwargs
+                self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs
             )
             self.k_proj = nn.Linear(
-                self.embed_dim,
-                self.embed_dim,
-                bias=self.bias,
-                **factory_kwargs
+                self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs
             )
             self.v_proj = nn.Linear(
-                self.embed_dim,
-                self.embed_dim,
-                bias=self.bias,
-                **factory_kwargs
+                self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs
             )
-    
+
     def _reset_parameters(self):
         """Initialize parameters following MAGNETO architecture guidelines."""
-        if self.use_fused_qkv and hasattr(self, 'qkv_proj'):
+        if self.use_fused_qkv and hasattr(self, "qkv_proj"):
             # Split initialization for Q, K, V parts of the fused weight
             embed_dim = self.embed_dim
-            
+
             # Get weight slices for Q, K, V
             q_weight = self.qkv_proj.weight[:embed_dim, :]
-            k_weight = self.qkv_proj.weight[embed_dim:2*embed_dim, :]
-            v_weight = self.qkv_proj.weight[2*embed_dim:, :]
-            
+            k_weight = self.qkv_proj.weight[embed_dim : 2 * embed_dim, :]
+            v_weight = self.qkv_proj.weight[2 * embed_dim :, :]
+
             # Standard Xavier for Q and K
             nn.init.xavier_normal_(q_weight)
             nn.init.xavier_normal_(k_weight)
-            
+
             # MAGNETO initialization for V with gain
             nn.init.xavier_normal_(v_weight, gain=self.multihead_config.gamma_init)
-            
+
             # Initialize bias if present
             if self.qkv_proj.bias is not None:
                 nn.init.constant_(self.qkv_proj.bias, 0)
         else:
             # Use base class initialization for separate projections
             super()._reset_parameters()
-        
+
         # Initialize output projection with MAGNETO gain
-        if hasattr(self, 'out_proj'):
+        if hasattr(self, "out_proj"):
             nn.init.xavier_normal_(self.out_proj.weight, gain=self.multihead_config.gamma_init)
             if self.out_proj.bias is not None:
                 nn.init.constant_(self.out_proj.bias, 0)
-    
+
     def forward(
         self,
         query: Tensor,
-        key: Optional[Tensor] = None,
-        value: Optional[Tensor] = None,
-        key_padding_mask: Optional[Tensor] = None,
+        key: Tensor | None = None,
+        value: Tensor | None = None,
+        key_padding_mask: Tensor | None = None,
         need_weights: bool = False,
-        attn_mask: Optional[Tensor] = None,
+        attn_mask: Tensor | None = None,
         is_causal: bool = False,
         average_attn_weights: bool = True,
-    ) -> Union[Tensor, Tuple[Tensor, Optional[Tensor]]]:
+    ) -> Tensor | tuple[Tensor, Tensor | None]:
         """
         Forward pass for improved multihead dilated attention.
-        
+
         Args:
             query: Query tensor [batch, seq_len, embed_dim]
             key: Key tensor (uses query if None)
@@ -203,7 +190,7 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             attn_mask: Attention mask
             is_causal: Whether to apply causal masking
             average_attn_weights: Whether to average attention weights (unused)
-            
+
         Returns:
             If need_weights is False:
                 Attention output [batch, seq_len, embed_dim]
@@ -215,34 +202,34 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             key = query
         if value is None:
             value = query
-        
+
         # Validate inputs
         if query.dim() != 3 or key.dim() != 3 or value.dim() != 3:
             raise ValueError(
                 f"Expected 3D tensors (batch, seq_len, embed_dim), got shapes: "
                 f"query={query.shape}, key={key.shape}, value={value.shape}"
             )
-        
+
         batch_size, seq_len, _ = query.shape
-        
-        if self.use_fused_qkv and hasattr(self, 'qkv_proj'):
+
+        if self.use_fused_qkv and hasattr(self, "qkv_proj"):
             # Use fused QKV projection for efficiency
             qkv = self.qkv_proj(query)
-            
+
             # Handle key and value if different from query
             if key is not query or value is not query:
                 # Need separate projections for key/value
                 k_qkv = self.qkv_proj(key) if key is not query else qkv
                 v_qkv = self.qkv_proj(value) if value is not query else qkv
-                
+
                 # Extract Q from query projection, K from key, V from value
-                q = qkv[:, :, :self.embed_dim]
-                k = k_qkv[:, :, self.embed_dim:2*self.embed_dim]
-                v = v_qkv[:, :, 2*self.embed_dim:]
+                q = qkv[:, :, : self.embed_dim]
+                k = k_qkv[:, :, self.embed_dim : 2 * self.embed_dim]
+                v = v_qkv[:, :, 2 * self.embed_dim :]
             else:
                 # Self-attention: split QKV from single projection
                 q, k, v = qkv.chunk(3, dim=-1)
-            
+
             # Reshape to separate heads
             q = q.view(batch_size, seq_len, self.num_heads, self.head_dim)
             k = k.view(batch_size, seq_len, self.num_heads, self.head_dim)
@@ -252,59 +239,56 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             q = self.q_proj(query)
             k = self.k_proj(key)
             v = self.v_proj(value)
-            
+
             # Apply layer normalization if enabled
             q, k = self._apply_layer_norm(q, k)
-            
+
             # Split into heads
             q = split_attention_heads(q, self.num_heads)
             k = split_attention_heads(k, self.num_heads)
             v = split_attention_heads(v, self.num_heads)
-        
+
         # Combine masks if provided
-        combined_mask = self._combine_masks(
-            attn_mask, key_padding_mask, batch_size, seq_len
-        )
-        
+        combined_mask = self._combine_masks(attn_mask, key_padding_mask, batch_size, seq_len)
+
         # Apply improved dilated attention
-        attn_output = self.attention(
-            q, k, v, is_causal=is_causal, attention_mask=combined_mask
-        )
-        
+        attn_output = self.attention(q, k, v, is_causal=is_causal, attention_mask=combined_mask)
+
         # Merge heads back
         attn_output = attn_output.view(batch_size, seq_len, self.embed_dim)
-        
+
         # Apply post-attention layer norm if enabled (MAGNETO style)
-        if self.multihead_config.layer_norm and hasattr(self, 'q_ln'):
+        if self.multihead_config.layer_norm and hasattr(self, "q_ln"):
             attn_output = self.q_ln(attn_output)
-        
+
         # Output projection
         output = self.out_proj(attn_output)
-        
+
         if need_weights:
             return output, None
         else:
             return output
-    
+
     def _combine_masks(
         self,
-        attn_mask: Optional[Tensor],
-        key_padding_mask: Optional[Tensor],
+        attn_mask: Tensor | None,
+        key_padding_mask: Tensor | None,
         batch_size: int,
         seq_len: int,
-    ) -> Optional[Tensor]:
+    ) -> Tensor | None:
         """Combine attention mask and key padding mask."""
         # Note: ImprovedDilatedAttention doesn't support masks in segments
         # This is provided for interface compatibility
         if attn_mask is not None or key_padding_mask is not None:
             import warnings
+
             warnings.warn(
                 "ImprovedDilatedAttention does not support attention masks "
                 "within dilated segments. Masks will be ignored.",
-                UserWarning
+                UserWarning,
             )
         return None
-    
+
     def extra_repr(self) -> str:
         """Extra representation for printing."""
         repr_str = super().extra_repr()
@@ -319,18 +303,18 @@ def create_improved_multihead_dilated_attention(
     num_heads: int,
     dilation_rates: Sequence[int],
     segment_lengths: Sequence[int],
-    **kwargs
+    **kwargs,
 ) -> ImprovedMultiheadDilatedAttention:
     """
     Create an improved multihead dilated attention module (backward compatibility).
-    
+
     Args:
         embed_dim: Total embedding dimension
         num_heads: Number of attention heads
         dilation_rates: List of dilation rates
         segment_lengths: List of segment lengths
         **kwargs: Additional arguments
-        
+
     Returns:
         ImprovedMultiheadDilatedAttention module
     """

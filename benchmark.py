@@ -20,6 +20,7 @@ from dilated_attention_pytorch import (
     create_dilated_attention,
     create_multihead_dilated_attention,
 )
+
 # For backward compatibility
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
 from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
@@ -27,49 +28,105 @@ from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilat
 import argparse
 
 # Create the parser
-parser = argparse.ArgumentParser(description='Benchmarking parameters')
+parser = argparse.ArgumentParser(description="Benchmarking parameters")
 
 # Add the arguments
-parser.add_argument('--batch_size', type=int, default=1, help='Batch size for benchmarking')
-parser.add_argument('--total_tokens', type=int, default=24,
-                    help='Exponent for Total tokens for benchmarking, default is 26 which is 64M(2**26) tokens')
-parser.add_argument('--heads', type=int, default=4, help='Number of heads for benchmarking, default is 4')
-parser.add_argument('--embed_dim', type=int, default=32, help='Embed dimension for benchmarking, default is 32')
-parser.add_argument('--vanilla_seq_lengths', type=int, default=18,
-                    help='End of Sequence length range for vanilla attention, default is 18 which is 2**18')
-parser.add_argument('--segment_lengths', nargs='+', type=int, default=[8192, 16384, 32768, 65536],
-                    help='Segment lengths for dilated attention')
-parser.add_argument('--dilated_seq_lengths', type=int, default=27,
-                    help='End of Sequence lengths for dilated attention, default is 27 which is 2**27 ')
-parser.add_argument('--vanilla', type=bool, default=True, action=argparse.BooleanOptionalAction,
-                    help='Benchmark vanilla attention')
-parser.add_argument('--improved', type=bool, default=True, action=argparse.BooleanOptionalAction,
-                    help='Benchmark improved attention')
-parser.add_argument('--factory', type=bool, default=True, action=argparse.BooleanOptionalAction,
-                    help='Use factory pattern for creation')
-parser.add_argument('--dilated', type=bool, default=True, action=argparse.BooleanOptionalAction,
-                    help='Benchmark dilated attention')
-parser.add_argument('--multihead', type=bool, default=True, action=argparse.BooleanOptionalAction,
-                    help='Benchmark multihead dilated attention')
-parser.add_argument('--causal', type=bool, default=False, action=argparse.BooleanOptionalAction,
-                    help='Causal attention')
-parser.add_argument('--permutation', type=bool, default=False, action=argparse.BooleanOptionalAction,
-                    help='Benchmark permutations for heads and embed_dim')
+parser.add_argument("--batch_size", type=int, default=1, help="Batch size for benchmarking")
+parser.add_argument(
+    "--total_tokens",
+    type=int,
+    default=24,
+    help="Exponent for Total tokens for benchmarking, default is 26 which is 64M(2**26) tokens",
+)
+parser.add_argument(
+    "--heads", type=int, default=4, help="Number of heads for benchmarking, default is 4"
+)
+parser.add_argument(
+    "--embed_dim", type=int, default=32, help="Embed dimension for benchmarking, default is 32"
+)
+parser.add_argument(
+    "--vanilla_seq_lengths",
+    type=int,
+    default=18,
+    help="End of Sequence length range for vanilla attention, default is 18 which is 2**18",
+)
+parser.add_argument(
+    "--segment_lengths",
+    nargs="+",
+    type=int,
+    default=[8192, 16384, 32768, 65536],
+    help="Segment lengths for dilated attention",
+)
+parser.add_argument(
+    "--dilated_seq_lengths",
+    type=int,
+    default=27,
+    help="End of Sequence lengths for dilated attention, default is 27 which is 2**27 ",
+)
+parser.add_argument(
+    "--vanilla",
+    type=bool,
+    default=True,
+    action=argparse.BooleanOptionalAction,
+    help="Benchmark vanilla attention",
+)
+parser.add_argument(
+    "--improved",
+    type=bool,
+    default=True,
+    action=argparse.BooleanOptionalAction,
+    help="Benchmark improved attention",
+)
+parser.add_argument(
+    "--factory",
+    type=bool,
+    default=True,
+    action=argparse.BooleanOptionalAction,
+    help="Use factory pattern for creation",
+)
+parser.add_argument(
+    "--dilated",
+    type=bool,
+    default=True,
+    action=argparse.BooleanOptionalAction,
+    help="Benchmark dilated attention",
+)
+parser.add_argument(
+    "--multihead",
+    type=bool,
+    default=True,
+    action=argparse.BooleanOptionalAction,
+    help="Benchmark multihead dilated attention",
+)
+parser.add_argument(
+    "--causal",
+    type=bool,
+    default=False,
+    action=argparse.BooleanOptionalAction,
+    help="Causal attention",
+)
+parser.add_argument(
+    "--permutation",
+    type=bool,
+    default=False,
+    action=argparse.BooleanOptionalAction,
+    help="Benchmark permutations for heads and embed_dim",
+)
 
 # Parse the arguments
 args = parser.parse_args()
 
 # Generic benchmarking parameters
 BATCH_SIZE: int = args.batch_size
-TOTAL_TOKENS: int = 2 ** args.total_tokens  # 64M
+TOTAL_TOKENS: int = 2**args.total_tokens  # 64M
 NUM_HEADS: int = args.heads
 EMBED_DIM: int = args.embed_dim
 # Vanilla attention only
-VANILLA_SEQ_LENGTHS: List[int] = [2 ** i for i in range(13, args.vanilla_seq_lengths)]  # 8k - 128k
+VANILLA_SEQ_LENGTHS: List[int] = [2**i for i in range(13, args.vanilla_seq_lengths)]  # 8k - 128k
 
 # Dilated attention only
 SEGMENT_LENGTHS: List[int] = args.segment_lengths  # 8k - 64k
-DILATED_SEQ_LENGTHS: List[int] = [2 ** i for i in range(13, args.dilated_seq_lengths)]  # 8k - 64M
+DILATED_SEQ_LENGTHS: List[int] = [2**i for i in range(13, args.dilated_seq_lengths)]  # 8k - 64M
 
 BENCHMARK_VANILLA: bool = args.vanilla
 BENCHMARK_DILATED: bool = args.dilated
@@ -88,15 +145,15 @@ class BenchmarkResult(NamedTuple):
         return f"BenchmarkResult(mean: {self.mean:.3e}, std: {self.std:.3e})"
 
     def __str__(self):
-        return f"({self.mean:.3e} \u00B1 {self.std:.3e}) s"
+        return f"({self.mean:.3e} \u00b1 {self.std:.3e}) s"
 
 
 def benchmark(
-        fn: Callable,
-        *args,
-        min_total_seconds: float = 1.0,
-        min_iterations: int = 2,
-        **kwargs,
+    fn: Callable,
+    *args,
+    min_total_seconds: float = 1.0,
+    min_iterations: int = 2,
+    **kwargs,
 ) -> BenchmarkResult:
     # Benchmark the runtime of a function and dynamically determine the number of
     # iterations to run.  Continue running the function until *total* runtime
@@ -139,7 +196,7 @@ def calculate_segments_and_dilation_rates(seq_length: int):
         # We can't use segment lengths larger than the sequence length.
         segment_length = min(segment_length, seq_length)
         exponent = segment_length // SEGMENT_LENGTHS[0] - 1
-        dilation_rate = 2 ** exponent
+        dilation_rate = 2**exponent
         segment_lengths.append(segment_length)
         dilation_rates.append(dilation_rate)
 
@@ -154,13 +211,13 @@ class AttentionType(Enum):
 
 
 def get_attention_for_seq_length(
-        seq_length: int,
-        device: device | str | None,
-        num_heads: int = NUM_HEADS,
-        embed_dim: int = EMBED_DIM,
-        attention_type: AttentionType = AttentionType.DILATED,
-        dtype: torch.dtype = torch.float16,
-        op: xops.AttentionOp = xops.MemoryEfficientAttentionFlashAttentionOp,
+    seq_length: int,
+    device: device | str | None,
+    num_heads: int = NUM_HEADS,
+    embed_dim: int = EMBED_DIM,
+    attention_type: AttentionType = AttentionType.DILATED,
+    dtype: torch.dtype = torch.float16,
+    op: xops.AttentionOp = xops.MemoryEfficientAttentionFlashAttentionOp,
 ) -> MultiheadDilatedAttention | DilatedAttention:
     """This is roughly how benchmarking was described in the paper, except that they
     were testing in a distributed (multi-GPU) setting.  We use a base segment
@@ -212,7 +269,7 @@ def get_attention_for_seq_length(
                 dtype=dtype,
             )
         elif attention_type == AttentionType.IMPROVED:
-            # Benchmark improved implementation  
+            # Benchmark improved implementation
             return create_multihead_dilated_attention(
                 "improved",
                 embed_dim=embed_dim,
@@ -222,8 +279,8 @@ def get_attention_for_seq_length(
                 device=device,
                 dtype=dtype,
             )
-    else:
-        raise ValueError(f"Invalid attention type: {attention_type}")
+        else:
+            raise ValueError(f"Invalid attention type: {attention_type}")
 
 
 def attention_forward(x: torch.Tensor, attn: Callable):
@@ -248,13 +305,13 @@ def plot_results(seq_lengths: List[int], results: List[BenchmarkResult], name: s
 
 
 def benchmark_attention(
-        seq_lengths: List[int],
-        device: device | str | None,
-        embed_dim: int = EMBED_DIM,
-        num_heads: int = NUM_HEADS,
-        attention_type: AttentionType = AttentionType.DILATED,
-        dtype: torch.dtype = torch.float16,
-        op: xops.AttentionOp = xops.MemoryEfficientAttentionFlashAttentionOp,
+    seq_lengths: List[int],
+    device: device | str | None,
+    embed_dim: int = EMBED_DIM,
+    num_heads: int = NUM_HEADS,
+    attention_type: AttentionType = AttentionType.DILATED,
+    dtype: torch.dtype = torch.float16,
+    op: xops.AttentionOp = xops.MemoryEfficientAttentionFlashAttentionOp,
 ) -> List[BenchmarkResult]:
     results: List[BenchmarkResult] = []
     for seq_length in seq_lengths:
@@ -268,7 +325,9 @@ def benchmark_attention(
                     dtype=dtype,
                     device=device,
                 )
-            elif (attention_type == AttentionType.DILATED) | (attention_type == AttentionType.VANILLA):
+            elif (attention_type == AttentionType.DILATED) | (
+                attention_type == AttentionType.VANILLA
+            ):
                 x = torch.randn(
                     (batch_size, seq_length, num_heads, embed_dim),
                     dtype=dtype,
@@ -285,7 +344,7 @@ def benchmark_attention(
                     num_heads=num_heads,
                     attention_type=attention_type,
                     op=op,
-                    dtype=dtype
+                    dtype=dtype,
                 )
             else:
                 attn = xops.memory_efficient_attention
@@ -301,26 +360,30 @@ def benchmark_attention(
 
 
 def bench_and_plot(
-        label: str,
-        token_count: str,
-        seq_lengths: List[int],
-        device: device | str | None,
-        embed_dim: int = EMBED_DIM,
-        num_heads: int = NUM_HEADS,
-        attention_type: AttentionType = AttentionType.VANILLA
+    label: str,
+    token_count: str,
+    seq_lengths: List[int],
+    device: device | str | None,
+    embed_dim: int = EMBED_DIM,
+    num_heads: int = NUM_HEADS,
+    attention_type: AttentionType = AttentionType.VANILLA,
 ) -> List[BenchmarkResult]:
-    logging.info(f"Benchmark {label} against {token_count} tokens... with embed_dim {embed_dim} and num_heads {num_heads}")
-    results: List[BenchmarkResult] = (
-        benchmark_attention(
-            seq_lengths=seq_lengths,
-            device=device,
-            embed_dim=embed_dim,
-            num_heads=num_heads,
-            attention_type=attention_type,
-        )
+    logging.info(
+        f"Benchmark {label} against {token_count} tokens... with embed_dim {embed_dim} and num_heads {num_heads}"
+    )
+    results: List[BenchmarkResult] = benchmark_attention(
+        seq_lengths=seq_lengths,
+        device=device,
+        embed_dim=embed_dim,
+        num_heads=num_heads,
+        attention_type=attention_type,
     )
     logging.info(f"Plotting {label} results for {token_count} tokens...")
-    plot_results(seq_lengths=seq_lengths, results=results, name=f"{label}-embed_dim-{embed_dim}-heads-{num_heads}")
+    plot_results(
+        seq_lengths=seq_lengths,
+        results=results,
+        name=f"{label}-embed_dim-{embed_dim}-heads-{num_heads}",
+    )
     return results
 
 
@@ -329,7 +392,7 @@ if __name__ == "__main__":
     # Get current date
     current_date = datetime.date.today()
 
-    token_count = f"{round(TOTAL_TOKENS / 2 ** 20, 2)}M"
+    token_count = f"{round(TOTAL_TOKENS / 2**20, 2)}M"
     bench_config = {
         "batch_size": BATCH_SIZE,
         "total_tokens": TOTAL_TOKENS,
@@ -345,7 +408,6 @@ if __name__ == "__main__":
         "causal": IS_CAUSAL,
         "permutation": PERMUTATION,
         "date": current_date,
-
     }
 
     logging.info(f"Running benchmark with {TOTAL_TOKENS} tokens...({token_count})")
@@ -373,8 +435,12 @@ if __name__ == "__main__":
     for i in range(gpu_count):
         gpu_info[f"gpu_{i}_name"] = torch.cuda.get_device_name(i)
         logging.info(f"GPU {i} name: {torch.cuda.get_device_name(i)}")
-        gpu_info[f"gpu_{i}_memory"] = round(torch.cuda.get_device_properties(i).total_memory / 1024 ** 3, 2)
-        logging.info(f"GPU {i} memory: {round(torch.cuda.get_device_properties(i).total_memory / 1024 ** 3, 2)} GB")
+        gpu_info[f"gpu_{i}_memory"] = round(
+            torch.cuda.get_device_properties(i).total_memory / 1024**3, 2
+        )
+        logging.info(
+            f"GPU {i} memory: {round(torch.cuda.get_device_properties(i).total_memory / 1024**3, 2)} GB"
+        )
         gpu_info[f"gpu_{i}_compute_capability"] = torch.cuda.get_device_capability(i)
         logging.info(f"GPU {i} compute capability: {torch.cuda.get_device_capability(i)}")
 
@@ -386,19 +452,22 @@ if __name__ == "__main__":
 
     b_dir = os.path.join("doc", b_name)
 
-    with open(os.path.join(b_dir, f"config-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"), "w") as f:
+    with open(
+        os.path.join(b_dir, f"config-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"),
+        "w",
+    ) as f:
         f.write(str(bench_config))
 
     fig = go.Figure()
     if PERMUTATION:
         # 4 is the minimum num_heads for dilated attention
-        smallest_head = math.ceil(math.log2(NUM_HEADS))-1
-        num_heads = [NUM_HEADS // 2 ** i for i in range(0, smallest_head)]
+        smallest_head = math.ceil(math.log2(NUM_HEADS)) - 1
+        num_heads = [NUM_HEADS // 2**i for i in range(0, smallest_head)]
         logging.info(f"Sequence of num_heads: {num_heads}")
 
         # the minimum embed_dim 32, this calculates the denominator for the largest EMDED_DIM needed to find it
-        smallest_dim = math.ceil(math.log2(EMBED_DIM))-4
-        embed_dims = [EMBED_DIM // 2 ** i for i in range(0, smallest_dim)]
+        smallest_dim = math.ceil(math.log2(EMBED_DIM)) - 4
+        embed_dims = [EMBED_DIM // 2**i for i in range(0, smallest_dim)]
         logging.info(f"Sequence of embed_dims: {embed_dims}")
     else:
         embed_dims = [EMBED_DIM]
@@ -408,7 +477,6 @@ if __name__ == "__main__":
 
     for embed_dim in embed_dims:  # loop over embed_dims
         for num_head in num_heads:  # loop over num_heads
-
             if embed_dim % num_head != 0:
                 logging.info(f"embed_dim ({embed_dim}) must be divisible by num_heads ({num_head})")
                 continue
@@ -436,7 +504,7 @@ if __name__ == "__main__":
                     device="cuda",
                     embed_dim=embed_dim,
                     num_heads=num_head,
-                    attention_type=AttentionType.VANILLA
+                    attention_type=AttentionType.VANILLA,
                 )
                 result_set["vanilla"] = vanilla_results
 
@@ -448,13 +516,15 @@ if __name__ == "__main__":
                     device="cuda",
                     embed_dim=embed_dim,
                     num_heads=num_head,
-                    attention_type=AttentionType.DILATED
+                    attention_type=AttentionType.DILATED,
                 )
                 result_set["dilated"] = dilated_results
 
-            if BENCHMARK_MULTIHEAD and embed_dim//num_head <= 128:
+            if BENCHMARK_MULTIHEAD and embed_dim // num_head <= 128:
                 if embed_dim // num_head % 8 != 0:
-                    logging.info(f"head_dim (embed_dim / num_heads = {embed_dim // num_head}) must be divisible by 8")
+                    logging.info(
+                        f"head_dim (embed_dim / num_heads = {embed_dim // num_head}) must be divisible by 8"
+                    )
 
                 else:
                     mha_results: List[BenchmarkResult] = bench_and_plot(
@@ -464,19 +534,22 @@ if __name__ == "__main__":
                         device="cuda",
                         embed_dim=embed_dim,
                         num_heads=num_head,
-                        attention_type=AttentionType.MHA
+                        attention_type=AttentionType.MHA,
                     )
                     result_set["multihead"] = mha_results
 
             results.append(result_set)
 
-    with open(os.path.join(b_dir, f"results-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"), "w") as f:
+    with open(
+        os.path.join(b_dir, f"results-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"),
+        "w",
+    ) as f:
         f.write(str(results))
 
     fig.update_layout(
         title=f"Attention Benchmark on {current_date} <br>"
-              f"(Total Tokens = {token_count}) <br>"
-              f"Starting Embed Dim = {EMBED_DIM} Starting Num Heads = {NUM_HEADS}",
+        f"(Total Tokens = {token_count}) <br>"
+        f"Starting Embed Dim = {EMBED_DIM} Starting Num Heads = {NUM_HEADS}",
         title_x=0.5,
         xaxis_title="Sequence Length",
         yaxis_title="Runtime (s)",
@@ -484,4 +557,6 @@ if __name__ == "__main__":
         yaxis_type="log",
     )
 
-    fig.write_image(os.path.join(b_dir, f"tokens-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.png"))
+    fig.write_image(
+        os.path.join(b_dir, f"tokens-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.png")
+    )

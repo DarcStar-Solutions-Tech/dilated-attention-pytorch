@@ -41,10 +41,8 @@ jobs:
 
       - name: Format Check
         run: |
-          hatch run format
-          # Check if formatting changed any files
-          git diff --exit-code
-
+          hatch run format-check
+          
       - name: Lint
         run: |
           hatch run lint

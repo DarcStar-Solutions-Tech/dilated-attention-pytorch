@@ -5,15 +5,16 @@ This module provides a consolidated memory pool that can be used across all
 dilated attention implementations, replacing multiple separate pools.
 """
 
+import gc
+import logging
+import threading
+import weakref
+from collections import OrderedDict
+from dataclasses import dataclass
+from typing import Any
+
 import torch
 from torch import Tensor
-from typing import Dict, Tuple, Optional, Any
-from collections import OrderedDict
-import threading
-import logging
-from dataclasses import dataclass
-import weakref
-import gc
 
 from .config import MemoryPoolConfig
 
@@ -24,7 +25,7 @@ logger = logging.getLogger("dilated_attention_pytorch.memory_pool")
 class BufferStats:
     """Statistics for a buffer in the pool."""
 
-    shape: Tuple[int, ...]
+    shape: tuple[int, ...]
     dtype: torch.dtype
     device: torch.device
     access_count: int = 0
@@ -56,12 +57,12 @@ class UnifiedMemoryPool:
         config: Memory pool configuration
     """
 
-    def __init__(self, config: Optional[MemoryPoolConfig] = None):
+    def __init__(self, config: MemoryPoolConfig | None = None):
         """Initialize the unified memory pool."""
         self.config = config or MemoryPoolConfig()
 
         # Separate pools for different strategies
-        self._pools: Dict[str, OrderedDict[Tuple, Tensor]] = {
+        self._pools: dict[str, OrderedDict[tuple, Tensor]] = {
             "default": OrderedDict(),
             "ring": OrderedDict(),
             "sparse": OrderedDict(),
@@ -69,10 +70,10 @@ class UnifiedMemoryPool:
         }
 
         # Buffer statistics
-        self._stats: Dict[Tuple, BufferStats] = {}
+        self._stats: dict[tuple, BufferStats] = {}
 
         # Hot cache for frequently accessed buffers
-        self._hot_cache: OrderedDict[Tuple, Tensor] = OrderedDict()
+        self._hot_cache: OrderedDict[tuple, Tensor] = OrderedDict()
 
         # Lock for thread safety
         self._lock = threading.RLock()
@@ -94,9 +95,9 @@ class UnifiedMemoryPool:
 
     def get_buffer(
         self,
-        shape: Tuple[int, ...],
+        shape: tuple[int, ...],
         dtype: torch.dtype = torch.float32,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
         pinned: bool = False,
         pool_type: str = "default",
     ) -> Tensor:
@@ -158,11 +159,11 @@ class UnifiedMemoryPool:
 
     def _find_compatible_buffer(
         self,
-        shape: Tuple[int, ...],
+        shape: tuple[int, ...],
         dtype: torch.dtype,
-        device: Optional[torch.device],
+        device: torch.device | None,
         pool: OrderedDict,
-    ) -> Optional[Tensor]:
+    ) -> Tensor | None:
         """
         Find a compatible buffer that can be reshaped or sliced.
 
@@ -202,9 +203,9 @@ class UnifiedMemoryPool:
 
     def _allocate_new_buffer(
         self,
-        shape: Tuple[int, ...],
+        shape: tuple[int, ...],
         dtype: torch.dtype,
-        device: Optional[torch.device],
+        device: torch.device | None,
         pinned: bool,
     ) -> Tensor:
         """Allocate a new buffer with the specified properties."""
@@ -239,7 +240,7 @@ class UnifiedMemoryPool:
 
             return buffer
 
-    def _update_stats(self, key: Tuple, buffer: Tensor) -> None:
+    def _update_stats(self, key: tuple, buffer: Tensor) -> None:
         """Update statistics for buffer access."""
         import time
 
@@ -255,7 +256,7 @@ class UnifiedMemoryPool:
         stats.access_count += 1
         stats.last_access_time = time.time()
 
-    def _maybe_promote_to_hot_cache(self, key: Tuple, buffer: Tensor) -> None:
+    def _maybe_promote_to_hot_cache(self, key: tuple, buffer: Tensor) -> None:
         """Promote frequently accessed buffers to hot cache."""
         if key not in self._stats:
             return
@@ -270,7 +271,7 @@ class UnifiedMemoryPool:
             while len(self._hot_cache) > self.config.hot_cache_size:
                 self._hot_cache.popitem(last=False)
 
-    def _track_buffer(self, key: Tuple, buffer: Tensor) -> None:
+    def _track_buffer(self, key: tuple, buffer: Tensor) -> None:
         """Track buffer with weak reference."""
         self._active_buffers[id(buffer)] = buffer
 
@@ -365,7 +366,7 @@ class UnifiedMemoryPool:
                     self._total_allocated_bytes -= size_bytes
                     del buffer
 
-    def clear_pool(self, pool_type: Optional[str] = None) -> None:
+    def clear_pool(self, pool_type: str | None = None) -> None:
         """
         Clear buffers from specified pool or all pools.
 
@@ -388,7 +389,7 @@ class UnifiedMemoryPool:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get memory pool statistics."""
         with self._lock:
             total_buffers = sum(len(pool) for pool in self._pools.values())
@@ -434,11 +435,11 @@ class UnifiedMemoryPool:
 
 
 # Global memory pool instance (created lazily)
-_GLOBAL_POOL: Optional[UnifiedMemoryPool] = None
+_GLOBAL_POOL: UnifiedMemoryPool | None = None
 _POOL_LOCK = threading.Lock()
 
 
-def get_global_memory_pool(config: Optional[MemoryPoolConfig] = None) -> UnifiedMemoryPool:
+def get_global_memory_pool(config: MemoryPoolConfig | None = None) -> UnifiedMemoryPool:
     """
     Get the global memory pool instance.
 
