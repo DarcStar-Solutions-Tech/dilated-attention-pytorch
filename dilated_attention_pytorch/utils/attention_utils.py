@@ -300,8 +300,25 @@ def standard_attention(
     Returns:
         Attention output [..., seq_len, num_heads, head_dim]
     """
+    # Handle multi-head attention by reshaping
+    # [..., seq_len, num_heads, head_dim] -> [..., num_heads, seq_len, head_dim]
+    q = q.transpose(-3, -2)
+    k = k.transpose(-3, -2)
+    v = v.transpose(-3, -2)
+    
+    # Get dimensions
+    *batch_dims, num_heads, seq_len, head_dim = q.shape
+    
+    # Compute attention scores for each head
+    # We need to handle this head by head or reshape
+    # Reshape to [...*num_heads, seq_len, head_dim]
+    q_reshaped = q.reshape(-1, seq_len, head_dim)
+    k_reshaped = k.reshape(-1, seq_len, head_dim)
+    v_reshaped = v.reshape(-1, seq_len, head_dim)
+    
     # Compute attention scores
     scores = compute_attention_scores(q, k, None, attention_mask, is_causal)
+
 
     # Apply softmax
     attn_weights = F.softmax(scores, dim=-1)

@@ -163,6 +163,7 @@ class SparsePatternGenerator:
     def _generate_local_window_pattern(
         self, num_blocks: int, num_heads: int, device: torch.device
     ) -> torch.Tensor:
+
         """Generate local window attention pattern"""
         pattern = torch.zeros(num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device)
         window_blocks = self.config.local_window_size // self.config.block_size
@@ -192,6 +193,9 @@ class SparsePatternGenerator:
 
             # Create dilated pattern
             for i in range(num_blocks):
+                # Always connect to self
+                pattern[h, i, i] = True
+                
                 # Connect to positions at multiples of dilation
                 for offset in range(
                     -target_connections // (2 * num_blocks),

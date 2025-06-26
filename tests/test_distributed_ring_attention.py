@@ -29,7 +29,6 @@ from dilated_attention_pytorch.ring_distributed_dilated_attention import (
     RingDistributedDilatedAttention,
 )
 
-
 class TestRingAttentionMemoryPool:
     """Test memory pool thread safety and limits."""
 
@@ -123,6 +122,7 @@ class TestDistributedRingAttention:
             patch("torch.distributed.get_world_size", return_value=4),
             patch("torch.distributed.get_rank", return_value=0),
         ):
+
             yield
 
     def test_ring_size_validation(self, mock_distributed_env):
@@ -178,6 +178,7 @@ class TestDistributedRingAttention:
                 attention(q, k, v)
 
 
+
 class TestBlockSparseDistributed:
     """Test distributed block-sparse attention."""
 
@@ -207,7 +208,7 @@ class TestErrorRecovery:
     """Test error recovery mechanisms."""
 
     def test_forward_error_cleanup(self):
-        """Test resource cleanup on forward pass errors."""
+        """Test that forward pass errors don't break the module."""
         attention = BlockSparseRingDistributedDilatedAttention(
             segment_lengths=[512], dilation_rates=[1], enable_memory_pool=True
         )
@@ -242,6 +243,8 @@ class TestErrorRecovery:
             patch("torch.distributed.get_rank", return_value=0),
         ):
             attention = RingDistributedDilatedAttention(
+                embed_dim=512,
+                num_heads=8,
                 segment_lengths=[512],
                 dilation_rates=[1],
                 enable_deepspeed=False,  # Avoid DeepSpeed complexity
@@ -259,7 +262,7 @@ class TestErrorRecovery:
                 with pytest.raises(RuntimeError, match="Ring communication failed"):
                     attention._ring_communicate_kv(k_block, v_block, ring_step=1)
 
-
+                    
 class TestEdgeCases:
     """Test edge cases and boundary conditions."""
 

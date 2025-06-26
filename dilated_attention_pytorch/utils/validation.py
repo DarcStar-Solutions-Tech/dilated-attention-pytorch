@@ -34,11 +34,15 @@ class ValidationMixin:
             dilation_rates: List of dilation rates
 
         Raises:
-            ValueError: If lengths don't match
+            ValueError: If lengths don't match or lists are empty
         """
+        if not segment_lengths:
+            raise ValueError("segment_lengths cannot be empty")
+        if not dilation_rates:
+            raise ValueError("dilation_rates cannot be empty")
         if len(segment_lengths) != len(dilation_rates):
             raise ValueError(
-                f"segment_lengths and dilation_rates must have same length: "
+                f"segment_lengths and dilation_rates must have the same length: "
                 f"{len(segment_lengths)} != {len(dilation_rates)}"
             )
 

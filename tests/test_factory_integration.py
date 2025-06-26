@@ -10,6 +10,7 @@ import pytest
 import torch
 from torch import nn
 
+
 from dilated_attention_pytorch import (
     create_block_sparse_attention,
     create_multihead_dilated_attention,
@@ -18,6 +19,14 @@ from dilated_attention_pytorch.core import (
     DilatedAttentionConfig,
     MultiheadConfig,
 )
+
+# Explicitly import implementations to ensure they're registered
+# This helps with test isolation issues
+try:
+    import dilated_attention_pytorch.improved_multihead_dilated_attention
+    import dilated_attention_pytorch.ring_multihead_dilated_attention
+except ImportError:
+    pass
 
 
 class TestFactoryIntegration:
@@ -238,7 +247,7 @@ class TestFactoryIntegration:
     def test_error_handling(self):
         """Test that factory provides helpful error messages."""
         # Invalid implementation name
-        with pytest.raises(ValueError, match="Unknown implementation"):
+        with pytest.raises(ValueError, match="Unknown attention type"):
             create_multihead_dilated_attention("invalid_impl")
 
         # Missing required parameters

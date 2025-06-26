@@ -101,7 +101,8 @@ class TestUnifiedMemoryPool:
         shape = (10, 10)
 
         # Access buffer multiple times
-        for _ in range(3):
+        # Need 4 accesses because promotion happens AFTER incrementing count to 3
+        for _ in range(4):
             buffer = pool.get_buffer(shape, torch.float32)
 
         # Should be in hot cache now
@@ -152,6 +153,7 @@ class TestUnifiedMemoryPool:
     def test_memory_pressure_cleanup(
         self, mock_cuda_available, mock_device_props, mock_reserved, mock_allocated
     ):
+
         """Test cleanup under memory pressure."""
         # Mock CUDA available
         mock_cuda_available.return_value = True

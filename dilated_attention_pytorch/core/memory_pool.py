@@ -134,9 +134,10 @@ class UnifiedMemoryPool:
                 buffer = pool[key]
                 # Move to end for LRU
                 pool.move_to_end(key)
+                # Update stats first so promotion logic sees the correct count
+                self._update_stats(key, buffer)
                 # Promote to hot cache if frequently accessed
                 self._maybe_promote_to_hot_cache(key, buffer)
-                self._update_stats(key, buffer)
                 return buffer
 
             # Try to find a compatible buffer
@@ -151,6 +152,7 @@ class UnifiedMemoryPool:
             # Add to pool
             pool[key] = buffer
             self._track_buffer(key, buffer)
+            self._update_stats(key, buffer)
 
             # Check memory pressure and clean if needed
             self._maybe_cleanup()
@@ -432,6 +434,23 @@ class UnifiedMemoryPool:
             self.clear_pool()
         except Exception:
             pass
+
+    def __getstate__(self):
+        """Support for pickling - exclude unpickleable objects."""
+        state = self.__dict__.copy()
+        # Remove the unpickleable locks
+        state['_lock'] = None
+        # Clear the pools to avoid pickling large tensors
+        state['_pools'] = {}
+        state['_hot_cache'] = {}
+        state['_active_buffers'] = {}
+        return state
+
+    def __setstate__(self, state):
+        """Support for unpickling - recreate locks."""
+        self.__dict__.update(state)
+        # Recreate the lock
+        self._lock = threading.RLock()
 
 
 # Global memory pool instance (created lazily)

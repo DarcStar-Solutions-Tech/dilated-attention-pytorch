@@ -188,6 +188,7 @@ class TestAttentionComputation:
 
     @patch("dilated_attention_pytorch.core.attention_utils.HAS_FLASH_ATTN", True)
     @patch("dilated_attention_pytorch.core.attention_utils.flash_attn_func")
+
     def test_optimize_attention_flash(self, mock_flash_attn):
         """Test optimized attention with Flash Attention."""
         batch_size, seq_len, num_heads, head_dim = 2, 8, 4, 16

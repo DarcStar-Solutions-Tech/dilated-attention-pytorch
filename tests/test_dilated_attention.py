@@ -37,6 +37,7 @@ def test_dilated_attention(
             dilated_attention(x, x, x, is_causal=is_causal)
         return
 
+
     out = dilated_attention(x, x, x, is_causal=is_causal)  # default: causal=False
     assert out.size(0) == 1
     assert out.size(1) == SEQ_LEN
@@ -77,6 +78,7 @@ def test_multihead_dilated_attention(
         with pytest.raises(NotImplementedError):
             mhda(x, x, x, is_causal=is_causal)
         return
+
 
     out = mhda(x, x, x, is_causal=is_causal)  # default: causal=False
     assert out.size(0) == 1

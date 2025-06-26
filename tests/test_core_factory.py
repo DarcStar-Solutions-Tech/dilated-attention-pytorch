@@ -222,6 +222,7 @@ class TestAutoSelection:
         attention_type = _select_best_attention_type()
         assert attention_type == "standard"
 
+
     def test_create_with_auto(self):
         """Test creation with auto type."""
         attention = create_dilated_attention(attention_type="auto")

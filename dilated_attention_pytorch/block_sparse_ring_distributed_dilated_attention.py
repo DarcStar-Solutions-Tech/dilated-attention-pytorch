@@ -325,6 +325,7 @@ class HierarchicalSparsePatternGenerator:
                 ]
                 pattern[h, i, start : start + len(keep_indices)] = True
 
+
         with self._pattern_lock:
             self.local_patterns[cache_key] = pattern
 
@@ -776,10 +777,13 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
         monitoring_interval: int = 100,
         **kwargs,
     ):
+
         """
         Initialize Block-Sparse Ring Distributed Dilated Attention.
 
         Args:
+            embed_dim: Total embedding dimension
+            num_heads: Number of attention heads
             segment_lengths: Sequence of segment lengths for dilated attention
             dilation_rates: Corresponding dilation rates
             distributed_config: Configuration for distributed sparse patterns

@@ -214,6 +214,11 @@ class SparsePatternConfig:
     adaptation_rate: float = 0.1  # For adaptive patterns
     min_sparsity: float = 0.05  # Minimum sparsity to maintain
     max_sparsity: float = 0.95  # Maximum sparsity to maintain
+    
+    def __post_init__(self):
+        """Validate configuration parameters."""
+        if self.block_size <= 0:
+            raise ValueError(f"block_size must be positive, got {self.block_size}")
 
 
 class SparsePatternGenerator:
@@ -346,18 +351,23 @@ class SparsePatternGenerator:
         self, pattern: torch.Tensor, target_sparsity: float
     ) -> torch.Tensor:
         """Ensure pattern meets target sparsity ratio"""
+        # Handle empty patterns
+        if pattern.numel() == 0:
+            return pattern
+            
         current_sparsity = pattern.float().mean().item()
 
         if current_sparsity < self.config.min_sparsity:
             # Pattern too dense, remove some connections
             num_remove = int((current_sparsity - self.config.min_sparsity) * pattern.numel())
+
             active_indices = torch.nonzero(pattern, as_tuple=False)
             if len(active_indices) > num_remove:
-                # Randomly remove connections (preserving diagonal and global tokens)
+                # Randomly remove connections (preserving diagonal)
                 remove_indices = torch.randperm(len(active_indices))[:num_remove]
                 for idx in remove_indices:
                     i, j = active_indices[idx]
-                    if i != j and i >= 4 and j >= 4:  # Preserve diagonal and first 4 global blocks
+                    if i != j:  # Preserve diagonal
                         pattern[i, j] = False
 
         elif current_sparsity > self.config.max_sparsity:
@@ -365,7 +375,7 @@ class SparsePatternGenerator:
             num_add = int((self.config.max_sparsity - current_sparsity) * pattern.numel())
             inactive_indices = torch.nonzero(~pattern, as_tuple=False)
             if len(inactive_indices) > num_add:
-                # Add connections near diagonal for locality
+                # Add connections randomly
                 add_indices = torch.randperm(len(inactive_indices))[:num_add]
                 for idx in add_indices:
                     i, j = inactive_indices[idx]
@@ -718,7 +728,6 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
     ) -> tuple[Tensor, Tensor | None]:
         """Execute block-sparse ring attention computation"""
         batch, seq_len, num_heads, head_dim = q.shape
-        num_blocks = seq_len // self.sparse_config.block_size
         block_size = self.sparse_config.block_size
 
         # Check for Flash Attention 3 optimization

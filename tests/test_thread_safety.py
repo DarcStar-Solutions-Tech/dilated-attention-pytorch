@@ -225,6 +225,7 @@ class TestAttentionModuleThreadSafety:
         """Test concurrent forward passes through attention."""
         attention = RingDilatedAttention(
             segment_lengths=[256, 512], dilation_rates=[1, 2], block_size=128
+
         )
         tester = ThreadSafetyTester()
 

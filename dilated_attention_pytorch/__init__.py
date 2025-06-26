@@ -7,6 +7,7 @@ including Ring Attention for O(n) memory scaling.
 
 __version__ = "0.2.0"
 
+
 # Block-Sparse Ring Attention implementations
 from .block_sparse_ring_dilated_attention import (
     BlockSparseMemoryPool,
@@ -56,6 +57,9 @@ __all__ = [
     "DilatedAttention",
     "MultiheadDilatedAttention",
     "ImprovedDilatedAttention",
+    "ImprovedMultiheadDilatedAttention",
+    "DistributedImprovedDilatedAttention",
+    "DistributedImprovedMultiheadDilatedAttention",
     # "DistributedMultiheadDilatedAttention",  # Old implementation
     "RingDilatedAttention",
     "RingMultiheadDilatedAttention",
