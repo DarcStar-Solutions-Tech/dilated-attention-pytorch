@@ -134,9 +134,12 @@ def test_flash_attention_3_integration():
     print("Testing Mathematical Correctness...")
 
     # Check output properties
-    assert output.shape == (batch_size, seq_len, num_heads, head_dim), (
-        f"Unexpected output shape: {output.shape}"
-    )
+    assert output.shape == (
+        batch_size,
+        seq_len,
+        num_heads,
+        head_dim,
+    ), f"Unexpected output shape: {output.shape}"
     assert not torch.isnan(output).any(), "Output contains NaN values"
     assert not torch.isinf(output).any(), "Output contains infinite values"
 

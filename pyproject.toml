@@ -34,8 +34,10 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
 requires-python = ">=3.12"
 dependencies = [
@@ -53,9 +55,7 @@ test = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "pytest-xdist>=3.0.0",
-    "black>=23.0.0",
-    "isort>=5.12.0",
-    "flake8>=6.0.0",
+    "ruff>=0.1.0",
     "mypy>=1.0.0",
 ]
 dev = [
@@ -83,11 +83,11 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/fkodom/dilated-attention-pytorch"
-Documentation = "https://github.com/fkodom/dilated-attention-pytorch/blob/main/README.md"
-Repository = "https://github.com/fkodom/dilated-attention-pytorch"
-Issues = "https://github.com/fkodom/dilated-attention-pytorch/issues"
-Changelog = "https://github.com/fkodom/dilated-attention-pytorch/releases"
+Homepage = "https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch"
+Documentation = "https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch/blob/main/README.md"
+Repository = "https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch"
+Issues = "https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch/issues"
+Changelog = "https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch/releases"
 
 [tool.hatch.version]
 path = "dilated_attention_pytorch/__init__.py"
@@ -166,12 +166,22 @@ select = [
     "UP",   # pyupgrade
     "ARG",  # flake8-unused-arguments
     "SIM",  # flake8-simplify
+    "N",    # pep8-naming
+    "RUF",  # Ruff-specific rules
+    "PL",   # Pylint
+    "TRY",  # tryceratops
+    "PERF", # Perflint
 ]
 ignore = [
     "E501",  # line too long (handled by formatter)
     "B008",  # do not perform function calls in argument defaults
     "C901",  # too complex
     "W191",  # indentation contains tabs
+    "PLR0913", # Too many arguments
+    "PLR0915", # Too many statements
+    "PLR2004", # Magic value used in comparison
+    "N803",  # Argument name should be lowercase (for Q, K, V)
+    "N806",  # Variable in function should be lowercase (for Q, K, V)
 ]
 
 [tool.ruff.format]
@@ -206,6 +216,9 @@ module = [
     "fairscale.*",
     "plotly.*",
     "kaleido.*",
+    "timm.*",
+    "torchscale.*",
+    "einops.*",
 ]
 ignore_missing_imports = true
 
