@@ -23,8 +23,7 @@ References:
 
 import threading
 import warnings
-from collections.abc import Sequence
-from typing import Any
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
 import torch
 import torch.distributed as dist
@@ -63,7 +62,7 @@ def get_flash_attention_version() -> str | None:
         import flash_attn
 
         return flash_attn.__version__
-    except:
+    except Exception:
         return None
 
 
@@ -109,7 +108,7 @@ class RingAttentionMemoryPool:
                 if len(self._pools) >= self.max_pool_size:
                     self._evict_lru_buffer()
 
-                if self.device.type == "cuda" and pin_memory:
+                if self.device.type == 'cuda' and pin_memory:
                     # Allocate pinned memory for faster GPU transfers
                     self._pools[pool_key] = torch.empty(
                         shape, dtype=dtype, device="cpu", pin_memory=True
@@ -209,6 +208,7 @@ class RingAttentionMemoryPool:
         self._access_lock = threading.RLock()
 
 
+
 class RingDilatedAttention(BaseDilatedAttention):
     """
     Ring Attention implementation for Dilated Attention with O(n) memory complexity.
@@ -273,7 +273,6 @@ class RingDilatedAttention(BaseDilatedAttention):
         self.world_size = dist.get_world_size() if dist.is_initialized() else 1
         self.rank = dist.get_rank() if dist.is_initialized() else 0
         self.ring_size = self.config.ring_size or self.world_size
-
 
         # Ring-specific caches and buffers
         self._cached_indices = {}  # Cache for dilation indices
@@ -357,11 +356,11 @@ class RingDilatedAttention(BaseDilatedAttention):
                 ):
                     indices_key = (s, r, i % r)
                     step_patterns[i] = {
-                        "head_range": (hmin, hmax),
-                        "indices": all_indices[indices_key],
-                        "segment_size": s,
-                        "dilation": r,
-                        "group_size": g,
+                        'head_range': (hmin, hmax),
+                        'indices': all_indices[indices_key],
+                        'segment_size': s,
+                        'dilation': r,
+                        'group_size': g,
                     }
                 ring_patterns.append(step_patterns)
 
@@ -419,8 +418,8 @@ class RingDilatedAttention(BaseDilatedAttention):
                 # Check again inside lock
                 if buffer_key not in self._rotation_buffers:
                     self._rotation_buffers[buffer_key] = {
-                        "k": self._ring_memory_pool.get_buffer(buffer_shape, k.dtype, "rot_k"),
-                        "v": self._ring_memory_pool.get_buffer(buffer_shape, k.dtype, "rot_v"),
+                        'k': self._ring_memory_pool.get_buffer(buffer_shape, k.dtype, "rot_k"),
+                        'v': self._ring_memory_pool.get_buffer(buffer_shape, k.dtype, "rot_v"),
                     }
 
     def _ring_attention_step(
@@ -458,9 +457,8 @@ class RingDilatedAttention(BaseDilatedAttention):
         b, n_q, h, d = q.shape
         b, n_kv, h, d = k.shape
 
-        # Get pre-computed head distribution and ring patterns
+        # Get pre-computed head distribution
         gs, head_ranges = self._get_head_groups(h)
-        ring_patterns = self._precompute_ring_patterns(h, self.ring_size)
 
         # Optimized output allocation: use empty + zero for better memory efficiency
         out = torch.empty_like(q)
@@ -482,10 +480,10 @@ class RingDilatedAttention(BaseDilatedAttention):
             # Calculate effective segment size for this block
             effective_s = min(s, n_kv)
 
-            # Use tensor views instead of slicing for zero-copy operations
-            q_slice = q[:, :, hmin:hmax, :].view(b, n_q, g, d)
-            k_slice = k[:, :, hmin:hmax, :].view(b, n_kv, g, d)
-            v_slice = v[:, :, hmin:hmax, :].view(b, n_kv, g, d)
+            # Use contiguous tensors for reshaping after slicing
+            q_slice = q[:, :, hmin:hmax, :].contiguous()
+            k_slice = k[:, :, hmin:hmax, :].contiguous()
+            v_slice = v[:, :, hmin:hmax, :].contiguous()
 
             # Segment and apply dilation
             q_segments = self._segment_tensor(q_slice, effective_s, n_q)
@@ -501,20 +499,24 @@ class RingDilatedAttention(BaseDilatedAttention):
                         offset, s, r, device=q.device
                     )
                 idx = self._cached_indices[cache_key]
+                # Ensure idx is on the same device as the tensors
+                if idx.device != q.device:
+                    idx = idx.to(q.device)
 
                 # Use advanced indexing for efficient dilation
+                # Also apply dilation to query to match k/v sequence length
+                q_segments = q_segments.index_select(2, idx)
                 k_segments = k_segments.index_select(2, idx)
                 v_segments = v_segments.index_select(2, idx)
 
             # Flatten for attention computation
             num_segments_q = q_segments.size(1)
             num_segments_kv = k_segments.size(1)
-            dilated_len = k_segments.size(2)
+            seq_len = q_segments.size(2)  # Same for q, k, v after dilation
 
-            q_flat = q_segments.view(b * num_segments_q, effective_s, g, d)
-            k_flat = k_segments.view(b * num_segments_kv, dilated_len, g, d)
-            v_flat = v_segments.view(b * num_segments_kv, dilated_len, g, d)
-
+            q_flat = q_segments.contiguous().view(b * num_segments_q, seq_len, g, d)
+            k_flat = k_segments.contiguous().view(b * num_segments_kv, seq_len, g, d)
+            v_flat = v_segments.contiguous().view(b * num_segments_kv, seq_len, g, d)
 
             # Handle different segment counts between q and kv (ring attention)
             if num_segments_q != num_segments_kv:
@@ -551,21 +553,27 @@ class RingDilatedAttention(BaseDilatedAttention):
                 )
 
             # Reshape back and accumulate
-            # Use the actual attention output size for reshaping
-            attn_seq_len = attn_out.size(1)
-            attn_reshaped = attn_out.view(b, num_segments_q, attn_seq_len, g, d)
-            
-            # Handle truncated attention output for dilated case
-            if r > 1 and s != attn_seq_len:
-                # Pad the attention output back to original segment size
-                if s > attn_seq_len:
-                    pad_len = s - attn_seq_len
-                    padding = torch.zeros(b, num_segments_q, pad_len, g, d, 
-                                        device=attn_reshaped.device, 
-                                        dtype=attn_reshaped.dtype)
-                    attn_reshaped = torch.cat([attn_reshaped, padding], dim=2)
-            
-            attn_flat = attn_reshaped.view(b, n_q, g, d)
+            attn_reshaped = attn_out.reshape(b, num_segments_q, seq_len, g, d)
+
+            # If dilation was applied, we need to reconstruct the full sequence
+            if r > 1:
+                # Create output tensor for this group
+                group_out = torch.zeros(
+                    b,
+                    num_segments_q,
+                    effective_s,
+                    g,
+                    d,
+                    device=attn_reshaped.device,
+                    dtype=attn_reshaped.dtype,
+                )
+                # Place dilated results back at appropriate positions
+                # Ensure idx is on the same device as group_out
+                idx_device = idx.to(group_out.device) if idx.device != group_out.device else idx
+                group_out.index_copy_(2, idx_device, attn_reshaped)
+                attn_reshaped = group_out
+
+            attn_flat = attn_reshaped.reshape(b, n_q, g, d)
 
             # Accumulate results - slicing creates a view, so this modifies 'out' in-place
             out[:, :, hmin:hmax, :].add_(attn_flat)
@@ -595,7 +603,8 @@ class RingDilatedAttention(BaseDilatedAttention):
 
         # Reshape to segments
         num_segments = (total_len + segment_size - 1) // segment_size
-        return x[:, : num_segments * segment_size].view(b, num_segments, segment_size, h, d)
+        x_trimmed = x[:, : num_segments * segment_size].contiguous()
+        return x_trimmed.view(b, num_segments, segment_size, h, d)
 
     def forward(
         self,
@@ -603,7 +612,7 @@ class RingDilatedAttention(BaseDilatedAttention):
         key: Tensor,
         value: Tensor,
         is_causal: bool = False,
-        attention_mask: Tensor | None = None,
+        attention_mask: Optional[Tensor] = None,
     ) -> Tensor:
         """
         Forward pass with Ring Attention for O(n) memory complexity.
@@ -647,8 +656,6 @@ class RingDilatedAttention(BaseDilatedAttention):
         through the ring.
         """
         b, n, h, d = q.shape
-        device = q.device
-
         try:
             # Calculate local sequence lengths
             local_seq_len = n // self.ring_size
@@ -678,7 +685,6 @@ class RingDilatedAttention(BaseDilatedAttention):
             v_ring = v_local.clone()
 
             # Double buffering for overlapping computation and communication
-            k_next, v_next = None, None
             rotation_handle = None
 
             for step in range(self.ring_size):
@@ -770,7 +776,7 @@ class RingDilatedAttention(BaseDilatedAttention):
             warnings.warn(f"Ring attention failed: {e}. Falling back to single device computation.")
             return self._single_device_forward(q, k, v, is_causal)
 
-    def _rotate_kv_ring(self, k: Tensor, v: Tensor) -> tuple[Tensor, Tensor]:
+    def _rotate_kv_ring(self, k: Tensor, v: Tensor) -> Tuple[Tensor, Tensor]:
         """
         Optimized ring rotation with packed K/V communication and buffer reuse.
 
@@ -785,8 +791,8 @@ class RingDilatedAttention(BaseDilatedAttention):
         # Get pre-allocated rotation buffers
         buffer_key = (k.shape, k.dtype)
         rotation_buffers = self._rotation_buffers[buffer_key]
-        k_buffer = rotation_buffers["k"]
-        v_buffer = rotation_buffers["v"]
+        k_buffer = rotation_buffers['k']
+        v_buffer = rotation_buffers['v']
 
         # Calculate send/receive ranks
         send_rank = (self.rank + 1) % self.ring_size
@@ -839,16 +845,16 @@ class RingDilatedAttention(BaseDilatedAttention):
 
         return k_buffer, v_buffer
 
-    def _start_async_rotation(self, k: Tensor, v: Tensor) -> dict[str, Any]:
+    def _start_async_rotation(self, k: Tensor, v: Tensor) -> Dict[str, Any]:
         """Start asynchronous ring rotation for computation-communication overlap."""
         if self.ring_group is None:
-            return {"k": k, "v": v, "requests": None}
+            return {'k': k, 'v': v, 'requests': None}
 
         # Get pre-allocated rotation buffers
         buffer_key = (k.shape, k.dtype)
         rotation_buffers = self._rotation_buffers[buffer_key]
-        k_buffer = rotation_buffers["k"]
-        v_buffer = rotation_buffers["v"]
+        k_buffer = rotation_buffers['k']
+        v_buffer = rotation_buffers['v']
 
         # Calculate send/receive ranks
         send_rank = (self.rank + 1) % self.ring_size
@@ -873,24 +879,24 @@ class RingDilatedAttention(BaseDilatedAttention):
         recv_req = dist.irecv(packed_recv, src=recv_rank, group=self.ring_group)
 
         return {
-            "k_buffer": k_buffer,
-            "v_buffer": v_buffer,
-            "packed_recv": packed_recv,
-            "k_size": k_size,
-            "k_shape": k.shape,
-            "v_shape": v.shape,
-            "send_req": send_req,
-            "recv_req": recv_req,
+            'k_buffer': k_buffer,
+            'v_buffer': v_buffer,
+            'packed_recv': packed_recv,
+            'k_size': k_size,
+            'k_shape': k.shape,
+            'v_shape': v.shape,
+            'send_req': send_req,
+            'recv_req': recv_req,
         }
 
-    def _complete_async_rotation(self, rotation_handle: dict[str, Any]) -> tuple[Tensor, Tensor]:
+    def _complete_async_rotation(self, rotation_handle: Dict[str, Any]) -> Tuple[Tensor, Tensor]:
         """Complete asynchronous ring rotation and return rotated tensors."""
-        if rotation_handle.get("requests") is None:
-            return rotation_handle["k"], rotation_handle["v"]
+        if rotation_handle.get('requests') is None:
+            return rotation_handle['k'], rotation_handle['v']
 
         # Wait for communication completion
-        rotation_handle["send_req"].wait()
-        rotation_handle["recv_req"].wait()
+        rotation_handle['send_req'].wait()
+        rotation_handle['recv_req'].wait()
 
         # Unpack received data
         k_size = rotation_handle["k_size"]
@@ -899,10 +905,10 @@ class RingDilatedAttention(BaseDilatedAttention):
         v_received_flat = packed_recv[k_size:]
 
         # Copy to pre-allocated buffers
-        k_buffer = rotation_handle["k_buffer"]
-        v_buffer = rotation_handle["v_buffer"]
-        k_buffer.copy_(k_received_flat.view(rotation_handle["k_shape"]))
-        v_buffer.copy_(v_received_flat.view(rotation_handle["v_shape"]))
+        k_buffer = rotation_handle['k_buffer']
+        v_buffer = rotation_handle['v_buffer']
+        k_buffer.copy_(k_received_flat.view(rotation_handle['k_shape']))
+        v_buffer.copy_(v_received_flat.view(rotation_handle['v_shape']))
 
         return k_buffer, v_buffer
 
@@ -992,8 +998,8 @@ class RingDilatedAttention(BaseDilatedAttention):
                     pass
             self._pending_sends = []
 
-        if hasattr(self, "_pending_recvs"):
-            for handle in getattr(self, "_pending_recvs", []):
+        if hasattr(self, '_pending_recvs'):
+            for handle in getattr(self, '_pending_recvs', []):
                 try:
                     if hasattr(handle, "wait"):
                         handle.wait()
@@ -1025,7 +1031,7 @@ class RingDilatedAttention(BaseDilatedAttention):
             except Exception:
                 pass
 
-    def get_memory_info(self) -> dict[str, Any]:
+    def get_memory_info(self) -> Dict[str, Any]:
         """Get comprehensive memory usage information with optimization metrics."""
         info = {
             "memory_complexity": "O(n)",
@@ -1034,9 +1040,9 @@ class RingDilatedAttention(BaseDilatedAttention):
             "cached_patterns": len(self._ring_patterns),
             "cached_indices": len(self._cached_indices),
             "allocated_buffers": len(self._ring_memory_pool._pools),
-            "head_groups_cached": len(self._head_groups_cache)
-            if hasattr(self, "_head_groups_cache")
-            else 0,
+            "head_groups_cached": (
+                len(self._head_groups_cache) if hasattr(self, '_head_groups_cache') else 0
+            ),
             "vectorized_patterns_cached": len(self._vectorized_patterns),
             "hot_buffer_keys": len(self._ring_memory_pool._hot_keys_cache),
             "flash_attention_version": None,  # Use core detection

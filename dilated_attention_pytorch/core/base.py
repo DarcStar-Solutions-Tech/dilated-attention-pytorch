@@ -8,8 +8,8 @@ and shared functionality for all dilated attention implementations.
 import threading
 from abc import ABC, abstractmethod
 from collections import OrderedDict
-from collections.abc import Callable
-from typing import Any
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 
 import torch
 from torch import Tensor, nn
@@ -235,6 +235,28 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
             self._head_groups_cache.clear()
             self._pattern_cache.clear()
             self._indices_cache.clear()
+
+    def clear_cache(self, force: bool = False) -> None:
+        """Clear cached patterns and buffers to free memory.
+
+        Args:
+            force: If True, clear all caches immediately. Otherwise, only clear if needed.
+        """
+        self._clear_caches()
+
+    def get_memory_info(self) -> dict:
+        """Get memory usage information.
+
+        Returns:
+            Dictionary with memory usage statistics
+        """
+        return {
+            'cache_size': len(self._head_groups_cache)
+            + len(self._pattern_cache)
+            + len(self._indices_cache),
+            'max_cache_size': self._max_cache_size,
+            'memory_complexity': "O(n) for sequence length n",
+        }
 
     def extra_repr(self) -> str:
         """Extra representation for printing."""

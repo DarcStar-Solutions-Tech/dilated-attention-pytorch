@@ -5,7 +5,7 @@ This module provides an optimized multihead wrapper with fused QKV projections
 and enhanced performance characteristics.
 """
 
-from collections.abc import Sequence
+from typing import Optional, Sequence, Tuple, Union
 
 import torch
 from torch import Tensor, nn
@@ -212,7 +212,7 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
 
         batch_size, seq_len, _ = query.shape
 
-        if self.use_fused_qkv and hasattr(self, "qkv_proj"):
+        if self.use_fused_qkv and hasattr(self, 'qkv_proj'):
             # Use fused QKV projection for efficiency
             qkv = self.qkv_proj(query)
 
@@ -264,10 +264,8 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         # Output projection
         output = self.out_proj(attn_output)
 
-        if need_weights:
-            return output, None
-        else:
-            return output
+        # Always return tuple for consistency
+        return output, None
 
     def _combine_masks(
         self,

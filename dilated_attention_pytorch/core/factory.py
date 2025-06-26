@@ -6,6 +6,7 @@ implementations with sensible defaults and automatic optimization.
 """
 
 import logging
+from typing import Dict, Optional, Type
 
 from .base import BaseDilatedAttention, BaseMultiheadDilatedAttention
 from .config import (
@@ -67,8 +68,8 @@ def create_dilated_attention(
         ... )
     """
     # Ensure implementations are registered
-    _ensure_initialized()
-    
+    _ensure_implementations_registered()
+
     # Set defaults
     if segment_lengths is None:
         segment_lengths = [2048, 4096, 8192]
@@ -93,7 +94,21 @@ def create_dilated_attention(
 
     # Create and return module
     cls = _ATTENTION_REGISTRY[attention_type]
-    module = cls(config)
+
+    # Handle legacy constructors that don't accept config objects
+    if attention_type in ["block_sparse_ring", "block_sparse_ring_distributed"]:
+        # These implementations expect individual parameters
+        module = cls(
+            segment_lengths=config.segment_lengths,
+            dilation_rates=config.dilation_rates,
+            dropout=config.dropout,
+            use_tf32=config.use_tf32,
+            device=config.device,
+            dtype=config.dtype,
+            **kwargs,  # Pass through remaining kwargs
+        )
+    else:
+        module = cls(config)
 
     logger.info(f"Created {attention_type} dilated attention module")
     return module
@@ -130,8 +145,7 @@ def create_multihead_dilated_attention(
         ... )
     """
     # Ensure implementations are registered
-    _ensure_initialized()
-    
+    _ensure_implementations_registered()
     # Set defaults
     if segment_lengths is None:
         segment_lengths = [2048, 4096, 8192]
@@ -151,8 +165,8 @@ def create_multihead_dilated_attention(
         raise ValueError(f"Unknown attention type '{attention_type}'. Available types: {available}")
 
     # Check if configs were passed directly
-    multihead_config_passed = kwargs.get("multihead_config")
-    attention_config_passed = kwargs.get("attention_config")
+    multihead_config_passed = kwargs.get("multihead_config", None)
+    attention_config_passed = kwargs.get("attention_config", None)
 
     if multihead_config_passed is not None:
         multihead_config = multihead_config_passed
@@ -240,12 +254,21 @@ def create_multihead_dilated_attention(
             dtype=multihead_config.dtype,
             **remaining_kwargs,  # Pass through any extra kwargs
         )
-    elif attention_type == "ring_distributed":
-        # Ring distributed uses special initialization
+    elif attention_type == "ring":
+        # Ring attention expects individual parameters
         module = cls(
-            multihead_config=multihead_config,
-            ring_config=attention_config,
-            **remaining_kwargs
+            embed_dim=multihead_config.embed_dim,
+            num_heads=multihead_config.num_heads,
+            segment_lengths=attention_config.segment_lengths,
+            dilation_rates=attention_config.dilation_rates,
+            dropout=attention_config.dropout,
+            bias=multihead_config.bias,
+            layer_norm=multihead_config.layer_norm,
+            layer_norm_eps=multihead_config.layer_norm_eps,
+            gamma_init=multihead_config.gamma_init,
+            device=multihead_config.device,
+            dtype=multihead_config.dtype,
+            **remaining_kwargs,  # Pass through any extra kwargs
         )
     else:
         # New style with configs
@@ -369,7 +392,7 @@ def _filter_kwargs(config_class: type, kwargs: dict) -> dict:
     else:
         # Fallback for non-dataclass configs
         sig = inspect.signature(config_class.__init__)
-        valid_fields = set(sig.parameters.keys()) - {"self"}
+        valid_fields = set(sig.parameters.keys()) - {'self'}
 
     # Filter kwargs
     filtered = {k: v for k, v in kwargs.items() if k in valid_fields}
@@ -496,12 +519,13 @@ def _register_implementations():
         pass  # Block-sparse not refactored yet
 
 
-# Initialize registry - use lazy initialization to avoid import issues
-_initialized = False
+# Lazy registration flag to avoid circular imports
+_implementations_registered = False
 
-def _ensure_initialized():
-    """Ensure implementations are registered."""
-    global _initialized
-    if not _initialized:
+
+def _ensure_implementations_registered():
+    """Ensure implementations are registered (lazy loading to avoid circular imports)."""
+    global _implementations_registered
+    if not _implementations_registered:
         _register_implementations()
-        _initialized = True
+        _implementations_registered = True

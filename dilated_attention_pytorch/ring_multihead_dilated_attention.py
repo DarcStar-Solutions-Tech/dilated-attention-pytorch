@@ -22,8 +22,7 @@ This implementation combines:
 
 import threading
 import warnings
-from collections.abc import Sequence
-from typing import Any
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
 import torch
 from torch import Tensor, nn
@@ -126,26 +125,14 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             dtype=dtype,
         )
 
-        # Initialize base class
-        super().__init__(multihead_config, attention_config)
-
-        # Store additional attributes
-
+        # Store additional attributes that will be needed during initialization
         self.use_flash_attention = use_flash_attention
         self.compile_model = compile_model
         self.use_checkpointing = use_checkpointing
+        self.use_fused_qkv = True  # Set this before parent init
 
-        # Fused QKV projection for maximum memory efficiency
-        self.use_fused_qkv = True
-        
         # Initialize base class
         super().__init__(multihead_config, attention_config)
-        if self.use_fused_qkv:
-            factory_kwargs = {"device": self.device, "dtype": self.dtype}
-            self.qkv_proj = nn.Linear(embed_dim, 3 * embed_dim, bias=bias, **factory_kwargs)
-
-        # Create ring attention module
-        self.attention = self._create_attention_module()
 
         # Advanced memory optimization: Pre-allocate QKV output buffers
         self._qkv_output_buffers = {}
@@ -175,12 +162,21 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
     def _init_qkv_projections(self, factory_kwargs: dict):
         """Initialize fused QKV projection for ring attention efficiency."""
         if self.use_fused_qkv:
-            # Fused projection already initialized in __init__
-            # Skip base class initialization
-            return
+            # Initialize fused QKV projection
+            self.qkv_proj = nn.Linear(
+                self.embed_dim, 3 * self.embed_dim, bias=self.bias, **factory_kwargs
+            )
         else:
-            # Fallback to separate projections
-            super()._init_qkv_projections(factory_kwargs)
+            # Fallback to separate projections (if base class provides implementation)
+            self.q_proj = nn.Linear(
+                self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs
+            )
+            self.k_proj = nn.Linear(
+                self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs
+            )
+            self.v_proj = nn.Linear(
+                self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs
+            )
 
     def _reset_parameters(self):
         """Initialize parameters following MAGNETO architecture guidelines."""
@@ -209,17 +205,17 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
     def _enable_compilation(self):
         """Enable torch.compile optimization for additional performance."""
         try:
-            self.attention = torch.compile(self.attention, mode="max-autotune", fullgraph=True)
-            if hasattr(self, "qkv_proj"):
-                self.qkv_proj = torch.compile(self.qkv_proj, mode="max-autotune")
-            if hasattr(self, "out_proj"):
-                self.out_proj = torch.compile(self.out_proj, mode="max-autotune")
+            self.attention = torch.compile(self.attention, mode='max-autotune', fullgraph=True)
+            if hasattr(self, 'qkv_proj'):
+                self.qkv_proj = torch.compile(self.qkv_proj, mode='max-autotune')
+            if hasattr(self, 'out_proj'):
+                self.out_proj = torch.compile(self.out_proj, mode='max-autotune')
         except Exception as e:
             warnings.warn(f"torch.compile failed: {e}")
 
     def _apply_fused_qkv_projection(
         self, query: Tensor, key: Tensor, value: Tensor
-    ) -> tuple[Tensor, Tensor, Tensor]:
+    ) -> Tuple[Tensor, Tensor, Tensor]:
         """
         Apply fused QKV projection with advanced memory optimization.
 
@@ -247,9 +243,9 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             # Pre-allocate output buffers for efficient memory usage
             if buffer_key not in self._qkv_output_buffers:
                 self._qkv_output_buffers[buffer_key] = {
-                    "q": torch.empty(target_shape, dtype=query.dtype, device=query.device),
-                    "k": torch.empty(target_shape, dtype=query.dtype, device=query.device),
-                    "v": torch.empty(target_shape, dtype=query.dtype, device=query.device),
+                    'q': torch.empty(target_shape, dtype=query.dtype, device=query.device),
+                    'k': torch.empty(target_shape, dtype=query.dtype, device=query.device),
+                    'v': torch.empty(target_shape, dtype=query.dtype, device=query.device),
                 }
 
         # Ensure buffers match current input dimensions - use resize for efficiency
@@ -270,9 +266,9 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
 
             # Resize existing buffers instead of recreating
             try:
-                buffers["q"].resize_(target_shape)
-                buffers["k"].resize_(target_shape)
-                buffers["v"].resize_(target_shape)
+                buffers['q'].resize_(target_shape)
+                buffers['k'].resize_(target_shape)
+                buffers['v'].resize_(target_shape)
             except RuntimeError as resize_error:
                 # Enhanced fallback with error recovery
                 try:
@@ -321,11 +317,11 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             v_proj = self.qkv_proj(value)[:, :, 2 * self.embed_dim :]
 
             # Reshape and copy to buffers
-            buffers["q"].copy_(q_proj.view(target_shape))
-            buffers["k"].copy_(k_proj.view(target_shape))
-            buffers["v"].copy_(v_proj.view(target_shape))
+            buffers['q'].copy_(q_proj.view(target_shape))
+            buffers['k'].copy_(k_proj.view(target_shape))
+            buffers['v'].copy_(v_proj.view(target_shape))
 
-        return buffers["q"], buffers["k"], buffers["v"]
+        return buffers['q'], buffers['k'], buffers['v']
 
     def forward(
         self,
@@ -360,7 +356,7 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         # Handle ring attention limitations
         if attn_mask is not None or key_padding_mask is not None:
             warnings.warn(
-                "Attention masks are not supported with Ring Attention. Masks will be ignored."
+                "Attention masks are not supported with Ring Attention. " "Masks will be ignored."
             )
 
         if need_weights:
@@ -432,7 +428,7 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
                 raise e
 
         # Merge heads back
-        attn_output = attn_output.view(batch_size, seq_len, self.embed_dim)
+        attn_output = attn_output.reshape(batch_size, seq_len, self.embed_dim)
 
         # Apply post-attention layer norm if enabled (MAGNETO style)
         if self.multihead_config.layer_norm and hasattr(self, "q_ln"):
@@ -441,10 +437,8 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         # Output projection
         output = self.out_proj(attn_output)
 
-        if need_weights:
-            return output, None
-        else:
-            return output
+        # Always return tuple for consistency
+        return output, None
 
     def extra_repr(self) -> str:
         """String representation for debugging."""
@@ -470,7 +464,7 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         if hasattr(self.attention, "clear_cache"):
             self.attention.clear_cache()
 
-    def get_memory_info(self) -> dict[str, Any]:
+    def get_memory_info(self) -> Dict[str, Any]:
         """
         Get comprehensive memory usage information for the attention layer.
 

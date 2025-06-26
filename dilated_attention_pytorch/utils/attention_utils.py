@@ -7,7 +7,8 @@ and optimization strategies used across all dilated attention implementations.
 
 import math
 import warnings
-from typing import Any
+
+from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -19,8 +20,8 @@ from ..core.constants import HAS_FLASH_ATTN, HAS_SDPA, HAS_XFORMERS
 def compute_attention_scores(
     q: Tensor,
     k: Tensor,
-    scale: float | None = None,
-    attention_mask: Tensor | None = None,
+    scale: Optional[float] = None,
+    attention_mask: Optional[Tensor] = None,
     is_causal: bool = False,
 ) -> Tensor:
     """
@@ -49,7 +50,7 @@ def compute_attention_scores(
         causal_mask = torch.triu(
             torch.ones(seq_len, seq_len, dtype=torch.bool, device=q.device), diagonal=1
         )
-        scores = scores.masked_fill(causal_mask, float("-inf"))
+        scores = scores.masked_fill(causal_mask, float('-inf'))
 
     # Apply attention mask if provided
     if attention_mask is not None:
@@ -81,7 +82,7 @@ def apply_dilated_attention_pattern(
     mask = create_dilated_mask(seq_len, segment_length, dilation_rate, device)
 
     # Apply mask
-    scores = scores.masked_fill(~mask, float("-inf"))
+    scores = scores.masked_fill(~mask, float('-inf'))
 
     return scores
 
@@ -106,9 +107,6 @@ def create_dilated_mask(
 
     # For each query position
     for i in range(seq_len):
-        # Calculate the segment this position belongs to
-        segment_idx = i // segment_length
-
         # Calculate the range of keys to attend to
         start = max(0, i - segment_length // 2 * dilation_rate)
         end = min(seq_len, i + segment_length // 2 * dilation_rate + 1)
@@ -172,7 +170,7 @@ def optimize_attention_computation(
     k: Tensor,
     v: Tensor,
     is_causal: bool = False,
-    attention_mask: Tensor | None = None,
+    attention_mask: Optional[Tensor] = None,
     dropout_p: float = 0.0,
 ) -> Tensor:
     """
@@ -285,7 +283,7 @@ def standard_attention(
     k: Tensor,
     v: Tensor,
     is_causal: bool = False,
-    attention_mask: Tensor | None = None,
+    attention_mask: Optional[Tensor] = None,
     dropout_p: float = 0.0,
 ) -> Tensor:
     """
@@ -300,43 +298,41 @@ def standard_attention(
     Returns:
         Attention output [..., seq_len, num_heads, head_dim]
     """
-    # Handle multi-head attention by reshaping
-    # [..., seq_len, num_heads, head_dim] -> [..., num_heads, seq_len, head_dim]
-    q = q.transpose(-3, -2)
-    k = k.transpose(-3, -2)
-    v = v.transpose(-3, -2)
-    
     # Get dimensions
-    *batch_dims, num_heads, seq_len, head_dim = q.shape
-    
-    # Compute attention scores for each head
-    # We need to handle this head by head or reshape
-    # Reshape to [...*num_heads, seq_len, head_dim]
-    q_reshaped = q.reshape(-1, seq_len, head_dim)
-    k_reshaped = k.reshape(-1, seq_len, head_dim)
-    v_reshaped = v.reshape(-1, seq_len, head_dim)
-    
-    # Compute attention scores
-    scores = compute_attention_scores(q, k, None, attention_mask, is_causal)
+    *batch_dims, seq_len, num_heads, head_dim = q.shape
 
+    # Reshape to [..., num_heads, seq_len, head_dim] for attention computation
+    q_reshaped = q.transpose(-3, -2)  # [..., num_heads, seq_len, head_dim]
+    k_reshaped = k.transpose(-3, -2)  # [..., num_heads, seq_len, head_dim]
+    v_reshaped = v.transpose(-3, -2)  # [..., num_heads, seq_len, head_dim]
 
-    # Apply softmax
-    attn_weights = F.softmax(scores, dim=-1)
+    # Initialize output tensor
+    output = torch.zeros_like(q_reshaped)
 
-    # Apply dropout
-    if dropout_p > 0 and q.training:
-        attn_weights = F.dropout(attn_weights, p=dropout_p)
+    # Process each head separately to handle attention computation correctly
+    for h in range(num_heads):
+        # Extract head-specific tensors [..., seq_len, head_dim]
+        q_h = q_reshaped[..., h, :, :]
+        k_h = k_reshaped[..., h, :, :]
+        v_h = v_reshaped[..., h, :, :]
 
-    # Apply attention to values
-    # attn_weights: [..., seq_len, seq_len]
-    # v: [..., seq_len, num_heads, head_dim]
-    # We need to transpose v to [..., num_heads, seq_len, head_dim] for proper matmul
-    v_transposed = v.transpose(-3, -2)  # [..., num_heads, seq_len, head_dim]
-    attn_weights_expanded = attn_weights.unsqueeze(-3)  # [..., 1, seq_len, seq_len]
+        # Compute attention scores for this head
+        scores_h = compute_attention_scores(q_h, k_h, None, attention_mask, is_causal)
 
-    # Perform batched matmul: [..., 1, seq_len, seq_len] x [..., num_heads, seq_len, head_dim]
-    # Result: [..., num_heads, seq_len, head_dim]
-    output = torch.matmul(attn_weights_expanded, v_transposed)
+        # Apply softmax
+        attn_weights_h = F.softmax(scores_h, dim=-1)
+
+        # Apply dropout
+        if dropout_p > 0 and q.training:
+            attn_weights_h = F.dropout(attn_weights_h, p=dropout_p)
+
+        # Apply attention to values
+        # attn_weights_h: [..., seq_len, seq_len]
+        # v_h: [..., seq_len, head_dim]
+        output_h = torch.matmul(attn_weights_h, v_h)  # [..., seq_len, head_dim]
+
+        # Store in output tensor
+        output[..., h, :, :] = output_h
 
     # Transpose back to [..., seq_len, num_heads, head_dim]
     output = output.transpose(-3, -2)
@@ -380,7 +376,7 @@ def compute_rotary_embeddings(
     device: torch.device,
     base: int = 10000,
     dtype: torch.dtype = torch.float32,
-) -> tuple[Tensor, Tensor]:
+) -> Tuple[Tensor, Tensor]:
     """
     Compute rotary position embeddings (RoPE).
 
@@ -414,7 +410,7 @@ def compute_rotary_embeddings(
 
 def apply_rotary_embeddings(
     q: Tensor, k: Tensor, cos: Tensor, sin: Tensor
-) -> tuple[Tensor, Tensor]:
+) -> Tuple[Tensor, Tensor]:
     """
     Apply rotary embeddings to query and key tensors.
 
@@ -503,7 +499,7 @@ def create_4d_causal_mask(
 
 
 def apply_head_specific_masks(
-    attention_scores: Tensor, head_masks: list[Tensor] | None = None
+    attention_scores: Tensor, head_masks: Optional[List[Tensor]] = None
 ) -> Tensor:
     """
     Apply head-specific masks to attention scores.
@@ -571,8 +567,8 @@ def get_attention_backend_info() -> dict[str, Any]:
     }
 
     if torch.cuda.is_available():
-        info["gpu_name"] = torch.cuda.get_device_name()
-        info["gpu_capability"] = torch.cuda.get_device_capability()
+        info['gpu_name'] = torch.cuda.get_device_name()
+        info['gpu_capability'] = torch.cuda.get_device_capability()
 
     return info
 

@@ -1,9 +1,7 @@
 import pytest
 import torch
 
-from dilated_attention_pytorch.dilated_attention import (
-    DilatedAttention,
-)
+from dilated_attention_pytorch.dilated_attention import DilatedAttention
 from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -31,11 +29,8 @@ def test_dilated_attention(
     dilated_attention = DilatedAttention(segment_lengths, dilation_rates)
     x = torch.randn(1, SEQ_LEN, num_heads, embed_dim, device=DEVICE, dtype=DTYPE)
 
-    # Causal attention is not implemented on CPU for 'xformers'.
-    if is_causal and torch.device("cpu") == DEVICE:
-        with pytest.raises(NotImplementedError):
-            dilated_attention(x, x, x, is_causal=is_causal)
-        return
+    # Note: With the fallback to standard_attention, causal attention now works on CPU
+    # The old test assumed xformers would raise NotImplementedError, but we now have a fallback
 
 
     out = dilated_attention(x, x, x, is_causal=is_causal)  # default: causal=False
@@ -73,12 +68,8 @@ def test_multihead_dilated_attention(
     )
     x = torch.randn(1, SEQ_LEN, embed_dim, device=DEVICE, dtype=DTYPE)
 
-    # Causal attention is not implemented on CPU for 'xformers'.
-    if is_causal and torch.device("cpu") == DEVICE:
-        with pytest.raises(NotImplementedError):
-            mhda(x, x, x, is_causal=is_causal)
-        return
-
+    # Note: With the fallback to standard_attention, causal attention now works on CPU
+    # The old test assumed xformers would raise NotImplementedError, but we now have a fallback
 
     out = mhda(x, x, x, is_causal=is_causal)  # default: causal=False
     assert out.size(0) == 1

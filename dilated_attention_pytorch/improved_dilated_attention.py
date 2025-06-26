@@ -5,7 +5,8 @@ This module provides an optimized dilated attention mechanism with enhanced
 memory efficiency and performance optimizations.
 """
 
-from collections.abc import Sequence
+from typing import Optional, Sequence
+
 
 import torch
 import torch.nn.functional as F
@@ -32,10 +33,7 @@ except ImportError:
         return contextlib.nullcontext()
 
 
-from .core import (
-    BaseDilatedAttention,
-    DilatedAttentionConfig,
-)
+from .core import BaseDilatedAttention, DilatedAttentionConfig
 
 
 class ImprovedDilatedAttention(BaseDilatedAttention):
@@ -110,7 +108,7 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
         key: Tensor,
         value: Tensor,
         is_causal: bool = False,
-        attention_mask: Tensor | None = None,
+        attention_mask: Optional[Tensor] = None,
     ) -> Tensor:
         """
         Forward pass for improved dilated attention.
@@ -139,9 +137,7 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
         group_sizes, head_ranges = self._get_head_groups(h)
 
         # Process all segments with optimized memory access patterns
-        for i, (g, r, s) in enumerate(
-            zip(group_sizes, self.dilation_rates, self.segment_lengths, strict=False)
-        ):
+        for i, (g, r, s) in enumerate(zip(group_sizes, self.dilation_rates, self.segment_lengths)):
             if g == 0 or n < s:  # Skip empty groups or too-small sequences
                 continue
 
@@ -205,9 +201,9 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
                 # Create temporary tensor for scattering
                 temp_output = torch.zeros(b, n // s, s, g, d, device=device, dtype=dtype)
                 temp_output[:, :, idx, :, :] = x_reshaped
-                out[:, :, hmin:hmax, :].add_(temp_output.view(b, n, g, d))
+                out[:, :, hmin:hmax, :].add_(temp_output.reshape(b, n, g, d))
             else:
-                out[:, :, hmin:hmax, :].add_(x_reshaped.view(b, n, g, d))
+                out[:, :, hmin:hmax, :].add_(x_reshaped.reshape(b, n, g, d))
 
         # Apply dropout if configured (from base class)
         out = self._apply_dropout(out)
