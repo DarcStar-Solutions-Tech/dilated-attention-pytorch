@@ -18,11 +18,16 @@ import pytest
 import torch
 
 from dilated_attention_pytorch.block_sparse_ring_distributed_dilated_attention import (
-    BlockSparseRingDistributedDilatedAttention, DistributedSparseConfig)
+    BlockSparseRingDistributedDilatedAttention,
+    DistributedSparseConfig,
+)
 from dilated_attention_pytorch.ring_dilated_attention import (
-    RingAttentionMemoryPool, RingDilatedAttention)
-from dilated_attention_pytorch.ring_distributed_dilated_attention import \
-    RingDistributedDilatedAttention
+    RingAttentionMemoryPool,
+    RingDilatedAttention,
+)
+from dilated_attention_pytorch.ring_distributed_dilated_attention import (
+    RingDistributedDilatedAttention,
+)
 
 
 class TestRingAttentionMemoryPool:
@@ -325,7 +330,9 @@ class TestMemoryLimits:
     def test_pattern_cache_limits(self):
         """Test pattern cache size limits."""
         from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-            SparsePatternConfig, SparsePatternGenerator)
+            SparsePatternConfig,
+            SparsePatternGenerator,
+        )
 
         config = SparsePatternConfig(pattern_type="local_window")
         generator = SparsePatternGenerator(config, max_cache_size=3)

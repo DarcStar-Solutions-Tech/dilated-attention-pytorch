@@ -7,8 +7,7 @@ import time
 import torch
 
 from dilated_attention_pytorch import DilatedAttention
-from dilated_attention_pytorch.ring_dilated_attention import \
-    RingDilatedAttention
+from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
 
 
 def test_optimization():

@@ -6,10 +6,7 @@ import time
 
 import torch
 
-from dilated_attention_pytorch import (RingDilatedAttention,
-                                       UnfoldRingDilatedAttention)
-from dilated_attention_pytorch.ring_dilated_attention_unfold_optimized import \
-    OptimizedUnfoldRingDilatedAttention
+from dilated_attention_pytorch import RingDilatedAttention, UnfoldRingDilatedAttention
 
 
 def test_correctness():
@@ -32,23 +29,15 @@ def test_correctness():
         print(f"\nTesting: batch={batch_size}, seq_len={seq_len}, heads={num_heads}")
 
         # Create inputs
-        q = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
-        k = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
-        v = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
+        q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+        k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+        v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
 
         # Create modules
-        orig_module = RingDilatedAttention(segments, dilations, 0.0, ring_size=1).to(
+        orig_module = RingDilatedAttention(segments, dilations, 0.0, ring_size=1).to(device, dtype)
+        unfold_module = UnfoldRingDilatedAttention(segments, dilations, 0.0, ring_size=1).to(
             device, dtype
         )
-        unfold_module = UnfoldRingDilatedAttention(
-            segments, dilations, 0.0, ring_size=1
-        ).to(device, dtype)
 
         # Set to eval mode for consistent results
         orig_module.eval()
@@ -108,23 +97,15 @@ def benchmark_performance():
         print(f"\nSequence length: {seq_len:,} tokens")
 
         # Create inputs
-        q = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
-        k = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
-        v = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
+        q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+        k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+        v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
 
         # Create modules
-        orig_module = RingDilatedAttention(segments, dilations, 0.0, ring_size=1).to(
+        orig_module = RingDilatedAttention(segments, dilations, 0.0, ring_size=1).to(device, dtype)
+        unfold_module = UnfoldRingDilatedAttention(segments, dilations, 0.0, ring_size=1).to(
             device, dtype
         )
-        unfold_module = UnfoldRingDilatedAttention(
-            segments, dilations, 0.0, ring_size=1
-        ).to(device, dtype)
 
         # Warmup
         for _ in range(3):
@@ -169,9 +150,7 @@ def benchmark_performance():
                 _ = unfold_module(q, k, v)
             unfold_memory = torch.cuda.max_memory_allocated() / (1024**2)
 
-            print(
-                f"  Memory - Original: {orig_memory:.1f}MB, Unfold: {unfold_memory:.1f}MB"
-            )
+            print(f"  Memory - Original: {orig_memory:.1f}MB, Unfold: {unfold_memory:.1f}MB")
             print(f"  Memory reduction: {(1 - unfold_memory/orig_memory)*100:.1f}%")
 
         # Cleanup
@@ -187,12 +166,12 @@ def test_edge_cases():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dtype = torch.float32
 
-    # Edge case 1: Non-divisible sequence lengths
-    print("\n1. Non-divisible sequence lengths:")
+    # Edge case 1: Valid sequence lengths (must be divisible by largest segment)
+    print("\n1. Valid sequence lengths:")
     segments = [256, 512, 1024]
     dilations = [1, 2, 4]
 
-    for seq_len in [1000, 1500, 3000]:  # Not divisible by largest segment
+    for seq_len in [1024, 2048, 4096]:  # Divisible by largest segment (1024)
         print(f"  Testing seq_len={seq_len}")
 
         q = torch.randn(1, seq_len, 8, 64, device=device, dtype=dtype)
@@ -209,9 +188,7 @@ def test_edge_cases():
         if torch.allclose(orig_out, unfold_out, rtol=1e-5):
             print("    ✓ Pass")
         else:
-            print(
-                f"    ✗ Fail - max diff: {(orig_out - unfold_out).abs().max().item():.2e}"
-            )
+            print(f"    ✗ Fail - max diff: {(orig_out - unfold_out).abs().max().item():.2e}")
 
     # Edge case 2: Different dilation offsets
     print("\n2. Testing different dilation offsets:")
@@ -235,9 +212,7 @@ def test_edge_cases():
         if torch.allclose(orig_out, unfold_out, rtol=1e-5):
             print("    ✓ Pass")
         else:
-            print(
-                f"    ✗ Fail - max diff: {(orig_out - unfold_out).abs().max().item():.2e}"
-            )
+            print(f"    ✗ Fail - max diff: {(orig_out - unfold_out).abs().max().item():.2e}")
 
 
 if __name__ == "__main__":

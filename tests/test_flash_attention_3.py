@@ -15,8 +15,10 @@ import torch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "."))
 
 from dilated_attention_pytorch.ring_dilated_attention import (
-    RingDilatedAttention, get_flash_attention_version,
-    is_flash_attention_3_available)
+    RingDilatedAttention,
+    get_flash_attention_version,
+    is_flash_attention_3_available,
+)
 
 
 def test_flash_attention_3_integration():

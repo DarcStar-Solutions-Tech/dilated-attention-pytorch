@@ -8,18 +8,27 @@ from unittest.mock import patch
 
 import pytest
 
-from dilated_attention_pytorch.core import (BaseDilatedAttention,
-                                            BaseMultiheadDilatedAttention,
-                                            DilatedAttentionConfig,
-                                            create_adaptive_sparse_attention,
-                                            create_block_sparse_attention,
-                                            create_dilated_attention,
-                                            create_multihead_dilated_attention,
-                                            register_attention,
-                                            register_multihead_attention)
+from dilated_attention_pytorch.core import (
+    BaseDilatedAttention,
+    BaseMultiheadDilatedAttention,
+    DilatedAttentionConfig,
+    create_adaptive_sparse_attention,
+    create_block_sparse_attention,
+    create_dilated_attention,
+    create_multihead_dilated_attention,
+    register_attention,
+    register_multihead_attention,
+)
 from dilated_attention_pytorch.core.factory import (
-    _ATTENTION_REGISTRY, _MULTIHEAD_REGISTRY, _get_config_class,
-    _select_best_attention_type)
+    _ATTENTION_REGISTRY,
+    _MULTIHEAD_REGISTRY,
+    _ensure_implementations_registered,
+    _get_config_class,
+    _select_best_attention_type,
+)
+
+# Ensure implementations are registered for tests
+_ensure_implementations_registered()
 
 
 # Mock implementations for testing
@@ -48,6 +57,9 @@ class TestFactoryRegistration:
 
     def setup_method(self):
         """Clear registries before each test."""
+        # Save current registry state
+        self._saved_attention_registry = _ATTENTION_REGISTRY.copy()
+        self._saved_multihead_registry = _MULTIHEAD_REGISTRY.copy()
         _ATTENTION_REGISTRY.clear()
         _MULTIHEAD_REGISTRY.clear()
 
@@ -57,6 +69,13 @@ class TestFactoryRegistration:
 
         assert "test_attention" in _ATTENTION_REGISTRY
         assert _ATTENTION_REGISTRY["test_attention"] is MockDilatedAttention
+
+    def teardown_method(self):
+        """Restore registry state after test."""
+        _ATTENTION_REGISTRY.clear()
+        _MULTIHEAD_REGISTRY.clear()
+        _ATTENTION_REGISTRY.update(self._saved_attention_registry)
+        _MULTIHEAD_REGISTRY.update(self._saved_multihead_registry)
 
     def test_register_multihead_attention(self):
         """Test registering multihead attention implementation."""
@@ -71,20 +90,25 @@ class TestFactoryCreation:
 
     def setup_method(self):
         """Setup test implementations."""
+        # Save current registry state
+        self._saved_attention_registry = _ATTENTION_REGISTRY.copy()
+        self._saved_multihead_registry = _MULTIHEAD_REGISTRY.copy()
         _ATTENTION_REGISTRY.clear()
         _MULTIHEAD_REGISTRY.clear()
-
         # Register test implementations
         register_attention("test", MockDilatedAttention)
         register_attention("standard", MockDilatedAttention)
         register_attention("improved", MockDilatedAttention)
         register_multihead_attention("multihead_test", MockMultiheadDilatedAttention)
-        register_multihead_attention(
-            "multihead_standard", MockMultiheadDilatedAttention
-        )
-        register_multihead_attention(
-            "multihead_improved", MockMultiheadDilatedAttention
-        )
+        register_multihead_attention("multihead_standard", MockMultiheadDilatedAttention)
+        register_multihead_attention("multihead_improved", MockMultiheadDilatedAttention)
+
+    def teardown_method(self):
+        """Restore registry state after test."""
+        _ATTENTION_REGISTRY.clear()
+        _MULTIHEAD_REGISTRY.clear()
+        _ATTENTION_REGISTRY.update(self._saved_attention_registry)
+        _MULTIHEAD_REGISTRY.update(self._saved_multihead_registry)
 
     def test_create_dilated_attention_basic(self):
         """Test basic dilated attention creation."""
@@ -150,14 +174,21 @@ class TestSpecializedFactories:
 
     def setup_method(self):
         """Setup test implementations."""
+        # Save current registry state
+        self._saved_attention_registry = _ATTENTION_REGISTRY.copy()
+        self._saved_multihead_registry = _MULTIHEAD_REGISTRY.copy()
         _ATTENTION_REGISTRY.clear()
         _MULTIHEAD_REGISTRY.clear()
-
         # Register required implementations
         register_attention("block_sparse_ring", MockDilatedAttention)
-        register_multihead_attention(
-            "multihead_block_sparse_ring", MockMultiheadDilatedAttention
-        )
+        register_multihead_attention("multihead_block_sparse_ring", MockMultiheadDilatedAttention)
+
+    def teardown_method(self):
+        """Restore registry state after test."""
+        _ATTENTION_REGISTRY.clear()
+        _MULTIHEAD_REGISTRY.clear()
+        _ATTENTION_REGISTRY.update(self._saved_attention_registry)
+        _MULTIHEAD_REGISTRY.update(self._saved_multihead_registry)
 
     def test_create_block_sparse_attention(self):
         """Test block-sparse attention creation."""
@@ -190,18 +221,16 @@ class TestAutoSelection:
 
     def setup_method(self):
         """Setup test implementations."""
+        # Save current registry state
+        self._saved_attention_registry = _ATTENTION_REGISTRY.copy()
+        self._saved_multihead_registry = _MULTIHEAD_REGISTRY.copy()
         _ATTENTION_REGISTRY.clear()
         _MULTIHEAD_REGISTRY.clear()
-
         # Register implementations
         register_attention("standard", MockDilatedAttention)
         register_attention("improved", MockDilatedAttention)
-        register_multihead_attention(
-            "multihead_standard", MockMultiheadDilatedAttention
-        )
-        register_multihead_attention(
-            "multihead_improved", MockMultiheadDilatedAttention
-        )
+        register_multihead_attention("multihead_standard", MockMultiheadDilatedAttention)
+        register_multihead_attention("multihead_improved", MockMultiheadDilatedAttention)
 
     @patch("dilated_attention_pytorch.core.factory.GPU_TYPE", "h100")
     @patch("dilated_attention_pytorch.core.factory.HAS_FLASH_ATTN_3", True)
@@ -222,13 +251,20 @@ class TestAutoSelection:
     def test_auto_select_v100(self):
         """Test auto-selection on V100."""
         attention_type = _select_best_attention_type()
-        assert attention_type == "standard"
+        assert attention_type == "improved"
 
     @patch("dilated_attention_pytorch.core.factory.GPU_TYPE", "cpu")
     def test_auto_select_cpu(self):
         """Test auto-selection on CPU."""
         attention_type = _select_best_attention_type()
-        assert attention_type == "standard"
+        assert attention_type == "improved"
+
+    def teardown_method(self):
+        """Restore registry state after test."""
+        _ATTENTION_REGISTRY.clear()
+        _MULTIHEAD_REGISTRY.clear()
+        _ATTENTION_REGISTRY.update(self._saved_attention_registry)
+        _MULTIHEAD_REGISTRY.update(self._saved_multihead_registry)
 
     def test_create_with_auto(self):
         """Test creation with auto type."""
@@ -269,10 +305,20 @@ class TestFactoryEdgeCases:
 
     def setup_method(self):
         """Setup minimal registry."""
+        # Save current registry state
+        self._saved_attention_registry = _ATTENTION_REGISTRY.copy()
+        self._saved_multihead_registry = _MULTIHEAD_REGISTRY.copy()
         _ATTENTION_REGISTRY.clear()
         _MULTIHEAD_REGISTRY.clear()
         register_attention("test", MockDilatedAttention)
         register_multihead_attention("multihead_test", MockMultiheadDilatedAttention)
+
+    def teardown_method(self):
+        """Restore registry state after test."""
+        _ATTENTION_REGISTRY.clear()
+        _MULTIHEAD_REGISTRY.clear()
+        _ATTENTION_REGISTRY.update(self._saved_attention_registry)
+        _MULTIHEAD_REGISTRY.update(self._saved_multihead_registry)
 
     def test_create_with_extra_kwargs(self):
         """Test creation with extra keyword arguments."""

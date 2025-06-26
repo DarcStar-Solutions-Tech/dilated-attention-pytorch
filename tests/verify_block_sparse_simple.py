@@ -14,9 +14,12 @@ def main():
     print("=" * 60)
 
     from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-        BlockSparseRingDilatedAttention, SparsePatternConfig)
-    from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import \
-        BlockSparseRingMultiheadDilatedAttention
+        BlockSparseRingDilatedAttention,
+        SparsePatternConfig,
+    )
+    from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import (
+        BlockSparseRingMultiheadDilatedAttention,
+    )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"\nDevice: {device}")

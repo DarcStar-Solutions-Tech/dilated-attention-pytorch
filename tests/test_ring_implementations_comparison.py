@@ -7,12 +7,9 @@ This test validates functionality, performance, and memory usage of both impleme
 import time
 
 import torch
-import torch.nn as nn
 
-from dilated_attention_pytorch.ring_dilated_attention import \
-    RingDilatedAttention
-from dilated_attention_pytorch.ring_multihead_dilated_attention import \
-    RingMultiheadDilatedAttention
+from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
+from dilated_attention_pytorch.ring_multihead_dilated_attention import RingMultiheadDilatedAttention
 
 
 def test_implementation_comparison():
@@ -36,7 +33,7 @@ def test_implementation_comparison():
     dilation_rates = [1, 2, 4]
     ring_size = 4
 
-    print(f"\nTest Configuration:")
+    print("\nTest Configuration:")
     print(f"  Batch size: {batch_size}")
     print(f"  Sequence length: {seq_len}")
     print(f"  Embed dim: {embed_dim}")
@@ -78,8 +75,8 @@ def test_implementation_comparison():
             ring_size=ring_size,
         ).to(device, dtype=dtype)
 
-        print(f"✓ Single-headed module created successfully")
-        print(f"  Memory complexity: O(n)")
+        print("✓ Single-headed module created successfully")
+        print("  Memory complexity: O(n)")
         print(f"  Ring size: {single_attention.ring_size}")
 
         # Memory before
@@ -97,7 +94,7 @@ def test_implementation_comparison():
         if device.type == "cuda":
             peak_memory_single = torch.cuda.max_memory_allocated() / (1024**3)
 
-        print(f"✓ Forward pass successful")
+        print("✓ Forward pass successful")
         print(f"  Input shape: {q_single.shape}")
         print(f"  Output shape: {output_single.shape}")
         print(f"  Forward time: {forward_time_single*1000:.1f}ms")
@@ -108,7 +105,7 @@ def test_implementation_comparison():
         print(f"  Memory info: {memory_info_single.get('memory_complexity', 'N/A')}")
 
     except Exception as e:
-        print(f"✗ Single-headed test failed: {str(e)}")
+        print(f"✗ Single-headed test failed: {e!s}")
         output_single = None
         forward_time_single = float("inf")
         peak_memory_single = float("inf")
@@ -128,8 +125,8 @@ def test_implementation_comparison():
             ring_size=ring_size,
         ).to(device, dtype=dtype)
 
-        print(f"✓ Multihead module created successfully")
-        print(f"  Memory complexity: O(n)")
+        print("✓ Multihead module created successfully")
+        print("  Memory complexity: O(n)")
         print(f"  Ring size: {multihead_attention.attention.ring_size}")
         print(f"  Fused QKV: {getattr(multihead_attention, 'use_fused_qkv', True)}")
 
@@ -148,7 +145,7 @@ def test_implementation_comparison():
         if device.type == "cuda":
             peak_memory_multi = torch.cuda.max_memory_allocated() / (1024**3)
 
-        print(f"✓ Forward pass successful")
+        print("✓ Forward pass successful")
         print(f"  Input shape: {query_multi.shape}")
         print(f"  Output shape: {output_multi.shape}")
         print(f"  Forward time: {forward_time_multi*1000:.1f}ms")
@@ -160,7 +157,7 @@ def test_implementation_comparison():
         print(f"  QKV buffers cached: {memory_info_multi.get('qkv_buffers_cached', 0)}")
 
     except Exception as e:
-        print(f"✗ Multihead test failed: {str(e)}")
+        print(f"✗ Multihead test failed: {e!s}")
         output_multi = None
         forward_time_multi = float("inf")
         peak_memory_multi = float("inf")
@@ -172,7 +169,7 @@ def test_implementation_comparison():
     # Performance comparison
     if forward_time_single != float("inf") and forward_time_multi != float("inf"):
         speedup = forward_time_single / forward_time_multi
-        print(f"Performance Comparison:")
+        print("Performance Comparison:")
         print(f"  Single-headed time: {forward_time_single*1000:.1f}ms")
         print(f"  Multihead time: {forward_time_multi*1000:.1f}ms")
         print(
@@ -184,39 +181,39 @@ def test_implementation_comparison():
         memory_ratio = (
             peak_memory_single / peak_memory_multi if peak_memory_multi > 0 else 1
         )
-        print(f"\nMemory Comparison:")
+        print("\nMemory Comparison:")
         print(f"  Single-headed peak: {peak_memory_single:.3f}GB")
         print(f"  Multihead peak: {peak_memory_multi:.3f}GB")
         print(f"  Memory ratio: {memory_ratio:.2f}x")
 
     # Functionality comparison
-    print(f"\nFunctionality Comparison:")
-    print(f"  Single-headed:")
-    print(f"    - Direct attention computation")
-    print(f"    - Manual head management required")
-    print(f"    - Lower-level interface")
-    print(f"    - Input: [batch, seq_len, num_heads, head_dim]")
-    print(f"  Multihead:")
-    print(f"    - Complete multihead attention interface")
-    print(f"    - Automatic head management")
-    print(f"    - Drop-in replacement for nn.MultiheadAttention")
-    print(f"    - Input: [batch, seq_len, embed_dim]")
-    print(f"    - Fused QKV projections")
-    print(f"    - MAGNETO architecture support")
+    print("\nFunctionality Comparison:")
+    print("  Single-headed:")
+    print("    - Direct attention computation")
+    print("    - Manual head management required")
+    print("    - Lower-level interface")
+    print("    - Input: [batch, seq_len, num_heads, head_dim]")
+    print("  Multihead:")
+    print("    - Complete multihead attention interface")
+    print("    - Automatic head management")
+    print("    - Drop-in replacement for nn.MultiheadAttention")
+    print("    - Input: [batch, seq_len, embed_dim]")
+    print("    - Fused QKV projections")
+    print("    - MAGNETO architecture support")
 
     # Architecture analysis
-    print(f"\nArchitecture Analysis:")
-    print(f"  Single-headed (RingDilatedAttention):")
-    print(f"    - Core ring attention algorithm")
-    print(f"    - Direct tensor operations")
-    print(f"    - Minimal overhead")
-    print(f"    - Best for research/custom implementations")
-    print(f"  Multihead (RingMultiheadDilatedAttention):")
-    print(f"    - Wrapper around single-headed implementation")
-    print(f"    - Additional QKV projection layers")
-    print(f"    - Buffer management and caching")
-    print(f"    - Production-ready interface")
-    print(f"    - Best for practical applications")
+    print("\nArchitecture Analysis:")
+    print("  Single-headed (RingDilatedAttention):")
+    print("    - Core ring attention algorithm")
+    print("    - Direct tensor operations")
+    print("    - Minimal overhead")
+    print("    - Best for research/custom implementations")
+    print("  Multihead (RingMultiheadDilatedAttention):")
+    print("    - Wrapper around single-headed implementation")
+    print("    - Additional QKV projection layers")
+    print("    - Buffer management and caching")
+    print("    - Production-ready interface")
+    print("    - Best for practical applications")
 
 
 def test_mathematical_equivalence():
@@ -309,7 +306,7 @@ def test_mathematical_equivalence():
         max_diff = (single_final - multi_output).abs().max().item()
         mean_diff = (single_final - multi_output).abs().mean().item()
 
-        print(f"Equivalence Test Results:")
+        print("Equivalence Test Results:")
         print(f"  Single-headed output shape: {single_final.shape}")
         print(f"  Multihead output shape: {multi_output.shape}")
         print(f"  Max difference: {max_diff:.2e}")
@@ -320,10 +317,10 @@ def test_mathematical_equivalence():
             print(f"  ✓ Outputs are mathematically equivalent (within {tolerance})")
         else:
             print(f"  ⚠ Outputs differ beyond tolerance (>{tolerance})")
-            print(f"    This is expected due to different projection layers")
+            print("    This is expected due to different projection layers")
 
     except Exception as e:
-        print(f"✗ Equivalence test failed: {str(e)}")
+        print(f"✗ Equivalence test failed: {e!s}")
 
 
 def test_memory_scaling():
@@ -348,7 +345,7 @@ def test_memory_scaling():
     segment_lengths = [256, 512, 1024]
     dilation_rates = [1, 2, 4]
 
-    print(f"Memory Scaling Analysis:")
+    print("Memory Scaling Analysis:")
     print(f"{'Seq Len':>8} {'Single (GB)':>12} {'Multi (GB)':>12} {'Ratio':>8}")
     print("-" * 45)
 
@@ -414,11 +411,11 @@ def test_memory_scaling():
             f"{seq_len:>8} {single_memory:>11.3f} {multi_memory:>11.3f} {ratio:>7.2f}x"
         )
 
-    print(f"\nMemory Scaling Observations:")
-    print(f"- Both implementations show O(n) memory scaling")
-    print(f"- Multihead adds overhead from QKV projections and buffers")
-    print(f"- Single-headed is more memory efficient for the core attention")
-    print(f"- Memory ratio should remain roughly constant across sequence lengths")
+    print("\nMemory Scaling Observations:")
+    print("- Both implementations show O(n) memory scaling")
+    print("- Multihead adds overhead from QKV projections and buffers")
+    print("- Single-headed is more memory efficient for the core attention")
+    print("- Memory ratio should remain roughly constant across sequence lengths")
 
 
 if __name__ == "__main__":

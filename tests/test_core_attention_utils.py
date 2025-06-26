@@ -11,10 +11,18 @@ import pytest
 import torch
 
 from dilated_attention_pytorch.utils.attention_utils import (
-    apply_dilated_attention_pattern, apply_rotary_embeddings,
-    compute_alibi_bias, compute_attention_scores, compute_rotary_embeddings,
-    create_block_diagonal_mask, create_dilated_mask, merge_attention_heads,
-    optimize_attention_computation, split_attention_heads, standard_attention)
+    apply_dilated_attention_pattern,
+    apply_rotary_embeddings,
+    compute_alibi_bias,
+    compute_attention_scores,
+    compute_rotary_embeddings,
+    create_block_diagonal_mask,
+    create_dilated_mask,
+    merge_attention_heads,
+    optimize_attention_computation,
+    split_attention_heads,
+    standard_attention,
+)
 
 
 class TestAttentionScores:

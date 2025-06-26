@@ -6,8 +6,7 @@ import gc
 
 import torch
 
-from dilated_attention_pytorch.ring_dilated_attention import \
-    RingDilatedAttention
+from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
 
 
 def test_ring_attention_scaling():

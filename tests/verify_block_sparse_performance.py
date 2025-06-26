@@ -4,7 +4,6 @@ Verify performance improvements of Block Sparse Ring Dilated Attention.
 """
 
 import time
-from typing import Tuple
 
 import numpy as np
 import torch
@@ -12,7 +11,7 @@ import torch
 
 def measure_performance(
     attention_module, q, k, v, num_warmup=3, num_runs=10
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """Measure forward pass performance."""
     device = q.device
 
@@ -44,9 +43,10 @@ def compare_implementations():
     print("=" * 60)
 
     from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-        BlockSparseRingDilatedAttention, SparsePatternConfig)
-    from dilated_attention_pytorch.ring_dilated_attention import \
-        RingDilatedAttention
+        BlockSparseRingDilatedAttention,
+        SparsePatternConfig,
+    )
+    from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
 
     # Test configurations
     configs = [
@@ -123,7 +123,9 @@ def test_pattern_efficiency():
     print("=" * 60)
 
     from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-        BlockSparseRingDilatedAttention, SparsePatternConfig)
+        BlockSparseRingDilatedAttention,
+        SparsePatternConfig,
+    )
 
     patterns = ["local_window", "dilated_sparse", "global_local"]
     seq_len = 2048
@@ -165,7 +167,9 @@ def test_adaptive_performance():
     print("=" * 60)
 
     from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-        BlockSparseRingDilatedAttention, SparsePatternConfig)
+        BlockSparseRingDilatedAttention,
+        SparsePatternConfig,
+    )
 
     seq_len = 1024
     batch_size = 2

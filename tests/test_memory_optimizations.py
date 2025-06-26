@@ -9,10 +9,10 @@ import tracemalloc
 
 import torch
 
-from dilated_attention_pytorch.improved_dilated_attention import \
-    ImprovedDilatedAttention
-from dilated_attention_pytorch.improved_multihead_dilated_attention import \
-    ImprovedMultiheadDilatedAttention
+from dilated_attention_pytorch.improved_dilated_attention import ImprovedDilatedAttention
+from dilated_attention_pytorch.improved_multihead_dilated_attention import (
+    ImprovedMultiheadDilatedAttention,
+)
 
 
 def measure_memory_and_speed(func, *args, **kwargs):

@@ -43,8 +43,9 @@ def test_basic_forward_pass():
     print("\nTesting BlockSparseRingDilatedAttention forward pass...")
 
     try:
-        from dilated_attention_pytorch.block_sparse_ring_dilated_attention import \
-            BlockSparseRingDilatedAttention
+        from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
+            BlockSparseRingDilatedAttention,
+        )
 
         # Test parameters
         batch_size = 2
@@ -89,8 +90,9 @@ def test_multihead_forward_pass():
     print("\nTesting BlockSparseRingMultiheadDilatedAttention forward pass...")
 
     try:
-        from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import \
-            BlockSparseRingMultiheadDilatedAttention
+        from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import (
+            BlockSparseRingMultiheadDilatedAttention,
+        )
 
         # Test parameters
         batch_size = 2
@@ -139,8 +141,9 @@ def test_different_patterns():
     print("\nTesting different sparse patterns...")
 
     try:
-        from dilated_attention_pytorch.block_sparse_ring_dilated_attention import \
-            BlockSparseRingDilatedAttention
+        from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
+            BlockSparseRingDilatedAttention,
+        )
 
         patterns = ["local_window", "dilated_sparse", "global_local", "random"]
         batch_size = 1
@@ -183,8 +186,9 @@ def test_memory_efficiency():
     print("\nTesting memory efficiency...")
 
     try:
-        from dilated_attention_pytorch.block_sparse_ring_dilated_attention import \
-            BlockSparseRingDilatedAttention
+        from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
+            BlockSparseRingDilatedAttention,
+        )
 
         sparsity_ratios = [0.1, 0.5, 0.9]
         results = []
@@ -219,8 +223,7 @@ def test_factory_creation():
     print("\nTesting factory creation...")
 
     try:
-        from dilated_attention_pytorch import \
-            create_block_sparse_multihead_attention
+        from dilated_attention_pytorch import create_block_sparse_multihead_attention
 
         # Create using factory
         attention = create_block_sparse_multihead_attention(
@@ -253,8 +256,7 @@ def test_adaptive_sparsity():
     print("\nTesting adaptive sparsity...")
 
     try:
-        from dilated_attention_pytorch import \
-            create_adaptive_sparse_multihead_attention
+        from dilated_attention_pytorch import create_adaptive_sparse_multihead_attention
 
         # Create adaptive sparse attention
         attention = create_adaptive_sparse_multihead_attention(

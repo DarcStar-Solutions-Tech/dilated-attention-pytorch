@@ -14,18 +14,31 @@ import torch.nn.functional as F
 
 # Import implementations to test
 from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention, ContentAdaptiveSparsity,
-    SparsePatternConfig, SparsePatternGenerator)
+    BlockSparseRingDilatedAttention,
+    ContentAdaptiveSparsity,
+    SparsePatternConfig,
+    SparsePatternGenerator,
+)
 from dilated_attention_pytorch.block_sparse_ring_distributed_dilated_attention import (
-    BlockSparseRingDistributedDilatedAttention, DistributedSparseConfig,
-    DistributedSparsePattern, HierarchicalSparsePatternGenerator)
+    BlockSparseRingDistributedDilatedAttention,
+    DistributedSparseConfig,
+    DistributedSparsePattern,
+    HierarchicalSparsePatternGenerator,
+)
 from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import (
-    FusedQKVProjection, create_adaptive_sparse_multihead_attention,
-    create_block_sparse_multihead_attention)
+    FusedQKVProjection,
+    create_adaptive_sparse_multihead_attention,
+    create_block_sparse_multihead_attention,
+)
 from dilated_attention_pytorch.utils.sparse_pattern_utils import (
-    PatternConfig, PatternOptimizer, PatternQualityAnalyzer, PatternType)
-from dilated_attention_pytorch.utils.sparse_pattern_utils import \
-    SparsePatternGenerator as UtilsSparsePatternGenerator
+    PatternConfig,
+    PatternOptimizer,
+    PatternQualityAnalyzer,
+    PatternType,
+)
+from dilated_attention_pytorch.utils.sparse_pattern_utils import (
+    SparsePatternGenerator as UtilsSparsePatternGenerator,
+)
 
 # Test configurations
 TEST_CONFIGS = {

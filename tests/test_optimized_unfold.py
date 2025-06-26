@@ -7,8 +7,9 @@ import time
 import torch
 
 from dilated_attention_pytorch import RingDilatedAttention
-from dilated_attention_pytorch.ring_dilated_attention_unfold_optimized import \
-    OptimizedUnfoldRingDilatedAttention
+from dilated_attention_pytorch.ring_dilated_attention_unfold_optimized import (
+    OptimizedUnfoldRingDilatedAttention,
+)
 
 
 def benchmark_all_implementations():

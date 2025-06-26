@@ -16,10 +16,15 @@ import pytest
 import torch
 
 from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-    BlockSparseMemoryPool, BlockSparseRingDilatedAttention,
-    SparsePatternConfig, SparsePatternGenerator)
+    BlockSparseMemoryPool,
+    BlockSparseRingDilatedAttention,
+    SparsePatternConfig,
+    SparsePatternGenerator,
+)
 from dilated_attention_pytorch.ring_dilated_attention import (
-    RingAttentionMemoryPool, RingDilatedAttention)
+    RingAttentionMemoryPool,
+    RingDilatedAttention,
+)
 
 
 class ThreadSafetyTester:

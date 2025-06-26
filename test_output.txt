@@ -1,0 +1,766 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.7, pytest-7.4.4, pluggy-1.6.0 -- /home/mharris/apps/anaconda3/bin/python
+cachedir: .pytest_cache
+rootdir: /home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-6.2.1, anyio-4.6.2
+collecting ... collected 315 items
+
+tests/test_benchmark_update.py::test_benchmark_includes_block_sparse PASSED [  0%]
+tests/test_block_sparse_attention.py::TestSparsePatternGeneration::test_pattern_generation[0.25-local_window] PASSED [  0%]
+tests/test_block_sparse_attention.py::TestSparsePatternGeneration::test_pattern_generation[0.25-dilated_sparse] FAILED [  0%]
+tests/test_block_sparse_attention.py::TestSparsePatternGeneration::test_pattern_generation[0.25-global_local] PASSED [  1%]
+tests/test_block_sparse_attention.py::TestSparsePatternGeneration::test_pattern_generation[0.5-local_window] FAILED [  1%]
+tests/test_block_sparse_attention.py::TestSparsePatternGeneration::test_pattern_generation[0.5-dilated_sparse] FAILED [  1%]
+tests/test_block_sparse_attention.py::TestSparsePatternGeneration::test_pattern_generation[0.5-global_local] FAILED [  2%]
+tests/test_block_sparse_attention.py::TestSparsePatternGeneration::test_pattern_caching PASSED [  2%]
+tests/test_block_sparse_attention.py::TestSparsePatternGeneration::test_adaptive_sparsity_learning PASSED [  2%]
+tests/test_block_sparse_attention.py::TestBlockSparseRingDilatedAttention::test_forward_pass[0.25-small] FAILED [  3%]
+tests/test_block_sparse_attention.py::TestBlockSparseRingDilatedAttention::test_forward_pass[0.25-medium] FAILED [  3%]
+tests/test_block_sparse_attention.py::TestBlockSparseRingDilatedAttention::test_forward_pass[0.5-small] FAILED [  3%]
+tests/test_block_sparse_attention.py::TestBlockSparseRingDilatedAttention::test_forward_pass[0.5-medium] FAILED [  4%]
+tests/test_block_sparse_attention.py::TestBlockSparseRingDilatedAttention::test_attention_weights_return PASSED [  4%]
+tests/test_block_sparse_attention.py::TestBlockSparseRingDilatedAttention::test_causal_masking PASSED [  4%]
+tests/test_block_sparse_attention.py::TestBlockSparseRingDilatedAttention::test_performance_tracking PASSED [  5%]
+tests/test_block_sparse_attention.py::TestBlockSparseRingMultiheadDilatedAttention::test_multihead_forward_pass[small] PASSED [  5%]
+tests/test_block_sparse_attention.py::TestBlockSparseRingMultiheadDilatedAttention::test_multihead_forward_pass[medium] FAILED [  5%]
+tests/test_block_sparse_attention.py::TestBlockSparseRingMultiheadDilatedAttention::test_multihead_compatibility PASSED [  6%]
+tests/test_block_sparse_attention.py::TestBlockSparseRingMultiheadDilatedAttention::test_fused_qkv_projection PASSED [  6%]
+tests/test_block_sparse_attention.py::TestBlockSparseRingMultiheadDilatedAttention::test_adaptive_sparse_creation PASSED [  6%]
+tests/test_block_sparse_attention.py::TestBlockSparseAdvancedDistributedAttention::test_hierarchical_pattern_generation FAILED [  6%]
+tests/test_block_sparse_attention.py::TestBlockSparseAdvancedDistributedAttention::test_load_balancing PASSED [  7%]
+tests/test_block_sparse_attention.py::TestBlockSparseAdvancedDistributedAttention::test_distributed_attention_forward FAILED [  7%]
+tests/test_block_sparse_attention.py::TestSparsePatternUtils::test_utils_pattern_generation[PatternType.LOCAL_WINDOW] PASSED [  7%]
+tests/test_block_sparse_attention.py::TestSparsePatternUtils::test_utils_pattern_generation[PatternType.DILATED_SPARSE] PASSED [  8%]
+tests/test_block_sparse_attention.py::TestSparsePatternUtils::test_utils_pattern_generation[PatternType.RANDOM] PASSED [  8%]
+tests/test_block_sparse_attention.py::TestSparsePatternUtils::test_pattern_quality_analysis PASSED [  8%]
+tests/test_block_sparse_attention.py::TestSparsePatternUtils::test_pattern_optimization PASSED [  9%]
+tests/test_block_sparse_attention.py::TestSparsePatternUtils::test_pattern_statistics FAILED [  9%]
+tests/test_block_sparse_attention.py::TestPerformanceComparison::test_speedup_measurement[0.1] PASSED [  9%]
+tests/test_block_sparse_attention.py::TestPerformanceComparison::test_speedup_measurement[0.25] PASSED [ 10%]
+tests/test_block_sparse_attention.py::TestPerformanceComparison::test_speedup_measurement[0.5] PASSED [ 10%]
+tests/test_block_sparse_attention.py::TestPerformanceComparison::test_memory_usage PASSED [ 10%]
+tests/test_core_attention_utils.py::TestAttentionScores::test_compute_attention_scores_basic PASSED [ 11%]
+tests/test_core_attention_utils.py::TestAttentionScores::test_compute_attention_scores_with_mask PASSED [ 11%]
+tests/test_core_attention_utils.py::TestAttentionScores::test_compute_attention_scores_causal PASSED [ 11%]
+tests/test_core_attention_utils.py::TestAttentionPatterns::test_create_dilated_mask PASSED [ 12%]
+tests/test_core_attention_utils.py::TestAttentionPatterns::test_create_block_diagonal_mask PASSED [ 12%]
+tests/test_core_attention_utils.py::TestAttentionPatterns::test_create_block_diagonal_mask_with_overlap PASSED [ 12%]
+tests/test_core_attention_utils.py::TestAttentionPatterns::test_apply_dilated_attention_pattern PASSED [ 13%]
+tests/test_core_attention_utils.py::TestAttentionComputation::test_standard_attention PASSED [ 13%]
+tests/test_core_attention_utils.py::TestAttentionComputation::test_standard_attention_with_dropout FAILED [ 13%]
+tests/test_core_attention_utils.py::TestAttentionComputation::test_optimize_attention_flash FAILED [ 13%]
+tests/test_core_attention_utils.py::TestAttentionComputation::test_optimize_attention_sdpa FAILED [ 14%]
+tests/test_core_attention_utils.py::TestPositionalEncodings::test_compute_alibi_bias PASSED [ 14%]
+tests/test_core_attention_utils.py::TestPositionalEncodings::test_compute_rotary_embeddings PASSED [ 14%]
+tests/test_core_attention_utils.py::TestPositionalEncodings::test_apply_rotary_embeddings PASSED [ 15%]
+tests/test_core_attention_utils.py::TestHeadOperations::test_split_attention_heads PASSED [ 15%]
+tests/test_core_attention_utils.py::TestHeadOperations::test_merge_attention_heads PASSED [ 15%]
+tests/test_core_attention_utils.py::TestHeadOperations::test_split_merge_roundtrip PASSED [ 16%]
+tests/test_core_attention_utils.py::TestEdgeCases::test_odd_dimension_rotary PASSED [ 16%]
+tests/test_core_attention_utils.py::TestEdgeCases::test_empty_sequence PASSED [ 16%]
+tests/test_core_attention_utils.py::TestEdgeCases::test_single_position PASSED [ 17%]
+tests/test_core_factory.py::TestFactoryRegistration::test_register_attention PASSED [ 17%]
+tests/test_core_factory.py::TestFactoryRegistration::test_register_multihead_attention PASSED [ 17%]
+tests/test_core_factory.py::TestFactoryCreation::test_create_dilated_attention_basic PASSED [ 18%]
+tests/test_core_factory.py::TestFactoryCreation::test_create_dilated_attention_defaults PASSED [ 18%]
+tests/test_core_factory.py::TestFactoryCreation::test_create_dilated_attention_invalid_type PASSED [ 18%]
+tests/test_core_factory.py::TestFactoryCreation::test_create_multihead_dilated_attention PASSED [ 19%]
+tests/test_core_factory.py::TestFactoryCreation::test_create_multihead_config_separation PASSED [ 19%]
+tests/test_core_factory.py::TestSpecializedFactories::test_create_block_sparse_attention PASSED [ 19%]
+tests/test_core_factory.py::TestSpecializedFactories::test_create_adaptive_sparse_attention PASSED [ 20%]
+tests/test_core_factory.py::TestAutoSelection::test_auto_select_h100_with_fa3 PASSED [ 20%]
+tests/test_core_factory.py::TestAutoSelection::test_auto_select_a100_with_fa2 PASSED [ 20%]
+tests/test_core_factory.py::TestAutoSelection::test_auto_select_v100 FAILED [ 20%]
+tests/test_core_factory.py::TestAutoSelection::test_auto_select_cpu FAILED [ 21%]
+tests/test_core_factory.py::TestAutoSelection::test_create_with_auto PASSED [ 21%]
+tests/test_core_factory.py::TestConfigSelection::test_get_config_class_standard PASSED [ 21%]
+tests/test_core_factory.py::TestConfigSelection::test_get_config_class_ring PASSED [ 22%]
+tests/test_core_factory.py::TestConfigSelection::test_get_config_class_sparse PASSED [ 22%]
+tests/test_core_factory.py::TestConfigSelection::test_get_config_class_default PASSED [ 22%]
+tests/test_core_factory.py::TestFactoryEdgeCases::test_create_with_extra_kwargs PASSED [ 23%]
+tests/test_core_factory.py::TestFactoryEdgeCases::test_empty_registry PASSED [ 23%]
+tests/test_core_factory.py::TestFactoryEdgeCases::test_mismatched_multihead_type PASSED [ 23%]
+tests/test_core_memory_pool.py::TestUnifiedMemoryPool::test_initialization PASSED [ 24%]
+tests/test_core_memory_pool.py::TestUnifiedMemoryPool::test_buffer_allocation PASSED [ 24%]
+tests/test_core_memory_pool.py::TestUnifiedMemoryPool::test_buffer_reuse PASSED [ 24%]
+tests/test_core_memory_pool.py::TestUnifiedMemoryPool::test_compatible_buffer_reshape PASSED [ 25%]
+tests/test_core_memory_pool.py::TestUnifiedMemoryPool::test_compatible_buffer_slicing PASSED [ 25%]
+tests/test_core_memory_pool.py::TestUnifiedMemoryPool::test_hot_cache_promotion PASSED [ 25%]
+tests/test_core_memory_pool.py::TestUnifiedMemoryPool::test_hot_cache_size_limit PASSED [ 26%]
+tests/test_core_memory_pool.py::TestUnifiedMemoryPool::test_thread_safety PASSED [ 26%]
+tests/test_core_memory_pool.py::TestUnifiedMemoryPool::test_memory_pressure_cleanup PASSED [ 26%]
+tests/test_core_memory_pool.py::TestUnifiedMemoryPool::test_pool_statistics PASSED [ 26%]
+tests/test_core_memory_pool.py::TestUnifiedMemoryPool::test_clear_pool PASSED [ 27%]
+tests/test_core_memory_pool.py::TestUnifiedMemoryPool::test_clear_specific_pool PASSED [ 27%]
+tests/test_core_memory_pool.py::TestUnifiedMemoryPool::test_pinned_memory PASSED [ 27%]
+tests/test_core_memory_pool.py::TestGlobalMemoryPool::test_global_pool_singleton PASSED [ 28%]
+tests/test_core_memory_pool.py::TestGlobalMemoryPool::test_global_pool_configuration PASSED [ 28%]
+tests/test_core_memory_pool.py::TestGlobalMemoryPool::test_reset_global_pool PASSED [ 28%]
+tests/test_core_memory_pool.py::TestMemoryPoolEdgeCases::test_invalid_pool_type PASSED [ 29%]
+tests/test_core_memory_pool.py::TestMemoryPoolEdgeCases::test_oom_recovery PASSED [ 29%]
+tests/test_core_memory_pool.py::TestMemoryPoolEdgeCases::test_buffer_stats_tracking PASSED [ 29%]
+tests/test_core_refactoring.py::TestValidationMixin::test_validate_segment_dilation_match PASSED [ 30%]
+tests/test_core_refactoring.py::TestValidationMixin::test_validate_positive_values PASSED [ 30%]
+tests/test_core_refactoring.py::TestValidationMixin::test_validate_tensor_shape PASSED [ 30%]
+tests/test_core_refactoring.py::TestValidationMixin::test_validate_head_dim PASSED [ 31%]
+tests/test_core_refactoring.py::TestConfigurations::test_dilated_attention_config FAILED [ 31%]
+tests/test_core_refactoring.py::TestConfigurations::test_multihead_config PASSED [ 31%]
+tests/test_core_refactoring.py::TestBaseDilatedAttention::test_initialization PASSED [ 32%]
+tests/test_core_refactoring.py::TestBaseDilatedAttention::test_thread_safe_caching PASSED [ 32%]
+tests/test_core_refactoring.py::TestBaseDilatedAttention::test_cache_size_limit PASSED [ 32%]
+tests/test_core_refactoring.py::TestBaseDilatedAttention::test_cache_helper_methods PASSED [ 33%]
+tests/test_core_refactoring.py::TestBaseMultiheadDilatedAttention::test_parameter_initialization_fused PASSED [ 33%]
+tests/test_core_refactoring.py::TestBaseMultiheadDilatedAttention::test_parameter_initialization_separate PASSED [ 33%]
+tests/test_core_refactoring.py::TestConstants::test_gpu_type_lazy_evaluation PASSED [ 33%]
+tests/test_core_refactoring.py::TestConstants::test_optimal_settings_lazy PASSED [ 34%]
+tests/test_core_refactoring.py::TestConstants::test_logging_instead_of_print PASSED [ 34%]
+tests/test_dilated_attention.py::test_dilated_attention[True-4-32-dilation_rates0-segment_lengths0] PASSED [ 34%]
+tests/test_dilated_attention.py::test_dilated_attention[True-4-32-dilation_rates0-segment_lengths1] PASSED [ 35%]
+tests/test_dilated_attention.py::test_dilated_attention[True-4-32-dilation_rates0-segment_lengths2] PASSED [ 35%]
+tests/test_dilated_attention.py::test_dilated_attention[True-4-32-dilation_rates1-segment_lengths0] PASSED [ 35%]
+tests/test_dilated_attention.py::test_dilated_attention[True-4-32-dilation_rates1-segment_lengths1] PASSED [ 36%]
+tests/test_dilated_attention.py::test_dilated_attention[True-4-32-dilation_rates1-segment_lengths2] PASSED [ 36%]
+tests/test_dilated_attention.py::test_dilated_attention[True-4-32-dilation_rates2-segment_lengths0] PASSED [ 36%]
+tests/test_dilated_attention.py::test_dilated_attention[True-4-32-dilation_rates2-segment_lengths1] PASSED [ 37%]
+tests/test_dilated_attention.py::test_dilated_attention[True-4-32-dilation_rates2-segment_lengths2] PASSED [ 37%]
+tests/test_dilated_attention.py::test_dilated_attention[True-8-32-dilation_rates0-segment_lengths0] PASSED [ 37%]
+tests/test_dilated_attention.py::test_dilated_attention[True-8-32-dilation_rates0-segment_lengths1] PASSED [ 38%]
+tests/test_dilated_attention.py::test_dilated_attention[True-8-32-dilation_rates0-segment_lengths2] PASSED [ 38%]
+tests/test_dilated_attention.py::test_dilated_attention[True-8-32-dilation_rates1-segment_lengths0] PASSED [ 38%]
+tests/test_dilated_attention.py::test_dilated_attention[True-8-32-dilation_rates1-segment_lengths1] PASSED [ 39%]
+tests/test_dilated_attention.py::test_dilated_attention[True-8-32-dilation_rates1-segment_lengths2] PASSED [ 39%]
+tests/test_dilated_attention.py::test_dilated_attention[True-8-32-dilation_rates2-segment_lengths0] PASSED [ 39%]
+tests/test_dilated_attention.py::test_dilated_attention[True-8-32-dilation_rates2-segment_lengths1] PASSED [ 40%]
+tests/test_dilated_attention.py::test_dilated_attention[True-8-32-dilation_rates2-segment_lengths2] PASSED [ 40%]
+tests/test_dilated_attention.py::test_dilated_attention[False-4-32-dilation_rates0-segment_lengths0] PASSED [ 40%]
+tests/test_dilated_attention.py::test_dilated_attention[False-4-32-dilation_rates0-segment_lengths1] PASSED [ 40%]
+tests/test_dilated_attention.py::test_dilated_attention[False-4-32-dilation_rates0-segment_lengths2] PASSED [ 41%]
+tests/test_dilated_attention.py::test_dilated_attention[False-4-32-dilation_rates1-segment_lengths0] PASSED [ 41%]
+tests/test_dilated_attention.py::test_dilated_attention[False-4-32-dilation_rates1-segment_lengths1] PASSED [ 41%]
+tests/test_dilated_attention.py::test_dilated_attention[False-4-32-dilation_rates1-segment_lengths2] PASSED [ 42%]
+tests/test_dilated_attention.py::test_dilated_attention[False-4-32-dilation_rates2-segment_lengths0] PASSED [ 42%]
+tests/test_dilated_attention.py::test_dilated_attention[False-4-32-dilation_rates2-segment_lengths1] PASSED [ 42%]
+tests/test_dilated_attention.py::test_dilated_attention[False-4-32-dilation_rates2-segment_lengths2] PASSED [ 43%]
+tests/test_dilated_attention.py::test_dilated_attention[False-8-32-dilation_rates0-segment_lengths0] PASSED [ 43%]
+tests/test_dilated_attention.py::test_dilated_attention[False-8-32-dilation_rates0-segment_lengths1] PASSED [ 43%]
+tests/test_dilated_attention.py::test_dilated_attention[False-8-32-dilation_rates0-segment_lengths2] PASSED [ 44%]
+tests/test_dilated_attention.py::test_dilated_attention[False-8-32-dilation_rates1-segment_lengths0] PASSED [ 44%]
+tests/test_dilated_attention.py::test_dilated_attention[False-8-32-dilation_rates1-segment_lengths1] PASSED [ 44%]
+tests/test_dilated_attention.py::test_dilated_attention[False-8-32-dilation_rates1-segment_lengths2] PASSED [ 45%]
+tests/test_dilated_attention.py::test_dilated_attention[False-8-32-dilation_rates2-segment_lengths0] PASSED [ 45%]
+tests/test_dilated_attention.py::test_dilated_attention[False-8-32-dilation_rates2-segment_lengths1] PASSED [ 45%]
+tests/test_dilated_attention.py::test_dilated_attention[False-8-32-dilation_rates2-segment_lengths2] PASSED [ 46%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-64-dilation_rates0-segment_lengths0] PASSED [ 46%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-64-dilation_rates0-segment_lengths1] PASSED [ 46%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-64-dilation_rates0-segment_lengths2] PASSED [ 46%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-64-dilation_rates1-segment_lengths0] PASSED [ 47%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-64-dilation_rates1-segment_lengths1] PASSED [ 47%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-64-dilation_rates1-segment_lengths2] PASSED [ 47%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-64-dilation_rates2-segment_lengths0] PASSED [ 48%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-64-dilation_rates2-segment_lengths1] PASSED [ 48%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-64-dilation_rates2-segment_lengths2] PASSED [ 48%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-128-dilation_rates0-segment_lengths0] PASSED [ 49%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-128-dilation_rates0-segment_lengths1] PASSED [ 49%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-128-dilation_rates0-segment_lengths2] PASSED [ 49%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-128-dilation_rates1-segment_lengths0] PASSED [ 50%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-128-dilation_rates1-segment_lengths1] PASSED [ 50%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-128-dilation_rates1-segment_lengths2] PASSED [ 50%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-128-dilation_rates2-segment_lengths0] PASSED [ 51%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-128-dilation_rates2-segment_lengths1] PASSED [ 51%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-4-128-dilation_rates2-segment_lengths2] PASSED [ 51%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-64-dilation_rates0-segment_lengths0] PASSED [ 52%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-64-dilation_rates0-segment_lengths1] PASSED [ 52%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-64-dilation_rates0-segment_lengths2] PASSED [ 52%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-64-dilation_rates1-segment_lengths0] PASSED [ 53%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-64-dilation_rates1-segment_lengths1] PASSED [ 53%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-64-dilation_rates1-segment_lengths2] PASSED [ 53%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-64-dilation_rates2-segment_lengths0] PASSED [ 53%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-64-dilation_rates2-segment_lengths1] PASSED [ 54%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-64-dilation_rates2-segment_lengths2] PASSED [ 54%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-128-dilation_rates0-segment_lengths0] PASSED [ 54%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-128-dilation_rates0-segment_lengths1] PASSED [ 55%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-128-dilation_rates0-segment_lengths2] PASSED [ 55%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-128-dilation_rates1-segment_lengths0] PASSED [ 55%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-128-dilation_rates1-segment_lengths1] PASSED [ 56%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-128-dilation_rates1-segment_lengths2] PASSED [ 56%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-128-dilation_rates2-segment_lengths0] PASSED [ 56%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-128-dilation_rates2-segment_lengths1] PASSED [ 57%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[True-8-128-dilation_rates2-segment_lengths2] PASSED [ 57%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-64-dilation_rates0-segment_lengths0] PASSED [ 57%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-64-dilation_rates0-segment_lengths1] PASSED [ 58%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-64-dilation_rates0-segment_lengths2] PASSED [ 58%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-64-dilation_rates1-segment_lengths0] PASSED [ 58%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-64-dilation_rates1-segment_lengths1] PASSED [ 59%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-64-dilation_rates1-segment_lengths2] PASSED [ 59%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-64-dilation_rates2-segment_lengths0] PASSED [ 59%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-64-dilation_rates2-segment_lengths1] PASSED [ 60%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-64-dilation_rates2-segment_lengths2] PASSED [ 60%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-128-dilation_rates0-segment_lengths0] PASSED [ 60%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-128-dilation_rates0-segment_lengths1] PASSED [ 60%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-128-dilation_rates0-segment_lengths2] PASSED [ 61%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-128-dilation_rates1-segment_lengths0] PASSED [ 61%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-128-dilation_rates1-segment_lengths1] PASSED [ 61%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-128-dilation_rates1-segment_lengths2] PASSED [ 62%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-128-dilation_rates2-segment_lengths0] PASSED [ 62%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-128-dilation_rates2-segment_lengths1] PASSED [ 62%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-4-128-dilation_rates2-segment_lengths2] PASSED [ 63%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-64-dilation_rates0-segment_lengths0] PASSED [ 63%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-64-dilation_rates0-segment_lengths1] PASSED [ 63%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-64-dilation_rates0-segment_lengths2] PASSED [ 64%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-64-dilation_rates1-segment_lengths0] PASSED [ 64%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-64-dilation_rates1-segment_lengths1] PASSED [ 64%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-64-dilation_rates1-segment_lengths2] PASSED [ 65%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-64-dilation_rates2-segment_lengths0] PASSED [ 65%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-64-dilation_rates2-segment_lengths1] PASSED [ 65%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-64-dilation_rates2-segment_lengths2] PASSED [ 66%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-128-dilation_rates0-segment_lengths0] PASSED [ 66%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-128-dilation_rates0-segment_lengths1] PASSED [ 66%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-128-dilation_rates0-segment_lengths2] PASSED [ 66%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-128-dilation_rates1-segment_lengths0] PASSED [ 67%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-128-dilation_rates1-segment_lengths1] PASSED [ 67%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-128-dilation_rates1-segment_lengths2] PASSED [ 67%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-128-dilation_rates2-segment_lengths0] PASSED [ 68%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-128-dilation_rates2-segment_lengths1] PASSED [ 68%]
+tests/test_dilated_attention.py::test_multihead_dilated_attention[False-8-128-dilation_rates2-segment_lengths2] PASSED [ 68%]
+tests/test_distributed_ring_attention.py::TestRingAttentionMemoryPool::test_memory_pool_size_limits PASSED [ 69%]
+tests/test_distributed_ring_attention.py::TestRingAttentionMemoryPool::test_memory_pool_thread_safety PASSED [ 69%]
+tests/test_distributed_ring_attention.py::TestRingAttentionMemoryPool::test_lru_eviction PASSED [ 69%]
+tests/test_distributed_ring_attention.py::TestDistributedRingAttention::test_ring_size_validation FAILED [ 70%]
+tests/test_distributed_ring_attention.py::TestDistributedRingAttention::test_single_gpu_fallback FAILED [ 70%]
+tests/test_distributed_ring_attention.py::TestDistributedRingAttention::test_communication_error_handling[DistBackendError] FAILED [ 70%]
+tests/test_distributed_ring_attention.py::TestDistributedRingAttention::test_communication_error_handling[RuntimeError] FAILED [ 71%]
+tests/test_distributed_ring_attention.py::TestDistributedRingAttention::test_communication_error_handling[OutOfMemoryError] FAILED [ 71%]
+tests/test_distributed_ring_attention.py::TestBlockSparseDistributed::test_distributed_sparse_config_validation FAILED [ 71%]
+tests/test_distributed_ring_attention.py::TestErrorRecovery::test_forward_error_cleanup FAILED [ 72%]
+tests/test_distributed_ring_attention.py::TestErrorRecovery::test_distributed_error_recovery FAILED [ 72%]
+tests/test_distributed_ring_attention.py::TestEdgeCases::test_empty_sequence FAILED [ 72%]
+tests/test_distributed_ring_attention.py::TestEdgeCases::test_single_head FAILED [ 73%]
+tests/test_distributed_ring_attention.py::TestEdgeCases::test_extreme_sequence_lengths PASSED [ 73%]
+tests/test_distributed_ring_attention.py::TestMemoryLimits::test_pattern_cache_limits PASSED [ 73%]
+tests/test_distributed_ring_attention.py::TestCUDASpecific::test_memory_pressure_handling PASSED [ 73%]
+tests/test_edge_cases_validation.py::TestInputValidation::test_dilated_attention_validation FAILED [ 74%]
+tests/test_edge_cases_validation.py::TestInputValidation::test_multihead_attention_validation FAILED [ 74%]
+tests/test_edge_cases_validation.py::TestInputValidation::test_forward_shape_validation PASSED [ 74%]
+tests/test_edge_cases_validation.py::TestInputValidation::test_multihead_forward_validation PASSED [ 75%]
+tests/test_edge_cases_validation.py::TestBoundaryConditions::test_minimum_sequence_length PASSED [ 75%]
+tests/test_edge_cases_validation.py::TestBoundaryConditions::test_single_head_single_segment PASSED [ 75%]
+tests/test_edge_cases_validation.py::TestBoundaryConditions::test_many_segments_few_heads FAILED [ 76%]
+tests/test_edge_cases_validation.py::TestBoundaryConditions::test_extreme_dilation_rates PASSED [ 76%]
+tests/test_edge_cases_validation.py::TestSparsityPatterns::test_extreme_sparsity_ratios PASSED [ 76%]
+tests/test_edge_cases_validation.py::TestSparsityPatterns::test_block_size_edge_cases FAILED [ 77%]
+tests/test_edge_cases_validation.py::TestCausalMasking::test_causal_with_single_element PASSED [ 77%]
+tests/test_edge_cases_validation.py::TestCausalMasking::test_causal_preserves_autoregressive_property PASSED [ 77%]
+tests/test_edge_cases_validation.py::TestNumericalStability::test_attention_with_large_values PASSED [ 78%]
+tests/test_edge_cases_validation.py::TestNumericalStability::test_attention_with_zero_values PASSED [ 78%]
+tests/test_edge_cases_validation.py::TestNumericalStability::test_gradient_flow PASSED [ 78%]
+tests/test_edge_cases_validation.py::TestDeviceCompatibility::test_cpu_device_explicit PASSED [ 79%]
+tests/test_edge_cases_validation.py::TestDeviceCompatibility::test_mixed_device_inputs FAILED [ 79%]
+tests/test_factory_integration.py::TestFactoryIntegration::test_auto_selection_creates_valid_module FAILED [ 79%]
+tests/test_factory_integration.py::TestFactoryIntegration::test_all_implementations_compatible SKIPPEDd'. Available types: []) [ 80%]
+tests/test_factory_integration.py::TestFactoryIntegration::test_config_objects_work_correctly FAILED [ 80%]
+tests/test_factory_integration.py::TestFactoryIntegration::test_backward_compatibility FAILED [ 80%]
+tests/test_factory_integration.py::TestFactoryIntegration::test_block_sparse_attention_integration FAILED [ 80%]
+tests/test_factory_integration.py::TestFactoryIntegration::test_mixed_precision_support FAILED [ 81%]
+tests/test_factory_integration.py::TestFactoryIntegration::test_error_handling PASSED [ 81%]
+tests/test_factory_integration.py::TestFactoryIntegration::test_in_transformer_model FAILED [ 81%]
+tests/test_factory_integration.py::TestFactoryIntegration::test_performance_characteristics FAILED [ 82%]
+tests/test_flash_attention_3.py::test_flash_attention_3_integration PASSED [ 82%]
+tests/test_improved_multihead.py::test_interface_compatibility PASSED    [ 82%]
+tests/test_improved_multihead.py::test_forward_compatibility PASSED      [ 83%]
+tests/test_improved_multihead.py::test_feature_compatibility PASSED      [ 83%]
+tests/test_long_net.py::test_long_net[segment_lengths0-False-relu-0.0-64-1-4-128] PASSED [ 83%]
+tests/test_long_net.py::test_long_net[segment_lengths0-False-relu-0.0-64-1-8-128] PASSED [ 84%]
+tests/test_long_net.py::test_long_net[segment_lengths0-False-relu-0.0-64-2-4-128] PASSED [ 84%]
+tests/test_long_net.py::test_long_net[segment_lengths0-False-relu-0.0-64-2-8-128] PASSED [ 84%]
+tests/test_long_net.py::test_long_net[segment_lengths0-False-gelu-0.0-64-1-4-128] PASSED [ 85%]
+tests/test_long_net.py::test_long_net[segment_lengths0-False-gelu-0.0-64-1-8-128] PASSED [ 85%]
+tests/test_long_net.py::test_long_net[segment_lengths0-False-gelu-0.0-64-2-4-128] PASSED [ 85%]
+tests/test_long_net.py::test_long_net[segment_lengths0-False-gelu-0.0-64-2-8-128] PASSED [ 86%]
+tests/test_long_net.py::test_long_net[segment_lengths1-False-relu-0.0-64-1-4-128] PASSED [ 86%]
+tests/test_long_net.py::test_long_net[segment_lengths1-False-relu-0.0-64-1-8-128] PASSED [ 86%]
+tests/test_long_net.py::test_long_net[segment_lengths1-False-relu-0.0-64-2-4-128] PASSED [ 86%]
+tests/test_long_net.py::test_long_net[segment_lengths1-False-relu-0.0-64-2-8-128] PASSED [ 87%]
+tests/test_long_net.py::test_long_net[segment_lengths1-False-gelu-0.0-64-1-4-128] PASSED [ 87%]
+tests/test_long_net.py::test_long_net[segment_lengths1-False-gelu-0.0-64-1-8-128] PASSED [ 87%]
+tests/test_long_net.py::test_long_net[segment_lengths1-False-gelu-0.0-64-2-4-128] PASSED [ 88%]
+tests/test_long_net.py::test_long_net[segment_lengths1-False-gelu-0.0-64-2-8-128] PASSED [ 88%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths0-False-relu-0.0-64-1-4-128-100] PASSED [ 88%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths0-False-relu-0.0-64-1-8-128-100] PASSED [ 89%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths0-False-relu-0.0-64-2-4-128-100] PASSED [ 89%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths0-False-relu-0.0-64-2-8-128-100] PASSED [ 89%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths0-False-gelu-0.0-64-1-4-128-100] PASSED [ 90%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths0-False-gelu-0.0-64-1-8-128-100] PASSED [ 90%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths0-False-gelu-0.0-64-2-4-128-100] PASSED [ 90%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths0-False-gelu-0.0-64-2-8-128-100] PASSED [ 91%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths1-False-relu-0.0-64-1-4-128-100] PASSED [ 91%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths1-False-relu-0.0-64-1-8-128-100] PASSED [ 91%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths1-False-relu-0.0-64-2-4-128-100] PASSED [ 92%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths1-False-relu-0.0-64-2-8-128-100] PASSED [ 92%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths1-False-gelu-0.0-64-1-4-128-100] PASSED [ 92%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths1-False-gelu-0.0-64-1-8-128-100] PASSED [ 93%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths1-False-gelu-0.0-64-2-4-128-100] PASSED [ 93%]
+tests/test_long_net.py::test_long_net_lm[segment_lengths1-False-gelu-0.0-64-2-8-128-100] PASSED [ 93%]
+tests/test_max_chunk_capabilities.py::test_max_chunk_size_single_headed PASSED [ 93%]
+tests/test_max_chunk_capabilities.py::test_max_chunk_size_multihead PASSED [ 94%]
+tests/test_max_chunk_capabilities.py::test_billion_token_capability PASSED [ 94%]
+tests/test_memory_optimizations.py::test_attention_memory_optimization FAILED [ 94%]
+tests/test_optimized_unfold.py::test_specific_optimizations PASSED       [ 95%]
+tests/test_ring_implementations_comparison.py::test_implementation_comparison PASSED [ 95%]
+tests/test_ring_implementations_comparison.py::test_mathematical_equivalence PASSED [ 95%]
+tests/test_ring_implementations_comparison.py::test_memory_scaling PASSED [ 96%]
+tests/test_ring_optimization.py::test_optimization PASSED                [ 96%]
+tests/test_thread_safety.py::TestMemoryPoolThreadSafety::test_concurrent_buffer_allocation PASSED [ 96%]
+tests/test_thread_safety.py::TestMemoryPoolThreadSafety::test_hot_cache_concurrent_access PASSED [ 97%]
+tests/test_thread_safety.py::TestMemoryPoolThreadSafety::test_lru_eviction_race_condition PASSED [ 97%]
+tests/test_thread_safety.py::TestPatternGeneratorThreadSafety::test_concurrent_pattern_generation PASSED [ 97%]
+tests/test_thread_safety.py::TestAttentionModuleThreadSafety::test_concurrent_forward_passes PASSED [ 98%]
+tests/test_thread_safety.py::TestAttentionModuleThreadSafety::test_memory_pool_sharing PASSED [ 98%]
+tests/test_thread_safety.py::TestWeakReferenceCleanup::test_memory_pool_cleanup PASSED [ 98%]
+tests/test_thread_safety.py::TestDeadlockPrevention::test_no_deadlock_on_nested_locks PASSED [ 99%]
+tests/test_true_ring_attention.py::test_ring_attention_scaling PASSED    [ 99%]
+tests/test_unfold_implementation.py::test_correctness PASSED             [ 99%]
+tests/test_unfold_implementation.py::test_edge_cases FAILED              [100%]
+
+=================================== FAILURES ===================================
+___ TestSparsePatternGeneration.test_pattern_generation[0.25-dilated_sparse] ___
+tests/test_block_sparse_attention.py:83: in test_pattern_generation
+    assert abs(actual_sparsity - sparsity_ratio) < 0.1
+E   assert 0.234375 < 0.1
+E    +  where 0.234375 = abs((0.484375 - 0.25))
+____ TestSparsePatternGeneration.test_pattern_generation[0.5-local_window] _____
+tests/test_block_sparse_attention.py:83: in test_pattern_generation
+    assert abs(actual_sparsity - sparsity_ratio) < 0.1
+E   assert 0.2109375 < 0.1
+E    +  where 0.2109375 = abs((0.2890625 - 0.5))
+___ TestSparsePatternGeneration.test_pattern_generation[0.5-dilated_sparse] ____
+tests/test_block_sparse_attention.py:83: in test_pattern_generation
+    assert abs(actual_sparsity - sparsity_ratio) < 0.1
+E   assert 0.28125 < 0.1
+E    +  where 0.28125 = abs((0.78125 - 0.5))
+____ TestSparsePatternGeneration.test_pattern_generation[0.5-global_local] _____
+tests/test_block_sparse_attention.py:83: in test_pattern_generation
+    assert abs(actual_sparsity - sparsity_ratio) < 0.1
+E   assert 0.2109375 < 0.1
+E    +  where 0.2109375 = abs((0.2890625 - 0.5))
+______ TestBlockSparseRingDilatedAttention.test_forward_pass[0.25-small] _______
+tests/test_block_sparse_attention.py:167: in test_forward_pass
+    assert output.device == device
+E   AssertionError: assert device(type='cuda', index=0) == device(type='cuda')
+E    +  where device(type='cuda', index=0) = tensor([[[[ 0.0194, -0.2419, -0.0835,  ..., -0.0677,  0.0761, -0.0427],\n          [-0.0830,  0.1480, -0.2597,  ...,  0.2178,  0.0896,  0.0377],\n          [ 0.0153, -0.0053,  0.2214,  ...,  0.2435,  0.0646, -0.0070],\n          [-0.0268,  0.0573,  0.1965,  ...,  0.0707, -0.0803, -0.0292]],\n\n         [[-0.1338, -0.1080,  0.2013,  ...,  0.1735,  0.2493, -0.0435],\n          [ 0.0243,  0.0808,  0.1027,  ...,  0.0883, -0.0385, -0.1369],\n          [-0.0435,  0.0314,  0.2049,  ..., -0.0958, -0.0164, -0.0224],\n          [ 0.0414, -0.0109,  0.1751,  ..., -0.0979, -0.0443, -0.2058]],\n\n         [[ 0.1339, -0.2758, -0.0534,  ...,  0.0298, -0.0191,  0.0229],\n          [-0.0251,  0.0159, -0.0565,  ...,  0.1600, -0.0803, -0.1673],\n          [-0.0708, -0.0007, -0.1852,  ...,  0.1610,  0.1244,  0.2008],\n          [ 0.2567, -0.0549,  0.1549,  ...,  0.0349, -0.1502, -0.0955]],\n\n         ...,\n\n         [[ 0.0435, -0.1123,  0.0190,  ...,  0.0137,  0.0353, -0.0175],\n          [ 0.1248,  0.0596, -0.3755,  ..., -0.1135, -0.0345,  0.2823],\n          [ 0.0871, -0.0019, -0.1574,  ..., -0.1917,  0.1841,  0.0541],\n          [-0.0867,  0.0073,  0.0690,  ..., -0.1936,  0.1289,  0.1457]],\n\n         [[ 0.1042,  0.0926, -0.1841,  ..., -0.0561, -0.0449,  0.0186],\n          [-0.1737, -0.0132, -0.1096,  ..., -0.0641, -0.0764, -0.0788],\n          [ 0.1755, -0.0063, -0.0925,  ..., -0.2631,  0.0796, -0.0592],\n          [ 0.0515, -0.0078,  0.0574,  ..., -0.2819, -0.0590,  0.1410]],\n\n         [[-0.2801,  0.0547, -0.2729,  ...,  0.2148, -0.0549, -0.2108],\n          [-0.1446,  0.1484, -0.1145,  ...,  0.1090, -0.0719,  0.1285],\n          [-0.0664, -0.0741, -0.1053,  ..., -0.3771, -0.1564, -0.0191],\n          [-0.2276,  0.0596,  0.0705,  ..., -0.4568,  0.1090,  0.1951]]],\n\n\n        [[[-0.1519,  0.0330, -0.0936,  ..., -0.0970, -0.0237, -0.0298],\n          [ 0.0492, -0.1299,  0.1089,  ...,  0.0383,  0.1324,  0.0652],\n          [-0.2613,  0.2462, -0.4430,  ...,  0.2084, -0.3316,  0.3319],\n          [ 0.0852,  0.0464, -0.1308,  ..., -0.0206, -0.0923, -0.2610]],\n\n         [[ 0.0612,  0.0858,  0.0090,  ..., -0.1505,  0.1308, -0.1393],\n          [-0.2091, -0.1393,  0.0629,  ...,  0.0896, -0.0761,  0.1038],\n          [-0.0136, -0.1482, -0.1662,  ..., -0.0952, -0.3083, -0.1327],\n          [-0.0631,  0.2755, -0.1790,  ...,  0.1089,  0.1139, -0.0867]],\n\n         [[ 0.0894,  0.2169, -0.0458,  ..., -0.1090,  0.0874,  0.0046],\n          [ 0.1838,  0.0526,  0.0319,  ..., -0.1690, -0.1625, -0.1024],\n          [-0.1988, -0.1582,  0.0219,  ...,  0.1301, -0.1020, -0.0153],\n          [ 0.1542, -0.0876,  0.1393,  ..., -0.1631,  0.0745,  0.2021]],\n\n         ...,\n\n         [[ 0.0374,  0.0902,  0.0973,  ...,  0.2254, -0.1108, -0.0271],\n          [ 0.2460,  0.2202,  0.0388,  ...,  0.1654, -0.1420, -0.0455],\n          [-0.1147,  0.0047,  0.1729,  ...,  0.0672,  0.0763, -0.2478],\n          [-0.1656,  0.0528,  0.1314,  ..., -0.2125, -0.0819, -0.0599]],\n\n         [[-0.2279,  0.0177,  0.1428,  ...,  0.1744,  0.0642,  0.1010],\n          [ 0.2148, -0.1858,  0.1322,  ...,  0.1675, -0.0614,  0.0410],\n          [ 0.1026,  0.1461, -0.0428,  ..., -0.0398, -0.0640,  0.0103],\n          [-0.0982,  0.0769,  0.0359,  ..., -0.0676, -0.0897, -0.1175]],\n\n         [[ 0.0281, -0.1094,  0.0531,  ...,  0.2879,  0.0316,  0.0413],\n          [-0.0038, -0.1013,  0.1264,  ..., -0.0409, -0.0212,  0.3280],\n          [-0.2203, -0.1218, -0.0313,  ...,  0.0261,  0.1926, -0.2109],\n          [-0.1565,  0.0390,  0.2015,  ..., -0.0202, -0.1177, -0.0648]]]],\n       device='cuda:0').device
+______ TestBlockSparseRingDilatedAttention.test_forward_pass[0.25-medium] ______
+tests/test_block_sparse_attention.py:167: in test_forward_pass
+    assert output.device == device
+E   AssertionError: assert device(type='cuda', index=0) == device(type='cuda')
+E    +  where device(type='cuda', index=0) = tensor([[[[ 1.1147e-01,  2.7614e-02,  2.0741e-01,  ...,  1.0457e-01,\n           -1.8958e-01, -9.4340e-02],\n          [ 2.0442e-01, -4.2790e-02, -1.1979e-01,  ...,  2.3231e-01,\n           -9.0095e-02, -2.1598e-02],\n          [ 1.6633e-01,  1.5762e-01,  2.7458e-02,  ...,  1.7540e-01,\n           -1.9772e-02, -2.5157e-01],\n          ...,\n          [ 1.5195e-01,  3.4607e-01, -1.6990e-01,  ...,  2.6825e-01,\n           -1.0159e-02, -1.0221e-01],\n          [-2.8902e-03, -1.0891e-01, -1.5689e-01,  ..., -8.0572e-02,\n            1.4254e-01,  1.0096e-01],\n          [ 1.2589e-01, -1.1899e-01,  1.5910e-02,  ..., -4.8959e-02,\n            3.4506e-01,  3.5061e-02]],\n\n         [[-1.7301e-01,  6.9245e-02,  3.3155e-01,  ..., -4.2956e-01,\n           -4.2483e-02, -1.1051e-01],\n          [-2.1801e-01, -1.8694e-01,  4.0966e-02,  ...,  1.8422e-02,\n           -8.6636e-02, -1.1432e-01],\n          [ 1.1560e-02,  1.7605e-01, -6.4248e-02,  ...,  2.5638e-01,\n           -4.3179e-02, -2.4508e-01],\n          ...,\n          [-7.5971e-02,  1.2309e-01, -2.6804e-01,  ..., -2.1183e-01,\n            1.7371e-01, -2.6951e-01],\n          [ 1.5918e-01,  1.6550e-01,  4.1373e-03,  ..., -5.1684e-02,\n           -9.7973e-03, -8.8032e-02],\n          [ 6.5895e-02, -7.4295e-02,  8.6118e-02,  ...,  1.0169e-01,\n            1.9226e-01,  7.5455e-03]],\n\n         [[-9.3435e-02, -8.0113e-02,  2.7363e-03,  ...,  7.6285e-02,\n           -4.9072e-02,  2.7093e-03],\n          [ 1.0625e-01,  1.9365e-02, -2.7487e-01,  ...,  2.9312e-01,\n           -1.0821e-01,  5.1479e-02],\n          [ 3.0450e-02,  6.0873e-03,  1.1026e-01,  ...,  2.2163e-01,\n            1.3839e-01,  7.7326e-02],\n          ...,\n          [-1.1187e-02, -2.4203e-01,  1.5184e-01,  ...,  2.8844e-01,\n            1.0970e-01, -6.5218e-02],\n          [-7.7306e-02,  1.3749e-01, -8.9610e-02,  ..., -2.9220e-02,\n            2.6725e-01, -1.5428e-01],\n          [ 5.5901e-02,  8.2933e-02,  3.2532e-03,  ..., -3.9756e-02,\n           -9.6561e-02, -1.7101e-01]],\n\n         ...,\n\n         [[-2.0082e-01, -3.6381e-02,  3.2047e-02,  ...,  1.1053e-01,\n           -3.3439e-02,  4.9490e-02],\n          [-3.7738e-02, -1.7443e-01,  1.3053e-01,  ...,  1.1886e-01,\n           -5.4170e-02,  3.5285e-02],\n          [-1.1185e-01, -8.7860e-02,  1.0119e-01,  ..., -2.9381e-01,\n            2.8134e-01,  7.1898e-02],\n          ...,\n          [ 3.7149e-02, -5.2435e-02,  1.0616e-01,  ..., -8.0498e-03,\n           -1.8346e-01,  1.2095e-01],\n          [ 5.5618e-02,  5.7158e-02, -1.1423e-01,  ...,  1.3733e-02,\n           -1.4923e-01, -1.4731e-01],\n          [-4.0688e-02, -4.4837e-01, -8.6015e-02,  ...,  2.2724e-01,\n            4.5782e-02,  5.8995e-03]],\n\n         [[-7.6479e-02,  3.0281e-02,  4.3097e-02,  ...,  8.5855e-02,\n           -1.6313e-01,  8.3465e-02],\n          [-6.0738e-02, -1.7677e-01, -3.8137e-02,  ...,  7.7025e-02,\n            1.7861e-01, -1.1121e-03],\n          [ 9.4122e-03, -4.8338e-03,  1.3181e-01,  ..., -8.2752e-02,\n            2.4591e-01,  1.4298e-01],\n          ...,\n          [ 1.7657e-01, -8.8738e-02,  1.5370e-01,  ..., -1.0295e-02,\n           -8.2215e-02, -4.9319e-02],\n          [-1.0129e-01, -6.1545e-02, -7.5232e-02,  ..., -7.9229e-02,\n           -1.5276e-02, -1.8898e-01],\n          [-1.1841e-02,  2.6594e-01, -4.7013e-02,  ...,  2.7776e-03,\n           -1.3580e-02, -1.4903e-01]],\n\n         [[-3.9160e-02, -1.5969e-01, -2.6154e-01,  ...,  2.6816e-01,\n            1.3087e-01,  1.9235e-02],\n          [-2.4015e-01, -3.7844e-02,  4.5518e-01,  ...,  2.7669e-01,\n            5.2728e-02,  7.6589e-03],\n          [ 2.8958e-01, -8.4929e-02, -4.5157e-02,  ..., -2.6214e-01,\n           -4.8266e-02,  3.0102e-02],\n          ...,\n          [-2.6290e-02, -1.6991e-01,  3.3301e-02,  ...,  3.6745e-02,\n           -1.3076e-01,  1.5692e-01],\n          [-8.5778e-02, -9.3220e-02,  6.6685e-02,  ..., -3.9026e-02,\n           -2.0268e-01, -1.3967e-01],\n          [-1.8779e-01, -9.0724e-02,  3.2499e-02,  ...,  3.2077e-02,\n            9.7756e-03,  2.8852e-01]]],\n\n\n        [[[-2.2852e-02, -1.7270e-01, -6.2281e-02,  ..., -7.8171e-02,\n            5.4849e-02,  6.8095e-02],\n          [-1.1182e-01,  1.3155e-01,  3.3739e-02,  ..., -1.6773e-01,\n           -1.1732e-01,  8.0807e-02],\n          [-2.3148e-02, -1.1299e-01,  2.7011e-01,  ...,  5.2142e-02,\n           -4.5737e-02,  6.7546e-03],\n          ...,\n          [-9.6496e-02, -9.9056e-02,  1.8826e-01,  ..., -1.8045e-03,\n           -3.9989e-02,  1.9251e-01],\n          [ 8.1535e-03, -1.1452e-02,  5.1745e-02,  ..., -1.7058e-02,\n           -1.0300e-01, -2.3692e-01],\n          [-4.2426e-02,  6.2096e-02,  5.7832e-02,  ..., -9.9899e-02,\n           -1.3318e-01, -3.2103e-01]],\n\n         [[-2.6702e-02, -2.0542e-01, -2.2659e-02,  ..., -1.8802e-01,\n           -8.1604e-02,  5.3552e-03],\n          [ 1.1534e-01,  8.8011e-02, -6.6726e-02,  ..., -1.3327e-01,\n           -1.8649e-01,  1.6848e-01],\n          [-5.6500e-01, -5.2570e-03,  3.0634e-01,  ...,  5.3516e-02,\n           -1.6147e-03,  1.3859e-01],\n          ...,\n          [-2.2059e-04, -8.3979e-02,  1.5004e-01,  ..., -2.0720e-02,\n            9.5654e-02, -4.3414e-03],\n          [-8.6794e-02, -6.3357e-02, -1.1838e-01,  ...,  1.5802e-02,\n           -1.8990e-01, -1.6804e-01],\n          [-7.8932e-02, -1.6206e-01,  9.3220e-02,  ...,  3.6431e-01,\n            1.3865e-01,  9.4201e-03]],\n\n         [[-1.7903e-02, -3.9042e-01, -4.6554e-02,  ..., -1.0067e-01,\n            1.3373e-02,  1.2079e-01],\n          [ 5.2244e-02,  1.2122e-01,  1.3789e-01,  ..., -1.4671e-01,\n            1.1360e-01,  2.6333e-01],\n          [-4.6080e-02, -3.2489e-01,  8.9259e-02,  ..., -6.4434e-02,\n           -5.4617e-02, -1.0984e-01],\n          ...,\n          [-1.4155e-01, -3.3742e-01,  2.1106e-01,  ..., -2.3116e-01,\n           -3.0941e-01, -3.0076e-01],\n          [-1.3817e-01, -1.3904e-01,  8.9325e-02,  ..., -1.1375e-01,\n           -1.2632e-01,  3.0238e-02],\n          [-1.0916e-01, -3.7317e-02,  9.7895e-02,  ...,  1.8308e-01,\n            8.8023e-02,  1.7085e-01]],\n\n         ...,\n\n         [[-1.0016e-01,  7.8613e-02, -1.0084e-01,  ...,  2.7126e-01,\n           -1.1960e-01,  1.7288e-01],\n          [-1.3042e-01,  1.2038e-01,  4.6470e-02,  ...,  2.5954e-01,\n           -1.5346e-01,  9.4635e-02],\n          [ 1.4366e-01,  2.0628e-01,  1.3059e-02,  ...,  7.7187e-02,\n           -3.2106e-01, -2.3632e-01],\n          ...,\n          [-2.4617e-01,  7.1712e-02, -3.8032e-01,  ..., -1.1071e-01,\n           -2.3028e-01,  1.0944e-01],\n          [-3.7229e-02,  1.3247e-01,  1.7566e-01,  ..., -9.1968e-02,\n           -2.6688e-02, -1.0231e-01],\n          [ 4.3721e-02,  3.5175e-01,  6.1495e-02,  ...,  1.7605e-01,\n            2.5747e-01, -1.8809e-01]],\n\n         [[ 1.0589e-01,  2.5863e-01, -7.3596e-02,  ...,  2.5497e-01,\n           -2.9056e-02,  1.1644e-01],\n          [-2.3618e-01, -1.6987e-01, -1.8150e-01,  ...,  1.7380e-01,\n           -1.0435e-01,  9.8433e-02],\n          [ 1.7562e-01, -1.6640e-01,  7.7051e-02,  ...,  1.1273e-01,\n            3.0321e-02, -5.1367e-02],\n          ...,\n          [-5.3914e-02,  1.1531e-01,  2.7159e-02,  ..., -1.9925e-01,\n           -2.5348e-02,  1.5162e-01],\n          [-1.6803e-01,  9.5480e-02,  4.9942e-02,  ...,  2.1755e-02,\n           -1.1611e-01, -1.2062e-01],\n          [-1.1524e-01, -3.5246e-01, -2.3434e-01,  ..., -7.6424e-02,\n            4.8827e-01,  2.0129e-02]],\n\n         [[ 2.9620e-03,  1.7315e-01,  1.9632e-01,  ...,  2.2202e-01,\n           -1.6726e-01,  4.3393e-02],\n          [-5.9546e-02,  9.9067e-02, -6.8627e-02,  ..., -4.0208e-02,\n           -1.6015e-01, -2.9190e-01],\n          [ 2.5545e-01,  1.8222e-01,  2.2449e-01,  ...,  1.1021e-01,\n            1.0648e-01, -1.4390e-01],\n          ...,\n          [-2.2786e-01,  1.6709e-01, -3.5043e-02,  ..., -5.0355e-03,\n            2.4290e-02,  4.9885e-02],\n          [ 3.0607e-02,  6.5775e-02, -7.7550e-02,  ..., -8.6383e-02,\n            4.5221e-02, -1.0628e-01],\n          [ 2.4242e-01, -2.2718e-01, -1.0998e-01,  ...,  1.1948e-01,\n           -3.2444e-02, -8.2521e-02]]],\n\n\n        [[[-1.9980e-01,  7.9158e-02,  6.1539e-02,  ...,  1.0747e-01,\n           -1.6408e-01, -1.3028e-01],\n          [-2.4033e-01,  1.3305e-01,  2.2295e-01,  ...,  2.0809e-01,\n           -4.0961e-02,  8.6540e-02],\n          [-1.0707e-02,  9.8557e-02,  3.2365e-02,  ...,  7.4777e-03,\n            1.8143e-01,  1.1667e-01],\n          ...,\n          [-3.5291e-02,  1.3157e-01,  4.3792e-02,  ...,  4.3909e-02,\n            3.1205e-01, -1.9829e-01],\n          [ 1.1056e-01,  1.6436e-01,  1.0747e-01,  ...,  1.0824e-01,\n            2.6503e-01, -1.5320e-01],\n          [ 2.6410e-02,  3.9481e-01, -1.5469e-01,  ...,  8.5873e-02,\n           -1.2948e-01,  2.6087e-02]],\n\n         [[ 1.2248e-01,  9.9685e-03, -1.4056e-01,  ...,  1.1881e-01,\n            2.9366e-02,  2.6662e-02],\n          [-2.1268e-01,  1.8174e-01,  1.4476e-01,  ...,  1.2873e-01,\n            1.1453e-02,  3.3125e-02],\n          [-1.8997e-02,  8.9701e-02, -1.4914e-01,  ...,  4.3341e-02,\n           -3.1806e-02,  9.6498e-02],\n          ...,\n          [-5.1134e-01, -7.1504e-02, -1.7715e-01,  ...,  9.3999e-02,\n            1.7679e-01, -3.8722e-01],\n          [ 1.3142e-01,  5.3596e-02, -8.7756e-02,  ..., -2.2547e-01,\n            1.9563e-01, -1.4750e-01],\n          [ 9.5324e-02,  1.8773e-01,  7.7840e-02,  ..., -2.1820e-02,\n            1.6386e-01,  2.5618e-01]],\n\n         [[ 1.8718e-01, -2.7586e-01, -2.6973e-03,  ...,  7.5088e-02,\n           -1.8149e-02, -6.1532e-02],\n          [-3.0613e-01,  2.4542e-01,  2.0957e-01,  ...,  1.3967e-01,\n           -7.9229e-02,  4.4934e-02],\n          [ 2.1045e-02, -2.2576e-01,  2.3593e-02,  ...,  3.0249e-01,\n           -9.2077e-02, -1.4170e-01],\n          ...,\n          [-4.6499e-02,  3.6299e-01, -2.8036e-01,  ..., -1.7160e-01,\n            6.7029e-02, -6.3706e-02],\n          [-1.9856e-01,  1.7182e-02,  1.3128e-01,  ..., -1.6244e-01,\n            4.7256e-02, -1.6691e-01],\n          [-3.1873e-02,  2.3702e-01, -1.2319e-01,  ...,  5.3682e-02,\n            1.2464e-01, -8.6502e-02]],\n\n         ...,\n\n         [[ 3.2967e-02, -3.8951e-01,  1.0970e-01,  ..., -4.3721e-02,\n           -2.3980e-01, -1.4819e-02],\n          [ 2.3908e-01,  1.1638e-01, -1.1562e-01,  ...,  1.3289e-01,\n           -7.9047e-02, -2.4227e-02],\n          [ 1.1743e-01, -1.0568e-01,  2.0291e-01,  ...,  1.0316e-01,\n           -8.6337e-02,  3.1158e-02],\n          ...,\n          [ 8.4678e-02,  7.8044e-02, -2.3624e-02,  ..., -8.5273e-03,\n            1.3935e-01,  9.2580e-03],\n          [-5.9499e-02,  1.7148e-01, -8.5675e-03,  ..., -2.3821e-01,\n            1.3502e-01, -4.9879e-02],\n          [-4.5335e-02, -1.0422e-01,  1.2744e-01,  ...,  1.1279e-01,\n            1.2886e-01,  3.2909e-02]],\n\n         [[ 9.8061e-02, -3.5328e-02, -1.4219e-01,  ..., -1.8105e-02,\n           -8.7679e-02,  3.5851e-02],\n          [ 1.0119e-01,  1.1655e-01, -1.4845e-01,  ...,  1.6174e-01,\n           -2.5776e-02,  2.2203e-02],\n          [-1.6608e-01, -1.8980e-01,  1.1832e-01,  ..., -8.8180e-02,\n            1.7873e-02, -1.2694e-01],\n          ...,\n          [ 6.4380e-02,  2.3344e-01, -2.1424e-02,  ..., -3.4374e-02,\n           -3.1875e-02, -1.3136e-01],\n          [ 2.4553e-01,  2.0555e-01, -1.8809e-01,  ..., -8.1619e-02,\n            5.1696e-03, -1.3263e-01],\n          [ 1.1433e-01, -9.2675e-03,  9.5412e-02,  ..., -1.1272e-01,\n            4.9997e-02,  9.1891e-02]],\n\n         [[ 7.5771e-02, -6.9115e-02,  2.9272e-01,  ..., -1.6462e-02,\n           -1.2172e-01,  1.3848e-01],\n          [ 2.3131e-01,  1.8370e-02, -1.6522e-01,  ...,  1.5808e-01,\n            8.2195e-02, -2.1863e-01],\n          [ 1.5187e-01, -1.4315e-01, -9.2336e-02,  ...,  4.3014e-02,\n            2.2739e-02, -6.7440e-02],\n          ...,\n          [-2.9252e-02,  5.1185e-02,  8.7089e-02,  ...,  1.2020e-01,\n           -2.1939e-02, -1.3290e-01],\n          [ 7.0347e-02,  1.1103e-01, -1.5291e-01,  ..., -2.3504e-02,\n            9.1091e-02, -1.1515e-01],\n          [ 8.7118e-02, -1.2380e-01, -2.1782e-02,  ...,  2.9403e-01,\n           -7.4962e-02, -1.5462e-01]]],\n\n\n        [[[ 1.5250e-01,  1.2167e-02, -1.3759e-01,  ...,  9.7150e-02,\n           -1.3741e-02, -1.3869e-02],\n          [ 9.9798e-02,  1.8970e-01, -2.0146e-01,  ...,  5.8536e-03,\n           -2.4787e-02, -1.3179e-01],\n          [-1.4168e-01, -5.1726e-02,  1.6300e-01,  ...,  1.7580e-01,\n           -1.0925e-02,  1.0825e-01],\n          ...,\n          [-1.4027e-02, -4.4278e-02, -2.3730e-02,  ..., -1.1799e-01,\n           -4.4400e-02,  4.1808e-02],\n          [ 1.0725e-01, -3.5888e-02,  8.1835e-03,  ..., -4.6576e-02,\n           -9.2199e-02,  1.2483e-01],\n          [-1.8218e-01,  2.2015e-01,  4.4058e-02,  ...,  6.7178e-02,\n            3.5091e-01, -1.6059e-01]],\n\n         [[ 1.3556e-01, -3.3009e-02, -1.6374e-01,  ...,  2.0290e-01,\n            2.4589e-01, -1.3104e-01],\n          [-7.9632e-03,  1.3137e-01,  1.1023e-01,  ...,  2.1895e-01,\n           -1.2585e-01, -1.6685e-01],\n          [-1.5536e-01, -9.3997e-02, -1.0236e-02,  ...,  3.3025e-01,\n            1.7943e-01, -7.2305e-02],\n          ...,\n          [-1.9138e-01, -7.0417e-02,  6.7090e-02,  ...,  1.6328e-01,\n            1.0289e-01,  3.3160e-02],\n          [ 1.2168e-01, -2.3782e-02,  9.7643e-03,  ...,  1.0690e-01,\n           -1.6867e-02,  8.5697e-02],\n          [-1.5956e-01, -3.8539e-02, -1.5015e-01,  ...,  3.7979e-01,\n           -6.9803e-02,  2.5350e-01]],\n\n         [[ 1.0861e-01,  3.4259e-02, -2.1166e-01,  ...,  1.9559e-01,\n            2.8177e-01,  1.4088e-01],\n          [ 5.2612e-02,  1.5017e-01, -1.9624e-01,  ..., -1.1549e-01,\n            1.0706e-01, -1.9684e-01],\n          [-9.5873e-03, -1.6888e-03, -2.5374e-02,  ...,  1.5819e-01,\n            8.8802e-03,  1.9354e-01],\n          ...,\n          [-3.5223e-02, -5.1695e-02, -2.3065e-01,  ...,  5.6379e-02,\n            2.5418e-02,  1.3024e-02],\n          [ 6.8549e-02,  1.2086e-01,  1.6137e-01,  ...,  2.9299e-02,\n           -2.3012e-01,  1.1231e-01],\n          [-1.0486e-01, -8.4653e-02, -1.9816e-02,  ..., -8.5208e-03,\n            1.5550e-01, -2.5390e-01]],\n\n         ...,\n\n         [[ 1.2152e-01, -9.4205e-02, -1.0588e-01,  ..., -2.8207e-01,\n           -4.3120e-02, -1.3726e-02],\n          [ 1.6474e-01,  9.9467e-02,  1.2615e-01,  ...,  7.8614e-02,\n           -1.3474e-01,  1.2832e-01],\n          [-4.6946e-02,  6.5306e-02, -1.4579e-01,  ..., -1.2469e-01,\n           -4.8897e-02,  1.0966e-02],\n          ...,\n          [ 1.3098e-01,  3.9941e-02, -3.4146e-02,  ..., -1.8572e-01,\n            1.0225e-01,  9.3110e-02],\n          [ 1.3934e-01, -3.3738e-02,  4.2751e-02,  ..., -1.7748e-01,\n            5.2885e-02, -1.0093e-01],\n          [-1.5779e-01, -2.4266e-02, -1.2699e-01,  ..., -1.6509e-02,\n           -1.4503e-01, -2.0861e-02]],\n\n         [[ 1.7970e-01, -2.9502e-02, -5.9972e-02,  ...,  3.7674e-03,\n           -8.7657e-02,  6.9362e-02],\n          [ 6.3079e-02,  2.7576e-01,  1.8634e-01,  ..., -1.6214e-01,\n           -5.2982e-03,  1.4816e-01],\n          [-6.5835e-02, -4.7115e-02, -1.3769e-01,  ..., -3.3900e-02,\n            1.4352e-02, -2.7294e-01],\n          ...,\n          [-6.4918e-02, -4.2848e-02, -1.0305e-01,  ..., -6.4839e-02,\n           -5.0163e-02, -3.8137e-03],\n          [ 2.9978e-01,  3.4734e-02,  1.1760e-02,  ..., -4.4041e-02,\n            1.5657e-02,  1.5053e-01],\n          [-2.1152e-01, -1.7181e-01, -3.2232e-02,  ..., -4.8156e-02,\n           -8.0522e-02, -6.6201e-02]],\n\n         [[-5.4531e-02, -6.7915e-02, -5.6064e-02,  ..., -2.3437e-02,\n           -1.1022e-01,  2.1063e-01],\n          [ 1.4417e-02, -3.8299e-02,  1.0127e-01,  ...,  1.1124e-01,\n           -1.4080e-01,  1.5486e-01],\n          [-2.1156e-01, -1.7453e-01, -9.7759e-02,  ...,  2.2439e-01,\n           -2.4825e-02, -1.1294e-01],\n          ...,\n          [ 1.7104e-01,  1.2976e-01, -4.8131e-02,  ..., -3.4155e-01,\n            2.5263e-02,  1.4568e-01],\n          [ 2.4603e-01,  1.7311e-01, -1.2496e-01,  ..., -2.5488e-01,\n           -1.0438e-02, -1.7033e-02],\n          [-5.0117e-02, -2.1417e-02,  9.4581e-02,  ..., -7.3908e-02,\n           -2.2025e-01, -1.2622e-01]]]], device='cuda:0').device
+_______ TestBlockSparseRingDilatedAttention.test_forward_pass[0.5-small] _______
+tests/test_block_sparse_attention.py:167: in test_forward_pass
+    assert output.device == device
+E   AssertionError: assert device(type='cuda', index=0) == device(type='cuda')
+E    +  where device(type='cuda', index=0) = tensor([[[[ 1.3632e-01, -3.4197e-02,  6.3930e-02,  ...,  6.9947e-02,\n            1.1388e-01,  1.5731e-01],\n          [-2.6156e-01, -2.8491e-01,  7.1673e-02,  ...,  6.0179e-02,\n            1.4219e-01, -4.2322e-02],\n          [-2.5844e-02,  2.1314e-02, -1.2244e-01,  ...,  2.1576e-01,\n           -5.4515e-02,  8.3217e-02],\n          [-1.3930e-01,  1.9324e-01,  5.9029e-02,  ..., -3.5938e-01,\n           -3.5457e-02, -1.0955e-01]],\n\n         [[ 1.3726e-01, -8.2149e-03, -4.9985e-02,  ..., -5.6374e-02,\n            6.0242e-02,  2.5247e-01],\n          [-2.0781e-02,  9.4427e-02,  1.2175e-01,  ..., -8.8185e-02,\n            2.5724e-02, -1.1176e-01],\n          [-6.1002e-02, -9.1328e-02,  2.4693e-01,  ..., -2.4739e-01,\n           -1.7354e-01, -4.4688e-02],\n          [-8.1019e-02,  2.3320e-02,  7.7804e-02,  ..., -1.7998e-01,\n           -2.0398e-02,  3.6273e-02]],\n\n         [[-9.2652e-02,  9.5847e-02, -4.1564e-02,  ...,  1.5955e-01,\n            3.4799e-02, -4.3583e-02],\n          [ 8.8057e-02, -1.1650e-01,  2.0392e-01,  ...,  1.4474e-02,\n            2.2098e-02, -1.3088e-01],\n          [-4.6381e-02, -4.8954e-02,  1.1788e-01,  ...,  1.1108e-01,\n           -2.4556e-01,  1.7597e-01],\n          [ 1.5000e-01, -3.3575e-02, -1.2308e-02,  ..., -3.7879e-02,\n           -1.7912e-01, -8.0720e-02]],\n\n         ...,\n\n         [[-3.4654e-02, -8.8326e-02, -1.5525e-01,  ..., -3.9138e-02,\n           -1.4502e-01, -1.2730e-01],\n          [-2.8641e-01, -1.1879e-02, -2.1763e-01,  ...,  5.0629e-02,\n            1.8736e-02, -9.0628e-02],\n          [ 1.0747e-01,  7.7341e-04,  4.3193e-01,  ...,  5.5216e-01,\n            3.8214e-01, -4.8906e-01],\n          [ 2.4942e-01,  2.1352e-02, -3.5197e-02,  ..., -6.0534e-02,\n            5.8262e-02, -9.9575e-02]],\n\n         [[-9.6764e-02,  1.9187e-01, -6.4683e-04,  ..., -1.3193e-03,\n           -1.3394e-01, -1.5970e-01],\n          [-1.9451e-01,  5.4470e-02, -4.5503e-02,  ...,  3.5404e-04,\n            6.1103e-03,  8.2354e-02],\n          [ 1.4753e-02,  1.1130e-01,  2.4865e-01,  ...,  1.9046e-01,\n            2.7071e-01, -2.3743e-01],\n          [ 8.8649e-02, -2.5107e-02, -2.0527e-01,  ..., -2.4169e-01,\n            4.5326e-04, -7.3107e-03]],\n\n         [[-2.1286e-02,  1.7957e-01,  9.8053e-04,  ..., -7.8919e-02,\n           -1.8849e-01, -6.6657e-02],\n          [-1.5725e-01, -1.7218e-01, -2.2058e-01,  ..., -6.8175e-02,\n            6.2846e-02,  6.0241e-02],\n          [ 1.8402e-01,  1.9190e-01,  5.0846e-02,  ...,  4.8349e-02,\n            1.4504e-01,  7.5240e-02],\n          [ 7.7750e-02, -4.1465e-02, -1.3128e-02,  ..., -2.4493e-01,\n           -9.0386e-03, -5.8017e-02]]],\n\n\n        [[[-1.8992e-02,  1.1867e-01,  6.1837e-02,  ..., -7.7614e-02,\n           -9.0433e-03, -1.5894e-01],\n          [ 4.2368e-03,  4.0086e-02, -4.7419e-02,  ...,  6.0198e-02,\n           -2.1918e-01, -1.9706e-01],\n          [ 9.9136e-03, -1.1056e-01, -3.8742e-01,  ..., -1.2910e-01,\n            3.2462e-03, -2.6005e-01],\n          [-2.6945e-01, -2.6700e-02, -1.7273e-01,  ...,  3.4621e-02,\n            2.8493e-01, -8.6460e-02]],\n\n         [[-4.6620e-01, -2.8047e-03, -1.1607e-01,  ...,  3.6056e-01,\n            4.2902e-01,  1.1683e-01],\n          [-2.4680e-01, -7.6117e-02, -1.2576e-01,  ...,  7.9272e-02,\n            4.8239e-02, -2.9507e-01],\n          [ 1.6776e-02,  9.7952e-02, -8.0767e-02,  ...,  8.5746e-02,\n           -1.3500e-01, -2.3480e-01],\n          [-2.1109e-01, -1.3734e-01, -1.3211e-01,  ...,  6.6443e-02,\n            7.4684e-02,  1.0406e-03]],\n\n         [[-1.0393e-01,  8.1191e-02,  8.6722e-02,  ...,  1.9119e-01,\n            4.9859e-02, -1.3090e-01],\n          [-1.4944e-01, -2.8632e-02, -4.4504e-02,  ...,  1.3350e-01,\n           -7.4600e-03, -8.4160e-02],\n          [ 3.3798e-02, -1.8946e-01, -1.1742e-01,  ..., -7.0257e-02,\n            1.1731e-01, -1.9588e-01],\n          [-1.0706e-01, -1.2879e-01, -9.3052e-02,  ...,  4.6451e-02,\n            9.9558e-02,  6.4434e-02]],\n\n         ...,\n\n         [[-4.2931e-02,  9.9542e-02, -2.6810e-04,  ..., -7.1958e-02,\n           -2.0941e-01,  2.5705e-02],\n          [-1.9325e-01, -1.0571e-01, -1.4167e-03,  ..., -1.3500e-01,\n            2.1928e-01, -9.8925e-02],\n          [-1.7863e-01, -8.5436e-02,  8.9794e-02,  ...,  1.7364e-01,\n           -5.7251e-02, -3.2278e-02],\n          [ 1.5326e-01,  2.0872e-01, -1.1415e-01,  ..., -1.6798e-01,\n           -1.6133e-01,  9.7512e-02]],\n\n         [[-5.5193e-02,  2.3658e-01, -3.4571e-02,  ..., -1.3495e-01,\n           -3.2168e-02,  2.1251e-01],\n          [-1.9079e-01, -1.3234e-01,  1.0715e-01,  ...,  1.2527e-01,\n            2.1285e-02,  1.6947e-01],\n          [ 8.8068e-03,  8.8070e-02, -1.2058e-01,  ...,  3.9612e-02,\n           -4.9801e-02, -1.0993e-01],\n          [ 1.6215e-01, -1.0091e-02,  5.6066e-02,  ...,  8.4569e-02,\n            8.9884e-02,  4.9910e-02]],\n\n         [[ 2.6535e-01,  9.3985e-02, -2.4125e-02,  ...,  5.5427e-02,\n           -1.2967e-01, -1.9237e-02],\n          [-1.5181e-01, -7.4097e-03,  6.5354e-02,  ...,  3.4672e-02,\n            2.9149e-01,  3.9474e-02],\n          [ 3.2388e-01, -2.3184e-01, -4.9846e-03,  ...,  1.8658e-02,\n           -3.6871e-02, -1.5559e-01],\n          [ 2.4369e-01, -6.1784e-02,  7.1905e-03,  ..., -1.1468e-02,\n           -8.0070e-02,  4.6077e-02]]]], device='cuda:0').device
+______ TestBlockSparseRingDilatedAttention.test_forward_pass[0.5-medium] _______
+tests/test_block_sparse_attention.py:167: in test_forward_pass
+    assert output.device == device
+E   AssertionError: assert device(type='cuda', index=0) == device(type='cuda')
+E    +  where device(type='cuda', index=0) = tensor([[[[-1.5774e-01,  1.1203e-02, -2.0241e-01,  ...,  3.0328e-01,\n            2.9512e-01,  1.5415e-01],\n          [-1.3234e-02, -2.5825e-01,  1.5610e-01,  ...,  1.8894e-01,\n            1.3145e-01,  2.9139e-02],\n          [ 1.8345e-01, -2.6897e-01,  8.4482e-02,  ...,  2.1988e-01,\n           -1.0622e-01,  7.9628e-02],\n          ...,\n          [ 9.1172e-02,  1.3594e-01,  8.5421e-03,  ..., -6.8617e-02,\n            1.6552e-01, -6.6262e-02],\n          [-2.8653e-01,  1.4526e-01, -2.2089e-03,  ..., -2.0878e-02,\n           -3.3145e-02,  6.4243e-03],\n          [-1.4641e-01,  8.8673e-02,  7.7463e-02,  ..., -6.5557e-02,\n           -9.3347e-02, -1.3145e-01]],\n\n         [[ 7.8439e-02,  7.2953e-02,  1.0716e-01,  ...,  2.1258e-01,\n            2.1052e-01,  1.8848e-01],\n          [-8.3828e-02, -1.9248e-01, -3.4475e-02,  ..., -3.2439e-02,\n            3.1559e-01,  7.9786e-02],\n          [ 2.0572e-01, -1.4711e-01, -1.5901e-01,  ...,  1.2218e-01,\n           -2.9773e-02,  2.1824e-01],\n          ...,\n          [-1.2721e-01,  1.3114e-01,  2.3983e-03,  ...,  1.1070e-01,\n            3.9716e-01,  1.1654e-02],\n          [-8.8352e-02,  4.3427e-02, -1.5915e-02,  ...,  2.2592e-01,\n            6.0876e-02, -5.6041e-02],\n          [-9.8100e-02, -5.3243e-02, -2.9945e-02,  ..., -3.8674e-02,\n           -9.0865e-03,  6.2147e-02]],\n\n         [[ 1.3288e-01,  7.6777e-02, -2.1153e-01,  ..., -2.0488e-01,\n           -5.4624e-02,  5.0094e-02],\n          [-5.0446e-02, -1.5231e-01, -1.8664e-03,  ...,  1.5492e-01,\n           -9.8957e-02,  2.6675e-02],\n          [-2.4737e-01, -4.0741e-01, -4.8318e-02,  ..., -1.0906e-01,\n           -1.8668e-01, -1.3808e-01],\n          ...,\n          [-1.3874e-01,  1.0445e-02, -2.3796e-01,  ...,  2.0987e-01,\n           -3.1365e-01,  8.9132e-02],\n          [-5.9544e-02,  1.9078e-01, -9.2982e-02,  ..., -2.0922e-02,\n            9.5678e-03,  1.2263e-01],\n          [ 2.4164e-01,  1.7919e-02, -3.1401e-02,  ..., -3.1751e-02,\n           -1.8072e-01,  1.4033e-02]],\n\n         ...,\n\n         [[ 1.3064e-01,  8.6838e-02, -4.1955e-02,  ..., -1.1834e-01,\n           -2.7122e-01, -8.4095e-02],\n          [-3.4868e-02,  2.0733e-01,  8.9058e-02,  ...,  6.2954e-02,\n            1.2684e-01, -5.9916e-02],\n          [-9.5106e-02,  5.5173e-02,  3.7698e-03,  ..., -6.8687e-02,\n           -6.4197e-02, -1.1391e-01],\n          ...,\n          [ 1.4774e-01,  9.8121e-02, -4.2566e-02,  ..., -2.2723e-01,\n           -1.1124e-01,  3.7230e-01],\n          [ 1.4665e-01,  2.4086e-01, -1.0275e-01,  ..., -2.4349e-01,\n           -3.4471e-01, -1.0261e-01],\n          [-1.3441e-01, -1.0298e-01, -2.2387e-02,  ..., -2.0927e-02,\n           -1.7994e-01, -2.5309e-02]],\n\n         [[-4.1890e-02, -1.2924e-01, -3.6489e-02,  ...,  1.4964e-01,\n            9.1779e-02,  5.7240e-02],\n          [-6.1254e-02,  4.5400e-02, -1.3693e-01,  ..., -1.0247e-01,\n           -5.9419e-02,  3.5249e-02],\n          [ 1.8216e-01, -1.6217e-01, -1.0302e-02,  ..., -5.3103e-02,\n           -5.3696e-02,  1.7089e-01],\n          ...,\n          [ 2.2327e-01, -8.5189e-02,  6.9685e-02,  ..., -1.4627e-01,\n           -8.4554e-02,  1.1124e-01],\n          [-1.2042e-03,  3.0970e-01, -2.7483e-01,  ..., -2.8455e-01,\n           -1.4516e-01,  1.2765e-01],\n          [-1.5724e-01, -1.7079e-01,  2.3529e-01,  ...,  6.6463e-02,\n            9.3427e-02,  1.2630e-02]],\n\n         [[ 7.8216e-02,  8.3174e-02, -1.1777e-01,  ...,  7.6242e-02,\n            1.4120e-02, -4.9307e-02],\n          [ 1.0700e-02,  1.7621e-01,  1.3711e-01,  ..., -9.0062e-02,\n            7.4486e-02, -1.1242e-01],\n          [ 7.7190e-02, -1.4332e-01,  3.3586e-02,  ..., -7.2307e-02,\n           -1.5965e-02, -5.4253e-02],\n          ...,\n          [ 2.3536e-01, -1.5314e-01,  9.9848e-02,  ..., -5.5681e-02,\n           -1.1524e-01,  1.9546e-01],\n          [-2.1605e-01,  4.2565e-02, -5.4323e-02,  ..., -2.6439e-01,\n            9.1252e-02, -1.1625e-01],\n          [-1.5145e-02, -8.5235e-02,  2.8305e-02,  ..., -5.7427e-02,\n           -1.0542e-01, -1.0789e-01]]],\n\n\n        [[[-1.2671e-01,  7.4264e-02, -4.4571e-02,  ...,  1.1827e-01,\n           -5.5266e-02,  4.2653e-02],\n          [-2.2505e-01, -1.3390e-01, -1.8610e-01,  ...,  6.6181e-02,\n            2.8584e-01,  1.0255e-01],\n          [-3.2384e-02, -1.6919e-01,  2.1126e-01,  ..., -1.2537e-02,\n            2.8366e-02,  9.1209e-02],\n          ...,\n          [ 1.0016e-01, -3.3167e-01,  1.5747e-01,  ...,  1.5310e-02,\n           -1.1476e-01, -9.6986e-02],\n          [-1.2084e-01, -1.3024e-01, -9.6960e-02,  ..., -3.3078e-02,\n           -1.1216e-02,  1.3590e-01],\n          [-8.2131e-02, -1.3173e-01,  1.0077e-01,  ...,  9.3886e-03,\n           -8.2065e-02, -5.3618e-04]],\n\n         [[ 9.6500e-02,  6.2859e-02,  1.5128e-01,  ..., -1.4495e-01,\n            4.6174e-02,  2.2572e-01],\n          [-3.9482e-02, -2.8317e-01, -1.0290e-01,  ..., -2.9847e-02,\n           -4.3346e-02,  1.2940e-01],\n          [ 3.9294e-02, -3.5485e-01, -1.1171e-03,  ...,  1.0416e-01,\n            1.7879e-02,  1.1446e-01],\n          ...,\n          [ 1.4504e-01, -2.0512e-01,  5.9632e-02,  ..., -2.4784e-03,\n            7.8475e-02,  8.9613e-03],\n          [ 4.5208e-02, -9.2225e-02, -2.6792e-01,  ...,  9.2984e-02,\n           -5.4341e-02,  3.4156e-02],\n          [ 2.1356e-02,  3.2415e-02,  5.2577e-02,  ..., -2.8964e-02,\n           -2.1113e-02,  9.9574e-02]],\n\n         [[-1.1072e-02,  2.8298e-02,  1.9569e-02,  ..., -4.1601e-02,\n            1.9665e-01,  8.9723e-02],\n          [-3.7306e-02, -1.6763e-01,  7.3582e-03,  ...,  4.4737e-02,\n            1.6871e-01,  1.4657e-01],\n          [-3.1466e-02, -8.0616e-02,  5.5194e-02,  ...,  9.2544e-02,\n            7.3510e-02,  2.2604e-02],\n          ...,\n          [-8.2328e-02, -2.2849e-01,  1.9957e-01,  ...,  6.0390e-02,\n            1.9646e-01,  2.2061e-02],\n          [ 1.2923e-01,  6.4562e-02,  1.9017e-01,  ..., -6.0829e-02,\n           -2.4766e-01,  2.7490e-01],\n          [ 1.5285e-02, -1.8935e-02,  9.7922e-02,  ..., -9.4756e-02,\n           -6.4653e-02,  5.7921e-02]],\n\n         ...,\n\n         [[ 7.2416e-02,  3.2755e-02, -1.9121e-01,  ..., -1.4626e-01,\n           -3.0879e-02, -4.1607e-02],\n          [ 1.5542e-01,  3.1568e-01, -7.8845e-02,  ..., -2.1950e-01,\n            2.1467e-01,  3.2172e-03],\n          [-7.0582e-02, -3.2868e-01,  8.7018e-02,  ...,  1.2353e-01,\n            4.1652e-01,  1.7868e-01],\n          ...,\n          [-7.4292e-02,  2.1852e-01, -1.4955e-01,  ..., -3.2563e-02,\n           -2.8343e-01, -3.0044e-01],\n          [ 3.0698e-02, -3.3428e-01, -2.1618e-01,  ...,  7.6920e-02,\n           -3.4675e-02, -4.5295e-02],\n          [ 1.3477e-01,  1.0804e-01, -8.7318e-02,  ...,  1.9177e-01,\n            1.8489e-01,  3.4705e-01]],\n\n         [[ 2.7044e-01,  3.4361e-02, -8.5351e-02,  ...,  4.1764e-03,\n            9.0899e-02,  9.6082e-02],\n          [-3.2737e-02,  1.2213e-01, -8.8130e-02,  ..., -1.4414e-01,\n            4.5341e-02,  1.0864e-02],\n          [-8.7042e-02, -2.8308e-01,  1.2771e-01,  ..., -5.0371e-03,\n            4.3553e-01,  1.4042e-01],\n          ...,\n          [ 1.6162e-02,  4.1352e-01, -2.1580e-01,  ...,  1.5299e-01,\n           -9.7560e-02, -5.3147e-02],\n          [ 7.8990e-03,  2.8705e-02, -2.7383e-01,  ..., -2.1759e-01,\n           -1.5638e-01, -1.9268e-01],\n          [-4.3660e-01, -1.0569e-01,  3.1203e-03,  ...,  2.0033e-01,\n            1.2340e-01,  9.4124e-02]],\n\n         [[-2.4374e-02, -1.9578e-02,  1.4669e-01,  ...,  6.8283e-02,\n            8.8134e-02, -5.5622e-02],\n          [ 7.1652e-02,  2.3063e-01,  2.0088e-01,  ..., -2.0404e-01,\n           -6.5142e-02, -6.1074e-02],\n          [-9.3118e-02, -2.3839e-01,  6.7220e-03,  ..., -1.1277e-01,\n            2.5191e-01,  1.1000e-01],\n          ...,\n          [ 1.8294e-01,  7.1912e-02, -5.6786e-02,  ...,  7.9767e-02,\n           -1.8212e-01, -6.5091e-02],\n          [ 5.5803e-02, -2.5919e-02, -2.3397e-01,  ...,  1.6946e-01,\n           -7.4431e-02, -5.2904e-02],\n          [ 1.5465e-01,  1.6219e-01, -1.7818e-01,  ...,  1.1436e-01,\n           -7.7438e-02,  1.6771e-01]]],\n\n\n        [[[-5.5986e-02, -1.3456e-01,  1.3828e-02,  ..., -1.1401e-01,\n            2.7474e-02,  6.3768e-02],\n          [-1.5934e-02,  4.1482e-02, -1.2109e-01,  ...,  6.1995e-02,\n           -1.1448e-01, -4.9609e-02],\n          [-5.7091e-02,  1.3447e-01, -7.4493e-02,  ...,  1.3962e-01,\n           -3.1326e-04,  8.2267e-02],\n          ...,\n          [-2.1632e-01,  2.1294e-01,  2.9231e-01,  ...,  1.1756e-01,\n           -5.6932e-02, -2.0116e-01],\n          [-3.0411e-01,  1.9781e-01,  1.4575e-01,  ...,  2.7245e-01,\n            6.3255e-02,  2.0147e-01],\n          [-1.4559e-01, -6.7037e-02,  1.7905e-02,  ..., -1.4611e-01,\n           -1.1859e-01, -1.3418e-01]],\n\n         [[-7.4432e-02, -1.9830e-01, -6.0331e-02,  ...,  2.2770e-02,\n           -2.6140e-02,  5.7504e-02],\n          [-1.6089e-01, -5.2975e-02,  2.6396e-01,  ...,  1.0059e-01,\n           -1.7241e-01, -3.3315e-02],\n          [-2.6768e-01,  3.3320e-02,  5.6453e-02,  ..., -3.1074e-02,\n            1.4790e-02, -2.6297e-01],\n          ...,\n          [-5.4417e-02, -3.6818e-02,  8.0056e-02,  ...,  2.8791e-01,\n           -9.7254e-02, -5.9814e-02],\n          [-2.2365e-01,  1.0375e-01, -1.4913e-01,  ..., -1.9215e-01,\n            1.0645e-01,  7.0012e-02],\n          [-5.9123e-02,  1.2900e-01,  2.1704e-02,  ...,  1.1928e-01,\n           -3.5468e-01, -9.9735e-04]],\n\n         [[ 3.3712e-02,  2.6460e-02, -2.4493e-02,  ...,  1.6834e-01,\n           -1.3904e-01,  6.9170e-02],\n          [-9.5692e-02, -1.4428e-01,  5.9618e-02,  ...,  1.0279e-01,\n            9.2985e-02, -1.1311e-02],\n          [-3.1559e-02,  8.6151e-02,  4.0975e-02,  ...,  2.9141e-01,\n            2.4623e-03, -7.1409e-02],\n          ...,\n          [-2.3740e-01, -1.2651e-01,  1.0482e-01,  ...,  7.9728e-02,\n           -1.6256e-01, -1.6378e-02],\n          [-3.3957e-01,  1.8617e-01,  1.1715e-02,  ..., -1.9328e-01,\n           -7.7248e-02, -9.6601e-02],\n          [ 7.2992e-02, -3.4657e-02,  8.0420e-02,  ...,  1.5750e-01,\n           -7.4210e-02, -2.2288e-02]],\n\n         ...,\n\n         [[ 7.4253e-02,  2.8099e-01, -3.9095e-02,  ...,  7.4382e-03,\n           -8.7133e-03,  1.0383e-01],\n          [ 1.6183e-02, -2.4234e-02, -4.2674e-02,  ...,  6.8242e-02,\n            3.0237e-02,  1.0312e-01],\n          [-5.9185e-02, -9.2865e-02, -1.6816e-02,  ...,  1.7345e-01,\n           -1.4745e-01, -2.0721e-02],\n          ...,\n          [-1.5543e-01, -2.7987e-02, -1.5646e-01,  ..., -2.9807e-02,\n           -7.3483e-03, -1.9175e-02],\n          [ 4.4584e-02, -1.5455e-01, -8.1269e-02,  ..., -4.9294e-02,\n            1.0665e-01,  3.0783e-02],\n          [-7.7810e-02,  1.0418e-01,  4.8022e-03,  ...,  1.0900e-01,\n           -9.2014e-02,  1.2541e-01]],\n\n         [[ 1.0047e-01,  1.4376e-01, -1.3361e-01,  ..., -1.0198e-01,\n            9.3748e-02, -4.9859e-02],\n          [ 3.5179e-02, -1.5119e-01, -2.9737e-02,  ...,  5.6868e-02,\n            5.0666e-02, -1.6787e-01],\n          [ 5.7889e-03, -1.4376e-01, -1.8178e-01,  ...,  2.5609e-01,\n           -6.6856e-03,  1.4088e-01],\n          ...,\n          [-9.4434e-02, -9.2234e-02,  1.7655e-01,  ...,  2.2975e-02,\n           -8.9159e-03,  1.7912e-01],\n          [ 1.4101e-01,  2.9625e-01, -1.8648e-01,  ..., -2.4362e-01,\n           -1.4929e-01,  5.9725e-02],\n          [ 1.4215e-01, -1.9321e-01,  1.0129e-01,  ..., -3.1681e-02,\n           -1.5235e-01,  1.7033e-01]],\n\n         [[ 1.5269e-01,  5.4058e-02, -4.9728e-02,  ..., -2.1369e-01,\n           -7.5812e-02, -1.8504e-01],\n          [ 3.2498e-03,  2.5596e-01, -1.5149e-01,  ...,  1.1453e-01,\n           -3.2183e-02, -9.5065e-03],\n          [-3.6197e-02, -3.1670e-01, -1.9563e-01,  ..., -1.6817e-02,\n           -1.2211e-01,  2.4661e-03],\n          ...,\n          [-6.5644e-02,  2.0026e-01, -2.0082e-01,  ..., -2.8056e-02,\n            3.3609e-02,  1.1410e-01],\n          [ 1.5639e-01,  3.4786e-02, -6.8445e-02,  ..., -9.8102e-02,\n            2.4977e-02, -6.5402e-02],\n          [ 2.6224e-01, -1.3687e-02,  1.2625e-01,  ...,  1.7586e-01,\n           -2.0637e-01,  7.8586e-02]]],\n\n\n        [[[ 2.6518e-02,  3.0785e-01, -2.3036e-01,  ...,  1.2524e-01,\n           -1.6407e-02, -2.4652e-01],\n          [-3.8975e-02, -1.1416e-01,  1.0005e-01,  ..., -6.3339e-02,\n            8.1296e-02, -2.4449e-01],\n          [-3.9162e-01, -1.2717e-01, -2.0037e-01,  ..., -2.7536e-01,\n            1.7787e-01,  1.2206e-01],\n          ...,\n          [-1.3239e-01, -2.1981e-02, -1.3013e-01,  ...,  3.8584e-02,\n            1.0511e-01, -1.2808e-02],\n          [ 7.9365e-02, -1.6453e-01,  1.4426e-01,  ..., -1.0279e-01,\n            2.2641e-01,  1.5826e-02],\n          [-8.0764e-03, -1.3038e-01,  6.1937e-02,  ...,  5.8088e-02,\n           -1.2555e-01,  2.3972e-02]],\n\n         [[-1.2832e-01,  2.0446e-01, -5.0575e-02,  ...,  2.9822e-01,\n           -5.2023e-02, -2.4526e-01],\n          [-3.1364e-01, -3.6981e-01, -3.8413e-02,  ..., -9.9715e-02,\n            1.3872e-02,  3.9343e-03],\n          [-1.4013e-02,  1.3465e-01, -1.8041e-01,  ..., -1.8215e-01,\n           -1.0418e-01, -6.5330e-03],\n          ...,\n          [-2.3702e-02,  5.9760e-02,  1.0835e-01,  ..., -1.4532e-02,\n           -8.6423e-02,  1.6872e-01],\n          [ 9.2865e-02, -1.3412e-01,  2.3129e-01,  ..., -2.4829e-01,\n            1.6395e-01,  5.5107e-02],\n          [ 1.3189e-01,  1.2122e-01,  1.3933e-01,  ..., -1.5255e-01,\n            5.7571e-02,  1.7555e-01]],\n\n         [[-2.7967e-01, -4.7880e-02, -1.4398e-01,  ...,  8.0804e-02,\n           -1.3632e-01, -1.5197e-01],\n          [-1.5304e-01,  4.1654e-02,  3.3793e-02,  ...,  1.8764e-01,\n           -1.6588e-01,  1.1856e-02],\n          [ 5.0500e-02,  2.5065e-01, -2.9867e-01,  ..., -2.4389e-01,\n            1.0020e-02, -8.9244e-02],\n          ...,\n          [ 2.2601e-01,  1.0865e-01,  2.4398e-02,  ...,  1.7167e-02,\n           -2.0859e-01, -2.1098e-01],\n          [-6.8721e-02, -2.6854e-01,  2.3895e-02,  ...,  1.4122e-01,\n           -3.0029e-01, -5.3931e-02],\n          [-4.3491e-03, -1.3852e-01,  3.5872e-02,  ..., -2.9804e-02,\n           -9.3035e-03,  1.8354e-01]],\n\n         ...,\n\n         [[-1.2656e-01, -2.0128e-01, -1.3083e-01,  ..., -2.0579e-01,\n           -5.1467e-02,  1.3274e-01],\n          [ 9.5582e-02, -1.5331e-01,  6.3055e-02,  ..., -2.2476e-01,\n            3.4089e-01,  1.5207e-01],\n          [ 2.3289e-01, -4.1075e-02,  1.4764e-01,  ...,  4.5289e-02,\n           -2.1773e-02,  5.4050e-02],\n          ...,\n          [ 1.9493e-01,  1.0767e-01, -1.7955e-01,  ..., -1.2157e-01,\n            8.5093e-02, -3.6941e-02],\n          [-9.9700e-02, -3.4215e-01, -1.1515e-01,  ...,  5.4164e-02,\n           -9.3755e-02, -8.4116e-02],\n          [ 5.4445e-02, -6.6068e-02,  5.8879e-02,  ...,  1.9190e-01,\n           -1.2604e-02, -2.2807e-02]],\n\n         [[-1.9358e-01, -1.8990e-01, -9.7534e-02,  ..., -8.1788e-02,\n           -1.3441e-02, -1.8948e-01],\n          [-9.8527e-02, -4.8322e-02,  9.2466e-02,  ..., -8.9089e-02,\n            7.7822e-02,  1.6755e-01],\n          [ 1.3342e-01, -1.3016e-01, -8.2479e-03,  ...,  1.2701e-01,\n            1.0255e-01,  1.1964e-01],\n          ...,\n          [ 1.1038e-01,  2.3376e-01, -2.8917e-01,  ..., -2.4965e-01,\n            1.4038e-01,  8.6206e-02],\n          [-9.8328e-02, -5.8673e-02,  6.6635e-02,  ..., -7.9394e-02,\n           -1.5981e-01, -4.0770e-02],\n          [ 2.4024e-01,  5.2184e-02, -8.7422e-02,  ...,  2.2398e-02,\n           -1.4115e-01, -1.4158e-03]],\n\n         [[-1.3548e-01, -1.0246e-01, -1.2582e-01,  ...,  7.9030e-02,\n           -1.2130e-01, -1.9808e-02],\n          [-5.5085e-02, -1.8556e-01, -3.1668e-02,  ..., -2.1046e-01,\n            2.9263e-01,  9.1485e-02],\n          [-9.0438e-02,  8.0907e-02, -1.1366e-01,  ...,  1.2785e-01,\n           -7.0308e-02, -2.7135e-02],\n          ...,\n          [ 2.0762e-02,  1.5069e-01, -1.5205e-01,  ..., -1.5513e-01,\n            7.8593e-02, -2.2948e-02],\n          [-1.0004e-01, -6.4745e-02,  1.0709e-01,  ...,  1.3004e-01,\n           -7.9225e-02, -1.3777e-01],\n          [-1.5144e-01, -1.5017e-01,  1.0207e-01,  ...,  1.0568e-01,\n           -1.2264e-01, -6.2729e-02]]]], device='cuda:0').device
+_ TestBlockSparseRingMultiheadDilatedAttention.test_multihead_forward_pass[medium] _
+tests/test_block_sparse_attention.py:302: in test_multihead_forward_pass
+    output, attention_weights = attention(query, need_weights=True)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1739: in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1750: in _call_impl
+    return forward_call(*args, **kwargs)
+dilated_attention_pytorch/block_sparse_ring_multihead_dilated_attention.py:309: in forward
+    attention_output, attention_weights = self.attention(
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1739: in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1750: in _call_impl
+    return forward_call(*args, **kwargs)
+dilated_attention_pytorch/block_sparse_ring_dilated_attention.py:738: in forward
+    output, attention_weights = self._block_sparse_ring_attention(
+dilated_attention_pytorch/block_sparse_ring_dilated_attention.py:822: in _block_sparse_ring_attention
+    step_output, step_weights = self._process_sparse_ring_step(
+dilated_attention_pytorch/block_sparse_ring_dilated_attention.py:941: in _process_sparse_ring_step
+    attention_weights = torch.zeros(
+E   torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.00 GiB. GPU 0 has a total capacity of 7.88 GiB of which 1.83 GiB is free. Process 2349839 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 2.81 GiB memory in use. Of the allocated memory 2.52 GiB is allocated by PyTorch, and 174.87 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+_ TestBlockSparseAdvancedDistributedAttention.test_hierarchical_pattern_generation _
+tests/test_block_sparse_attention.py:450: in test_hierarchical_pattern_generation
+    assert local_sparsity > global_sparsity > inter_node_sparsity
+E   assert 0.0 > 0.26318359375
+_ TestBlockSparseAdvancedDistributedAttention.test_distributed_attention_forward _
+tests/test_block_sparse_attention.py:489: in test_distributed_attention_forward
+    attention = BlockSparseRingDistributedDilatedAttention(
+dilated_attention_pytorch/block_sparse_ring_distributed_dilated_attention.py:866: in __init__
+    super().__init__(segment_lengths, dilation_rates, **kwargs)
+E   TypeError: RingDistributedDilatedAttention.__init__() missing 2 required positional arguments: 'segment_lengths' and 'dilation_rates'
+________________ TestSparsePatternUtils.test_pattern_statistics ________________
+tests/test_block_sparse_attention.py:596: in test_pattern_statistics
+    stats = pattern_statistics(pattern)
+E   NameError: name 'pattern_statistics' is not defined
+________ TestAttentionComputation.test_standard_attention_with_dropout _________
+tests/test_core_attention_utils.py:175: in test_standard_attention_with_dropout
+    output1 = standard_attention(q, k, v, dropout_p=0.5)
+dilated_attention_pytorch/utils/attention_utils.py:329: in standard_attention
+    if dropout_p > 0 and q.training:
+E   AttributeError: 'Tensor' object has no attribute 'training'
+____________ TestAttentionComputation.test_optimize_attention_flash ____________
+../../../apps/anaconda3/lib/python3.12/unittest/mock.py:1392: in patched
+    with self.decoration_helper(patched,
+../../../apps/anaconda3/lib/python3.12/contextlib.py:137: in __enter__
+    return next(self.gen)
+../../../apps/anaconda3/lib/python3.12/unittest/mock.py:1374: in decoration_helper
+    arg = exit_stack.enter_context(patching)
+../../../apps/anaconda3/lib/python3.12/contextlib.py:526: in enter_context
+    result = _enter(cm)
+../../../apps/anaconda3/lib/python3.12/unittest/mock.py:1447: in __enter__
+    self.target = self.getter()
+../../../apps/anaconda3/lib/python3.12/pkgutil.py:528: in resolve_name
+    result = getattr(result, p)
+E   AttributeError: module 'dilated_attention_pytorch.core' has no attribute 'attention_utils'
+____________ TestAttentionComputation.test_optimize_attention_sdpa _____________
+../../../apps/anaconda3/lib/python3.12/unittest/mock.py:1392: in patched
+    with self.decoration_helper(patched,
+../../../apps/anaconda3/lib/python3.12/contextlib.py:137: in __enter__
+    return next(self.gen)
+../../../apps/anaconda3/lib/python3.12/unittest/mock.py:1374: in decoration_helper
+    arg = exit_stack.enter_context(patching)
+../../../apps/anaconda3/lib/python3.12/contextlib.py:526: in enter_context
+    result = _enter(cm)
+../../../apps/anaconda3/lib/python3.12/unittest/mock.py:1447: in __enter__
+    self.target = self.getter()
+../../../apps/anaconda3/lib/python3.12/pkgutil.py:528: in resolve_name
+    result = getattr(result, p)
+E   AttributeError: module 'dilated_attention_pytorch.core' has no attribute 'attention_utils'
+___________________ TestAutoSelection.test_auto_select_v100 ____________________
+tests/test_core_factory.py:225: in test_auto_select_v100
+    assert attention_type == "standard"
+E   AssertionError: assert 'improved' == 'standard'
+E     - standard
+E     + improved
+____________________ TestAutoSelection.test_auto_select_cpu ____________________
+tests/test_core_factory.py:231: in test_auto_select_cpu
+    assert attention_type == "standard"
+E   AssertionError: assert 'improved' == 'standard'
+E     - standard
+E     + improved
+_______________ TestConfigurations.test_dilated_attention_config _______________
+tests/test_core_refactoring.py:97: in test_dilated_attention_config
+    DilatedAttentionConfig(segment_lengths=[2048], dilation_rates=[1, 2])
+<string>:9: in __init__
+    ???
+dilated_attention_pytorch/core/config.py:49: in __post_init__
+    self.validate_segment_dilation_match(self.segment_lengths, self.dilation_rates)
+dilated_attention_pytorch/utils/validation.py:44: in validate_segment_dilation_match
+    raise ValueError(
+E   ValueError: segment_lengths and dilation_rates must have the same length: 1 != 2
+
+During handling of the above exception, another exception occurred:
+tests/test_core_refactoring.py:96: in test_dilated_attention_config
+    with pytest.raises(ValueError, match="must have same length"):
+E   AssertionError: Regex pattern did not match.
+E    Regex: 'must have same length'
+E    Input: 'segment_lengths and dilation_rates must have the same length: 1 != 2'
+____________ TestDistributedRingAttention.test_ring_size_validation ____________
+tests/test_distributed_ring_attention.py:127: in test_ring_size_validation
+    attention = RingDilatedAttention(
+dilated_attention_pytorch/ring_dilated_attention.py:303: in __init__
+    self._setup_ring_communication()
+dilated_attention_pytorch/ring_dilated_attention.py:317: in _setup_ring_communication
+    self.ring_group = dist.new_group(ranks=ring_ranks)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:95: in wrapper
+    func_return = func(*args, **kwargs)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:4981: in new_group
+    return _new_group_with_tag(
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:5011: in _new_group_with_tag
+    default_pg = _get_default_group()
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:1302: in _get_default_group
+    raise ValueError(
+E   ValueError: Default process group has not been initialized, please make sure to call init_process_group.
+____________ TestDistributedRingAttention.test_single_gpu_fallback _____________
+tests/test_distributed_ring_attention.py:148: in test_single_gpu_fallback
+    assert attention.ring_size == 1
+E   assert 4 == 1
+E    +  where 4 = RingDilatedAttention(segment_lengths=[1024, 2048], dilation_rates=[1, 2], dropout=0.0).ring_size
+_ TestDistributedRingAttention.test_communication_error_handling[DistBackendError] _
+tests/test_distributed_ring_attention.py:161: in test_communication_error_handling
+    attention = RingDilatedAttention(
+dilated_attention_pytorch/ring_dilated_attention.py:303: in __init__
+    self._setup_ring_communication()
+dilated_attention_pytorch/ring_dilated_attention.py:317: in _setup_ring_communication
+    self.ring_group = dist.new_group(ranks=ring_ranks)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:95: in wrapper
+    func_return = func(*args, **kwargs)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:4981: in new_group
+    return _new_group_with_tag(
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:5011: in _new_group_with_tag
+    default_pg = _get_default_group()
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:1302: in _get_default_group
+    raise ValueError(
+E   ValueError: Default process group has not been initialized, please make sure to call init_process_group.
+_ TestDistributedRingAttention.test_communication_error_handling[RuntimeError] _
+tests/test_distributed_ring_attention.py:161: in test_communication_error_handling
+    attention = RingDilatedAttention(
+dilated_attention_pytorch/ring_dilated_attention.py:303: in __init__
+    self._setup_ring_communication()
+dilated_attention_pytorch/ring_dilated_attention.py:317: in _setup_ring_communication
+    self.ring_group = dist.new_group(ranks=ring_ranks)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:95: in wrapper
+    func_return = func(*args, **kwargs)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:4981: in new_group
+    return _new_group_with_tag(
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:5011: in _new_group_with_tag
+    default_pg = _get_default_group()
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:1302: in _get_default_group
+    raise ValueError(
+E   ValueError: Default process group has not been initialized, please make sure to call init_process_group.
+_ TestDistributedRingAttention.test_communication_error_handling[OutOfMemoryError] _
+tests/test_distributed_ring_attention.py:161: in test_communication_error_handling
+    attention = RingDilatedAttention(
+dilated_attention_pytorch/ring_dilated_attention.py:303: in __init__
+    self._setup_ring_communication()
+dilated_attention_pytorch/ring_dilated_attention.py:317: in _setup_ring_communication
+    self.ring_group = dist.new_group(ranks=ring_ranks)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:95: in wrapper
+    func_return = func(*args, **kwargs)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:4981: in new_group
+    return _new_group_with_tag(
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:5011: in _new_group_with_tag
+    default_pg = _get_default_group()
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py:1302: in _get_default_group
+    raise ValueError(
+E   ValueError: Default process group has not been initialized, please make sure to call init_process_group.
+_____ TestBlockSparseDistributed.test_distributed_sparse_config_validation _____
+tests/test_distributed_ring_attention.py:187: in test_distributed_sparse_config_validation
+    config = DistributedSparseConfig(
+E   TypeError: DistributedSparseConfig.__init__() got an unexpected keyword argument 'hierarchical_stages'
+_________________ TestErrorRecovery.test_forward_error_cleanup _________________
+tests/test_distributed_ring_attention.py:215: in test_forward_error_cleanup
+    attention = BlockSparseRingDistributedDilatedAttention(
+dilated_attention_pytorch/block_sparse_ring_distributed_dilated_attention.py:866: in __init__
+    super().__init__(segment_lengths, dilation_rates, **kwargs)
+E   TypeError: RingDistributedDilatedAttention.__init__() got an unexpected keyword argument 'enable_memory_pool'
+______________ TestErrorRecovery.test_distributed_error_recovery _______________
+tests/test_distributed_ring_attention.py:252: in test_distributed_error_recovery
+    attention = RingDistributedDilatedAttention(
+E   TypeError: RingDistributedDilatedAttention.__init__() got an unexpected keyword argument 'enable_deepspeed'
+______________________ TestEdgeCases.test_empty_sequence _______________________
+tests/test_distributed_ring_attention.py:285: in test_empty_sequence
+    with pytest.raises(ValueError, match="Sequence length.*must be divisible"):
+E   Failed: DID NOT RAISE <class 'ValueError'>
+________________________ TestEdgeCases.test_single_head ________________________
+tests/test_distributed_ring_attention.py:299: in test_single_head
+    output = attention(q, k, v)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1739: in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1750: in _call_impl
+    return forward_call(*args, **kwargs)
+dilated_attention_pytorch/ring_dilated_attention.py:677: in forward
+    return self._single_device_forward(q, k, v, is_causal)
+dilated_attention_pytorch/ring_dilated_attention.py:686: in _single_device_forward
+    return self._dilated_attention_block(q, k, v, is_causal, ring_step=0)
+dilated_attention_pytorch/ring_dilated_attention.py:480: in _dilated_attention_block
+    gs, head_ranges = self._get_head_groups(h)
+dilated_attention_pytorch/core/base.py:132: in _get_head_groups
+    self.validate_num_heads(num_heads, self.num_groups)
+dilated_attention_pytorch/utils/validation.py:310: in validate_num_heads
+    raise ValueError(
+E   ValueError: num_heads (1) must be >= num_groups (2)
+____________ TestInputValidation.test_dilated_attention_validation _____________
+tests/test_edge_cases_validation.py:43: in test_dilated_attention_validation
+    DilatedAttention(
+dilated_attention_pytorch/dilated_attention.py:58: in __init__
+    config = DilatedAttentionConfig(
+<string>:9: in __init__
+    ???
+dilated_attention_pytorch/core/config.py:56: in __post_init__
+    self.validate_dropout_prob(self.dropout)
+dilated_attention_pytorch/utils/validation.py:256: in validate_dropout_prob
+    raise ValueError(f"{name} must be between 0.0 and 1.0, got {dropout}")
+E   ValueError: dropout must be between 0.0 and 1.0, got 1.5
+
+During handling of the above exception, another exception occurred:
+tests/test_edge_cases_validation.py:42: in test_dilated_attention_validation
+    with pytest.raises(ValueError, match="must be between 0 and 1"):
+E   AssertionError: Regex pattern did not match.
+E    Regex: 'must be between 0 and 1'
+E    Input: 'dropout must be between 0.0 and 1.0, got 1.5'
+___________ TestInputValidation.test_multihead_attention_validation ____________
+tests/test_edge_cases_validation.py:59: in test_multihead_attention_validation
+    with pytest.raises(ValueError, match="must be divisible by 8"):
+E   Failed: DID NOT RAISE <class 'ValueError'>
+_____________ TestBoundaryConditions.test_many_segments_few_heads ______________
+tests/test_edge_cases_validation.py:167: in test_many_segments_few_heads
+    output = attention(q, k, v)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1739: in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1750: in _call_impl
+    return forward_call(*args, **kwargs)
+dilated_attention_pytorch/dilated_attention.py:107: in forward
+    group_sizes, head_ranges = self._get_head_groups(h)
+dilated_attention_pytorch/core/base.py:132: in _get_head_groups
+    self.validate_num_heads(num_heads, self.num_groups)
+dilated_attention_pytorch/utils/validation.py:310: in validate_num_heads
+    raise ValueError(
+E   ValueError: num_heads (3) must be >= num_groups (5)
+_______________ TestSparsityPatterns.test_block_size_edge_cases ________________
+tests/test_edge_cases_validation.py:245: in test_block_size_edge_cases
+    output = attention(q, k, v)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1739: in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1750: in _call_impl
+    return forward_call(*args, **kwargs)
+dilated_attention_pytorch/block_sparse_ring_dilated_attention.py:738: in forward
+    output, attention_weights = self._block_sparse_ring_attention(
+dilated_attention_pytorch/block_sparse_ring_dilated_attention.py:812: in _block_sparse_ring_attention
+    q_blocks = q.view(batch, num_blocks, block_size, num_heads, head_dim)
+E   RuntimeError: shape '[1, 0, 512, 4, 64]' is invalid for input of size 65536
+_______________ TestDeviceCompatibility.test_mixed_device_inputs _______________
+tests/test_edge_cases_validation.py:381: in test_mixed_device_inputs
+    with pytest.raises((RuntimeError, AssertionError)):
+E   Failed: DID NOT RAISE (<class 'RuntimeError'>, <class 'AssertionError'>)
+_______ TestFactoryIntegration.test_auto_selection_creates_valid_module ________
+tests/test_factory_integration.py:42: in test_auto_selection_creates_valid_module
+    attention = create_multihead_dilated_attention(
+dilated_attention_pytorch/core/factory.py:167: in create_multihead_dilated_attention
+    raise ValueError(
+E   ValueError: Unknown attention type 'improved'. Available types: []
+__________ TestFactoryIntegration.test_config_objects_work_correctly ___________
+tests/test_factory_integration.py:123: in test_config_objects_work_correctly
+    attention = create_multihead_dilated_attention(
+dilated_attention_pytorch/core/factory.py:167: in create_multihead_dilated_attention
+    raise ValueError(
+E   ValueError: Unknown attention type 'improved'. Available types: []
+______________ TestFactoryIntegration.test_backward_compatibility ______________
+tests/test_factory_integration.py:156: in test_backward_compatibility
+    new_attention = create_multihead_dilated_attention(
+dilated_attention_pytorch/core/factory.py:167: in create_multihead_dilated_attention
+    raise ValueError(
+E   ValueError: Unknown attention type 'improved'. Available types: []
+________ TestFactoryIntegration.test_block_sparse_attention_integration ________
+tests/test_factory_integration.py:182: in test_block_sparse_attention_integration
+    attention = create_block_sparse_attention(
+dilated_attention_pytorch/core/factory.py:326: in create_block_sparse_attention
+    return create_multihead_dilated_attention(
+dilated_attention_pytorch/core/factory.py:167: in create_multihead_dilated_attention
+    raise ValueError(
+E   ValueError: Unknown attention type 'block_sparse_ring'. Available types: []
+_____________ TestFactoryIntegration.test_mixed_precision_support ______________
+tests/test_factory_integration.py:226: in test_mixed_precision_support
+    attention = create_multihead_dilated_attention(
+dilated_attention_pytorch/core/factory.py:167: in create_multihead_dilated_attention
+    raise ValueError(
+E   ValueError: Unknown attention type 'improved'. Available types: []
+_______________ TestFactoryIntegration.test_in_transformer_model _______________
+tests/test_factory_integration.py:288: in test_in_transformer_model
+    model = TestTransformer().to(device).to(dtype)
+tests/test_factory_integration.py:270: in __init__
+    create_multihead_dilated_attention(
+dilated_attention_pytorch/core/factory.py:167: in create_multihead_dilated_attention
+    raise ValueError(
+E   ValueError: Unknown attention type 'improved'. Available types: []
+___________ TestFactoryIntegration.test_performance_characteristics ____________
+tests/test_factory_integration.py:313: in test_performance_characteristics
+    ring = create_multihead_dilated_attention(
+dilated_attention_pytorch/core/factory.py:167: in create_multihead_dilated_attention
+    raise ValueError(
+E   ValueError: Unknown attention type 'ring'. Available types: []
+______________________ test_attention_memory_optimization ______________________
+tests/test_memory_optimizations.py:125: in test_attention_memory_optimization
+    multihead_stats = measure_memory_and_speed(run_multihead_attention)
+tests/test_memory_optimizations.py:28: in measure_memory_and_speed
+    result = func(*args, **kwargs)
+tests/test_memory_optimizations.py:120: in run_multihead_attention
+    output, _ = multihead_attention(
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1739: in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1750: in _call_impl
+    return forward_call(*args, **kwargs)
+dilated_attention_pytorch/improved_multihead_dilated_attention.py:215: in forward
+    qkv = self.qkv_proj(query)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1739: in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1750: in _call_impl
+    return forward_call(*args, **kwargs)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/linear.py:125: in forward
+    return F.linear(input, self.weight, self.bias)
+E   RuntimeError: mat1 and mat2 must have the same dtype, but got BFloat16 and Float
+----------------------------- Captured stdout call -----------------------------
+Testing on device: cuda
+Using dtype: torch.bfloat16
+Sequence length: 16,384
+Total parameters per attention: ~1.8M
+============================================================
+Testing ImprovedDilatedAttention...
+Execution time: 0.0176s
+GPU memory used: 48.0 MB
+CPU peak memory: 0.3 MB
+
+Testing ImprovedMultiheadDilatedAttention...
+_______________________________ test_edge_cases ________________________________
+tests/test_unfold_implementation.py:206: in test_edge_cases
+    orig_out = orig(q, k, v)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1739: in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+../../../apps/anaconda3/lib/python3.12/site-packages/torch/nn/modules/module.py:1750: in _call_impl
+    return forward_call(*args, **kwargs)
+dilated_attention_pytorch/ring_dilated_attention.py:669: in forward
+    self._validate_forward_inputs(query, key, value, attention_mask)
+dilated_attention_pytorch/core/base.py:189: in _validate_forward_inputs
+    self.validate_sequence_length(seq_len, self.segment_lengths)
+dilated_attention_pytorch/utils/validation.py:143: in validate_sequence_length
+    raise ValueError(
+E   ValueError: Sequence length (1000) must be divisible by the largest segment length (1024). Consider padding sequence to 1024
+----------------------------- Captured stdout call -----------------------------
+
+
+Testing Edge Cases
+================================================================================
+
+1. Non-divisible sequence lengths:
+  Testing seq_len=1000
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_factory_integration.py:99: Implementation improved not available: Unknown attention type 'improved'. Available types: []
+FAILED tests/test_block_sparse_attention.py::TestSparsePatternGeneration::test_pattern_generation[0.25-dilated_sparse]
+FAILED tests/test_block_sparse_attention.py::TestSparsePatternGeneration::test_pattern_generation[0.5-local_window]
+FAILED tests/test_block_sparse_attention.py::TestSparsePatternGeneration::test_pattern_generation[0.5-dilated_sparse]
+FAILED tests/test_block_sparse_attention.py::TestSparsePatternGeneration::test_pattern_generation[0.5-global_local]
+FAILED tests/test_block_sparse_attention.py::TestBlockSparseRingDilatedAttention::test_forward_pass[0.25-small]
+FAILED tests/test_block_sparse_attention.py::TestBlockSparseRingDilatedAttention::test_forward_pass[0.25-medium]
+FAILED tests/test_block_sparse_attention.py::TestBlockSparseRingDilatedAttention::test_forward_pass[0.5-small]
+FAILED tests/test_block_sparse_attention.py::TestBlockSparseRingDilatedAttention::test_forward_pass[0.5-medium]
+FAILED tests/test_block_sparse_attention.py::TestBlockSparseRingMultiheadDilatedAttention::test_multihead_forward_pass[medium]
+FAILED tests/test_block_sparse_attention.py::TestBlockSparseAdvancedDistributedAttention::test_hierarchical_pattern_generation
+FAILED tests/test_block_sparse_attention.py::TestBlockSparseAdvancedDistributedAttention::test_distributed_attention_forward
+FAILED tests/test_block_sparse_attention.py::TestSparsePatternUtils::test_pattern_statistics
+FAILED tests/test_core_attention_utils.py::TestAttentionComputation::test_standard_attention_with_dropout
+FAILED tests/test_core_attention_utils.py::TestAttentionComputation::test_optimize_attention_flash
+FAILED tests/test_core_attention_utils.py::TestAttentionComputation::test_optimize_attention_sdpa
+FAILED tests/test_core_factory.py::TestAutoSelection::test_auto_select_v100
+FAILED tests/test_core_factory.py::TestAutoSelection::test_auto_select_cpu - ...
+FAILED tests/test_core_refactoring.py::TestConfigurations::test_dilated_attention_config
+FAILED tests/test_distributed_ring_attention.py::TestDistributedRingAttention::test_ring_size_validation
+FAILED tests/test_distributed_ring_attention.py::TestDistributedRingAttention::test_single_gpu_fallback
+FAILED tests/test_distributed_ring_attention.py::TestDistributedRingAttention::test_communication_error_handling[DistBackendError]
+FAILED tests/test_distributed_ring_attention.py::TestDistributedRingAttention::test_communication_error_handling[RuntimeError]
+FAILED tests/test_distributed_ring_attention.py::TestDistributedRingAttention::test_communication_error_handling[OutOfMemoryError]
+FAILED tests/test_distributed_ring_attention.py::TestBlockSparseDistributed::test_distributed_sparse_config_validation
+FAILED tests/test_distributed_ring_attention.py::TestErrorRecovery::test_forward_error_cleanup
+FAILED tests/test_distributed_ring_attention.py::TestErrorRecovery::test_distributed_error_recovery
+FAILED tests/test_distributed_ring_attention.py::TestEdgeCases::test_empty_sequence
+FAILED tests/test_distributed_ring_attention.py::TestEdgeCases::test_single_head
+FAILED tests/test_edge_cases_validation.py::TestInputValidation::test_dilated_attention_validation
+FAILED tests/test_edge_cases_validation.py::TestInputValidation::test_multihead_attention_validation
+FAILED tests/test_edge_cases_validation.py::TestBoundaryConditions::test_many_segments_few_heads
+FAILED tests/test_edge_cases_validation.py::TestSparsityPatterns::test_block_size_edge_cases
+FAILED tests/test_edge_cases_validation.py::TestDeviceCompatibility::test_mixed_device_inputs
+FAILED tests/test_factory_integration.py::TestFactoryIntegration::test_auto_selection_creates_valid_module
+FAILED tests/test_factory_integration.py::TestFactoryIntegration::test_config_objects_work_correctly
+FAILED tests/test_factory_integration.py::TestFactoryIntegration::test_backward_compatibility
+FAILED tests/test_factory_integration.py::TestFactoryIntegration::test_block_sparse_attention_integration
+FAILED tests/test_factory_integration.py::TestFactoryIntegration::test_mixed_precision_support
+FAILED tests/test_factory_integration.py::TestFactoryIntegration::test_in_transformer_model
+FAILED tests/test_factory_integration.py::TestFactoryIntegration::test_performance_characteristics
+FAILED tests/test_memory_optimizations.py::test_attention_memory_optimization
+FAILED tests/test_unfold_implementation.py::test_edge_cases - ValueError: Seq...
+============ 42 failed, 272 passed, 1 skipped in 106.41s (0:01:46) =============

@@ -184,9 +184,7 @@ class BlockSparseMemoryPool:
 
         # Clean up access counts for keys not in use
         active_keys = set(self.pool.keys()) | set(self.hot_cache.keys())
-        self.access_counts = {
-            k: v for k, v in self.access_counts.items() if k in active_keys
-        }
+        self.access_counts = {k: v for k, v in self.access_counts.items() if k in active_keys}
 
         self.last_cleanup_time = time.time()
 
@@ -287,9 +285,7 @@ class SparsePatternGenerator:
 
         return pattern.to(device)
 
-    def _create_local_window_pattern(
-        self, num_blocks: int, device: torch.device
-    ) -> torch.Tensor:
+    def _create_local_window_pattern(self, num_blocks: int, device: torch.device) -> torch.Tensor:
         """Create local window sparsity pattern"""
         pattern = torch.zeros(num_blocks, num_blocks, dtype=torch.bool, device=device)
         window_blocks = self.config.local_window_size // self.config.block_size
@@ -301,9 +297,7 @@ class SparsePatternGenerator:
 
         return pattern
 
-    def _create_dilated_sparse_pattern(
-        self, num_blocks: int, device: torch.device
-    ) -> torch.Tensor:
+    def _create_dilated_sparse_pattern(self, num_blocks: int, device: torch.device) -> torch.Tensor:
         """Create dilated sparsity pattern matching Ring Attention structure"""
         pattern = torch.zeros(num_blocks, num_blocks, dtype=torch.bool, device=device)
 
@@ -319,9 +313,7 @@ class SparsePatternGenerator:
 
         return pattern
 
-    def _create_global_local_pattern(
-        self, num_blocks: int, device: torch.device
-    ) -> torch.Tensor:
+    def _create_global_local_pattern(self, num_blocks: int, device: torch.device) -> torch.Tensor:
         """Create global + local attention pattern"""
         pattern = torch.zeros(num_blocks, num_blocks, dtype=torch.bool, device=device)
 
@@ -340,9 +332,7 @@ class SparsePatternGenerator:
 
         return pattern
 
-    def _create_adaptive_pattern(
-        self, num_blocks: int, device: torch.device
-    ) -> torch.Tensor:
+    def _create_adaptive_pattern(self, num_blocks: int, device: torch.device) -> torch.Tensor:
         """Create adaptive pattern based on attention history"""
         # Start with dilated sparse pattern as base
         pattern = self._create_dilated_sparse_pattern(num_blocks, device)
@@ -352,20 +342,14 @@ class SparsePatternGenerator:
             recent_attention = self.adaptive_history[-1]
             if recent_attention.size(0) == num_blocks:
                 # Boost important regions from history
-                importance_scores = recent_attention.mean(
-                    dim=-1
-                )  # Average across key blocks
-                threshold = torch.quantile(
-                    importance_scores, 1.0 - self.config.sparsity_ratio
-                )
+                importance_scores = recent_attention.mean(dim=-1)  # Average across key blocks
+                threshold = torch.quantile(importance_scores, 1.0 - self.config.sparsity_ratio)
                 adaptive_boost = importance_scores > threshold
 
                 # Expand important query blocks
                 for i, is_important in enumerate(adaptive_boost):
                     if is_important:
-                        pattern[i, :] = pattern[i, :] | (
-                            importance_scores > threshold * 0.5
-                        )
+                        pattern[i, :] = pattern[i, :] | (importance_scores > threshold * 0.5)
 
         return pattern
 
@@ -377,13 +361,15 @@ class SparsePatternGenerator:
         if pattern.numel() == 0:
             return pattern
 
-        current_sparsity = pattern.float().mean().item()
+        current_density = pattern.float().mean().item()
 
-        if current_sparsity < self.config.min_sparsity:
+        # Allow small tolerance (2%)
+        if abs(current_density - target_sparsity) < 0.02:
+            return pattern
+
+        if current_density > target_sparsity:
             # Pattern too dense, remove some connections
-            num_remove = int(
-                (current_sparsity - self.config.min_sparsity) * pattern.numel()
-            )
+            num_remove = int((current_density - target_sparsity) * pattern.numel())
 
             active_indices = torch.nonzero(pattern, as_tuple=False)
             if len(active_indices) > num_remove:
@@ -394,11 +380,9 @@ class SparsePatternGenerator:
                     if i != j:  # Preserve diagonal
                         pattern[i, j] = False
 
-        elif current_sparsity > self.config.max_sparsity:
+        else:
             # Pattern too sparse, add some connections
-            num_add = int(
-                (self.config.max_sparsity - current_sparsity) * pattern.numel()
-            )
+            num_add = int((target_sparsity - current_density) * pattern.numel())
             inactive_indices = torch.nonzero(~pattern, as_tuple=False)
             if len(inactive_indices) > num_add:
                 # Add connections randomly
@@ -418,14 +402,10 @@ class SparsePatternGenerator:
             num_blocks = seq_len // block_size
 
             # Pool attention weights to block level
-            reshaped = attention_weights.view(
-                -1, num_blocks, block_size, num_blocks, block_size
-            )
+            reshaped = attention_weights.view(-1, num_blocks, block_size, num_blocks, block_size)
             block_attention = reshaped.mean(dim=(2, 4))  # Average within blocks
 
-            self.adaptive_history.append(
-                block_attention.mean(dim=0)
-            )  # Average across batch/heads
+            self.adaptive_history.append(block_attention.mean(dim=0))  # Average across batch/heads
 
             # Keep only recent history
             if len(self.adaptive_history) > 10:
@@ -475,9 +455,7 @@ class ContentAdaptiveSparsity(nn.Module):
         k_block_avg = k_blocks.mean(dim=2)
 
         # Predict individual block importance
-        q_importance = self.importance_predictor(
-            q_block_avg
-        )  # [batch, num_blocks, heads, 1]
+        q_importance = self.importance_predictor(q_block_avg)  # [batch, num_blocks, heads, 1]
         k_importance = self.importance_predictor(k_block_avg)
 
         # Predict block-pair interactions
@@ -493,9 +471,7 @@ class ContentAdaptiveSparsity(nn.Module):
 
         # Combine importance and interaction scores
         combined_scores = (
-            q_importance.unsqueeze(2)
-            * k_importance.unsqueeze(1)
-            * interaction_scores.unsqueeze(-1)
+            q_importance.unsqueeze(2) * k_importance.unsqueeze(1) * interaction_scores.unsqueeze(-1)
         ).squeeze(-1)
 
         # Create sparse pattern by selecting top-k block pairs
@@ -561,27 +537,20 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
 
         # Validate quality threshold
         if not 0.0 <= quality_threshold <= 1.0:
-            raise ValueError(
-                f"quality_threshold must be between 0 and 1, got {quality_threshold}"
-            )
+            raise ValueError(f"quality_threshold must be between 0 and 1, got {quality_threshold}")
 
         # Sparsity configuration
         self.sparse_config = sparse_config or SparsePatternConfig()
 
         # Validate sparse config
-        if (
-            self.sparse_config.sparsity_ratio <= 0.0
-            or self.sparse_config.sparsity_ratio >= 1.0
-        ):
+        if self.sparse_config.sparsity_ratio <= 0.0 or self.sparse_config.sparsity_ratio >= 1.0:
             raise ValueError(
                 f"sparsity_ratio must be between 0 and 1 (exclusive), "
                 f"got {self.sparse_config.sparsity_ratio}"
             )
 
         if self.sparse_config.block_size <= 0:
-            raise ValueError(
-                f"block_size must be positive, got {self.sparse_config.block_size}"
-            )
+            raise ValueError(f"block_size must be positive, got {self.sparse_config.block_size}")
 
         if self.sparse_config.local_window_size <= 0:
             raise ValueError(
@@ -601,9 +570,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
 
         # Memory pool
         if self.enable_memory_pool:
-            self.memory_pool = BlockSparseMemoryPool(
-                max_pool_size=50, hot_cache_size=10
-            )
+            self.memory_pool = BlockSparseMemoryPool(max_pool_size=50, hot_cache_size=10)
         else:
             self.memory_pool = None
 
@@ -637,11 +604,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
         self._pattern_lock = threading.Lock()
 
         # Communication optimization
-        if (
-            self.enable_packed_comm
-            and hasattr(self, "ring_size")
-            and self.ring_size > 1
-        ):
+        if self.enable_packed_comm and hasattr(self, "ring_size") and self.ring_size > 1:
             self._init_packed_comm_buffers()
 
         # Versioned pattern cache
@@ -679,11 +642,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
         self.pack_stream = None
         self.comm_stream = None
 
-        if (
-            torch.cuda.is_available()
-            and hasattr(self, "use_async_comm")
-            and self.use_async_comm
-        ):
+        if torch.cuda.is_available() and hasattr(self, "use_async_comm") and self.use_async_comm:
             self.pack_stream = torch.cuda.Stream()
             self.comm_stream = torch.cuda.Stream()
 
@@ -743,10 +702,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
         self._update_performance_stats(sparse_pattern, attention_weights)
 
         # Update adaptive pattern history if applicable
-        if (
-            attention_weights is not None
-            and self.sparse_config.pattern_type == "adaptive"
-        ):
+        if attention_weights is not None and self.sparse_config.pattern_type == "adaptive":
             self.pattern_generator.update_adaptive_history(attention_weights)
 
         if return_attention_weights:
@@ -765,16 +721,10 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
             return pattern
         else:
             # Use predefined pattern
-            pattern = self.pattern_generator.create_pattern(
-                seq_len, num_heads, q.device
-            )
+            pattern = self.pattern_generator.create_pattern(seq_len, num_heads, q.device)
             # Expand for batch and heads if needed
             if pattern.dim() == 2:
-                pattern = (
-                    pattern.unsqueeze(0)
-                    .unsqueeze(0)
-                    .expand(q.size(0), num_heads, -1, -1)
-                )
+                pattern = pattern.unsqueeze(0).unsqueeze(0).expand(q.size(0), num_heads, -1, -1)
             return pattern
 
     def _block_sparse_ring_attention(
@@ -869,9 +819,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
                 "Falling back to standard implementation."
             )
             # Fall back to standard sparse attention
-            return self._block_sparse_ring_attention(
-                q, k, v, sparse_pattern, is_causal, False
-            )
+            return self._block_sparse_ring_attention(q, k, v, sparse_pattern, is_causal, False)
 
         # Validate block size for FA3
         if block_size % 64 != 0 and self.is_h100:
@@ -909,14 +857,10 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
                 f"Flash Attention 3 failed with error: {e}. Falling back to standard implementation."
             )
             # Fall back to standard implementation
-            return self._block_sparse_ring_attention(
-                q, k, v, sparse_pattern, is_causal, False
-            )
+            return self._block_sparse_ring_attention(q, k, v, sparse_pattern, is_causal, False)
 
         # Reshape back
-        output = output_fa3.transpose(
-            1, 2
-        ).contiguous()  # [batch, seq_len, num_heads, head_dim]
+        output = output_fa3.transpose(1, 2).contiguous()  # [batch, seq_len, num_heads, head_dim]
         return output, None
 
     def _process_sparse_ring_step(
@@ -981,9 +925,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
             # Apply causal mask if needed
             if is_causal:
                 causal_mask = torch.triu(
-                    torch.ones(
-                        block_size, block_size, device=scores.device, dtype=torch.bool
-                    ),
+                    torch.ones(block_size, block_size, device=scores.device, dtype=torch.bool),
                     diagonal=1,
                 )
                 scores.masked_fill_(causal_mask, float("-inf"))
@@ -993,9 +935,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
             block_outputs = torch.bmm(attn_probs, v_active)
 
             # Accumulate results
-            output_blocks[
-                batch_indices, q_block_indices, :, head_idx, :
-            ] += block_outputs
+            output_blocks[batch_indices, q_block_indices, :, head_idx, :] += block_outputs
 
             # Store attention weights if requested
             if return_attention_weights:
@@ -1007,9 +947,9 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
                     q_end = (q_idx + 1) * block_size
                     k_start = k_idx * block_size
                     k_end = (k_idx + 1) * block_size
-                    attention_weights[b_idx, head_idx, q_start:q_end, k_start:k_end] = (
-                        attn_probs[idx]
-                    )
+                    attention_weights[b_idx, head_idx, q_start:q_end, k_start:k_end] = attn_probs[
+                        idx
+                    ]
 
         return output_blocks, attention_weights
 
@@ -1064,9 +1004,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
                 return self._ring_rotate_kv_packed(k_blocks, v_blocks)
             else:
                 # Use standard distributed communication
-                warnings.warn(
-                    "Ring attention without packed communication may be slower"
-                )
+                warnings.warn("Ring attention without packed communication may be slower")
                 return self._ring_rotate_kv_standard(k_blocks, v_blocks, rotation)
         else:
             # Single GPU case - ring_size should be 1
@@ -1142,9 +1080,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
             return k_recv, v_recv
         else:
             # Fallback if rank not set
-            warnings.warn(
-                "Rank not set for ring communication, returning original tensors"
-            )
+            warnings.warn("Rank not set for ring communication, returning original tensors")
             return k, v
 
     def _get_ring_step_pattern(self, sparse_pattern: Tensor, ring_step: int) -> Tensor:
@@ -1153,9 +1089,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
         # In practice, could rotate or adapt pattern based on ring step
         return sparse_pattern
 
-    def _update_performance_stats(
-        self, sparse_pattern: Tensor, attention_weights: Tensor | None
-    ):
+    def _update_performance_stats(self, sparse_pattern: Tensor, attention_weights: Tensor | None):
         """Update performance tracking statistics"""
         with self._stats_lock:
             self.performance_stats["total_forwards"] += 1
@@ -1181,9 +1115,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
             max_history = 100
             for key in ["sparse_ratio_history", "speedup_ratios"]:
                 if len(self.performance_stats[key]) > max_history:
-                    self.performance_stats[key] = self.performance_stats[key][
-                        -max_history:
-                    ]
+                    self.performance_stats[key] = self.performance_stats[key][-max_history:]
 
     def get_performance_stats(self) -> dict[str, Any]:
         """Get current performance statistics"""
@@ -1194,9 +1126,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
                 stats["avg_sparsity"] = sum(stats["sparse_ratio_history"]) / len(
                     stats["sparse_ratio_history"]
                 )
-                stats["avg_speedup"] = sum(stats["speedup_ratios"]) / len(
-                    stats["speedup_ratios"]
-                )
+                stats["avg_speedup"] = sum(stats["speedup_ratios"]) / len(stats["speedup_ratios"])
             else:
                 stats["avg_sparsity"] = 0.0
                 stats["avg_speedup"] = 1.0
@@ -1206,9 +1136,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
     def set_sparsity_ratio(self, sparsity_ratio: float):
         """Dynamically adjust sparsity ratio"""
         if not (0.01 <= sparsity_ratio <= 0.99):
-            raise ValueError(
-                f"Sparsity ratio must be between 0.01 and 0.99, got {sparsity_ratio}"
-            )
+            raise ValueError(f"Sparsity ratio must be between 0.01 and 0.99, got {sparsity_ratio}")
 
         self.sparse_config.sparsity_ratio = sparsity_ratio
         # Clear pattern cache to force regeneration

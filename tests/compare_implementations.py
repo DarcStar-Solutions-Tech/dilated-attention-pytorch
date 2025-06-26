@@ -11,8 +11,7 @@ from typing import Any
 import torch
 
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
-from dilated_attention_pytorch.improved_dilated_attention import \
-    ImprovedDilatedAttention
+from dilated_attention_pytorch.improved_dilated_attention import ImprovedDilatedAttention
 
 
 def benchmark_implementation(
