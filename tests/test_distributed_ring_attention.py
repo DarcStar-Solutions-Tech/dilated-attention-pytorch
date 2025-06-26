@@ -97,15 +97,15 @@ class TestRingAttentionMemoryPool:
 
         # Access buffers in order
         buffer1 = pool.get_buffer((10,), torch.float32, "buffer1")
-        buffer2 = pool.get_buffer((20,), torch.float32, "buffer2")
-        buffer3 = pool.get_buffer((30,), torch.float32, "buffer3")
+        _ = pool.get_buffer((20,), torch.float32, "buffer2")
+        _ = pool.get_buffer((30,), torch.float32, "buffer3")
 
         # Access buffer1 again (moves to end)
         buffer1_again = pool.get_buffer((10,), torch.float32, "buffer1")
         assert buffer1_again is buffer1  # Should get same buffer
 
         # Add new buffer - should evict buffer2 (LRU)
-        buffer4 = pool.get_buffer((40,), torch.float32, "buffer4")
+        _ = pool.get_buffer((40,), torch.float32, "buffer4")
 
         # Check buffer2 was evicted
         assert len(pool._pools) == 3
@@ -118,12 +118,13 @@ class TestDistributedRingAttention:
     @pytest.fixture
     def mock_distributed_env(self):
         """Mock distributed environment for testing."""
+        mock_group = MagicMock()
         with (
             patch("torch.distributed.is_initialized", return_value=True),
             patch("torch.distributed.get_world_size", return_value=4),
             patch("torch.distributed.get_rank", return_value=0),
+            patch("torch.distributed.new_group", return_value=mock_group),
         ):
-
             yield
 
     def test_ring_size_validation(self, mock_distributed_env):
@@ -136,9 +137,7 @@ class TestDistributedRingAttention:
 
         # Should raise error if ring_size > world_size
         with pytest.raises(ValueError, match="ring_size.*cannot exceed world_size"):
-            RingDilatedAttention(
-                segment_lengths=[1024, 2048], dilation_rates=[1, 2], ring_size=8
-            )
+            RingDilatedAttention(segment_lengths=[1024, 2048], dilation_rates=[1, 2], ring_size=8)
 
     def test_single_gpu_fallback(self):
         """Test behavior when distributed is not initialized."""
@@ -169,9 +168,7 @@ class TestDistributedRingAttention:
         )
 
         # Mock communication failure
-        with patch.object(
-            attention, "_ring_communicate_kv", side_effect=error_type("Test error")
-        ):
+        with patch.object(attention, "_ring_communicate_kv", side_effect=error_type("Test error")):
             # Create test tensors
             batch_size, seq_len, num_heads, head_dim = 2, 512, 8, 64
             q = torch.randn(batch_size, seq_len, num_heads, head_dim)
@@ -196,7 +193,7 @@ class TestBlockSparseDistributed:
         )
 
         # Should work
-        attention = BlockSparseRingDistributedDilatedAttention(
+        _ = BlockSparseRingDistributedDilatedAttention(
             segment_lengths=[512, 1024],
             dilation_rates=[1, 2],
             distributed_config=config,
@@ -222,9 +219,7 @@ class TestErrorRecovery:
         )
 
         # Track allocated buffers
-        initial_pool_size = (
-            len(attention.memory_pool.pool) if attention.memory_pool else 0
-        )
+        initial_pool_size = len(attention.memory_pool.pool) if attention.memory_pool else 0
 
         # Force an error during forward pass
         with patch.object(
@@ -292,9 +287,7 @@ class TestEdgeCases:
 
     def test_single_head(self):
         """Test with single attention head."""
-        attention = RingDilatedAttention(
-            segment_lengths=[128, 256], dilation_rates=[1, 2]
-        )
+        attention = RingDilatedAttention(segment_lengths=[128, 256], dilation_rates=[1, 2])
 
         # Single head should work
         q = torch.randn(2, 256, 1, 64)
@@ -306,9 +299,7 @@ class TestEdgeCases:
 
     def test_extreme_sequence_lengths(self):
         """Test with very long sequences."""
-        attention = RingDilatedAttention(
-            segment_lengths=[4096], dilation_rates=[1], block_size=512
-        )
+        attention = RingDilatedAttention(segment_lengths=[4096], dilation_rates=[1], block_size=512)
 
         # Long sequence (but still valid)
         batch_size = 1

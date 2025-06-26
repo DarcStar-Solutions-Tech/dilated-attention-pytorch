@@ -7,7 +7,7 @@ and optimization strategies used across all dilated attention implementations.
 
 import math
 import warnings
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import torch
 import torch.nn.functional as F
@@ -19,8 +19,8 @@ from ..core.constants import HAS_FLASH_ATTN, HAS_SDPA, HAS_XFORMERS
 def compute_attention_scores(
     q: Tensor,
     k: Tensor,
-    scale: Optional[float] = None,
-    attention_mask: Optional[Tensor] = None,
+    scale: float | None = None,
+    attention_mask: Tensor | None = None,
     is_causal: bool = False,
 ) -> Tensor:
     """
@@ -173,7 +173,7 @@ def optimize_attention_computation(
     k: Tensor,
     v: Tensor,
     is_causal: bool = False,
-    attention_mask: Optional[Tensor] = None,
+    attention_mask: Tensor | None = None,
     dropout_p: float = 0.0,
 ) -> Tensor:
     """
@@ -224,7 +224,7 @@ def optimize_attention_computation(
             return output
 
         except Exception as e:
-            warnings.warn(f"Flash Attention failed, falling back: {e}")
+            warnings.warn(f"Flash Attention failed, falling back: {e}", stacklevel=2)
 
     # Try PyTorch SDPA
     if HAS_SDPA:
@@ -250,7 +250,7 @@ def optimize_attention_computation(
             return output
 
         except Exception as e:
-            warnings.warn(f"PyTorch SDPA failed, falling back: {e}")
+            warnings.warn(f"PyTorch SDPA failed, falling back: {e}", stacklevel=2)
 
     # Try xFormers
     if HAS_XFORMERS and q.is_cuda:
@@ -275,7 +275,7 @@ def optimize_attention_computation(
             return output
 
         except Exception as e:
-            warnings.warn(f"xFormers failed, falling back: {e}")
+            warnings.warn(f"xFormers failed, falling back: {e}", stacklevel=2)
 
     # Fallback to standard implementation
     return standard_attention(q, k, v, is_causal, attention_mask, dropout_p)
@@ -286,7 +286,7 @@ def standard_attention(
     k: Tensor,
     v: Tensor,
     is_causal: bool = False,
-    attention_mask: Optional[Tensor] = None,
+    attention_mask: Tensor | None = None,
     dropout_p: float = 0.0,
 ) -> Tensor:
     """
@@ -326,8 +326,8 @@ def standard_attention(
         attn_weights_h = F.softmax(scores_h, dim=-1)
 
         # Apply dropout
-        if dropout_p > 0 and q.training:
-            attn_weights_h = F.dropout(attn_weights_h, p=dropout_p)
+        if dropout_p > 0 and torch.is_grad_enabled():
+            attn_weights_h = F.dropout(attn_weights_h, p=dropout_p, training=True)
 
         # Apply attention to values
         # attn_weights_h: [..., seq_len, seq_len]
@@ -384,7 +384,7 @@ def compute_rotary_embeddings(
     device: torch.device,
     base: int = 10000,
     dtype: torch.dtype = torch.float32,
-) -> Tuple[Tensor, Tensor]:
+) -> tuple[Tensor, Tensor]:
     """
     Compute rotary position embeddings (RoPE).
 
@@ -401,9 +401,7 @@ def compute_rotary_embeddings(
     assert dim % 2 == 0, "Dimension must be even for rotary embeddings"
 
     # Compute frequencies
-    inv_freq = 1.0 / (
-        base ** (torch.arange(0, dim, 2, device=device, dtype=dtype) / dim)
-    )
+    inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2, device=device, dtype=dtype) / dim))
 
     # Create position indices
     positions = torch.arange(seq_len, device=device, dtype=dtype)
@@ -420,7 +418,7 @@ def compute_rotary_embeddings(
 
 def apply_rotary_embeddings(
     q: Tensor, k: Tensor, cos: Tensor, sin: Tensor
-) -> Tuple[Tensor, Tensor]:
+) -> tuple[Tensor, Tensor]:
     """
     Apply rotary embeddings to query and key tensors.
 
@@ -503,15 +501,13 @@ def create_4d_causal_mask(
     Returns:
         4D causal mask [1, 1, seq_len, seq_len]
     """
-    mask = torch.triu(
-        torch.ones(seq_len, seq_len, device=device, dtype=dtype), diagonal=1
-    )
+    mask = torch.triu(torch.ones(seq_len, seq_len, device=device, dtype=dtype), diagonal=1)
     mask = mask.masked_fill(mask == 1, float("-inf"))
     return mask.unsqueeze(0).unsqueeze(0)
 
 
 def apply_head_specific_masks(
-    attention_scores: Tensor, head_masks: Optional[List[Tensor]] = None
+    attention_scores: Tensor, head_masks: list[Tensor] | None = None
 ) -> Tensor:
     """
     Apply head-specific masks to attention scores.

@@ -274,9 +274,9 @@ class TestFactoryIntegration:
         with pytest.raises(ValueError, match="Unknown attention type"):
             create_multihead_dilated_attention("invalid_impl")
 
-        # Missing required parameters
-        with pytest.raises((TypeError, ValueError)):
-            create_multihead_dilated_attention("auto")  # Missing embed_dim, etc.
+        # Factory should work with defaults
+        attention = create_multihead_dilated_attention("auto")
+        assert attention.embed_dim == 768  # Default value
 
         # Invalid configuration
         with pytest.raises(ValueError):

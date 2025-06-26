@@ -186,8 +186,8 @@ class TestAttentionComputation:
         # With dropout, outputs should be different
         assert not torch.allclose(output1, output2)
 
-    @patch("dilated_attention_pytorch.core.attention_utils.HAS_FLASH_ATTN", True)
-    @patch("dilated_attention_pytorch.core.attention_utils.flash_attn_func")
+    @patch("dilated_attention_pytorch.utils.attention_utils.HAS_FLASH_ATTN", True)
+    @patch("dilated_attention_pytorch.utils.attention_utils.flash_attn_func")
     def test_optimize_attention_flash(self, mock_flash_attn):
         """Test optimized attention with Flash Attention."""
         batch_size, seq_len, num_heads, head_dim = 2, 8, 4, 16
@@ -198,13 +198,13 @@ class TestAttentionComputation:
         # Mock flash attention
         mock_flash_attn.return_value = torch.randn_like(q)
 
-        output = optimize_attention_computation(q, k, v)
+        _ = optimize_attention_computation(q, k, v)
 
         # Should have called flash attention
         mock_flash_attn.assert_called_once()
 
-    @patch("dilated_attention_pytorch.core.attention_utils.HAS_SDPA", True)
-    @patch("dilated_attention_pytorch.core.attention_utils.HAS_FLASH_ATTN", False)
+    @patch("dilated_attention_pytorch.utils.attention_utils.HAS_SDPA", True)
+    @patch("dilated_attention_pytorch.utils.attention_utils.HAS_FLASH_ATTN", False)
     def test_optimize_attention_sdpa(self):
         """Test optimized attention with PyTorch SDPA."""
         batch_size, seq_len, num_heads, head_dim = 2, 8, 4, 16
