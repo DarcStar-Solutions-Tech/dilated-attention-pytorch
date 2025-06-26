@@ -577,6 +577,9 @@ class DistributedImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention
         """Implementation of forward pass."""
         from .utils.attention_utils import split_attention_heads
 
+        # Extract dimensions
+        batch_size, seq_len, _ = query.shape
+
         # Apply projections based on model parallelism
         if self.use_model_parallel and hasattr(self, "qkv_proj"):
             # Fused QKV projection for model parallelism

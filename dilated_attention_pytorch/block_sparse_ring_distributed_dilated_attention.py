@@ -1259,7 +1259,7 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
                     try:
                         cached_buffer.resize_(*shape)
                         return cached_buffer
-                    except:
+                    except RuntimeError:
                         # Resize failed, allocate new
                         pass
 
@@ -1385,7 +1385,7 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
                 if isinstance(output, tuple):
                     return output[0].float(), output[1]
                 return output.float()
-            except:
+            except Exception:
                 pass
 
         # Try with gradient checkpointing
@@ -1406,7 +1406,7 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
         if hasattr(self, "gradient_communicator") and self.gradient_communicator:
             try:
                 self.gradient_communicator.synchronize_gradients()
-            except:
+            except Exception:
                 pass
 
         # Clear communication buffers
@@ -1463,7 +1463,7 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
                     output[1][:, :, :seq_len, :seq_len] if output[1] is not None else None
                 )
             return output[:, :seq_len]
-        except:
+        except Exception:
             # Final fallback
             return self._strategy_checkpoint_recovery(
                 q[:, :seq_len],

@@ -778,7 +778,7 @@ def load_sparse_pattern(filepath: str) -> torch.Tensor:
 
         with gzip.open(filepath + ".gz", "rb") as f:
             pattern_data = pickle.load(f)
-    except:
+    except (OSError, EOFError):
         # Fall back to uncompressed
         with open(filepath, "rb") as f:
             pattern_data = pickle.load(f)

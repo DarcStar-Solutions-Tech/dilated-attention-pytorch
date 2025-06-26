@@ -185,6 +185,7 @@ ignore = [
     "PLR2004", # Magic value used in comparison
     "N803",  # Argument name should be lowercase (for Q, K, V)
     "N806",  # Variable in function should be lowercase (for Q, K, V)
+    "TRY003", # Avoid specifying long messages outside the exception class
 ]
 
 [tool.ruff.format]

@@ -628,7 +628,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
                         version = flash_attn.__version__
                         major = int(version.split(".")[0])
                         self.has_fa3 = major >= 3 and self.is_h100
-                except:
+                except Exception:
                     pass
         else:
             self.is_h100 = False
