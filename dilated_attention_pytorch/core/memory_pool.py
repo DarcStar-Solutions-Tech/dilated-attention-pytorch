@@ -86,7 +86,8 @@ class UnifiedMemoryPool:
         self._total_allocated_bytes = 0
 
         # Weak references to track buffer usage
-        self._active_buffers = weakref.WeakValueDictionary()
+        # Use WeakSet instead of WeakValueDictionary to avoid circular references
+        self._active_buffers = weakref.WeakSet()
 
         # Register with garbage collector
         self._register_gc_callback()
@@ -275,7 +276,7 @@ class UnifiedMemoryPool:
 
     def _track_buffer(self, key: tuple, buffer: Tensor) -> None:
         """Track buffer with weak reference."""
-        self._active_buffers[id(buffer)] = buffer
+        self._active_buffers.add(buffer)
 
         # Initialize stats
         if key not in self._stats:
@@ -322,7 +323,7 @@ class UnifiedMemoryPool:
                 # Get list of keys to remove
                 keys_to_remove = []
                 for key, buffer in pool.items():
-                    if id(buffer) not in self._active_buffers:
+                    if buffer not in self._active_buffers:
                         keys_to_remove.append(key)
 
                 # Remove inactive buffers
@@ -357,7 +358,7 @@ class UnifiedMemoryPool:
                         if (
                             time_since_access > 60
                             and key not in self._hot_cache
-                            and id(pool[key]) not in self._active_buffers
+                            and pool[key] not in self._active_buffers
                         ):
                             keys_to_remove.append(key)
 
