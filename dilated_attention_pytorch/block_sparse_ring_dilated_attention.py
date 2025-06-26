@@ -98,7 +98,7 @@ class BlockSparseMemoryPool:
                 return buffer
 
             # Check regular pool
-            if key in self.pool and self.pool[key]:
+            if self.pool.get(key):
                 buffer = self.pool[key].pop()
                 self._update_hot_cache(key, buffer)
                 return buffer

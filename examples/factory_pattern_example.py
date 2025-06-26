@@ -7,7 +7,7 @@ of dilated attention modules with automatic optimization.
 """
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 # Import factory functions (v0.2.0+)
 from dilated_attention_pytorch import (

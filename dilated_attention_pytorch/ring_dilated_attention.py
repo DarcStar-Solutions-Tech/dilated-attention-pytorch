@@ -933,7 +933,7 @@ class RingDilatedAttention(BaseDilatedAttention):
             return [SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH]
 
         # Prioritize Flash Attention on H100 with Flash Attention 3
-        if self._is_h100_gpu and self._flash_attn_3_available or self._flash_attn_3_available:
+        if (self._is_h100_gpu and self._flash_attn_3_available) or self._flash_attn_3_available:
             return [SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH]
         else:
             # Fallback for Flash Attention 2 or older

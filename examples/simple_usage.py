@@ -7,7 +7,7 @@ implementation.
 """
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 # Import the factory function (v0.2.0+ recommended approach)
 # For backward compatibility, you can still use direct imports

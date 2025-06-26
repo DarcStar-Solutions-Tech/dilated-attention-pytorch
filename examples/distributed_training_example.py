@@ -33,7 +33,7 @@ from typing import Any
 
 import torch
 import torch.distributed as dist
-import torch.nn as nn
+from torch import nn
 from torch.cuda.amp import GradScaler, autocast
 from torch.utils.data import DataLoader, DistributedSampler
 

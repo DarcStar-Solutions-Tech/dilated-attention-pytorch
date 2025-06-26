@@ -249,37 +249,36 @@ def get_attention_for_seq_length(
                 device=device,
                 dtype=dtype,
             )
+    # Legacy direct instantiation
+    elif attention_type == AttentionType.DILATED:
+        return DilatedAttention(
+            segment_lengths=segment_lengths,
+            dilation_rates=dilation_rates,
+            op=op,
+        )
+    elif attention_type == AttentionType.MHA:
+        return MultiheadDilatedAttention(
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            segment_lengths=segment_lengths,
+            dilation_rates=dilation_rates,
+            op=op,
+            device=device,
+            dtype=dtype,
+        )
+    elif attention_type == AttentionType.IMPROVED:
+        # Benchmark improved implementation
+        return create_multihead_dilated_attention(
+            "improved",
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            segment_lengths=segment_lengths,
+            dilation_rates=dilation_rates,
+            device=device,
+            dtype=dtype,
+        )
     else:
-        # Legacy direct instantiation
-        if attention_type == AttentionType.DILATED:
-            return DilatedAttention(
-                segment_lengths=segment_lengths,
-                dilation_rates=dilation_rates,
-                op=op,
-            )
-        elif attention_type == AttentionType.MHA:
-            return MultiheadDilatedAttention(
-                embed_dim=embed_dim,
-                num_heads=num_heads,
-                segment_lengths=segment_lengths,
-                dilation_rates=dilation_rates,
-                op=op,
-                device=device,
-                dtype=dtype,
-            )
-        elif attention_type == AttentionType.IMPROVED:
-            # Benchmark improved implementation
-            return create_multihead_dilated_attention(
-                "improved",
-                embed_dim=embed_dim,
-                num_heads=num_heads,
-                segment_lengths=segment_lengths,
-                dilation_rates=dilation_rates,
-                device=device,
-                dtype=dtype,
-            )
-        else:
-            raise ValueError(f"Invalid attention type: {attention_type}")
+        raise ValueError(f"Invalid attention type: {attention_type}")
 
 
 def attention_forward(x: torch.Tensor, attn: Callable):

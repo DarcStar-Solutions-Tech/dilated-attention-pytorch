@@ -104,6 +104,7 @@ include = [
 ]
 
 [tool.hatch.envs.default]
+python = "3.13"
 dependencies = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
@@ -128,6 +129,7 @@ all = [
 ]
 
 [tool.hatch.envs.benchmark]
+python = "3.13"
 extra-dependencies = [
     "plotly>=5.16.0",
     "kaleido>=0.2.1",
@@ -139,6 +141,7 @@ run = "python benchmark.py {args}"
 profile = "python -m cProfile -o benchmark.prof benchmark.py {args}"
 
 [tool.hatch.envs.distributed]
+python = "3.13"
 extra-dependencies = [
     "deepspeed>=0.15.0",
     "fairscale>=0.4.0",

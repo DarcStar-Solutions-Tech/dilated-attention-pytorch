@@ -8,6 +8,7 @@ and shared functionality for all dilated attention implementations.
 import threading
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+from collections.abc import Callable
 from typing import Any
 
 import torch
@@ -196,7 +197,7 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
         return tensor
 
     def _cache_get(
-        self, cache_dict: OrderedDict, key: Any, compute_fn: callable | None = None
+        self, cache_dict: OrderedDict, key: Any, compute_fn: Callable | None = None
     ) -> Any | None:
         """
         Thread-safe cache retrieval with LRU behavior.

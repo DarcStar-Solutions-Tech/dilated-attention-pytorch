@@ -89,10 +89,9 @@ class TestMemoryPoolThreadSafety:
                     shape = (random.randint(10, 100), random.randint(10, 100))
                     buffer = pool.get_buffer(shape, torch.float32, f"thread_{thread_id}_buf_{i}")
                     allocated.append(buffer)
-                else:
-                    # Simulate releasing by clearing
-                    if random.random() > 0.5:
-                        pool.clear_unused_buffers(threshold=random.randint(1, 10))
+                # Simulate releasing by clearing
+                elif random.random() > 0.5:
+                    pool.clear_unused_buffers(threshold=random.randint(1, 10))
 
                 # Small delay to increase chance of race conditions
                 time.sleep(0.0001)

@@ -1255,7 +1255,7 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
         self._cleanup_resources()
 
         # Handle specific error types with targeted recovery
-        if "out of memory" in error_str or "cuda" in error_str and "memory" in error_str:
+        if "out of memory" in error_str or ("cuda" in error_str and "memory" in error_str):
             return self._handle_oom_error(q, k, v, is_causal, return_attention_weights)
         elif "communication" in error_str or "distributed" in error_str or "nccl" in error_str:
             return self._handle_communication_error(q, k, v, is_causal, return_attention_weights)
@@ -1674,6 +1674,6 @@ __all__ = [
     "BlockSparseRingDistributedDilatedAttention",
     "DistributedSparseConfig",
     "DistributedSparsePattern",
-    "HierarchicalSparsePatternGenerator",
     "GradientCompressor",
+    "HierarchicalSparsePatternGenerator",
 ]

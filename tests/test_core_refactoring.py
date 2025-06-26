@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 
 # Import the refactored components
 from dilated_attention_pytorch.core import (

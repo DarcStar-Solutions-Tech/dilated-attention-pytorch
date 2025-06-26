@@ -338,11 +338,10 @@ def _select_best_attention_type() -> str:
         return "improved"  # Use improved since standard has circular import
 
     # Default: Use improved if Flash Attention available
+    elif HAS_FLASH_ATTN:
+        return "improved"
     else:
-        if HAS_FLASH_ATTN:
-            return "improved"
-        else:
-            return "improved"  # Fallback to improved
+        return "improved"  # Fallback to improved
 
 
 def _filter_kwargs(config_class: type, kwargs: dict) -> dict:

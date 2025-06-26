@@ -565,6 +565,6 @@ __all__ = [
     "BlockSparseRingMultiheadDilatedAttention",
     "FusedQKVProjection",
     "PerformanceMonitor",
-    "create_block_sparse_multihead_attention",
     "create_adaptive_sparse_multihead_attention",
+    "create_block_sparse_multihead_attention",
 ]

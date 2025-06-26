@@ -8,7 +8,7 @@ scenarios and configurations.
 
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 
 from dilated_attention_pytorch import (
     create_block_sparse_attention,

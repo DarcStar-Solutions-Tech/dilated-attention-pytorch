@@ -15,8 +15,7 @@ from typing import Any
 
 import torch
 import torch.distributed as dist
-import torch.nn as nn
-from torch import Tensor
+from torch import Tensor, nn
 
 # Advanced distributed training libraries
 try:

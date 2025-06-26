@@ -888,14 +888,14 @@ def _align_to_blocks(pattern: torch.Tensor, block_size: int) -> torch.Tensor:
 
 # Export main classes and functions
 __all__ = [
-    "PatternType",
     "PatternConfig",
-    "PatternQualityMetrics",
-    "SparsePatternGenerator",
-    "PatternQualityAnalyzer",
     "PatternOptimizer",
+    "PatternQualityAnalyzer",
+    "PatternQualityMetrics",
+    "PatternType",
     "PatternVisualizer",
-    "save_pattern",
+    "SparsePatternGenerator",
     "load_pattern",
     "pattern_statistics",
+    "save_pattern",
 ]

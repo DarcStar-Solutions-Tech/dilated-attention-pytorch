@@ -242,8 +242,7 @@ def find_max_tokens(
         # Ensure sequence length is multiple of max segment length
         mid_seq_len = (mid_seq_len // config.max_segment_length) * config.max_segment_length
 
-        if mid_seq_len < config.max_segment_length:
-            mid_seq_len = config.max_segment_length
+        mid_seq_len = max(mid_seq_len, config.max_segment_length)
 
         breakdown = estimate_total_memory(
             mid_seq_len, config, batch_size, implementation, optimizer_type, dtype_bytes
