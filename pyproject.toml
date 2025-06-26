@@ -134,6 +134,7 @@ extra-dependencies = [
     "plotly>=5.16.0",
     "kaleido>=0.2.1",
     "timm>=0.6.13",
+    "xformers>=0.0.20",
 ]
 
 [tool.hatch.envs.benchmark.scripts]

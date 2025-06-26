@@ -677,7 +677,7 @@ class RingDilatedAttention(BaseDilatedAttention):
                     f"Sequence length ({n}) must be divisible by ring_size ({self.ring_size}) "
                     f"× max_segment_length ({max_segment_length}) = {self.ring_size * max_segment_length}"
                 )
-            
+
             # Calculate local sequence lengths
             local_seq_len = n // self.ring_size
             start_idx = self.rank * local_seq_len

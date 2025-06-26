@@ -9,7 +9,7 @@ from enum import Enum
 from functools import partial
 from math import ceil
 from timeit import Timer
-from typing import NamedTuple
+from typing import NamedTuple, List
 
 import plotly.graph_objects as go
 import torch
@@ -448,10 +448,13 @@ if __name__ == "__main__":
     bench_config.update(gpu_info)
 
     b_name = f"{current_date}-benchmark-{uuid.uuid4()}"
-    if b_name not in os.listdir("doc"):
-        os.mkdir(os.path.join("doc", b_name))
+    docs_benchmarks_dir = os.path.join("..", "docs", "benchmarks")
+    if not os.path.exists(docs_benchmarks_dir):
+        os.makedirs(docs_benchmarks_dir)
+    if b_name not in os.listdir(docs_benchmarks_dir):
+        os.mkdir(os.path.join(docs_benchmarks_dir, b_name))
 
-    b_dir = os.path.join("doc", b_name)
+    b_dir = os.path.join(docs_benchmarks_dir, b_name)
 
     with open(
         os.path.join(b_dir, f"config-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"),

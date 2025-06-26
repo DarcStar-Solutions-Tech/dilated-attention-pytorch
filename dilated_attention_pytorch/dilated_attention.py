@@ -179,10 +179,10 @@ class DilatedAttention(BaseDilatedAttention):
         # Normalize by number of groups (Eq. 10 from paper)
         # NOTE: Normalization must happen before dropout for mathematical correctness
         out = out / self.num_groups
-        
+
         # Apply dropout if configured (after normalization)
         out = self._apply_dropout(out)
-        
+
         return out
 
     def extra_repr(self) -> str:
