@@ -47,7 +47,7 @@ from dilated_attention_pytorch.improved_distributed_dilated_attention import (
 )
 
 try:
-    import deepspeed
+    import deepspeed  # noqa: F401
 
     HAS_DEEPSPEED = True
 except ImportError:

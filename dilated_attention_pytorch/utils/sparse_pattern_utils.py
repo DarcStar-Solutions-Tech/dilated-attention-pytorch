@@ -28,14 +28,13 @@ import torch.nn.functional as F
 # Optional imports for visualization
 try:
     import matplotlib.pyplot as plt
-    import seaborn as sns
 
     HAS_MATPLOTLIB = True
 except ImportError:
     HAS_MATPLOTLIB = False
 
 try:
-    import numpy as np
+    import numpy  # noqa: F401
 
     HAS_NUMPY = True
 except ImportError:

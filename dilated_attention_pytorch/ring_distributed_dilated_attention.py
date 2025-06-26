@@ -35,8 +35,7 @@ from torch import Tensor, nn
 
 # Distributed training libraries
 try:
-    import deepspeed
-    from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
+    import deepspeed  # noqa: F401
 
     HAS_DEEPSPEED = True
 except ImportError:
@@ -44,10 +43,8 @@ except ImportError:
     warnings.warn("DeepSpeed not available. Install with: pip install deepspeed")
 
 try:
-    import fairscale
-    from fairscale.nn import ShardedDataParallel as ShardedDDP
+    import fairscale  # noqa: F401
     from fairscale.nn.model_parallel.layers import ColumnParallelLinear, RowParallelLinear
-    from fairscale.optim.oss import OSS
 
     HAS_FAIRSCALE = True
 except ImportError:

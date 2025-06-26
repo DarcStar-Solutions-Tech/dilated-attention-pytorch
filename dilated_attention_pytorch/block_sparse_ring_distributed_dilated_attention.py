@@ -58,14 +58,14 @@ from .ring_distributed_dilated_attention import RingDistributedDilatedAttention
 
 # Optional imports for enterprise features
 try:
-    import deepspeed
+    import deepspeed  # noqa: F401
 
     HAS_DEEPSPEED = True
 except ImportError:
     HAS_DEEPSPEED = False
 
 try:
-    import apex
+    import apex  # noqa: F401
 
     HAS_APEX = True
 except ImportError:

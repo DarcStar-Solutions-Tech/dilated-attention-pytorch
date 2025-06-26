@@ -39,7 +39,7 @@ from .ring_dilated_attention import RingDilatedAttention
 
 # Handle torch.nn.attention availability for older PyTorch versions
 try:
-    from torch.nn.attention import SDPBackend, sdpa_kernel
+    from torch.nn.attention import SDPBackend
 
     HAS_SDPA_KERNEL = True
 except ImportError:
