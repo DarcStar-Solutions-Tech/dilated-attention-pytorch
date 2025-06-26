@@ -5,17 +5,17 @@ This module provides factory functions for creating various dilated attention
 implementations with sensible defaults and automatic optimization.
 """
 
-from typing import Optional, Dict, Type
 import logging
+from typing import Dict, Optional, Type
 
+from .base import BaseDilatedAttention, BaseMultiheadDilatedAttention
 from .config import (
     DilatedAttentionConfig,
     MultiheadConfig,
     RingAttentionConfig,
     SparseAttentionConfig,
 )
-from .base import BaseDilatedAttention, BaseMultiheadDilatedAttention
-from .constants import HAS_FLASH_ATTN, HAS_FLASH_ATTN_3, GPU_TYPE
+from .constants import GPU_TYPE, HAS_FLASH_ATTN, HAS_FLASH_ATTN_3
 
 logger = logging.getLogger("dilated_attention_pytorch.factory")
 
@@ -67,6 +67,9 @@ def create_dilated_attention(
         ...     dropout=0.1
         ... )
     """
+    # Ensure implementations are registered
+    _ensure_implementations_registered()
+
     # Set defaults
     if segment_lengths is None:
         segment_lengths = [2048, 4096, 8192]
@@ -87,7 +90,9 @@ def create_dilated_attention(
     # Create configuration
     config_class = _get_config_class(attention_type)
     filtered_kwargs = _filter_kwargs(config_class, kwargs)
-    config = config_class(segment_lengths=segment_lengths, dilation_rates=dilation_rates, **filtered_kwargs)
+    config = config_class(
+        segment_lengths=segment_lengths, dilation_rates=dilation_rates, **filtered_kwargs
+    )
 
     # Create and return module
     cls = _ATTENTION_REGISTRY[attention_type]
@@ -127,6 +132,9 @@ def create_multihead_dilated_attention(
         ...     dropout=0.1
         ... )
     """
+    # Ensure implementations are registered
+    _ensure_implementations_registered()
+
     # Set defaults
     if segment_lengths is None:
         segment_lengths = [2048, 4096, 8192]
@@ -150,7 +158,7 @@ def create_multihead_dilated_attention(
     # Check if configs were passed directly
     multihead_config_passed = kwargs.get("multihead_config", None)
     attention_config_passed = kwargs.get("attention_config", None)
-    
+
     if multihead_config_passed is not None:
         multihead_config = multihead_config_passed
         # Override with any direct parameters
@@ -174,7 +182,9 @@ def create_multihead_dilated_attention(
 
         # Create configurations
         filtered_multihead_kwargs = _filter_kwargs(MultiheadConfig, multihead_kwargs)
-        multihead_config = MultiheadConfig(embed_dim=embed_dim, num_heads=num_heads, **filtered_multihead_kwargs)
+        multihead_config = MultiheadConfig(
+            embed_dim=embed_dim, num_heads=num_heads, **filtered_multihead_kwargs
+        )
 
     if attention_config_passed is not None:
         attention_config = attention_config_passed
@@ -187,18 +197,36 @@ def create_multihead_dilated_attention(
         config_class = _get_config_class(attention_type)
         filtered_attention_kwargs = _filter_kwargs(config_class, attention_kwargs)
         attention_config = config_class(
-            segment_lengths=segment_lengths, dilation_rates=dilation_rates, **filtered_attention_kwargs
+            segment_lengths=segment_lengths,
+            dilation_rates=dilation_rates,
+            **filtered_attention_kwargs,
         )
-    
+
     # Filter out config objects from kwargs to avoid duplication
-    remaining_kwargs = {k: v for k, v in kwargs.items() 
-                       if k not in ["multihead_config", "attention_config", "bias", "layer_norm", 
-                                    "layer_norm_eps", "gamma_init", "device", "dtype", "dropout", 
-                                    "segment_lengths", "dilation_rates", "embed_dim", "num_heads"]}
+    remaining_kwargs = {
+        k: v
+        for k, v in kwargs.items()
+        if k
+        not in [
+            "multihead_config",
+            "attention_config",
+            "bias",
+            "layer_norm",
+            "layer_norm_eps",
+            "gamma_init",
+            "device",
+            "dtype",
+            "dropout",
+            "segment_lengths",
+            "dilation_rates",
+            "embed_dim",
+            "num_heads",
+        ]
+    }
 
     # Create and return module
     cls = _MULTIHEAD_REGISTRY[multihead_type]
-    
+
     # Handle legacy constructors for improved implementations
     if attention_type in ["improved", "improved_distributed"]:
         # These implementations haven't been fully refactored yet
@@ -336,7 +364,7 @@ def _filter_kwargs(config_class: Type, kwargs: dict) -> dict:
     """Filter kwargs to only include valid parameters for the config class."""
     import inspect
     from dataclasses import fields
-    
+
     # Get valid field names for dataclass
     if hasattr(config_class, '__dataclass_fields__'):
         valid_fields = {f.name for f in fields(config_class)}
@@ -344,15 +372,15 @@ def _filter_kwargs(config_class: Type, kwargs: dict) -> dict:
         # Fallback for non-dataclass configs
         sig = inspect.signature(config_class.__init__)
         valid_fields = set(sig.parameters.keys()) - {'self'}
-    
+
     # Filter kwargs
     filtered = {k: v for k, v in kwargs.items() if k in valid_fields}
-    
+
     # Log if any kwargs were filtered out
     filtered_out = set(kwargs.keys()) - set(filtered.keys())
     if filtered_out:
         logger.debug(f"Filtered out unknown kwargs: {filtered_out}")
-    
+
     return filtered
 
 
@@ -460,5 +488,13 @@ def _register_implementations():
         pass  # Block-sparse not refactored yet
 
 
-# Initialize registry
-_register_implementations()
+# Lazy registration flag to avoid circular imports
+_implementations_registered = False
+
+
+def _ensure_implementations_registered():
+    """Ensure implementations are registered (lazy loading to avoid circular imports)."""
+    global _implementations_registered
+    if not _implementations_registered:
+        _register_implementations()
+        _implementations_registered = True

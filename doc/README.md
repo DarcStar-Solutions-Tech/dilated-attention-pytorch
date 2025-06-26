@@ -125,6 +125,15 @@ Game-changing feasibility with improved block-sparse ring attention:
 - **ROI**: 100x+ over 5 years with 6-month break-even
 - **Unique Capability**: 100M+ token context with 5-50x speedup
 
+### 📊 [Benchmark Results 2024](benchmark-results-2024.md) **NEW!**
+Performance benchmarks on NVIDIA GTX 1080 GPUs:
+- **Hardware**: 2x GTX 1080 (7.9 GB), CUDA 12.4, PyTorch 2.6.0
+- **Small sequences (2048)**: MultiheadDilatedAttention 1.42x faster
+- **Large sequences (8192)**: MultiheadDilatedAttention 1.52x faster  
+- **GPU vs CPU**: 9.1x speedup with CUDA acceleration
+- **Memory efficiency**: DilatedAttention uses 77-87% less memory
+- **Detailed methodology** and reproduction instructions
+
 ### 🔥 [Block-Sparse Attention Guide](block-sparse-attention-guide.md) **NEW!**
 Revolutionary block-sparse attention patterns for 5-50x additional speedup:
 - **Block-Sparse Ring Attention**: Combines O(n) memory with sparse patterns
