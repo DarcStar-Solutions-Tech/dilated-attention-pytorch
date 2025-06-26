@@ -2,6 +2,21 @@
 
 This directory contains comprehensive documentation for the dilated attention implementations, including performance analysis, memory optimization, and practical usage guides.
 
+## Directory Structure
+
+- **`guides/`** - User guides and tutorials
+  - Ring Attention guide
+  - Block-sparse attention guide  
+  - Distributed training guide
+  - Billion-token deployment guide
+  - Migration guides
+  
+- **`reports/`** - Technical reports and analysis
+  - Performance benchmarks
+  - Memory analysis
+  - Implementation comparisons
+  - Optimization summaries
+
 ## 🎉 New in v0.2.0: Core Architecture Refactoring
 
 ### Core Architecture Documentation
@@ -45,7 +60,7 @@ This directory contains comprehensive documentation for the dilated attention im
 - **✅ Trillion-token feasibility** - Mathematical proof with 244M devices
 - **Complete benchmark methodology** and reproducible results
 
-### 🎯 [**Maximum Chunk Capabilities**](../maximum_chunk_analysis_results.md) **🔬 HARDWARE LIMITS VALIDATED**
+### 🎯 [**Maximum Chunk Capabilities**](reports/maximum_chunk_analysis_results.md) **🔬 HARDWARE LIMITS VALIDATED**
 **Both implementations tested to their absolute hardware limits!**
 - **✅ 262,144 token chunks** - Maximum single-device capability confirmed
 - **✅ Identical performance** - Both implementations achieve same limits  
