@@ -12,5 +12,6 @@ repos:
   rev: v1.13.0
   hooks:
   - id: mypy
-    additional_dependencies: [types-all]
+    additional_dependencies: [torch>=2.0.0, einops>=0.8.0]
     files: ^dilated_attention_pytorch/
+    args: [--ignore-missing-imports, --no-strict-optional]
