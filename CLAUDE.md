@@ -464,15 +464,19 @@ tests/
 
 docs/                       # Extensive documentation
 ├── README.md               # Documentation overview
-├── ring-attention-guide.md # Ring attention usage guide
-├── block-sparse-attention-guide.md # Block-sparse guide
-├── distributed-training-guide.md # Distributed training guide
-├── practical-usage-guide.md # Practical usage examples
-├── refactoring-proposal-2024.md # Refactoring analysis (NEW)
-├── refactoring-complete-2024.md # Refactoring summary (NEW)
-├── defect-analysis-and-fixes-2024.md # Defect fixes (NEW)
-├── block-sparse-optimizations-2024.md # Optimization details (NEW)
-└── [various analysis and report files]
+├── guides/                 # User guides (permanent names)
+│   ├── ring-attention-guide.md
+│   ├── block-sparse-attention-guide.md
+│   ├── distributed-training-guide.md
+│   ├── practical-usage-guide.md
+│   └── factory-pattern-guide.md
+├── benchmarks/             # Benchmark results (timestamped)
+│   └── benchmark-results-YYYY-MM-DD-HHMM-UTC.md
+├── feasibility/            # Feasibility studies (timestamped)
+│   └── feasibility-study-YYYY-MM-DD-HHMM-UTC.md
+├── reports/                # Technical reports (mixed naming)
+│   └── defect-analysis-YYYY-MM-DD-HHMM-UTC.md
+└── archive/                # Historical/obsolete documentation
 
 examples/                   # Example scripts
 └── distributed_training_example.py # Distributed training example
@@ -551,6 +555,60 @@ The root directory should contain ONLY:
 - Package config files (setup.py, pyproject.toml, etc.)
 - Git config files (.gitignore, .gitattributes)
 - validate_changes.py (project validation script)
+
+## Documentation Structure and Naming Conventions
+
+### Directory Structure:
+- `docs/` - Main documentation directory
+- `docs/guides/` - User guides and tutorials (permanent names)
+- `docs/benchmarks/` - Benchmark results (timestamped)
+- `docs/feasibility/` - Feasibility studies and analysis (timestamped)
+- `docs/reports/` - Technical reports and analysis (timestamped)
+- `docs/archive/` - Historical/obsolete documentation
+
+### Naming Conventions:
+
+#### 1. **Timestamped Documents** (results that may change over time):
+These documents capture a snapshot at a specific moment and should be timestamped:
+
+- **Benchmark Results**: `docs/benchmarks/benchmark-{description}-YYYY-MM-DD-HHMM-UTC.{ext}`
+  - Example: `docs/benchmarks/benchmark-ring-attention-2025-06-26-1456-UTC.md`
+  - Example: `docs/benchmarks/benchmark-1B-tokens-2025-06-26-1456-UTC.png`
+
+- **Feasibility Studies**: `docs/feasibility/{topic}-feasibility-YYYY-MM-DD-HHMM-UTC.md`
+  - Example: `docs/feasibility/1t-parameter-training-feasibility-2025-06-26-1456-UTC.md`
+
+- **Defect Reports**: `docs/reports/defect-{type}-YYYY-MM-DD-HHMM-UTC.md`
+  - Example: `docs/reports/defect-analysis-2025-06-26-1456-UTC.md`
+
+- **Performance Analysis**: `docs/reports/{analysis-type}-YYYY-MM-DD-HHMM-UTC.md`
+  - Example: `docs/reports/memory-optimization-analysis-2025-06-26-1456-UTC.md`
+
+#### 2. **Permanent Documents** (guides and references):
+These documents have stable content and use descriptive names without timestamps:
+
+- **User Guides**: `docs/guides/{feature}-guide.md`
+  - Example: `docs/guides/ring-attention-guide.md`
+  - Example: `docs/guides/distributed-training-guide.md`
+
+- **API Documentation**: `docs/guides/api-{module}.md`
+  - Example: `docs/guides/api-dilated-attention.md`
+
+- **Tutorials**: `docs/guides/tutorial-{topic}.md`
+  - Example: `docs/guides/tutorial-custom-attention-patterns.md`
+
+#### 3. **Timestamp Format**:
+- Always use UTC time zone
+- Format: `YYYY-MM-DD-HHMM-UTC`
+- Example: `2025-06-26-1456-UTC` (June 26, 2025, 14:56 UTC)
+- Generate with: `datetime.utcnow().strftime('%Y-%m-%d-%H%M-UTC')`
+
+#### 4. **File Naming Rules**:
+- Use lowercase with hyphens (kebab-case)
+- Be descriptive but concise
+- Include the document type in the name
+- For timestamped files, timestamp goes at the end before extension
+- Extensions: `.md` for markdown, `.png`/`.jpg` for images, `.json` for data
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
