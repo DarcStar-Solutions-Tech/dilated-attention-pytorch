@@ -13,8 +13,8 @@ The project structure has been reorganized to improve maintainability and naviga
 - **`scripts/`** - Utility scripts
   - `debug/` - Debugging utilities
   - `demo/` - Demo scripts
-- **`doc/reports/`** - Technical reports
-- **`doc/guides/`** - User guides
+- **`docs/reports/`** - Technical reports
+- **`docs/guides/`** - User guides
 
 ### 2. Files Moved (50+ files)
 
@@ -48,12 +48,12 @@ The project structure has been reorganized to improve maintainability and naviga
 - test_*.py (additional test files)
 - verify_*.py
 
-**From root → doc/reports/**
+**From root → docs/reports/**
 - *_REPORT.md, *_SUMMARY.md
 - comprehensive_defect_report.md
 - maximum_chunk_analysis_results.md
 
-**From root → doc/guides/**
+**From root → docs/guides/**
 - RING_ATTENTION_EXPLANATION.md
 - RING_PERFORMANCE_ANALYSIS.md
 - FLASH_ATTENTION_3_SETUP.md

@@ -57,7 +57,7 @@ dilated-attention-pytorch/
 │   ├── factory_pattern_example.py # Factory pattern usage
 │   └── distributed_training_example.py # Distributed training
 │
-├── doc/                         # Documentation
+├── docs/                        # Documentation
 │   ├── README.md                # Documentation index
 │   ├── guides/                  # User guides
 │   │   ├── ring-attention-guide.md
@@ -99,7 +99,7 @@ dilated-attention-pytorch/
 - Sequence length limit testing
 - Results and analysis
 
-### Documentation (`doc/`)
+### Documentation (`docs/`)
 - User guides for different use cases
 - Technical reports and analyses
 - API documentation
@@ -121,7 +121,7 @@ dilated-attention-pytorch/
 1. **Source code**: Make changes in `dilated_attention_pytorch/`
 2. **Testing**: Run tests from `tests/` directory
 3. **Benchmarking**: Use scripts in `benchmarks/` for performance testing
-4. **Documentation**: Update guides in `doc/` as needed
+4. **Documentation**: Update guides in `docs/` as needed
 5. **Examples**: Add usage examples in `examples/`
 
 ## Import Structure

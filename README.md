@@ -41,7 +41,7 @@ attention = create_multihead_dilated_attention("ring",  # or "improved", "distri
 )
 ```
 
-See the [Migration Guide](doc/migration-guide-v0.2.md) for upgrading from v0.1.x.
+See the [Migration Guide](docs/migration-guide-v0.2.md) for upgrading from v0.1.x.
 
 ## 📁 Project Structure
 
@@ -50,7 +50,7 @@ The project has been reorganized for better maintainability. See [PROJECT_STRUCT
 - **Source code**: `dilated_attention_pytorch/` - Core implementations
 - **Tests**: `tests/` - Comprehensive test suite  
 - **Benchmarks**: `benchmarks/` - Performance benchmarking scripts
-- **Documentation**: `doc/` - Guides and technical reports
+- **Documentation**: `docs/` - Guides and technical reports
 - **Examples**: `examples/` - Usage examples
 - **Scripts**: `scripts/` - Utility and analysis scripts
 
