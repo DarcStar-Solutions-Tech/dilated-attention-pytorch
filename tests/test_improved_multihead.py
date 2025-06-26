@@ -95,18 +95,22 @@ def test_forward_compatibility():
         segment_lengths = [1024, 2048]
         dilation_rates = [1, 2]
 
+        # Determine device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
         # Create model
         model = ImprovedMultiheadDilatedAttention(
             embed_dim=embed_dim,
             num_heads=num_heads,
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
+            device=device,
         )
 
-        # Create test data
-        query = torch.randn(batch_size, seq_len, embed_dim)
-        key = torch.randn(batch_size, seq_len, embed_dim)
-        value = torch.randn(batch_size, seq_len, embed_dim)
+        # Create test data on same device
+        query = torch.randn(batch_size, seq_len, embed_dim, device=device)
+        key = torch.randn(batch_size, seq_len, embed_dim, device=device)
+        value = torch.randn(batch_size, seq_len, embed_dim, device=device)
 
         print(f"Input shapes - Q: {query.shape}, K: {key.shape}, V: {value.shape}")
 
