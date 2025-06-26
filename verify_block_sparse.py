@@ -4,7 +4,6 @@ Verify Block Sparse Ring Dilated Attention implementations work correctly.
 """
 
 import traceback
-from typing import Any, Dict
 
 import torch
 
@@ -13,9 +12,7 @@ def test_import():
     """Test that all block sparse modules can be imported."""
     print("Testing imports...")
     try:
-        from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-            BlockSparseRingDilatedAttention,
-        )
+        import dilated_attention_pytorch.block_sparse_ring_dilated_attention
 
         print("✓ BlockSparseRingDilatedAttention imported successfully")
     except Exception as e:
@@ -23,9 +20,7 @@ def test_import():
         return False
 
     try:
-        from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import (
-            BlockSparseRingMultiheadDilatedAttention,
-        )
+        import dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention
 
         print("✓ BlockSparseRingMultiheadDilatedAttention imported successfully")
     except Exception as e:
@@ -33,9 +28,7 @@ def test_import():
         return False
 
     try:
-        from dilated_attention_pytorch.block_sparse_ring_distributed_dilated_attention import (
-            BlockSparseRingDistributedDilatedAttention,
-        )
+        import dilated_attention_pytorch.block_sparse_ring_distributed_dilated_attention  # noqa: F401
 
         print("✓ BlockSparseRingDistributedDilatedAttention imported successfully")
     except Exception as e:

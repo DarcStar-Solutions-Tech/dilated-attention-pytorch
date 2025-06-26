@@ -4,7 +4,7 @@ Verify performance improvements of Block Sparse Ring Dilated Attention.
 """
 
 import time
-from typing import Dict, Tuple
+from typing import Tuple
 
 import numpy as np
 import torch
@@ -78,7 +78,7 @@ def compare_implementations():
         )
 
         regular_time, regular_std = measure_performance(regular_attention, q, k, v)
-        print(f"Regular Ring Attention: {regular_time*1000:.2f} ± {regular_std*1000:.2f} ms")
+        print(f"Regular Ring Attention: {regular_time * 1000:.2f} ± {regular_std * 1000:.2f} ms")
 
         # Block Sparse variants
         for sparsity in sparsity_ratios:
@@ -101,7 +101,7 @@ def compare_implementations():
 
             print(
                 f"Block Sparse (sparsity={sparsity:.0%}): "
-                f"{sparse_time*1000:.2f} ± {sparse_std*1000:.2f} ms "
+                f"{sparse_time * 1000:.2f} ± {sparse_std * 1000:.2f} ms "
                 f"| Speedup: {speedup:.2f}x "
                 f"| Theoretical: {theoretical_speedup:.1f}x "
                 f"| Efficiency: {efficiency:.0f}%"
@@ -149,7 +149,7 @@ def test_pattern_efficiency():
         )
 
         mean_time, std_time = measure_performance(attention, q, k, v)
-        print(f"{pattern:.<30} {mean_time*1000:.2f} ± {std_time*1000:.2f} ms")
+        print(f"{pattern:.<30} {mean_time * 1000:.2f} ± {std_time * 1000:.2f} ms")
 
 
 def test_adaptive_performance():
@@ -207,10 +207,12 @@ def test_adaptive_performance():
     print("-" * 50)
 
     fixed_time, fixed_std = measure_performance(fixed_attention, q, k, v)
-    print(f"Fixed Sparsity (75% sparse):    {fixed_time*1000:.2f} ± {fixed_std*1000:.2f} ms")
+    print(f"Fixed Sparsity (75% sparse):    {fixed_time * 1000:.2f} ± {fixed_std * 1000:.2f} ms")
 
     adaptive_time, adaptive_std = measure_performance(adaptive_attention, q, k, v)
-    print(f"Adaptive Sparsity:              {adaptive_time*1000:.2f} ± {adaptive_std*1000:.2f} ms")
+    print(
+        f"Adaptive Sparsity:              {adaptive_time * 1000:.2f} ± {adaptive_std * 1000:.2f} ms"
+    )
 
     overhead = ((adaptive_time - fixed_time) / fixed_time) * 100
     print(f"Adaptive overhead:              {overhead:+.1f}%")
