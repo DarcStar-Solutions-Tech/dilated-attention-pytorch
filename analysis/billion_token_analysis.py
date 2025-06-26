@@ -7,9 +7,6 @@ how Ring Attention would perform at billion-token scale.
 
 import math
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
-
-import torch
 
 
 @dataclass
@@ -81,7 +78,7 @@ def analyze_scaling_characteristics():
     return analyses
 
 
-def extrapolate_billion_token_performance(analyses: List[ScalingAnalysis]):
+def extrapolate_billion_token_performance(analyses: list[ScalingAnalysis]):
     """Extrapolate performance for billion-token sequences."""
 
     print("\n\nBILLION-TOKEN EXTRAPOLATION:")
@@ -90,9 +87,7 @@ def extrapolate_billion_token_performance(analyses: List[ScalingAnalysis]):
     # Use the most recent large-scale result for extrapolation
     largest_result = max(analyses, key=lambda x: x.seq_len)
 
-    print(
-        f"Base result: {largest_result.seq_len:,} tokens in {largest_result.total_time_s:.1f}s"
-    )
+    print(f"Base result: {largest_result.seq_len:,} tokens in {largest_result.total_time_s:.1f}s")
     print(f"Throughput: {largest_result.tokens_per_second:,} tokens/second")
     print(f"Time per chunk: {largest_result.time_per_chunk_ms:.1f}ms")
 
@@ -113,7 +108,7 @@ def extrapolate_billion_token_performance(analyses: List[ScalingAnalysis]):
 
     print(f"Total memory for billion tokens: {total_memory_billion:.1f}GB")
     print(f"Required ring size: {required_ring_size}")
-    print(f"Memory per device: {total_memory_billion/required_ring_size:.1f}GB")
+    print(f"Memory per device: {total_memory_billion / required_ring_size:.1f}GB")
 
     # Time estimation
     # Chunk size for billion tokens
@@ -134,34 +129,32 @@ def extrapolate_billion_token_performance(analyses: List[ScalingAnalysis]):
 
     total_time_parallel = estimated_chunk_time_ms / 1000 + communication_time
 
-    print(f"\nPERFORMANCE ESTIMATES:")
+    print("\nPERFORMANCE ESTIMATES:")
     print(f"Chunk size: {chunk_size:,} tokens")
     print(f"Time per chunk: {estimated_chunk_time_ms:.1f}ms")
     print(
-        f"Sequential processing: {total_time_sequential:.1f}s ({total_time_sequential/60:.1f} minutes)"
+        f"Sequential processing: {total_time_sequential:.1f}s ({total_time_sequential / 60:.1f} minutes)"
     )
     print(
-        f"Parallel processing: {total_time_parallel:.1f}s ({total_time_parallel/60:.1f} minutes)"
+        f"Parallel processing: {total_time_parallel:.1f}s ({total_time_parallel / 60:.1f} minutes)"
     )
-    print(f"Parallel throughput: {billion/total_time_parallel:,.0f} tokens/second")
+    print(f"Parallel throughput: {billion / total_time_parallel:,.0f} tokens/second")
 
     # Hardware requirements
-    print(f"\nHARDWARE REQUIREMENTS:")
+    print("\nHARDWARE REQUIREMENTS:")
     print(f"Number of devices: {required_ring_size}")
-    print(f"Memory per device: {total_memory_billion/required_ring_size:.1f}GB")
+    print(f"Memory per device: {total_memory_billion / required_ring_size:.1f}GB")
     print(f"Total cluster memory: {total_memory_billion:.1f}GB")
 
     # Compare with existing systems
-    print(f"\nCOMPARISON WITH EXISTING SYSTEMS:")
-    print(f"GPT-3 (175B params): ~2048 context length")
-    print(f"PaLM (540B params): ~2048 context length")
+    print("\nCOMPARISON WITH EXISTING SYSTEMS:")
+    print("GPT-3 (175B params): ~2048 context length")
+    print("PaLM (540B params): ~2048 context length")
     print(f"Our billion-token system: {billion:,} context length")
-    print(f"Context length advantage: {billion/2048:,.0f}x longer")
+    print(f"Context length advantage: {billion / 2048:,.0f}x longer")
 
 
-def calculate_memory_usage(
-    seq_len: int, batch_size: int, num_heads: int, head_dim: int
-) -> float:
+def calculate_memory_usage(seq_len: int, batch_size: int, num_heads: int, head_dim: int) -> float:
     """Calculate total memory usage in GB."""
     # Each tensor (Q, K, V) size in elements
     tensor_elements = batch_size * seq_len * num_heads * head_dim

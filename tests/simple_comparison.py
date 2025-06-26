@@ -15,9 +15,7 @@ class SimpleDilatedAttention(torch.nn.Module):
     def __init__(self, segment_lengths, dilation_rates, dropout=0.0):
         super().__init__()
         if len(segment_lengths) != len(dilation_rates):
-            raise ValueError(
-                "segment_lengths and dilation_rates must have the same length"
-            )
+            raise ValueError("segment_lengths and dilation_rates must have the same length")
 
         self.segment_lengths = segment_lengths
         self.dilation_rates = dilation_rates
@@ -160,15 +158,9 @@ def test_functionality():
 
     # Create test data
     torch.manual_seed(42)
-    q = torch.randn(
-        batch_size, seq_len, num_heads, embed_dim, device=device, dtype=dtype
-    )
-    k = torch.randn(
-        batch_size, seq_len, num_heads, embed_dim, device=device, dtype=dtype
-    )
-    v = torch.randn(
-        batch_size, seq_len, num_heads, embed_dim, device=device, dtype=dtype
-    )
+    q = torch.randn(batch_size, seq_len, num_heads, embed_dim, device=device, dtype=dtype)
+    k = torch.randn(batch_size, seq_len, num_heads, embed_dim, device=device, dtype=dtype)
+    v = torch.randn(batch_size, seq_len, num_heads, embed_dim, device=device, dtype=dtype)
 
     # Test both implementations
     model1 = SimpleDilatedAttention(segment_lengths, dilation_rates).to(device)
@@ -262,9 +254,7 @@ def memory_complexity_analysis():
 
     print("DilatedAttention:")
     print("• Memory allocation: O(b * n * h * d) for output tensor")
-    print(
-        "• Intermediate tensors: Multiple rearrange operations create temporary tensors"
-    )
+    print("• Intermediate tensors: Multiple rearrange operations create temporary tensors")
     print("• Segment processing: Sequential processing with explicit cleanup")
     print("• Peak memory: Higher due to multiple intermediate tensors")
 

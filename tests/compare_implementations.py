@@ -37,15 +37,9 @@ def benchmark_implementation(
     model = model.to(device).to(dtype)
 
     # Create test data
-    q = torch.randn(
-        batch_size, seq_len, num_heads, embed_dim, device=device, dtype=dtype
-    )
-    k = torch.randn(
-        batch_size, seq_len, num_heads, embed_dim, device=device, dtype=dtype
-    )
-    v = torch.randn(
-        batch_size, seq_len, num_heads, embed_dim, device=device, dtype=dtype
-    )
+    q = torch.randn(batch_size, seq_len, num_heads, embed_dim, device=device, dtype=dtype)
+    k = torch.randn(batch_size, seq_len, num_heads, embed_dim, device=device, dtype=dtype)
+    v = torch.randn(batch_size, seq_len, num_heads, embed_dim, device=device, dtype=dtype)
 
     # Warmup
     for _ in range(3):
@@ -183,9 +177,7 @@ def compare_implementations():
         # Compare if both successful
         if results_orig and results_improved:
             time_speedup = results_orig["avg_time"] / results_improved["avg_time"]
-            memory_ratio = (
-                results_improved["gpu_memory_mb"] / results_orig["gpu_memory_mb"]
-            )
+            memory_ratio = results_improved["gpu_memory_mb"] / results_orig["gpu_memory_mb"]
             print("\nComparison:")
             print(
                 f"  Speedup: {time_speedup:.2f}x {'(Improved faster)' if time_speedup > 1 else '(Original faster)'}"
@@ -218,18 +210,12 @@ def functional_comparison():
     )
 
     print("\n3. Code Structure:")
-    print(
-        "   - DilatedAttention: More explicit tensor operations, step-by-step approach"
-    )
+    print("   - DilatedAttention: More explicit tensor operations, step-by-step approach")
     print("   - ImprovedDilatedAttention: More concise, optimized tensor operations")
 
     print("\n4. Error Handling:")
-    print(
-        "   - DilatedAttention: Explicit error checking for segment/dilation length mismatch"
-    )
-    print(
-        "   - ImprovedDilatedAttention: Uses assertions, skips segments that are too large"
-    )
+    print("   - DilatedAttention: Explicit error checking for segment/dilation length mismatch")
+    print("   - ImprovedDilatedAttention: Uses assertions, skips segments that are too large")
 
     print("\n5. Performance Optimizations:")
     print("   - DilatedAttention: Relies on xformers optimizations")

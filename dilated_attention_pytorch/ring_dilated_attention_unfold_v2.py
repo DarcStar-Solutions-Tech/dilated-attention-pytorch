@@ -4,14 +4,7 @@ Ring Attention implementation using unfold and stride-based operations (v2).
 This is a simplified and corrected version that properly handles the tensor dimensions.
 """
 
-import threading
-import warnings
-from collections.abc import Sequence
-from typing import Any
-
 import torch
-import torch.distributed as dist
-import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 
@@ -81,9 +74,7 @@ class UnfoldRingDilatedAttention(RingDilatedAttention):
                     # OPTIMIZATION: Use unfold for zero offset (most efficient)
                     # unfold creates a sliding window view: (batch, segments, windows, window_size, heads, dim)
                     # With step=r and size=1, we get every r-th element
-                    q_dilated = q_segments.unfold(2, 1, r).squeeze(
-                        3
-                    )  # Remove window_size dim
+                    q_dilated = q_segments.unfold(2, 1, r).squeeze(3)  # Remove window_size dim
                     k_dilated = k_segments.unfold(2, 1, r).squeeze(3)
                     v_dilated = v_segments.unfold(2, 1, r).squeeze(3)
                 else:
@@ -119,16 +110,12 @@ class UnfoldRingDilatedAttention(RingDilatedAttention):
 
             # Handle different segment counts between q and kv
             if num_segments_q != num_segments_kv:
-                repeat_factor = (
-                    num_segments_q + num_segments_kv - 1
-                ) // num_segments_kv
+                repeat_factor = (num_segments_q + num_segments_kv - 1) // num_segments_kv
                 k_flat = k_flat.repeat(repeat_factor, 1, 1, 1)[: b * num_segments_q]
                 v_flat = v_flat.repeat(repeat_factor, 1, 1, 1)[: b * num_segments_q]
 
             # Apply attention using parent's optimized method
-            attn_out = self._apply_attention(
-                q_flat, k_flat, v_flat, is_causal and ring_step == 0
-            )
+            attn_out = self._apply_attention(q_flat, k_flat, v_flat, is_causal and ring_step == 0)
 
             # Reshape back
             attn_reshaped = attn_out.reshape(b, num_segments_q, seq_len, g, d)
@@ -149,16 +136,12 @@ class UnfoldRingDilatedAttention(RingDilatedAttention):
                     # OPTIMIZATION: Use scatter for inverse of unfold
                     # Create indices for scatter
                     indices = torch.arange(0, effective_s, r, device=q.device)
-                    idx_expanded = indices.view(1, 1, -1, 1, 1).expand(
-                        b, num_segments_q, -1, g, d
-                    )
+                    idx_expanded = indices.view(1, 1, -1, 1, 1).expand(b, num_segments_q, -1, g, d)
                     group_out.scatter_(2, idx_expanded, attn_reshaped)
                 else:
                     # Use scatter for non-zero offset too
                     indices = torch.arange(offset, effective_s, r, device=q.device)
-                    idx_expanded = indices.view(1, 1, -1, 1, 1).expand(
-                        b, num_segments_q, -1, g, d
-                    )
+                    idx_expanded = indices.view(1, 1, -1, 1, 1).expand(b, num_segments_q, -1, g, d)
                     group_out.scatter_(2, idx_expanded, attn_reshaped)
 
                 attn_reshaped = group_out
@@ -179,9 +162,7 @@ class UnfoldRingDilatedAttention(RingDilatedAttention):
         """Helper to apply scaled dot product attention."""
         # Try to use the parent's SDPA logic if available
         if hasattr(super(), "_apply_scaled_dot_product_attention"):
-            return super()._apply_scaled_dot_product_attention(
-                q_flat, k_flat, v_flat, is_causal
-            )
+            return super()._apply_scaled_dot_product_attention(q_flat, k_flat, v_flat, is_causal)
 
         # Otherwise use standard SDPA
         return F.scaled_dot_product_attention(

@@ -10,9 +10,13 @@ from collections.abc import Sequence
 import torch
 from torch import Tensor, nn
 
-from .core import (BaseMultiheadDilatedAttention, DilatedAttentionConfig,
-                   MultiheadConfig, merge_attention_heads,
-                   split_attention_heads)
+from .core import (
+    BaseMultiheadDilatedAttention,
+    DilatedAttentionConfig,
+    MultiheadConfig,
+    merge_attention_heads,
+    split_attention_heads,
+)
 from .dilated_attention import DilatedAttention
 
 # Handle xformers availability
@@ -118,15 +122,9 @@ class MultiheadDilatedAttention(BaseMultiheadDilatedAttention):
     def _init_qkv_projections(self, factory_kwargs):
         """Initialize QKV projections."""
         # Create separate projections (not fused)
-        self.q_proj = nn.Linear(
-            self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs
-        )
-        self.k_proj = nn.Linear(
-            self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs
-        )
-        self.v_proj = nn.Linear(
-            self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs
-        )
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs)
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs)
 
     def forward(
         self,
@@ -201,14 +199,10 @@ class MultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         v = split_attention_heads(v, self.num_heads)
 
         # Combine attention mask and key padding mask if provided
-        combined_mask = self._combine_masks(
-            attn_mask, key_padding_mask, batch_size=b, seq_len=n
-        )
+        combined_mask = self._combine_masks(attn_mask, key_padding_mask, batch_size=b, seq_len=n)
 
         # Apply dilated attention
-        attn_output = self.attention(
-            q, k, v, is_causal=is_causal, attention_mask=combined_mask
-        )
+        attn_output = self.attention(q, k, v, is_causal=is_causal, attention_mask=combined_mask)
 
         # Merge attention heads
         attn_output = merge_attention_heads(attn_output, self.num_heads, self.head_dim)

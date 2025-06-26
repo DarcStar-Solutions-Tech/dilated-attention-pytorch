@@ -17,20 +17,17 @@ import xformers.ops as xops
 from torch import device
 
 # Import factory functions (v0.2.0+)
-from dilated_attention_pytorch import (create_dilated_attention,
-                                       create_multihead_dilated_attention)
+from dilated_attention_pytorch import create_dilated_attention, create_multihead_dilated_attention
+
 # For backward compatibility
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
-from dilated_attention_pytorch.multihead_dilated_attention import \
-    MultiheadDilatedAttention
+from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
 
 # Create the parser
 parser = argparse.ArgumentParser(description="Benchmarking parameters")
 
 # Add the arguments
-parser.add_argument(
-    "--batch_size", type=int, default=1, help="Batch size for benchmarking"
-)
+parser.add_argument("--batch_size", type=int, default=1, help="Batch size for benchmarking")
 parser.add_argument(
     "--total_tokens",
     type=int,
@@ -127,15 +124,11 @@ TOTAL_TOKENS: int = 2**args.total_tokens  # 64M
 NUM_HEADS: int = args.heads
 EMBED_DIM: int = args.embed_dim
 # Vanilla attention only
-VANILLA_SEQ_LENGTHS: List[int] = [
-    2**i for i in range(13, args.vanilla_seq_lengths)
-]  # 8k - 128k
+VANILLA_SEQ_LENGTHS: List[int] = [2**i for i in range(13, args.vanilla_seq_lengths)]  # 8k - 128k
 
 # Dilated attention only
 SEGMENT_LENGTHS: List[int] = args.segment_lengths  # 8k - 64k
-DILATED_SEQ_LENGTHS: List[int] = [
-    2**i for i in range(13, args.dilated_seq_lengths)
-]  # 8k - 64M
+DILATED_SEQ_LENGTHS: List[int] = [2**i for i in range(13, args.dilated_seq_lengths)]  # 8k - 64M
 
 BENCHMARK_VANILLA: bool = args.vanilla
 BENCHMARK_DILATED: bool = args.dilated
@@ -259,37 +252,36 @@ def get_attention_for_seq_length(
                 device=device,
                 dtype=dtype,
             )
+    # Legacy direct instantiation
+    elif attention_type == AttentionType.DILATED:
+        return DilatedAttention(
+            segment_lengths=segment_lengths,
+            dilation_rates=dilation_rates,
+            op=op,
+        )
+    elif attention_type == AttentionType.MHA:
+        return MultiheadDilatedAttention(
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            segment_lengths=segment_lengths,
+            dilation_rates=dilation_rates,
+            op=op,
+            device=device,
+            dtype=dtype,
+        )
+    elif attention_type == AttentionType.IMPROVED:
+        # Benchmark improved implementation
+        return create_multihead_dilated_attention(
+            "improved",
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            segment_lengths=segment_lengths,
+            dilation_rates=dilation_rates,
+            device=device,
+            dtype=dtype,
+        )
     else:
-        # Legacy direct instantiation
-        if attention_type == AttentionType.DILATED:
-            return DilatedAttention(
-                segment_lengths=segment_lengths,
-                dilation_rates=dilation_rates,
-                op=op,
-            )
-        elif attention_type == AttentionType.MHA:
-            return MultiheadDilatedAttention(
-                embed_dim=embed_dim,
-                num_heads=num_heads,
-                segment_lengths=segment_lengths,
-                dilation_rates=dilation_rates,
-                op=op,
-                device=device,
-                dtype=dtype,
-            )
-        elif attention_type == AttentionType.IMPROVED:
-            # Benchmark improved implementation
-            return create_multihead_dilated_attention(
-                "improved",
-                embed_dim=embed_dim,
-                num_heads=num_heads,
-                segment_lengths=segment_lengths,
-                dilation_rates=dilation_rates,
-                device=device,
-                dtype=dtype,
-            )
-        else:
-            raise ValueError(f"Invalid attention type: {attention_type}")
+        raise ValueError(f"Invalid attention type: {attention_type}")
 
 
 def attention_forward(x: torch.Tensor, attn: Callable):
@@ -345,9 +337,7 @@ def benchmark_attention(
 
             logging.info(f"Returned tensor shape {x.shape}")
 
-            if (attention_type == AttentionType.MHA) | (
-                attention_type == AttentionType.DILATED
-            ):
+            if (attention_type == AttentionType.MHA) | (attention_type == AttentionType.DILATED):
                 attn = get_attention_for_seq_length(
                     seq_length=seq_length,
                     device=device,
@@ -450,12 +440,10 @@ if __name__ == "__main__":
             torch.cuda.get_device_properties(i).total_memory / 1024**3, 2
         )
         logging.info(
-            f"GPU {i} memory: {round(torch.cuda.get_device_properties(i).total_memory / 1024 ** 3, 2)} GB"
+            f"GPU {i} memory: {round(torch.cuda.get_device_properties(i).total_memory / 1024**3, 2)} GB"
         )
         gpu_info[f"gpu_{i}_compute_capability"] = torch.cuda.get_device_capability(i)
-        logging.info(
-            f"GPU {i} compute capability: {torch.cuda.get_device_capability(i)}"
-        )
+        logging.info(f"GPU {i} compute capability: {torch.cuda.get_device_capability(i)}")
 
     bench_config.update(gpu_info)
 
@@ -466,9 +454,7 @@ if __name__ == "__main__":
     b_dir = os.path.join("doc", b_name)
 
     with open(
-        os.path.join(
-            b_dir, f"config-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"
-        ),
+        os.path.join(b_dir, f"config-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"),
         "w",
     ) as f:
         f.write(str(bench_config))
@@ -493,18 +479,14 @@ if __name__ == "__main__":
     for embed_dim in embed_dims:  # loop over embed_dims
         for num_head in num_heads:  # loop over num_heads
             if embed_dim % num_head != 0:
-                logging.info(
-                    f"embed_dim ({embed_dim}) must be divisible by num_heads ({num_head})"
-                )
+                logging.info(f"embed_dim ({embed_dim}) must be divisible by num_heads ({num_head})")
                 continue
 
             if num_head < 4:
                 logging.info(f"num_heads ({num_head}) must be greater than 4")
                 continue
 
-            logging.info(
-                f"Running benchmark with embed_dim {embed_dim} and num_heads {num_head}"
-            )
+            logging.info(f"Running benchmark with embed_dim {embed_dim} and num_heads {num_head}")
 
             result_set = {
                 "embed_dim": embed_dim,
@@ -560,9 +542,7 @@ if __name__ == "__main__":
             results.append(result_set)
 
     with open(
-        os.path.join(
-            b_dir, f"results-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"
-        ),
+        os.path.join(b_dir, f"results-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"),
         "w",
     ) as f:
         f.write(str(results))
@@ -579,7 +559,5 @@ if __name__ == "__main__":
     )
 
     fig.write_image(
-        os.path.join(
-            b_dir, f"tokens-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.png"
-        )
+        os.path.join(b_dir, f"tokens-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.png")
     )

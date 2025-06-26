@@ -71,9 +71,7 @@ def test_max_chunk_size_single_headed():
 
     for chunk_size in chunk_sizes:
         # Skip if chunk size is unreasonably large
-        estimated_memory = (batch_size * chunk_size * num_heads * head_dim * 2 * 3) / (
-            1024**3
-        )
+        estimated_memory = (batch_size * chunk_size * num_heads * head_dim * 2 * 3) / (1024**3)
         if estimated_memory > total_memory * 0.9:
             print(f"{chunk_size:>12,} {'Too large':>12} {'--':>10} {'Skip':>10}")
             continue
@@ -95,15 +93,9 @@ def test_max_chunk_size_single_headed():
             ).to(device, dtype=dtype)
 
             # Create test tensors
-            q = torch.randn(
-                batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype
-            )
-            k = torch.randn(
-                batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype
-            )
-            v = torch.randn(
-                batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype
-            )
+            q = torch.randn(batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
+            k = torch.randn(batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
+            v = torch.randn(batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
 
             # Time the forward pass
             start_time = time.time()
@@ -117,9 +109,7 @@ def test_max_chunk_size_single_headed():
             else:
                 peak_memory = estimated_memory
 
-            print(
-                f"{chunk_size:>12,} {peak_memory:>11.3f} {forward_time:>9.1f} {'✓':>10}"
-            )
+            print(f"{chunk_size:>12,} {peak_memory:>11.3f} {forward_time:>9.1f} {'✓':>10}")
 
             max_successful_chunk = chunk_size
             results.append(
@@ -230,9 +220,7 @@ def test_max_chunk_size_multihead():
             ).to(device, dtype=dtype)
 
             # Create test tensors
-            query = torch.randn(
-                batch_size, chunk_size, embed_dim, device=device, dtype=dtype
-            )
+            query = torch.randn(batch_size, chunk_size, embed_dim, device=device, dtype=dtype)
 
             # Time the forward pass
             start_time = time.time()
@@ -246,9 +234,7 @@ def test_max_chunk_size_multihead():
             else:
                 peak_memory = estimated_memory
 
-            print(
-                f"{chunk_size:>12,} {peak_memory:>11.3f} {forward_time:>9.1f} {'✓':>10}"
-            )
+            print(f"{chunk_size:>12,} {peak_memory:>11.3f} {forward_time:>9.1f} {'✓':>10}")
 
             max_successful_chunk = chunk_size
             results.append(
@@ -337,15 +323,9 @@ def test_billion_token_capability():
                 ).to(device, dtype=dtype)
 
                 # Create test chunk
-                q = torch.randn(
-                    1, chunk_size, num_heads, head_dim, device=device, dtype=dtype
-                )
-                k = torch.randn(
-                    1, chunk_size, num_heads, head_dim, device=device, dtype=dtype
-                )
-                v = torch.randn(
-                    1, chunk_size, num_heads, head_dim, device=device, dtype=dtype
-                )
+                q = torch.randn(1, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
+                k = torch.randn(1, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
+                v = torch.randn(1, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
 
                 # Process chunk
                 start_time = time.time()
@@ -370,9 +350,7 @@ def test_billion_token_capability():
                 ).to(device, dtype=dtype)
 
                 # Create test chunk
-                query = torch.randn(
-                    1, chunk_size, embed_dim, device=device, dtype=dtype
-                )
+                query = torch.randn(1, chunk_size, embed_dim, device=device, dtype=dtype)
 
                 # Process chunk
                 start_time = time.time()
@@ -386,16 +364,14 @@ def test_billion_token_capability():
             total_throughput = total_tokens / total_time_estimate
 
             print(f"✓ {impl_name} - Billion-token capable!")
-            print(f"  Chunk processing time: {chunk_time*1000:.1f}ms")
+            print(f"  Chunk processing time: {chunk_time * 1000:.1f}ms")
             print(f"  Tokens per second (chunk): {tokens_per_second:,.0f}")
             print(
-                f"  Estimated total time: {total_time_estimate:.1f}s ({total_time_estimate/3600:.1f} hours)"
+                f"  Estimated total time: {total_time_estimate:.1f}s ({total_time_estimate / 3600:.1f} hours)"
             )
+            print(f"  Estimated total throughput: {total_throughput:,.0f} tokens/second")
             print(
-                f"  Estimated total throughput: {total_throughput:,.0f} tokens/second"
-            )
-            print(
-                f"  Memory per device: ~{torch.cuda.max_memory_allocated()/(1024**3):.3f}GB"
+                f"  Memory per device: ~{torch.cuda.max_memory_allocated() / (1024**3):.3f}GB"
                 if device.type == "cuda"
                 else ""
             )
@@ -405,7 +381,7 @@ def test_billion_token_capability():
                 memory_per_chunk = torch.cuda.max_memory_allocated() / (1024**3)
                 total_memory_needed = memory_per_chunk * ring_size
                 print(f"  Total cluster memory needed: {total_memory_needed:.1f}GB")
-                print(f"  Devices needed (8GB each): {total_memory_needed/8:.0f}")
+                print(f"  Devices needed (8GB each): {total_memory_needed / 8:.0f}")
 
         except Exception as e:
             print(f"✗ {impl_name} failed: {str(e)[:100]}")
@@ -477,9 +453,7 @@ def main():
     print("   - Processing large chunks (tested up to hardware limits)")
     print("   - Scaling to billion-token sequences through ring distribution")
     print("   - Linear memory scaling O(n/ring_size)")
-    print(
-        "   - Maintaining constant memory per device regardless of total sequence length"
-    )
+    print("   - Maintaining constant memory per device regardless of total sequence length")
     print("\n🚀 CONCLUSION: Billion-token processing is VALIDATED and ACHIEVABLE")
     print("   with sufficient ring size (distributed devices)!")
 

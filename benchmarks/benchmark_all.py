@@ -6,25 +6,29 @@ Comprehensive benchmark script for all dilated attention implementations.
 import argparse
 import gc
 import time
-from typing import Dict, List
 
 import numpy as np
 import torch
 from tabulate import tabulate
 
 # Import all implementations
-from dilated_attention_pytorch import (DilatedAttention,
-                                       ImprovedDilatedAttention,
-                                       MultiheadDilatedAttention,
-                                       RingDilatedAttention,
-                                       RingMultiheadDilatedAttention)
+from dilated_attention_pytorch import (
+    DilatedAttention,
+    ImprovedDilatedAttention,
+    MultiheadDilatedAttention,
+    RingDilatedAttention,
+    RingMultiheadDilatedAttention,
+)
 
 # Import block sparse implementations
 try:
     from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-        BlockSparseRingDilatedAttention, SparsePatternConfig)
-    from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import \
-        BlockSparseRingMultiheadDilatedAttention
+        BlockSparseRingDilatedAttention,
+        SparsePatternConfig,
+    )
+    from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import (
+        BlockSparseRingMultiheadDilatedAttention,
+    )
 
     HAS_BLOCK_SPARSE = True
 except ImportError:
@@ -33,8 +37,9 @@ except ImportError:
 
 # Import ImprovedMultiheadDilatedAttention directly from module
 try:
-    from dilated_attention_pytorch.improved_multihead_dilated_attention import \
-        ImprovedMultiheadDilatedAttention
+    from dilated_attention_pytorch.improved_multihead_dilated_attention import (
+        ImprovedMultiheadDilatedAttention,
+    )
 
     HAS_IMPROVED_MHA = True
 except ImportError:
@@ -61,7 +66,7 @@ class BenchmarkRunner:
         warmup_steps: int = 3,
         benchmark_steps: int = 10,
         is_multihead: bool = False,
-    ) -> Dict:
+    ) -> dict:
         """Benchmark a single implementation."""
 
         # Create input tensors
@@ -71,9 +76,7 @@ class BenchmarkRunner:
             query = torch.randn(
                 batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype
             )
-            key = torch.randn(
-                batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype
-            )
+            key = torch.randn(batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype)
             value = torch.randn(
                 batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype
             )
@@ -163,9 +166,7 @@ class BenchmarkRunner:
         throughput = batch_size / mean_time
 
         # Memory in MB
-        peak_memory_mb = (
-            peak_memory / (1024 * 1024) if self.device.type == "cuda" else 0
-        )
+        peak_memory_mb = peak_memory / (1024 * 1024) if self.device.type == "cuda" else 0
 
         return {
             "name": name,
@@ -183,8 +184,8 @@ class BenchmarkRunner:
 
     def run_benchmarks(
         self,
-        batch_sizes: List[int] = [1, 2, 4],
-        seq_lens: List[int] = [2048, 4096, 8192],
+        batch_sizes: list[int] = [1, 2, 4],
+        seq_lens: list[int] = [2048, 4096, 8192],
         num_heads: int = 8,
         head_dim: int = 64,
     ):
@@ -404,9 +405,7 @@ class BenchmarkRunner:
 
             # Calculate speedups relative to baseline
             if len(results) > 1:
-                baseline = next(
-                    (r for r in results if r["name"] == "DilatedAttention"), results[0]
-                )
+                baseline = next((r for r in results if r["name"] == "DilatedAttention"), results[0])
                 print("\nSpeedups relative to DilatedAttention:")
                 for r in results:
                     if r["name"] != baseline["name"]:
@@ -415,13 +414,9 @@ class BenchmarkRunner:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Benchmark all dilated attention implementations"
-    )
+    parser = argparse.ArgumentParser(description="Benchmark all dilated attention implementations")
     parser.add_argument("--device", default="cuda", choices=["cpu", "cuda"])
-    parser.add_argument(
-        "--dtype", default="float16", choices=["float16", "float32", "bfloat16"]
-    )
+    parser.add_argument("--dtype", default="float16", choices=["float16", "float32", "bfloat16"])
     parser.add_argument("--batch-sizes", nargs="+", type=int, default=[1, 2, 4])
     parser.add_argument("--seq-lens", nargs="+", type=int, default=[2048, 4096, 8192])
     parser.add_argument("--num-heads", type=int, default=8)

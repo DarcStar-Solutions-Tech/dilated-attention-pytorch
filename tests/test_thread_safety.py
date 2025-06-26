@@ -87,9 +87,7 @@ class TestMemoryPoolThreadSafety:
                 if random.random() > 0.3 or not allocated:
                     # Allocate
                     shape = (random.randint(10, 100), random.randint(10, 100))
-                    buffer = pool.get_buffer(
-                        shape, torch.float32, f"thread_{thread_id}_buf_{i}"
-                    )
+                    buffer = pool.get_buffer(shape, torch.float32, f"thread_{thread_id}_buf_{i}")
                     allocated.append(buffer)
                 # Simulate releasing by clearing
                 elif random.random() > 0.5:
@@ -100,9 +98,7 @@ class TestMemoryPoolThreadSafety:
 
             return len(allocated)
 
-        results, errors = tester.run_concurrent_test(
-            allocate_and_release, num_threads=10
-        )
+        results, errors = tester.run_concurrent_test(allocate_and_release, num_threads=10)
 
         # Should have no errors
         assert len(errors) == 0, f"Thread safety violations: {errors}"
@@ -175,9 +171,7 @@ class TestMemoryPoolThreadSafety:
 
             return successes
 
-        results, errors = tester.run_concurrent_test(
-            compete_for_buffers, num_threads=10
-        )
+        results, errors = tester.run_concurrent_test(compete_for_buffers, num_threads=10)
 
         # Should handle eviction gracefully
         assert len(errors) == 0

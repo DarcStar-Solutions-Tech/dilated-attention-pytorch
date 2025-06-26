@@ -81,12 +81,7 @@ class AttentionMemoryAnalyzer:
 
         intermediate_tensors = intermediate_tensors / (1024**3)  # Convert to GB
 
-        total = (
-            linear_projections
-            + layer_norm
-            + attention_computation
-            + intermediate_tensors
-        )
+        total = linear_projections + layer_norm + attention_computation + intermediate_tensors
 
         return MemoryProfile(
             linear_projections=linear_projections,
@@ -140,12 +135,7 @@ class AttentionMemoryAnalyzer:
 
         intermediate_tensors = (wrapper_tensors + underlying_tensors) / (1024**3)
 
-        total = (
-            linear_projections
-            + layer_norm
-            + attention_computation
-            + intermediate_tensors
-        )
+        total = linear_projections + layer_norm + attention_computation + intermediate_tensors
 
         return MemoryProfile(
             linear_projections=linear_projections,
@@ -188,9 +178,7 @@ class AttentionMemoryAnalyzer:
                 heads_per_group += 1
 
             # Attention matrix memory
-            attn_matrix_size = (
-                batch_size * num_segs * effective_seq_len**2 * self.dtype_bytes
-            )
+            attn_matrix_size = batch_size * num_segs * effective_seq_len**2 * self.dtype_bytes
 
             # Q, K, V tensors for this segment
             qkv_size = (
@@ -261,9 +249,7 @@ def compare_all_implementations():
 
         for seq_len in sequence_lengths:
             print(f"\nSequence Length: {seq_len:,} tokens")
-            print(
-                f"{'Implementation':<30} {'Total':<8} {'Attn':<8} {'Linear':<8} {'Interm':<8}"
-            )
+            print(f"{'Implementation':<30} {'Total':<8} {'Attn':<8} {'Linear':<8} {'Interm':<8}")
             print("-" * 70)
 
             for name, variant, impl_type in implementations:
@@ -338,9 +324,7 @@ def estimate_max_tokens_all_variants():
             transformer_params_per_layer = 12 * embed_dim**2  # FFN + other projections
         else:
             # Multihead attention: includes Q, K, V, output projections
-            transformer_params_per_layer = (
-                12 * embed_dim**2
-            )  # Includes attention projections
+            transformer_params_per_layer = 12 * embed_dim**2  # Includes attention projections
 
         total_transformer_params = num_layers * transformer_params_per_layer
         total_params = embedding_params + total_transformer_params
@@ -397,12 +381,7 @@ def estimate_max_tokens_all_variants():
         buffer_gb = (model_params_gb + activation_gb) * 0.2
 
         total_gb = (
-            model_params_gb
-            + optimizer_gb
-            + activation_gb
-            + attention_gb
-            + gradient_gb
-            + buffer_gb
+            model_params_gb + optimizer_gb + activation_gb + attention_gb + gradient_gb + buffer_gb
         )
 
         return total_gb, {
@@ -451,9 +430,7 @@ def estimate_max_tokens_all_variants():
     print(
         f"{'Model':<15} {'Standalone':<12} {'Standalone':<12} {'Multihead':<12} {'Multihead':<12}"
     )
-    print(
-        f"{'Size':<15} {'Original':<12} {'Improved':<12} {'Original':<12} {'Improved':<12}"
-    )
+    print(f"{'Size':<15} {'Original':<12} {'Improved':<12} {'Original':<12} {'Improved':<12}")
     print("-" * 75)
 
     baseline_results = {}
@@ -473,9 +450,7 @@ def estimate_max_tokens_all_variants():
     print(
         f"{'Model':<15} {'Standalone':<12} {'Standalone':<12} {'Multihead':<12} {'Multihead':<12}"
     )
-    print(
-        f"{'Size':<15} {'Original':<12} {'Improved':<12} {'Original':<12} {'Improved':<12}"
-    )
+    print(f"{'Size':<15} {'Original':<12} {'Improved':<12} {'Original':<12} {'Improved':<12}")
     print("-" * 75)
 
     optimized_results = {}
@@ -500,9 +475,7 @@ def estimate_max_tokens_all_variants():
     for i, config in enumerate(model_configs):
         standalone_improved = optimized_results[config["name"]][1]
         multihead_improved = optimized_results[config["name"]][3]
-        overhead = (
-            (standalone_improved - multihead_improved) / standalone_improved * 100
-        )
+        overhead = (standalone_improved - multihead_improved) / standalone_improved * 100
 
         print(
             f"{config['name']}: Multihead overhead: {overhead:.1f}% "
@@ -551,30 +524,20 @@ def main():
     print("=" * 80)
 
     print("1. MEMORY OVERHEAD:")
-    print(
-        "   • Multihead wrapper adds ~5-15% memory overhead due to linear projections"
-    )
+    print("   • Multihead wrapper adds ~5-15% memory overhead due to linear projections")
     print("   • Overhead is more significant for smaller models (proportionally)")
     print("   • Linear projections become fixed cost regardless of sequence length")
 
     print("\n2. IMPLEMENTATION COMPARISON:")
     print("   • ImprovedDilatedAttention: 15-20% reduction in attention computation")
     print("   • Benefit is consistent across standalone and multihead variants")
-    print(
-        "   • Larger models see smaller relative improvements (other factors dominate)"
-    )
+    print("   • Larger models see smaller relative improvements (other factors dominate)")
 
     print("\n3. PRACTICAL RECOMMENDATIONS:")
     print("   • Use standalone attention when integrating into custom architectures")
-    print(
-        "   • Use multihead variants for drop-in replacement of nn.MultiheadAttention"
-    )
-    print(
-        "   • ImprovedMultiheadDilatedAttention offers best balance of performance and usability"
-    )
-    print(
-        "   • Memory optimizations (checkpointing, 8-bit optimizer) have biggest impact"
-    )
+    print("   • Use multihead variants for drop-in replacement of nn.MultiheadAttention")
+    print("   • ImprovedMultiheadDilatedAttention offers best balance of performance and usability")
+    print("   • Memory optimizations (checkpointing, 8-bit optimizer) have biggest impact")
 
 
 if __name__ == "__main__":

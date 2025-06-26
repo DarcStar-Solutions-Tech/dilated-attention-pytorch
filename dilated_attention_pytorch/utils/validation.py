@@ -63,9 +63,7 @@ class ValidationMixin:
                 raise ValueError(f"{name}[{i}] must be positive, got {val}")
 
     @staticmethod
-    def validate_tensor_shape(
-        tensor: torch.Tensor, expected_dims: int, name: str
-    ) -> None:
+    def validate_tensor_shape(tensor: torch.Tensor, expected_dims: int, name: str) -> None:
         """
         Validate that a tensor has the expected number of dimensions.
 
@@ -105,9 +103,7 @@ class ValidationMixin:
 
         base_shape = tensors[0].shape
 
-        for i, (tensor, name) in enumerate(
-            zip(tensors[1:], names[1:], strict=False), 1
-        ):
+        for i, (tensor, name) in enumerate(zip(tensors[1:], names[1:], strict=False), 1):
             if dims_to_check is None:
                 if tensor.shape != base_shape:
                     raise ValueError(
@@ -236,9 +232,7 @@ class ValidationMixin:
 
         # Check for boolean or float mask
         if mask.dtype not in [torch.bool, torch.float32, torch.float16, torch.bfloat16]:
-            raise ValueError(
-                f"{name} must have boolean or float dtype, got {mask.dtype}"
-            )
+            raise ValueError(f"{name} must have boolean or float dtype, got {mask.dtype}")
 
     @staticmethod
     def validate_dropout_prob(dropout: float, name: str = "dropout") -> None:
@@ -307,6 +301,4 @@ class ValidationMixin:
             ValueError: If heads < groups
         """
         if num_heads < num_groups:
-            raise ValueError(
-                f"num_heads ({num_heads}) must be >= num_groups ({num_groups})"
-            )
+            raise ValueError(f"num_heads ({num_heads}) must be >= num_groups ({num_groups})")

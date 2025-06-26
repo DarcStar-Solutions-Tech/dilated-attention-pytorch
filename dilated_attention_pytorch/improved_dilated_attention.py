@@ -5,7 +5,7 @@ This module provides an optimized dilated attention mechanism with enhanced
 memory efficiency and performance optimizations.
 """
 
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 import torch
 import torch.nn.functional as F
@@ -107,7 +107,7 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
         key: Tensor,
         value: Tensor,
         is_causal: bool = False,
-        attention_mask: Optional[Tensor] = None,
+        attention_mask: Tensor | None = None,
     ) -> Tensor:
         """
         Forward pass for improved dilated attention.
@@ -137,7 +137,7 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
 
         # Process all segments with optimized memory access patterns
         for i, (g, r, s) in enumerate(
-            zip(group_sizes, self.dilation_rates, self.segment_lengths)
+            zip(group_sizes, self.dilation_rates, self.segment_lengths, strict=False)
         ):
             if g == 0 or n < s:  # Skip empty groups or too-small sequences
                 continue
@@ -156,9 +156,7 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
                 # Get or create cached indices
                 cache_key = (s, r, offset, device)
                 if cache_key not in self._cached_indices:
-                    self._cached_indices[cache_key] = torch.arange(
-                        offset, s, r, device=device
-                    )
+                    self._cached_indices[cache_key] = torch.arange(offset, s, r, device=device)
                 idx = self._cached_indices[cache_key]
 
                 # Use advanced indexing for dilated sampling
@@ -202,9 +200,7 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
             # Scatter back to original positions
             if r > 1 or offset:
                 # Create temporary tensor for scattering
-                temp_output = torch.zeros(
-                    b, n // s, s, g, d, device=device, dtype=dtype
-                )
+                temp_output = torch.zeros(b, n // s, s, g, d, device=device, dtype=dtype)
                 temp_output[:, :, idx, :, :] = x_reshaped
                 out[:, :, hmin:hmax, :].add_(temp_output.reshape(b, n, g, d))
             else:

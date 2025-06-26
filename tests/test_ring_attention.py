@@ -136,15 +136,9 @@ class RingAttentionTester:
         """Create test inputs for multihead attention."""
         torch.manual_seed(42)
 
-        query = torch.randn(
-            batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype
-        )
-        key = torch.randn(
-            batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype
-        )
-        value = torch.randn(
-            batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype
-        )
+        query = torch.randn(batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype)
+        key = torch.randn(batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype)
+        value = torch.randn(batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype)
 
         return query, key, value
 
@@ -236,9 +230,7 @@ class RingAttentionTester:
                 max_diff = torch.max(torch.abs(standard_output - ring_output)).item()
                 is_equivalent = max_diff < self.tolerance
 
-                self.log(
-                    f"    Max difference: {max_diff:.2e} (tolerance: {self.tolerance:.2e})"
-                )
+                self.log(f"    Max difference: {max_diff:.2e} (tolerance: {self.tolerance:.2e})")
                 self.log(f"    Equivalent: {is_equivalent}")
 
                 results[config_name] = is_equivalent
@@ -286,18 +278,14 @@ class RingAttentionTester:
 
                 # Forward pass
                 with torch.no_grad():
-                    standard_output, _ = standard_attention(
-                        query, key, value, is_causal=False
-                    )
+                    standard_output, _ = standard_attention(query, key, value, is_causal=False)
                     ring_output, _ = ring_attention(query, key, value, is_causal=False)
 
                 # Check equivalence
                 max_diff = torch.max(torch.abs(standard_output - ring_output)).item()
                 is_equivalent = max_diff < self.tolerance
 
-                self.log(
-                    f"    Max difference: {max_diff:.2e} (tolerance: {self.tolerance:.2e})"
-                )
+                self.log(f"    Max difference: {max_diff:.2e} (tolerance: {self.tolerance:.2e})")
                 self.log(f"    Equivalent: {is_equivalent}")
 
                 results[config_name] = is_equivalent
@@ -428,14 +416,8 @@ class RingAttentionTester:
                 ring_metrics = self.measure_memory_and_time(ring_forward)
 
                 # Calculate speedup and memory efficiency
-                if (
-                    standard_metrics.get("error") is None
-                    and ring_metrics.get("error") is None
-                ):
-                    speedup = (
-                        standard_metrics["execution_time"]
-                        / ring_metrics["execution_time"]
-                    )
+                if standard_metrics.get("error") is None and ring_metrics.get("error") is None:
+                    speedup = standard_metrics["execution_time"] / ring_metrics["execution_time"]
                     memory_ratio = ring_metrics["gpu_memory_used"] / max(
                         standard_metrics["gpu_memory_used"], 1
                     )
@@ -450,9 +432,7 @@ class RingAttentionTester:
                         "success": True,
                     }
 
-                    self.log(
-                        f"    Speedup: {speedup:.2f}x, Memory ratio: {memory_ratio:.2f}"
-                    )
+                    self.log(f"    Speedup: {speedup:.2f}x, Memory ratio: {memory_ratio:.2f}")
                 else:
                     results[config_name] = {
                         "success": False,
@@ -520,9 +500,7 @@ class RingAttentionTester:
                     "success": True,
                 }
 
-                self.log(
-                    f"    Memory info: {memory_info.get('memory_complexity', 'N/A')}"
-                )
+                self.log(f"    Memory info: {memory_info.get('memory_complexity', 'N/A')}")
                 self.log(f"    Max output difference: {max_diff:.2e}")
 
             except Exception as e:
@@ -563,9 +541,7 @@ class RingAttentionTester:
             results["performance_comparison"] = self.test_performance_comparison()
 
             # Test optimization effectiveness
-            results["optimization_effectiveness"] = (
-                self.test_optimization_effectiveness()
-            )
+            results["optimization_effectiveness"] = self.test_optimization_effectiveness()
 
             # Overall success
             all_equiv_tests = list(results["mathematical_equivalence"].values()) + list(
@@ -637,9 +613,7 @@ def main():
     # Print final results
     if results.get("overall_success", False):
         print("\\n✅ All Ring Attention tests passed!")
-        print(
-            "Ring Attention implementations are mathematically equivalent and ready for use."
-        )
+        print("Ring Attention implementations are mathematically equivalent and ready for use.")
     else:
         print("\\n❌ Some Ring Attention tests failed.")
         print("Please review the test output above for details.")

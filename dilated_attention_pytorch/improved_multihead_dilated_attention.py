@@ -5,13 +5,17 @@ This module provides an optimized multihead wrapper with fused QKV projections
 and enhanced performance characteristics.
 """
 
-from typing import Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
 
 import torch
 from torch import Tensor, nn
 
-from .core import (BaseMultiheadDilatedAttention, DilatedAttentionConfig,
-                   MultiheadConfig, split_attention_heads)
+from .core import (
+    BaseMultiheadDilatedAttention,
+    DilatedAttentionConfig,
+    MultiheadConfig,
+    split_attention_heads,
+)
 from .improved_dilated_attention import ImprovedDilatedAttention
 
 
@@ -159,9 +163,7 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
 
         # Initialize output projection with MAGNETO gain
         if hasattr(self, "out_proj"):
-            nn.init.xavier_normal_(
-                self.out_proj.weight, gain=self.multihead_config.gamma_init
-            )
+            nn.init.xavier_normal_(self.out_proj.weight, gain=self.multihead_config.gamma_init)
             if self.out_proj.bias is not None:
                 nn.init.constant_(self.out_proj.bias, 0)
 
@@ -247,14 +249,10 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             v = split_attention_heads(v, self.num_heads)
 
         # Combine masks if provided
-        combined_mask = self._combine_masks(
-            attn_mask, key_padding_mask, batch_size, seq_len
-        )
+        combined_mask = self._combine_masks(attn_mask, key_padding_mask, batch_size, seq_len)
 
         # Apply improved dilated attention
-        attn_output = self.attention(
-            q, k, v, is_causal=is_causal, attention_mask=combined_mask
-        )
+        attn_output = self.attention(q, k, v, is_causal=is_causal, attention_mask=combined_mask)
 
         # Merge heads back
         attn_output = attn_output.view(batch_size, seq_len, self.embed_dim)

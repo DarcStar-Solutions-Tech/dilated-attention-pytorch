@@ -84,9 +84,7 @@ def compare_implementations():
         )
 
         regular_time, regular_std = measure_performance(regular_attention, q, k, v)
-        print(
-            f"Regular Ring Attention: {regular_time * 1000:.2f} ± {regular_std * 1000:.2f} ms"
-        )
+        print(f"Regular Ring Attention: {regular_time * 1000:.2f} ± {regular_std * 1000:.2f} ms")
 
         # Block Sparse variants
         for sparsity in sparsity_ratios:
@@ -145,7 +143,9 @@ def test_pattern_efficiency():
 
     for pattern in patterns:
         sparse_config = SparsePatternConfig(
-            pattern_type=pattern, sparsity_ratio=0.25, block_size=32  # 75% sparse
+            pattern_type=pattern,
+            sparsity_ratio=0.25,
+            block_size=32,  # 75% sparse
         )
 
         attention = BlockSparseRingDilatedAttention(
@@ -215,9 +215,7 @@ def test_adaptive_performance():
     print("-" * 50)
 
     fixed_time, fixed_std = measure_performance(fixed_attention, q, k, v)
-    print(
-        f"Fixed Sparsity (75% sparse):    {fixed_time * 1000:.2f} ± {fixed_std * 1000:.2f} ms"
-    )
+    print(f"Fixed Sparsity (75% sparse):    {fixed_time * 1000:.2f} ± {fixed_std * 1000:.2f} ms")
 
     adaptive_time, adaptive_std = measure_performance(adaptive_attention, q, k, v)
     print(

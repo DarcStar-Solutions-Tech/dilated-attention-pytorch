@@ -8,7 +8,9 @@ import time
 import torch
 
 from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention, SparsePatternConfig)
+    BlockSparseRingDilatedAttention,
+    SparsePatternConfig,
+)
 
 
 def debug_forward():
@@ -43,15 +45,9 @@ def debug_forward():
 
     # Create inputs
     print("Creating inputs...")
-    query = torch.randn(
-        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-    )
-    key = torch.randn(
-        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-    )
-    value = torch.randn(
-        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-    )
+    query = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    key = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    value = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
 
     print("Starting forward pass...")
     sys.stdout.flush()

@@ -36,9 +36,7 @@ class BufferStats:
     def __post_init__(self):
         """Calculate size in bytes."""
         self.size_bytes = (
-            torch.prod(torch.tensor(self.shape)).item()
-            * torch.finfo(self.dtype).bits
-            // 8
+            torch.prod(torch.tensor(self.shape)).item() * torch.finfo(self.dtype).bits // 8
         )
 
 

@@ -6,10 +6,8 @@ import time
 
 import torch
 
-from dilated_attention_pytorch import (DilatedAttention,
-                                       ImprovedDilatedAttention)
-from dilated_attention_pytorch.ring_dilated_attention import \
-    RingDilatedAttention
+from dilated_attention_pytorch import DilatedAttention, ImprovedDilatedAttention
+from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
 
 
 def analyze_performance_differences():
@@ -79,7 +77,7 @@ def benchmark_operations():
     torch.cuda.synchronize()
     manual_time = (time.time() - start) * 1000
     print(f"   contiguous + view: {manual_time:.2f}ms")
-    print(f"   Overhead: {(manual_time/einops_time - 1)*100:.0f}%")
+    print(f"   Overhead: {(manual_time / einops_time - 1) * 100:.0f}%")
 
     # Benchmark index operations
     print("\n2. Dilation operations (1000 iterations):")
@@ -102,7 +100,7 @@ def benchmark_operations():
     torch.cuda.synchronize()
     index_time = (time.time() - start) * 1000
     print(f"   index_select: {index_time:.2f}ms")
-    print(f"   Overhead: {(index_time/slice_time - 1)*100:.0f}%")
+    print(f"   Overhead: {(index_time / slice_time - 1) * 100:.0f}%")
 
 
 def compare_implementations():
@@ -130,15 +128,9 @@ def compare_implementations():
         dilation_rates = [1, 2, 4]
 
         # Create inputs
-        q = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
-        k = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
-        v = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
+        q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+        k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+        v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
 
         # Test each implementation
         implementations = [
@@ -190,14 +182,10 @@ def main():
     print("=" * 80)
     print("RingDilatedAttention with ring_size=1 is slower because:")
     print("1. It uses less optimized tensor operations (manual reshape vs einops)")
-    print(
-        "2. Additional overhead from ring-specific logic not needed for single device"
-    )
+    print("2. Additional overhead from ring-specific logic not needed for single device")
     print("3. Extra memory copies from .contiguous() calls")
     print("4. index_select is slower than direct slicing for dilation")
-    print(
-        "5. The implementation is optimized for distributed ring operation, not single device"
-    )
+    print("5. The implementation is optimized for distributed ring operation, not single device")
     print("\nRecommendation: Use base DilatedAttention for single device scenarios")
 
 

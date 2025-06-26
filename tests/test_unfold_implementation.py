@@ -151,7 +151,7 @@ def benchmark_performance():
             unfold_memory = torch.cuda.max_memory_allocated() / (1024**2)
 
             print(f"  Memory - Original: {orig_memory:.1f}MB, Unfold: {unfold_memory:.1f}MB")
-            print(f"  Memory reduction: {(1 - unfold_memory/orig_memory)*100:.1f}%")
+            print(f"  Memory reduction: {(1 - unfold_memory / orig_memory) * 100:.1f}%")
 
         # Cleanup
         del q, k, v, orig_module, unfold_module

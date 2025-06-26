@@ -28,7 +28,9 @@ def main():
     print("\n1. Testing basic BlockSparseRingDilatedAttention...")
 
     sparse_config = SparsePatternConfig(
-        pattern_type="dilated_sparse", sparsity_ratio=0.25, block_size=32  # 75% sparse
+        pattern_type="dilated_sparse",
+        sparsity_ratio=0.25,
+        block_size=32,  # 75% sparse
     )
 
     attention = BlockSparseRingDilatedAttention(
@@ -86,9 +88,7 @@ def main():
         output = attention(q, k, v, is_causal=False)
         info = attention.get_memory_info()
 
-        print(
-            f"✓ Sparsity {sparsity:.0%}: Memory reduction = {info['memory_reduction']}"
-        )
+        print(f"✓ Sparsity {sparsity:.0%}: Memory reduction = {info['memory_reduction']}")
 
     # Test 4: Multihead version
     print("\n4. Testing BlockSparseRingMultiheadDilatedAttention...")

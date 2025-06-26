@@ -6,16 +6,13 @@ on the current hardware.
 """
 
 import gc
-import time
-from typing import Optional, Tuple
 
 import torch
 
-from dilated_attention_pytorch.ring_dilated_attention import \
-    RingDilatedAttention
+from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
 
 
-def get_gpu_memory_info() -> Tuple[float, float]:
+def get_gpu_memory_info() -> tuple[float, float]:
     """Get current and total GPU memory in GB."""
     if not torch.cuda.is_available():
         return 0.0, 0.0
@@ -25,7 +22,7 @@ def get_gpu_memory_info() -> Tuple[float, float]:
     return allocated, total
 
 
-def find_max_sequence_length_single_gpu() -> Optional[int]:
+def find_max_sequence_length_single_gpu() -> int | None:
     """Find the maximum sequence length achievable on single GPU."""
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -51,9 +48,7 @@ def find_max_sequence_length_single_gpu() -> Optional[int]:
     print("\nFinding upper bound...")
     test_len = min_len
     while test_len <= max_len:
-        success = test_sequence_length(
-            test_len, ring_size=1, device=device, dtype=dtype
-        )
+        success = test_sequence_length(test_len, ring_size=1, device=device, dtype=dtype)
         if success:
             best_len = test_len
             test_len *= 2
@@ -72,9 +67,7 @@ def find_max_sequence_length_single_gpu() -> Optional[int]:
     print("\nBinary search for maximum...")
     while min_len < max_len - 1024:  # 1K precision
         test_len = (min_len + max_len) // 2
-        success = test_sequence_length(
-            test_len, ring_size=1, device=device, dtype=dtype
-        )
+        success = test_sequence_length(test_len, ring_size=1, device=device, dtype=dtype)
 
         if success:
             best_len = test_len
@@ -130,15 +123,9 @@ def test_sequence_length(
         chunk_size = seq_len // ring_size
 
         # Create one chunk to test
-        q = torch.randn(
-            batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype
-        )
-        k = torch.randn(
-            batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype
-        )
-        v = torch.randn(
-            batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype
-        )
+        q = torch.randn(batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
+        k = torch.randn(batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
+        v = torch.randn(batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
 
         # Test forward pass
         with torch.no_grad():
@@ -157,7 +144,7 @@ def test_sequence_length(
         if verbose:
             error_msg = str(e)
             if "out of memory" in error_msg.lower():
-                print(f"  ✗ OOM")
+                print("  ✗ OOM")
             else:
                 print(f"  ✗ Error: {error_msg[:50]}")
         return False
@@ -190,9 +177,7 @@ def test_ring_scaling_limits():
 
         # Test increasing sequence lengths
         for seq_len in [1_000_000, 2_000_000, 4_000_000, 8_000_000, 16_000_000]:
-            success = test_sequence_length(
-                seq_len, ring_size, device, dtype, verbose=True
-            )
+            success = test_sequence_length(seq_len, ring_size, device, dtype, verbose=True)
             if success:
                 results[ring_size] = seq_len
             else:
@@ -211,7 +196,7 @@ def test_ring_scaling_limits():
     baseline = results.get(1, 0)
     for ring_size in sorted(results.keys()):
         max_len = results[ring_size]
-        improvement = f"{max_len/baseline:.1f}x" if baseline > 0 else "N/A"
+        improvement = f"{max_len / baseline:.1f}x" if baseline > 0 else "N/A"
         print(f"{ring_size:>10} {max_len:>13,} {improvement:>12}")
 
 
@@ -240,7 +225,7 @@ def test_extreme_ring_attention():
 
     for seq_len, ring_size in extreme_configs:
         print(f"\nTesting {seq_len:,} tokens with ring_size={ring_size}:")
-        print(f"  Chunk size: {seq_len//ring_size:,} tokens")
+        print(f"  Chunk size: {seq_len // ring_size:,} tokens")
 
         # Test just the chunk processing
         success = test_sequence_length(seq_len, ring_size, device, dtype, verbose=False)
@@ -249,12 +234,12 @@ def test_extreme_ring_attention():
             chunk_size = seq_len // ring_size
             # Estimate memory usage
             allocated, total = get_gpu_memory_info()
-            print(f"  ✓ Success! Chunk processed successfully")
+            print("  ✓ Success! Chunk processed successfully")
             print(f"  Memory usage: {allocated:.1f}GB")
             print(f"  Theoretical total memory: {allocated * ring_size:.1f}GB")
             print(f"  Devices needed: {ring_size}")
         else:
-            print(f"  ✗ Failed - chunk too large")
+            print("  ✗ Failed - chunk too large")
 
         # Clean up
         torch.cuda.empty_cache()
