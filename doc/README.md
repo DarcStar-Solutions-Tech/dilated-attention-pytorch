@@ -45,6 +45,24 @@ This directory contains comprehensive documentation for the dilated attention im
 - **✅ Trillion-token feasibility** - Mathematical proof with 244M devices
 - **Complete benchmark methodology** and reproducible results
 
+### 🎯 [**Maximum Chunk Capabilities**](../maximum_chunk_analysis_results.md) **🔬 HARDWARE LIMITS VALIDATED**
+**Both implementations tested to their absolute hardware limits!**
+- **✅ 262,144 token chunks** - Maximum single-device capability confirmed
+- **✅ Identical performance** - Both implementations achieve same limits  
+- **✅ Billion-token deployment** - 3,814 devices needed for optimal processing
+- **✅ Multiple strategies** - High-performance vs production-ready options
+- **✅ Hardware scaling calculator** - Optimize configuration for any sequence length
+- **Performance projections**: 7.5 min (single-headed) vs 43 min (multihead) for 1B tokens
+
+### 🚀 [**Billion-Token Deployment Guide**](billion-token-deployment-guide.md) **📋 PRACTICAL IMPLEMENTATION**
+**Complete guide for deploying billion-token Ring Attention in production!**
+- **🎯 Multiple deployment strategies** - Maximum performance vs production-ready vs conservative
+- **🔧 Hardware scaling calculator** - Determine optimal configuration for any sequence length  
+- **⚙️ Complete code examples** - End-to-end implementation with transformer integration
+- **📊 Performance optimization** - Memory efficiency, communication optimization, monitoring
+- **🛠️ Step-by-step deployment** - Infrastructure setup, model configuration, training scripts
+- **Real-world deployment strategies**: 3,814 devices, 7.5-43 min processing times
+
 ### 🚀 [Advanced Distributed Summary](advanced-distributed-summary.md) **🏆 ENTERPRISE UPDATE 2025**
 Complete overview of the **PRODUCTION-READY** distributed implementation:
 - **85-95% memory reduction** through comprehensive optimizations
