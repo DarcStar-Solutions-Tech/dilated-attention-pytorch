@@ -12,10 +12,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 import torch
 
-from dilated_attention_pytorch.core import (MemoryPoolConfig,
-                                            UnifiedMemoryPool,
-                                            get_global_memory_pool,
-                                            reset_global_memory_pool)
+from dilated_attention_pytorch.core import (
+    MemoryPoolConfig,
+    UnifiedMemoryPool,
+    get_global_memory_pool,
+    reset_global_memory_pool,
+)
 
 
 class TestUnifiedMemoryPool:

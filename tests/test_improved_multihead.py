@@ -15,10 +15,10 @@ def test_interface_compatibility():
 
         sys.path.append("dilated_attention_pytorch")
 
-        from dilated_attention_pytorch.improved_multihead_dilated_attention import \
-            ImprovedMultiheadDilatedAttention
-        from dilated_attention_pytorch.multihead_dilated_attention import \
-            MultiheadDilatedAttention
+        from dilated_attention_pytorch.improved_multihead_dilated_attention import (
+            ImprovedMultiheadDilatedAttention,
+        )
+        from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
 
         # Test parameters
         embed_dim = 512
@@ -83,8 +83,9 @@ def test_forward_compatibility():
     try:
         import torch
 
-        from dilated_attention_pytorch.improved_multihead_dilated_attention import \
-            ImprovedMultiheadDilatedAttention
+        from dilated_attention_pytorch.improved_multihead_dilated_attention import (
+            ImprovedMultiheadDilatedAttention,
+        )
 
         # Test parameters
         batch_size = 2
@@ -154,8 +155,9 @@ def test_feature_compatibility():
     try:
         import torch
 
-        from dilated_attention_pytorch.improved_multihead_dilated_attention import \
-            ImprovedMultiheadDilatedAttention
+        from dilated_attention_pytorch.improved_multihead_dilated_attention import (
+            ImprovedMultiheadDilatedAttention,
+        )
 
         # Test TF32 option
         model_tf32 = ImprovedMultiheadDilatedAttention(

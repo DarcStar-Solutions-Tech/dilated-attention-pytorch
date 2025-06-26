@@ -13,7 +13,7 @@ def test_benchmark_includes_block_sparse():
     # Check if block sparse implementations are imported
     print("Checking benchmark_all.py includes block sparse implementations...")
 
-    with open("benchmark_all.py") as f:
+    with open("benchmarks/benchmark_all.py") as f:
         content = f.read()
 
     # Check imports
@@ -38,7 +38,7 @@ def test_benchmark_includes_block_sparse():
     proc = subprocess.Popen(
         [
             sys.executable,
-            "benchmark_all.py",
+            "benchmarks/benchmark_all.py",
             "--batch-sizes",
             "1",
             "--seq-lens",
@@ -71,9 +71,7 @@ def test_benchmark_includes_block_sparse():
             print("STDOUT:", stdout[:500])
             print("STDERR:", stderr[:500])
 
-    print(
-        "\n✅ benchmark_all.py successfully updated with block sparse implementations!"
-    )
+    print("\n✅ benchmark_all.py successfully updated with block sparse implementations!")
 
 
 if __name__ == "__main__":

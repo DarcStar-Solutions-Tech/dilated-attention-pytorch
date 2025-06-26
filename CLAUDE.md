@@ -77,22 +77,20 @@ The project is configured with modern Python tooling via Hatch:
 # Using Hatch (recommended)
 hatch run test                         # Run tests with coverage
 hatch run test-fast                    # Run tests (exit on first failure)
-hatch run lint                         # Run all linting (black, isort, flake8)
-hatch run format                       # Format code (black, isort)
+hatch run lint                         # Run all linting (ruff)
+hatch run format                       # Format code (ruff)
 hatch run typecheck                    # Type checking (mypy)
 hatch run all                          # Run all checks (format, lint, typecheck, test)
 
 # Using uv + direct tools
 uv run pytest tests/                   # Run tests
-uv run black .                         # Format code
-uv run isort .                         # Sort imports
-uv run flake8 .                        # Lint code
+uv run ruff format .                   # Format code
+uv run ruff check .                    # Lint code (includes import sorting)
 uv run mypy dilated_attention_pytorch  # Type check
 
 # Legacy approach
-black .
-isort .
-flake8 .
+ruff format .
+ruff check .
 mypy .
 pytest tests/
 ```
@@ -464,7 +462,7 @@ tests/
 ├── multihead_memory_analysis.py # Multihead memory analysis
 └── simple_comparison.py     # Simple performance comparisons
 
-doc/                        # Extensive documentation
+docs/                       # Extensive documentation
 ├── README.md               # Documentation overview
 ├── ring-attention-guide.md # Ring attention usage guide
 ├── block-sparse-attention-guide.md # Block-sparse guide
@@ -482,13 +480,81 @@ examples/                   # Example scripts
 scripts/                    # Utility scripts
 └── launch_distributed_training.py # Launch distributed training
 
-benchmark.py                # Performance benchmarking
-pyproject.toml             # Modern Python package configuration
-poetry.lock                # Poetry lock file
-poetry.toml                # Poetry configuration
-requirements.txt           # Python dependencies (points to pyproject.toml)
-setup.py                   # Legacy package configuration
-setup.cfg                  # Additional setup configuration
-validate_changes.py        # Validation script
-FLASH_ATTENTION_3_SETUP.md # Flash Attention 3 setup guide
+benchmarks/                 # Performance benchmarking
+├── benchmark.py            # Main benchmark script
+├── benchmark_all.py        # Comprehensive benchmarks
+├── benchmark_ring_billion_tokens.py # Billion-token tests
+└── benchmark_sequence_limits.py # Sequence limit testing
+
+analysis/                   # Analysis scripts
+├── billion_token_analysis.py # Billion-token scaling
+├── ring_attention_analysis.py # Ring attention analysis
+└── ring_performance_analysis.py # Performance analysis
+
+README.md                  # Project documentation
+CLAUDE.md                  # This file - AI instructions
+PROJECT_STRUCTURE.md       # Project organization guide
+pyproject.toml            # Modern Python package configuration
+setup.py                  # Legacy package configuration
+validate_changes.py       # Validation script
 ```
+
+## Project Structure Rules
+
+### IMPORTANT: Maintain Organized Directory Structure
+
+When creating new files, ALWAYS place them in the correct directory:
+
+1. **Documentation Files**:
+   - User guides, tutorials → `docs/guides/`
+   - Technical reports, analysis → `docs/reports/`
+   - NEVER place documentation in root directory
+   - Example: `docs/guides/new-feature-guide.md`, NOT `new-feature-guide.md`
+
+2. **Test Files**:
+   - Unit tests → `tests/test_*.py`
+   - Verification scripts → `tests/verify_*.py`
+   - NEVER place test files in root directory
+   - Example: `tests/test_new_feature.py`, NOT `test_new_feature.py`
+
+3. **Benchmark Scripts**:
+   - Performance benchmarks → `benchmarks/benchmark_*.py`
+   - Benchmark results → `benchmarks/*.txt` or `benchmarks/*.md`
+   - Example: `benchmarks/benchmark_new_feature.py`, NOT `benchmark_new_feature.py`
+
+4. **Analysis Scripts**:
+   - Research/analysis code → `analysis/*_analysis.py`
+   - Example: `analysis/new_feature_analysis.py`, NOT `new_feature_analysis.py`
+
+5. **Utility Scripts**:
+   - Debug scripts → `scripts/debug/`
+   - Demo scripts → `scripts/demo/`
+   - Other utilities → `scripts/`
+   - Example: `scripts/debug/debug_new_feature.py`, NOT `debug_new_feature.py`
+
+6. **Source Code**:
+   - Core implementations → `dilated_attention_pytorch/`
+   - Utilities → `dilated_attention_pytorch/utils/`
+   - Core components → `dilated_attention_pytorch/core/`
+
+### File Creation Rules:
+- ALWAYS check if an appropriate directory exists before creating a file
+- NEVER create files in root unless they are project-level configs (pyproject.toml, etc.)
+- When in doubt, ask the user where to place the file
+- Maintain consistent naming conventions within each directory
+
+### Root Directory:
+The root directory should contain ONLY:
+- README.md, LICENSE, CHANGELOG.md
+- CONTRIBUTING.md, CODE_OF_CONDUCT.md
+- CLAUDE.md, PROJECT_STRUCTURE.md
+- Package config files (setup.py, pyproject.toml, etc.)
+- Git config files (.gitignore, .gitattributes)
+- validate_changes.py (project validation script)
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+ALWAYS follow the Project Structure Rules above when creating new files.

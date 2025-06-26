@@ -148,7 +148,7 @@ venv*/
 # Benchmarking outputs
 benchmark.prof
 *.png
-doc/*/
+# doc/*/ - Commented out to allow doc subdirectories
 
 # OS specific
 .DS_Store

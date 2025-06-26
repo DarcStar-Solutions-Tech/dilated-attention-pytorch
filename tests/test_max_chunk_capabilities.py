@@ -7,17 +7,14 @@ their billion-token processing capabilities.
 
 import gc
 import time
-from typing import Dict, List, Tuple
 
 import torch
 
-from dilated_attention_pytorch.ring_dilated_attention import \
-    RingDilatedAttention
-from dilated_attention_pytorch.ring_multihead_dilated_attention import \
-    RingMultiheadDilatedAttention
+from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
+from dilated_attention_pytorch.ring_multihead_dilated_attention import RingMultiheadDilatedAttention
 
 
-def get_gpu_memory_info() -> Tuple[float, float]:
+def get_gpu_memory_info() -> tuple[float, float]:
     """Get current and total GPU memory in GB."""
     if not torch.cuda.is_available():
         return 0.0, 8.0  # Assume 8GB for CPU testing
@@ -68,7 +65,7 @@ def test_max_chunk_size_single_headed():
     max_successful_chunk = 0
     results = []
 
-    print(f"\nTesting chunk sizes:")
+    print("\nTesting chunk sizes:")
     print(f"{'Chunk Size':>12} {'Memory (GB)':>12} {'Time (ms)':>10} {'Status':>10}")
     print("-" * 50)
 
@@ -201,7 +198,7 @@ def test_max_chunk_size_multihead():
     max_successful_chunk = 0
     results = []
 
-    print(f"\nTesting chunk sizes:")
+    print("\nTesting chunk sizes:")
     print(f"{'Chunk Size':>12} {'Memory (GB)':>12} {'Time (ms)':>10} {'Status':>10}")
     print("-" * 50)
 
@@ -307,11 +304,11 @@ def test_billion_token_capability():
     chunk_size = 4096  # Reasonable chunk size based on previous tests
     ring_size = total_tokens // chunk_size  # Calculate required ring size
 
-    print(f"\nBillion-token configuration:")
+    print("\nBillion-token configuration:")
     print(f"  Total tokens: {total_tokens:,}")
     print(f"  Chunk size: {chunk_size:,}")
     print(f"  Required ring size: {ring_size:,}")
-    print(f"  Simulated processing approach: Process representative chunks")
+    print("  Simulated processing approach: Process representative chunks")
 
     # Test both implementations
     implementations = [
@@ -424,7 +421,7 @@ def compare_chunk_capabilities(single_max: int, multi_max: int):
     print("\n\nChunk Capability Comparison")
     print("=" * 80)
 
-    print(f"Maximum chunk sizes:")
+    print("Maximum chunk sizes:")
     print(f"  RingDilatedAttention: {single_max:,} tokens")
     print(f"  RingMultiheadDilatedAttention: {multi_max:,} tokens")
 
@@ -432,7 +429,7 @@ def compare_chunk_capabilities(single_max: int, multi_max: int):
         ratio = single_max / multi_max
         print(f"  Ratio: {ratio:.2f}x (single-headed vs multihead)")
 
-    print(f"\nImplications for billion-token processing:")
+    print("\nImplications for billion-token processing:")
 
     # Calculate ring sizes needed for billion tokens
     billion = 1_000_000_000
@@ -445,14 +442,14 @@ def compare_chunk_capabilities(single_max: int, multi_max: int):
         multi_ring_size = billion // multi_max
         print(f"  Multihead: {multi_ring_size:,} devices needed")
 
-    print(f"\nMemory efficiency:")
-    print(f"  Single-headed: Lower memory overhead per chunk")
-    print(f"  Multihead: Higher memory overhead but more features")
+    print("\nMemory efficiency:")
+    print("  Single-headed: Lower memory overhead per chunk")
+    print("  Multihead: Higher memory overhead but more features")
 
-    print(f"\nBillion-token feasibility:")
-    print(f"  Both implementations: ✅ CAPABLE of billion-token processing")
-    print(f"  Ring attention enables: Linear scaling to unlimited sequence length")
-    print(f"  Hardware requirement: Sufficient devices for ring size")
+    print("\nBillion-token feasibility:")
+    print("  Both implementations: ✅ CAPABLE of billion-token processing")
+    print("  Ring attention enables: Linear scaling to unlimited sequence length")
+    print("  Hardware requirement: Sufficient devices for ring size")
 
 
 def main():
@@ -473,7 +470,7 @@ def main():
     # Compare results
     compare_chunk_capabilities(single_max, multi_max)
 
-    print(f"\n" + "=" * 80)
+    print("\n" + "=" * 80)
     print("FINAL ASSESSMENT:")
     print("=" * 80)
     print("✅ Both Ring Attention implementations are capable of:")

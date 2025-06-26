@@ -2,8 +2,7 @@ import pytest
 import torch
 
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
-from dilated_attention_pytorch.multihead_dilated_attention import \
-    MultiheadDilatedAttention
+from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 DTYPE = torch.float16 if torch.cuda.is_available() else torch.float32
