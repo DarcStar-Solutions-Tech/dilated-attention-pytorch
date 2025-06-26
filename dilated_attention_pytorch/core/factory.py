@@ -222,6 +222,13 @@ def create_multihead_dilated_attention(
             dtype=multihead_config.dtype,
             **remaining_kwargs,  # Pass through any extra kwargs
         )
+    elif attention_type == "ring_distributed":
+        # Ring distributed uses special initialization
+        module = cls(
+            multihead_config=multihead_config,
+            ring_config=attention_config,
+            **remaining_kwargs
+        )
     else:
         # New style with configs
         module = cls(multihead_config, attention_config)
@@ -425,6 +432,16 @@ def _register_implementations():
 
     except ImportError as e:
         logger.warning(f"Failed to register ring implementations: {e}")
+
+    try:
+        # Register ring distributed implementation
+        from ..ring_distributed_refactored import RingDistributedDilatedAttention
+
+        register_multihead_attention("multihead_ring_distributed", RingDistributedDilatedAttention)
+        logger.debug("Registered ring distributed dilated attention implementation")
+
+    except ImportError as e:
+        logger.warning(f"Failed to register ring distributed implementation: {e}")
 
     try:
         # Register distributed implementations

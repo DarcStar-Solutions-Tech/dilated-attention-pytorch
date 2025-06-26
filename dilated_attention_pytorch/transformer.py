@@ -1,3 +1,10 @@
+"""
+Transformer layers with dilated attention.
+
+This module maintains backward compatibility while using the refactored
+implementation internally.
+"""
+
 from typing import Callable, Optional, Sequence, Union
 
 import torch
@@ -6,6 +13,13 @@ from torch import Tensor, nn
 from torch.nn.modules.transformer import _get_activation_fn
 
 from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
+
+# Import refactored versions
+from .transformer_refactored import (
+    TransformerLayerConfig,
+    create_encoder_layer,
+    create_decoder_layer,
+)
 
 
 class DilatedTransformerEncoderLayer(nn.Module):
