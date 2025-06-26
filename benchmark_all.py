@@ -13,23 +13,18 @@ import torch
 from tabulate import tabulate
 
 # Import all implementations
-from dilated_attention_pytorch import (
-    DilatedAttention,
-    ImprovedDilatedAttention,
-    MultiheadDilatedAttention,
-    RingDilatedAttention,
-    RingMultiheadDilatedAttention,
-)
+from dilated_attention_pytorch import (DilatedAttention,
+                                       ImprovedDilatedAttention,
+                                       MultiheadDilatedAttention,
+                                       RingDilatedAttention,
+                                       RingMultiheadDilatedAttention)
 
 # Import block sparse implementations
 try:
     from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-        BlockSparseRingDilatedAttention,
-        SparsePatternConfig,
-    )
-    from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import (
-        BlockSparseRingMultiheadDilatedAttention,
-    )
+        BlockSparseRingDilatedAttention, SparsePatternConfig)
+    from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import \
+        BlockSparseRingMultiheadDilatedAttention
 
     HAS_BLOCK_SPARSE = True
 except ImportError:
@@ -38,9 +33,8 @@ except ImportError:
 
 # Import ImprovedMultiheadDilatedAttention directly from module
 try:
-    from dilated_attention_pytorch.improved_multihead_dilated_attention import (
-        ImprovedMultiheadDilatedAttention,
-    )
+    from dilated_attention_pytorch.improved_multihead_dilated_attention import \
+        ImprovedMultiheadDilatedAttention
 
     HAS_IMPROVED_MHA = True
 except ImportError:
@@ -77,20 +71,37 @@ class BenchmarkRunner:
             query = torch.randn(
                 batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype
             )
-            key = torch.randn(batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype)
+            key = torch.randn(
+                batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype
+            )
             value = torch.randn(
                 batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype
             )
         else:
             # Core attention expects (batch, seq, heads, head_dim)
             query = torch.randn(
-                batch_size, seq_len, num_heads, head_dim, device=self.device, dtype=self.dtype
+                batch_size,
+                seq_len,
+                num_heads,
+                head_dim,
+                device=self.device,
+                dtype=self.dtype,
             )
             key = torch.randn(
-                batch_size, seq_len, num_heads, head_dim, device=self.device, dtype=self.dtype
+                batch_size,
+                seq_len,
+                num_heads,
+                head_dim,
+                device=self.device,
+                dtype=self.dtype,
             )
             value = torch.randn(
-                batch_size, seq_len, num_heads, head_dim, device=self.device, dtype=self.dtype
+                batch_size,
+                seq_len,
+                num_heads,
+                head_dim,
+                device=self.device,
+                dtype=self.dtype,
             )
 
         # Move module to device and dtype
@@ -105,17 +116,17 @@ class BenchmarkRunner:
                         output = output[0]
                 except Exception as e:
                     return {
-                        'name': name,
-                        'batch_size': batch_size,
-                        'seq_len': seq_len,
-                        'num_heads': num_heads,
-                        'head_dim': head_dim,
-                        'error': str(e),
-                        'success': False,
+                        "name": name,
+                        "batch_size": batch_size,
+                        "seq_len": seq_len,
+                        "num_heads": num_heads,
+                        "head_dim": head_dim,
+                        "error": str(e),
+                        "success": False,
                     }
 
         # Clear cache and synchronize
-        if self.device.type == 'cuda':
+        if self.device.type == "cuda":
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
 
@@ -124,7 +135,7 @@ class BenchmarkRunner:
         peak_memory = 0
 
         for _ in range(benchmark_steps):
-            if self.device.type == 'cuda':
+            if self.device.type == "cuda":
                 torch.cuda.synchronize()
                 start_mem = torch.cuda.memory_allocated()
 
@@ -135,7 +146,7 @@ class BenchmarkRunner:
                 if isinstance(output, tuple):
                     output = output[0]
 
-            if self.device.type == 'cuda':
+            if self.device.type == "cuda":
                 torch.cuda.synchronize()
                 end_mem = torch.cuda.memory_allocated()
                 peak_memory = max(peak_memory, end_mem - start_mem)
@@ -152,20 +163,22 @@ class BenchmarkRunner:
         throughput = batch_size / mean_time
 
         # Memory in MB
-        peak_memory_mb = peak_memory / (1024 * 1024) if self.device.type == 'cuda' else 0
+        peak_memory_mb = (
+            peak_memory / (1024 * 1024) if self.device.type == "cuda" else 0
+        )
 
         return {
-            'name': name,
-            'batch_size': batch_size,
-            'seq_len': seq_len,
-            'num_heads': num_heads,
-            'head_dim': head_dim,
-            'mean_time_ms': mean_time * 1000,
-            'std_time_ms': std_time * 1000,
-            'min_time_ms': min_time * 1000,
-            'throughput': throughput,
-            'peak_memory_mb': peak_memory_mb,
-            'success': True,
+            "name": name,
+            "batch_size": batch_size,
+            "seq_len": seq_len,
+            "num_heads": num_heads,
+            "head_dim": head_dim,
+            "mean_time_ms": mean_time * 1000,
+            "std_time_ms": std_time * 1000,
+            "min_time_ms": min_time * 1000,
+            "throughput": throughput,
+            "peak_memory_mb": peak_memory_mb,
+            "success": True,
         }
 
     def run_benchmarks(
@@ -230,7 +243,7 @@ class BenchmarkRunner:
                     # Test with different sparsity ratios
                     for sparsity_ratio in [0.1, 0.25, 0.5]:  # 90%, 75%, 50% sparse
                         sparse_config = SparsePatternConfig(
-                            pattern_type='dilated_sparse',
+                            pattern_type="dilated_sparse",
                             sparsity_ratio=sparsity_ratio,
                             block_size=32,
                         )
@@ -298,7 +311,9 @@ class BenchmarkRunner:
                 if HAS_BLOCK_SPARSE:
                     # Test with 25% sparsity (75% sparse) for multihead
                     sparse_config = SparsePatternConfig(
-                        pattern_type='dilated_sparse', sparsity_ratio=0.25, block_size=32
+                        pattern_type="dilated_sparse",
+                        sparsity_ratio=0.25,
+                        block_size=32,
                     )
                     multihead_implementations.append(
                         (
@@ -319,7 +334,7 @@ class BenchmarkRunner:
                 all_implementations = implementations + multihead_implementations
 
                 for name, module, is_multihead in all_implementations:
-                    print(f"  {name}...", end='', flush=True)
+                    print(f"  {name}...", end="", flush=True)
 
                     result = self.benchmark_implementation(
                         name=name,
@@ -333,14 +348,14 @@ class BenchmarkRunner:
 
                     self.results.append(result)
 
-                    if result['success']:
+                    if result["success"]:
                         print(f" ✓ {result['mean_time_ms']:.2f}ms")
                     else:
                         print(f" ✗ {result['error']}")
 
                     # Cleanup
                     del module
-                    if self.device.type == 'cuda':
+                    if self.device.type == "cuda":
                         torch.cuda.empty_cache()
                     gc.collect()
 
@@ -354,10 +369,10 @@ class BenchmarkRunner:
         # Group results by configuration
         configs = {}
         for result in self.results:
-            if not result['success']:
+            if not result["success"]:
                 continue
 
-            key = (result['batch_size'], result['seq_len'])
+            key = (result["batch_size"], result["seq_len"])
             if key not in configs:
                 configs[key] = []
             configs[key].append(result)
@@ -369,33 +384,44 @@ class BenchmarkRunner:
 
             # Prepare table data
             table_data = []
-            for r in sorted(results, key=lambda x: x['mean_time_ms']):
+            for r in sorted(results, key=lambda x: x["mean_time_ms"]):
                 table_data.append(
                     [
-                        r['name'],
+                        r["name"],
                         f"{r['mean_time_ms']:.2f} ± {r['std_time_ms']:.2f}",
                         f"{r['throughput']:.1f}",
                         f"{r['peak_memory_mb']:.1f}",
                     ]
                 )
 
-            headers = ["Implementation", "Time (ms)", "Throughput (seq/s)", "Memory (MB)"]
+            headers = [
+                "Implementation",
+                "Time (ms)",
+                "Throughput (seq/s)",
+                "Memory (MB)",
+            ]
             print(tabulate(table_data, headers=headers, tablefmt="grid"))
 
             # Calculate speedups relative to baseline
             if len(results) > 1:
-                baseline = next((r for r in results if r['name'] == 'DilatedAttention'), results[0])
+                baseline = next(
+                    (r for r in results if r["name"] == "DilatedAttention"), results[0]
+                )
                 print("\nSpeedups relative to DilatedAttention:")
                 for r in results:
-                    if r['name'] != baseline['name']:
-                        speedup = baseline['mean_time_ms'] / r['mean_time_ms']
+                    if r["name"] != baseline["name"]:
+                        speedup = baseline["mean_time_ms"] / r["mean_time_ms"]
                         print(f"  {r['name']}: {speedup:.2f}x")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Benchmark all dilated attention implementations")
+    parser = argparse.ArgumentParser(
+        description="Benchmark all dilated attention implementations"
+    )
     parser.add_argument("--device", default="cuda", choices=["cpu", "cuda"])
-    parser.add_argument("--dtype", default="float16", choices=["float16", "float32", "bfloat16"])
+    parser.add_argument(
+        "--dtype", default="float16", choices=["float16", "float32", "bfloat16"]
+    )
     parser.add_argument("--batch-sizes", nargs="+", type=int, default=[1, 2, 4])
     parser.add_argument("--seq-lens", nargs="+", type=int, default=[2048, 4096, 8192])
     parser.add_argument("--num-heads", type=int, default=8)

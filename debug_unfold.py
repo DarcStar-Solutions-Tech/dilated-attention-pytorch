@@ -1,4 +1,5 @@
 """Debug unfold implementation"""
+
 import torch
 
 # Test tensor unfold behavior

@@ -36,7 +36,12 @@ def create_deepspeed_config(
         "gradient_accumulation_steps": gradient_accumulation_steps,
         "optimizer": {
             "type": "AdamW",
-            "params": {"lr": learning_rate, "betas": [0.9, 0.95], "eps": 1e-8, "weight_decay": 0.1},
+            "params": {
+                "lr": learning_rate,
+                "betas": [0.9, 0.95],
+                "eps": 1e-8,
+                "weight_decay": 0.1,
+            },
         },
         "scheduler": {
             "type": "WarmupDecayLR",
@@ -63,10 +68,16 @@ def create_deepspeed_config(
 
     # Add offloading for large models or memory constraints
     if cpu_offload or model_size == "large":
-        config["zero_optimization"]["offload_optimizer"] = {"device": "cpu", "pin_memory": True}
+        config["zero_optimization"]["offload_optimizer"] = {
+            "device": "cpu",
+            "pin_memory": True,
+        }
 
         if zero_stage >= 3:
-            config["zero_optimization"]["offload_param"] = {"device": "cpu", "pin_memory": True}
+            config["zero_optimization"]["offload_param"] = {
+                "device": "cpu",
+                "pin_memory": True,
+            }
 
     # Mixed precision configuration
     if use_fp16:
@@ -335,7 +346,9 @@ def setup_environment():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Launch distributed dilated attention training")
+    parser = argparse.ArgumentParser(
+        description="Launch distributed dilated attention training"
+    )
 
     # Model configuration
     parser.add_argument(
@@ -345,7 +358,9 @@ def main():
         choices=["tiny", "small", "medium", "large", "xl"],
         help="Model size preset",
     )
-    parser.add_argument("--max_seq_len", type=int, default=16384, help="Maximum sequence length")
+    parser.add_argument(
+        "--max_seq_len", type=int, default=16384, help="Maximum sequence length"
+    )
 
     # Hardware configuration
     parser.add_argument("--num_nodes", type=int, default=1, help="Number of nodes")
@@ -366,14 +381,18 @@ def main():
     )
 
     # Training configuration
-    parser.add_argument("--num_epochs", type=int, default=10, help="Number of training epochs")
+    parser.add_argument(
+        "--num_epochs", type=int, default=10, help="Number of training epochs"
+    )
     parser.add_argument(
         "--output_dir",
         type=str,
         default="./outputs",
         help="Output directory for checkpoints and logs",
     )
-    parser.add_argument("--use_wandb", action="store_true", help="Use Weights & Biases for logging")
+    parser.add_argument(
+        "--use_wandb", action="store_true", help="Use Weights & Biases for logging"
+    )
 
     # Distributed configuration
     parser.add_argument(
@@ -390,14 +409,19 @@ def main():
         help="Master node address for multi-node training",
     )
     parser.add_argument(
-        "--master_port", type=int, default=29500, help="Master port for multi-node training"
+        "--master_port",
+        type=int,
+        default=29500,
+        help="Master port for multi-node training",
     )
     parser.add_argument(
         "--hostfile", type=str, default=None, help="Hostfile for multi-node training"
     )
 
     # Advanced options
-    parser.add_argument("--dry_run", action="store_true", help="Print command without executing")
+    parser.add_argument(
+        "--dry_run", action="store_true", help="Print command without executing"
+    )
     parser.add_argument(
         "--custom_script", type=str, default=None, help="Path to custom training script"
     )

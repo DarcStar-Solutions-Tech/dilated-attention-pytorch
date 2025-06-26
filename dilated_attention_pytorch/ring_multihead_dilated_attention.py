@@ -27,12 +27,8 @@ from typing import Any, Dict, Optional, Sequence, Tuple, Union
 import torch
 from torch import Tensor, nn
 
-from .core import (
-    BaseMultiheadDilatedAttention,
-    MultiheadConfig,
-    RingAttentionConfig,
-    split_attention_heads,
-)
+from .core import (BaseMultiheadDilatedAttention, MultiheadConfig,
+                   RingAttentionConfig, split_attention_heads)
 from .ring_dilated_attention import RingDilatedAttention
 
 
@@ -205,11 +201,13 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
     def _enable_compilation(self):
         """Enable torch.compile optimization for additional performance."""
         try:
-            self.attention = torch.compile(self.attention, mode='max-autotune', fullgraph=True)
-            if hasattr(self, 'qkv_proj'):
-                self.qkv_proj = torch.compile(self.qkv_proj, mode='max-autotune')
-            if hasattr(self, 'out_proj'):
-                self.out_proj = torch.compile(self.out_proj, mode='max-autotune')
+            self.attention = torch.compile(
+                self.attention, mode="max-autotune", fullgraph=True
+            )
+            if hasattr(self, "qkv_proj"):
+                self.qkv_proj = torch.compile(self.qkv_proj, mode="max-autotune")
+            if hasattr(self, "out_proj"):
+                self.out_proj = torch.compile(self.out_proj, mode="max-autotune")
         except Exception as e:
             warnings.warn(f"torch.compile failed: {e}")
 
@@ -243,9 +241,15 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             # Pre-allocate output buffers for efficient memory usage
             if buffer_key not in self._qkv_output_buffers:
                 self._qkv_output_buffers[buffer_key] = {
-                    'q': torch.empty(target_shape, dtype=query.dtype, device=query.device),
-                    'k': torch.empty(target_shape, dtype=query.dtype, device=query.device),
-                    'v': torch.empty(target_shape, dtype=query.dtype, device=query.device),
+                    "q": torch.empty(
+                        target_shape, dtype=query.dtype, device=query.device
+                    ),
+                    "k": torch.empty(
+                        target_shape, dtype=query.dtype, device=query.device
+                    ),
+                    "v": torch.empty(
+                        target_shape, dtype=query.dtype, device=query.device
+                    ),
                 }
 
         # Ensure buffers match current input dimensions - use resize for efficiency
@@ -266,9 +270,9 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
 
             # Resize existing buffers instead of recreating
             try:
-                buffers['q'].resize_(target_shape)
-                buffers['k'].resize_(target_shape)
-                buffers['v'].resize_(target_shape)
+                buffers["q"].resize_(target_shape)
+                buffers["k"].resize_(target_shape)
+                buffers["v"].resize_(target_shape)
             except RuntimeError as resize_error:
                 # Enhanced fallback with error recovery
                 try:
@@ -277,9 +281,15 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
                     torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
                     # Recreate buffers
-                    buffers["q"] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
-                    buffers["k"] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
-                    buffers["v"] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
+                    buffers["q"] = torch.empty(
+                        target_shape, dtype=query.dtype, device=query.device
+                    )
+                    buffers["k"] = torch.empty(
+                        target_shape, dtype=query.dtype, device=query.device
+                    )
+                    buffers["v"] = torch.empty(
+                        target_shape, dtype=query.dtype, device=query.device
+                    )
                     self._qkv_output_buffers[buffer_key] = buffers
                 except RuntimeError as alloc_error:
                     # Ultimate fallback: use smaller batch processing
@@ -317,11 +327,11 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             v_proj = self.qkv_proj(value)[:, :, 2 * self.embed_dim :]
 
             # Reshape and copy to buffers
-            buffers['q'].copy_(q_proj.view(target_shape))
-            buffers['k'].copy_(k_proj.view(target_shape))
-            buffers['v'].copy_(v_proj.view(target_shape))
+            buffers["q"].copy_(q_proj.view(target_shape))
+            buffers["k"].copy_(k_proj.view(target_shape))
+            buffers["v"].copy_(v_proj.view(target_shape))
 
-        return buffers['q'], buffers['k'], buffers['v']
+        return buffers["q"], buffers["k"], buffers["v"]
 
     def forward(
         self,
@@ -356,7 +366,8 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         # Handle ring attention limitations
         if attn_mask is not None or key_padding_mask is not None:
             warnings.warn(
-                "Attention masks are not supported with Ring Attention. " "Masks will be ignored."
+                "Attention masks are not supported with Ring Attention. "
+                "Masks will be ignored."
             )
 
         if need_weights:
@@ -402,7 +413,13 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         try:
             if self.use_checkpointing and self.training:
                 attn_output = torch.utils.checkpoint.checkpoint(
-                    self.attention.forward, q, k, v, is_causal, None, use_reentrant=False
+                    self.attention.forward,
+                    q,
+                    k,
+                    v,
+                    is_causal,
+                    None,
+                    use_reentrant=False,
                 )
             else:
                 attn_output = self.attention(q, k, v, is_causal, None)
@@ -417,7 +434,13 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
                 if not self.use_checkpointing:
                     warnings.warn("OOM detected, retrying with gradient checkpointing")
                     attn_output = torch.utils.checkpoint.checkpoint(
-                        self.attention.forward, q, k, v, is_causal, None, use_reentrant=False
+                        self.attention.forward,
+                        q,
+                        k,
+                        v,
+                        is_causal,
+                        None,
+                        use_reentrant=False,
                     )
                 else:
                     raise RuntimeError(

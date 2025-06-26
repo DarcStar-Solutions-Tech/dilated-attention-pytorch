@@ -43,9 +43,8 @@ def test_basic_forward_pass():
     print("\nTesting BlockSparseRingDilatedAttention forward pass...")
 
     try:
-        from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-            BlockSparseRingDilatedAttention,
-        )
+        from dilated_attention_pytorch.block_sparse_ring_dilated_attention import \
+            BlockSparseRingDilatedAttention
 
         # Test parameters
         batch_size = 2
@@ -58,7 +57,7 @@ def test_basic_forward_pass():
             segment_lengths=[128, 256],
             dilation_rates=[1, 2],
             sparsity_ratio=0.5,
-            pattern_type='dilated_sparse',
+            pattern_type="dilated_sparse",
             dropout=0.0,
         )
 
@@ -90,9 +89,8 @@ def test_multihead_forward_pass():
     print("\nTesting BlockSparseRingMultiheadDilatedAttention forward pass...")
 
     try:
-        from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import (
-            BlockSparseRingMultiheadDilatedAttention,
-        )
+        from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import \
+            BlockSparseRingMultiheadDilatedAttention
 
         # Test parameters
         batch_size = 2
@@ -107,7 +105,7 @@ def test_multihead_forward_pass():
             segment_lengths=[128, 256],
             dilation_rates=[1, 2],
             sparsity_ratio=0.5,
-            pattern_type='dilated_sparse',
+            pattern_type="dilated_sparse",
             dropout=0.0,
         )
 
@@ -141,11 +139,10 @@ def test_different_patterns():
     print("\nTesting different sparse patterns...")
 
     try:
-        from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-            BlockSparseRingDilatedAttention,
-        )
+        from dilated_attention_pytorch.block_sparse_ring_dilated_attention import \
+            BlockSparseRingDilatedAttention
 
-        patterns = ['local_window', 'dilated_sparse', 'global_local', 'random']
+        patterns = ["local_window", "dilated_sparse", "global_local", "random"]
         batch_size = 1
         seq_len = 256
         num_heads = 4
@@ -186,9 +183,8 @@ def test_memory_efficiency():
     print("\nTesting memory efficiency...")
 
     try:
-        from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-            BlockSparseRingDilatedAttention,
-        )
+        from dilated_attention_pytorch.block_sparse_ring_dilated_attention import \
+            BlockSparseRingDilatedAttention
 
         sparsity_ratios = [0.1, 0.5, 0.9]
         results = []
@@ -198,12 +194,12 @@ def test_memory_efficiency():
                 segment_lengths=[256],
                 dilation_rates=[1],
                 sparsity_ratio=sparsity,
-                pattern_type='dilated_sparse',
+                pattern_type="dilated_sparse",
                 dropout=0.0,
             )
 
             # Get memory info if available
-            if hasattr(attention, 'get_memory_info'):
+            if hasattr(attention, "get_memory_info"):
                 info = attention.get_memory_info()
                 results.append((sparsity, info))
                 print(f"✓ Sparsity {sparsity}: {info.get('sparsity_ratio', 'N/A')}")
@@ -223,11 +219,15 @@ def test_factory_creation():
     print("\nTesting factory creation...")
 
     try:
-        from dilated_attention_pytorch import create_block_sparse_multihead_attention
+        from dilated_attention_pytorch import \
+            create_block_sparse_multihead_attention
 
         # Create using factory
         attention = create_block_sparse_multihead_attention(
-            embed_dim=512, num_heads=8, sparsity_ratio=0.5, pattern_type='dilated_sparse'
+            embed_dim=512,
+            num_heads=8,
+            sparsity_ratio=0.5,
+            pattern_type="dilated_sparse",
         )
 
         # Test forward pass
@@ -253,7 +253,8 @@ def test_adaptive_sparsity():
     print("\nTesting adaptive sparsity...")
 
     try:
-        from dilated_attention_pytorch import create_adaptive_sparse_multihead_attention
+        from dilated_attention_pytorch import \
+            create_adaptive_sparse_multihead_attention
 
         # Create adaptive sparse attention
         attention = create_adaptive_sparse_multihead_attention(
@@ -323,7 +324,9 @@ def main():
     print(f"\nTotal: {passed}/{total} tests passed")
 
     if passed == total:
-        print("\n✓ All tests passed! Block Sparse implementations are working correctly.")
+        print(
+            "\n✓ All tests passed! Block Sparse implementations are working correctly."
+        )
     else:
         print(f"\n✗ {total - passed} tests failed. Please check the implementation.")
 

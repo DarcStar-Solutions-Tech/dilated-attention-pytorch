@@ -7,7 +7,6 @@ and optimization strategies used across all dilated attention implementations.
 
 import math
 import warnings
-
 from typing import Any, Dict, List, Optional, Tuple
 
 import torch
@@ -50,7 +49,7 @@ def compute_attention_scores(
         causal_mask = torch.triu(
             torch.ones(seq_len, seq_len, dtype=torch.bool, device=q.device), diagonal=1
         )
-        scores = scores.masked_fill(causal_mask, float('-inf'))
+        scores = scores.masked_fill(causal_mask, float("-inf"))
 
     # Apply attention mask if provided
     if attention_mask is not None:
@@ -60,7 +59,11 @@ def compute_attention_scores(
 
 
 def apply_dilated_attention_pattern(
-    scores: Tensor, segment_length: int, dilation_rate: int, group_idx: int, total_groups: int
+    scores: Tensor,
+    segment_length: int,
+    dilation_rate: int,
+    group_idx: int,
+    total_groups: int,
 ) -> Tensor:
     """
     Apply dilated attention pattern to attention scores.
@@ -82,7 +85,7 @@ def apply_dilated_attention_pattern(
     mask = create_dilated_mask(seq_len, segment_length, dilation_rate, device)
 
     # Apply mask
-    scores = scores.masked_fill(~mask, float('-inf'))
+    scores = scores.masked_fill(~mask, float("-inf"))
 
     return scores
 
@@ -341,7 +344,10 @@ def standard_attention(
 
 
 def compute_alibi_bias(
-    seq_len: int, num_heads: int, device: torch.device, dtype: torch.dtype = torch.float32
+    seq_len: int,
+    num_heads: int,
+    device: torch.device,
+    dtype: torch.dtype = torch.float32,
 ) -> Tensor:
     """
     Compute ALiBi (Attention with Linear Biases) positional bias.
@@ -357,7 +363,9 @@ def compute_alibi_bias(
     """
     # Compute slopes for each head
     slopes = torch.tensor(
-        [2 ** (-8 * i / num_heads) for i in range(num_heads)], device=device, dtype=dtype
+        [2 ** (-8 * i / num_heads) for i in range(num_heads)],
+        device=device,
+        dtype=dtype,
     )
 
     # Create position indices
@@ -393,7 +401,9 @@ def compute_rotary_embeddings(
     assert dim % 2 == 0, "Dimension must be even for rotary embeddings"
 
     # Compute frequencies
-    inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2, device=device, dtype=dtype) / dim))
+    inv_freq = 1.0 / (
+        base ** (torch.arange(0, dim, 2, device=device, dtype=dtype) / dim)
+    )
 
     # Create position indices
     positions = torch.arange(seq_len, device=device, dtype=dtype)
@@ -493,7 +503,9 @@ def create_4d_causal_mask(
     Returns:
         4D causal mask [1, 1, seq_len, seq_len]
     """
-    mask = torch.triu(torch.ones(seq_len, seq_len, device=device, dtype=dtype), diagonal=1)
+    mask = torch.triu(
+        torch.ones(seq_len, seq_len, device=device, dtype=dtype), diagonal=1
+    )
     mask = mask.masked_fill(mask == 1, float("-inf"))
     return mask.unsqueeze(0).unsqueeze(0)
 
@@ -524,7 +536,10 @@ def apply_head_specific_masks(
 
 
 def compute_position_embeddings(
-    seq_len: int, embed_dim: int, device: torch.device, dtype: torch.dtype = torch.float32
+    seq_len: int,
+    embed_dim: int,
+    device: torch.device,
+    dtype: torch.dtype = torch.float32,
 ) -> Tensor:
     """
     Compute sinusoidal position embeddings.
@@ -567,8 +582,8 @@ def get_attention_backend_info() -> dict[str, Any]:
     }
 
     if torch.cuda.is_available():
-        info['gpu_name'] = torch.cuda.get_device_name()
-        info['gpu_capability'] = torch.cuda.get_device_capability()
+        info["gpu_name"] = torch.cuda.get_device_name()
+        info["gpu_capability"] = torch.cuda.get_device_capability()
 
     return info
 

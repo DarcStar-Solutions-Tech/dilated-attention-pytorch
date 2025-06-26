@@ -12,12 +12,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 import torch
 
-from dilated_attention_pytorch.core import (
-    MemoryPoolConfig,
-    UnifiedMemoryPool,
-    get_global_memory_pool,
-    reset_global_memory_pool,
-)
+from dilated_attention_pytorch.core import (MemoryPoolConfig,
+                                            UnifiedMemoryPool,
+                                            get_global_memory_pool,
+                                            reset_global_memory_pool)
 
 
 class TestUnifiedMemoryPool:
@@ -153,7 +151,6 @@ class TestUnifiedMemoryPool:
     def test_memory_pressure_cleanup(
         self, mock_cuda_available, mock_device_props, mock_reserved, mock_allocated
     ):
-
         """Test cleanup under memory pressure."""
         # Mock CUDA available
         mock_cuda_available.return_value = True
@@ -234,7 +231,9 @@ class TestUnifiedMemoryPool:
         pool = UnifiedMemoryPool()
 
         # Request pinned memory
-        buffer = pool.get_buffer((100, 100), torch.float32, torch.device("cuda"), pinned=True)
+        buffer = pool.get_buffer(
+            (100, 100), torch.float32, torch.device("cuda"), pinned=True
+        )
 
         assert buffer.is_cuda
         # Note: Can't directly test if memory is pinned

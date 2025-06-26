@@ -19,7 +19,7 @@ def measure_performance(
     # Warmup
     for _ in range(num_warmup):
         _ = attention_module(q, k, v, is_causal=False)
-        if device.type == 'cuda':
+        if device.type == "cuda":
             torch.cuda.synchronize()
 
     # Time runs
@@ -27,7 +27,7 @@ def measure_performance(
     for _ in range(num_runs):
         start = time.perf_counter()
         _ = attention_module(q, k, v, is_causal=False)
-        if device.type == 'cuda':
+        if device.type == "cuda":
             torch.cuda.synchronize()
         end = time.perf_counter()
         times.append(end - start)
@@ -44,10 +44,9 @@ def compare_implementations():
     print("=" * 60)
 
     from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-        BlockSparseRingDilatedAttention,
-        SparsePatternConfig,
-    )
-    from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
+        BlockSparseRingDilatedAttention, SparsePatternConfig)
+    from dilated_attention_pytorch.ring_dilated_attention import \
+        RingDilatedAttention
 
     # Test configurations
     configs = [
@@ -58,7 +57,7 @@ def compare_implementations():
 
     sparsity_ratios = [0.1, 0.25, 0.5]  # 90%, 75%, 50% sparse
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}\n")
 
     for config in configs:
@@ -67,27 +66,36 @@ def compare_implementations():
 
         # Create input tensors
         q = torch.randn(
-            config['batch'], config['seq_len'], config['heads'], config['dim'], device=device
+            config["batch"],
+            config["seq_len"],
+            config["heads"],
+            config["dim"],
+            device=device,
         )
         k = torch.randn_like(q)
         v = torch.randn_like(q)
 
         # Regular Ring Attention
         regular_attention = RingDilatedAttention(
-            segment_lengths=[config['seq_len'] // 2], dilation_rates=[1], dropout=0.0, device=device
+            segment_lengths=[config["seq_len"] // 2],
+            dilation_rates=[1],
+            dropout=0.0,
+            device=device,
         )
 
         regular_time, regular_std = measure_performance(regular_attention, q, k, v)
-        print(f"Regular Ring Attention: {regular_time * 1000:.2f} ± {regular_std * 1000:.2f} ms")
+        print(
+            f"Regular Ring Attention: {regular_time * 1000:.2f} ± {regular_std * 1000:.2f} ms"
+        )
 
         # Block Sparse variants
         for sparsity in sparsity_ratios:
             sparse_config = SparsePatternConfig(
-                pattern_type='dilated_sparse', sparsity_ratio=sparsity, block_size=32
+                pattern_type="dilated_sparse", sparsity_ratio=sparsity, block_size=32
             )
 
             sparse_attention = BlockSparseRingDilatedAttention(
-                segment_lengths=[config['seq_len'] // 2],
+                segment_lengths=[config["seq_len"] // 2],
                 dilation_rates=[1],
                 sparse_config=sparse_config,
                 dropout=0.0,
@@ -115,17 +123,15 @@ def test_pattern_efficiency():
     print("=" * 60)
 
     from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-        BlockSparseRingDilatedAttention,
-        SparsePatternConfig,
-    )
+        BlockSparseRingDilatedAttention, SparsePatternConfig)
 
-    patterns = ['local_window', 'dilated_sparse', 'global_local']
+    patterns = ["local_window", "dilated_sparse", "global_local"]
     seq_len = 2048
     batch_size = 2
     num_heads = 8
     head_dim = 64
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Create input tensors
     q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
@@ -159,16 +165,14 @@ def test_adaptive_performance():
     print("=" * 60)
 
     from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-        BlockSparseRingDilatedAttention,
-        SparsePatternConfig,
-    )
+        BlockSparseRingDilatedAttention, SparsePatternConfig)
 
     seq_len = 1024
     batch_size = 2
     num_heads = 8
     head_dim = 64
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Create input tensors
     q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
@@ -177,7 +181,7 @@ def test_adaptive_performance():
 
     # Fixed sparsity
     fixed_config = SparsePatternConfig(
-        pattern_type='dilated_sparse', sparsity_ratio=0.25, block_size=32
+        pattern_type="dilated_sparse", sparsity_ratio=0.25, block_size=32
     )
 
     fixed_attention = BlockSparseRingDilatedAttention(
@@ -191,7 +195,7 @@ def test_adaptive_performance():
 
     # Adaptive sparsity
     adaptive_config = SparsePatternConfig(
-        pattern_type='learned', sparsity_ratio=0.25, block_size=32
+        pattern_type="learned", sparsity_ratio=0.25, block_size=32
     )
 
     adaptive_attention = BlockSparseRingDilatedAttention(
@@ -207,7 +211,9 @@ def test_adaptive_performance():
     print("-" * 50)
 
     fixed_time, fixed_std = measure_performance(fixed_attention, q, k, v)
-    print(f"Fixed Sparsity (75% sparse):    {fixed_time * 1000:.2f} ± {fixed_std * 1000:.2f} ms")
+    print(
+        f"Fixed Sparsity (75% sparse):    {fixed_time * 1000:.2f} ± {fixed_std * 1000:.2f} ms"
+    )
 
     adaptive_time, adaptive_std = measure_performance(adaptive_attention, q, k, v)
     print(

@@ -10,7 +10,6 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-
 import torch
 from torch import Tensor, nn
 
@@ -68,7 +67,9 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
 
         # Initialize caches for frequently computed values with size limits
         self._max_cache_size = 100  # Configurable cache size limit
-        self._head_groups_cache: dict[int, tuple[list[int], list[tuple[int, int]]]] = OrderedDict()
+        self._head_groups_cache: dict[int, tuple[list[int], list[tuple[int, int]]]] = (
+            OrderedDict()
+        )
         self._pattern_cache: dict[Any, Tensor] = OrderedDict()
         self._indices_cache: dict[Any, tuple[Tensor, Tensor]] = OrderedDict()
 
@@ -103,7 +104,9 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
         """
         pass
 
-    def _get_head_groups(self, num_heads: int) -> tuple[list[int], list[tuple[int, int]]]:
+    def _get_head_groups(
+        self, num_heads: int
+    ) -> tuple[list[int], list[tuple[int, int]]]:
         """
         Get cached head group distribution.
 
@@ -251,11 +254,11 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
             Dictionary with memory usage statistics
         """
         return {
-            'cache_size': len(self._head_groups_cache)
+            "cache_size": len(self._head_groups_cache)
             + len(self._pattern_cache)
             + len(self._indices_cache),
-            'max_cache_size': self._max_cache_size,
-            'memory_complexity': "O(n) for sequence length n",
+            "max_cache_size": self._max_cache_size,
+            "memory_complexity": "O(n) for sequence length n",
         }
 
     def extra_repr(self) -> str:
@@ -270,11 +273,11 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
         """Support for pickling - exclude unpickleable objects."""
         state = self.__dict__.copy()
         # Remove the unpickleable lock
-        state['_cache_lock'] = None
+        state["_cache_lock"] = None
         # Clear caches to reduce pickle size
-        state['_head_groups_cache'] = {}
-        state['_pattern_cache'] = {}
-        state['_indices_cache'] = {}
+        state["_head_groups_cache"] = {}
+        state["_pattern_cache"] = {}
+        state["_indices_cache"] = {}
         return state
 
     def __setstate__(self, state):
@@ -304,7 +307,11 @@ class BaseMultiheadDilatedAttention(nn.Module, ValidationMixin, ABC):
         attention_config: Dilated attention configuration
     """
 
-    def __init__(self, multihead_config: MultiheadConfig, attention_config: DilatedAttentionConfig):
+    def __init__(
+        self,
+        multihead_config: MultiheadConfig,
+        attention_config: DilatedAttentionConfig,
+    ):
         super().__init__()
 
         # Store configurations
@@ -329,7 +336,9 @@ class BaseMultiheadDilatedAttention(nn.Module, ValidationMixin, ABC):
         self._init_qkv_projections(factory_kwargs)
 
         # Output projection
-        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs)
+        self.out_proj = nn.Linear(
+            self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs
+        )
 
         # Layer normalization if enabled
         if multihead_config.layer_norm:

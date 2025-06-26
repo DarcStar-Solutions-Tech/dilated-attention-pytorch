@@ -9,12 +9,8 @@ import logging
 from typing import Dict, Optional, Type
 
 from .base import BaseDilatedAttention, BaseMultiheadDilatedAttention
-from .config import (
-    DilatedAttentionConfig,
-    MultiheadConfig,
-    RingAttentionConfig,
-    SparseAttentionConfig,
-)
+from .config import (DilatedAttentionConfig, MultiheadConfig,
+                     RingAttentionConfig, SparseAttentionConfig)
 from .constants import GPU_TYPE, HAS_FLASH_ATTN, HAS_FLASH_ATTN_3
 
 logger = logging.getLogger("dilated_attention_pytorch.factory")
@@ -30,7 +26,9 @@ def register_attention(name: str, cls: type[BaseDilatedAttention]) -> None:
     _ATTENTION_REGISTRY[name] = cls
 
 
-def register_multihead_attention(name: str, cls: type[BaseMultiheadDilatedAttention]) -> None:
+def register_multihead_attention(
+    name: str, cls: type[BaseMultiheadDilatedAttention]
+) -> None:
     """Register a multihead dilated attention implementation."""
     _MULTIHEAD_REGISTRY[name] = cls
 
@@ -83,13 +81,17 @@ def create_dilated_attention(
     # Validate type
     if attention_type not in _ATTENTION_REGISTRY:
         available = list(_ATTENTION_REGISTRY.keys())
-        raise ValueError(f"Unknown attention type '{attention_type}'. Available types: {available}")
+        raise ValueError(
+            f"Unknown attention type '{attention_type}'. Available types: {available}"
+        )
 
     # Create configuration
     config_class = _get_config_class(attention_type)
     filtered_kwargs = _filter_kwargs(config_class, kwargs)
     config = config_class(
-        segment_lengths=segment_lengths, dilation_rates=dilation_rates, **filtered_kwargs
+        segment_lengths=segment_lengths,
+        dilation_rates=dilation_rates,
+        **filtered_kwargs,
     )
 
     # Create and return module
@@ -162,7 +164,9 @@ def create_multihead_dilated_attention(
     # Validate type
     if multihead_type not in _MULTIHEAD_REGISTRY:
         available = [t.replace("multihead_", "") for t in _MULTIHEAD_REGISTRY]
-        raise ValueError(f"Unknown attention type '{attention_type}'. Available types: {available}")
+        raise ValueError(
+            f"Unknown attention type '{attention_type}'. Available types: {available}"
+        )
 
     # Check if configs were passed directly
     multihead_config_passed = kwargs.get("multihead_config", None)
@@ -181,7 +185,14 @@ def create_multihead_dilated_attention(
         attention_kwargs = {}
 
         # Keywords that belong to multihead config
-        multihead_keys = {"bias", "layer_norm", "layer_norm_eps", "gamma_init", "device", "dtype"}
+        multihead_keys = {
+            "bias",
+            "layer_norm",
+            "layer_norm_eps",
+            "gamma_init",
+            "device",
+            "dtype",
+        }
 
         for key, value in kwargs.items():
             if key in multihead_keys:
@@ -313,7 +324,10 @@ def create_block_sparse_attention(
     kwargs.update({"sparsity_ratio": sparsity_ratio, "pattern_type": pattern_type})
 
     return create_multihead_dilated_attention(
-        attention_type=attention_type, embed_dim=embed_dim, num_heads=num_heads, **kwargs
+        attention_type=attention_type,
+        embed_dim=embed_dim,
+        num_heads=num_heads,
+        **kwargs,
     )
 
 
@@ -353,7 +367,10 @@ def create_adaptive_sparse_attention(
     )
 
     return create_multihead_dilated_attention(
-        attention_type=attention_type, embed_dim=embed_dim, num_heads=num_heads, **kwargs
+        attention_type=attention_type,
+        embed_dim=embed_dim,
+        num_heads=num_heads,
+        **kwargs,
     )
 
 
@@ -392,7 +409,7 @@ def _filter_kwargs(config_class: type, kwargs: dict) -> dict:
     else:
         # Fallback for non-dataclass configs
         sig = inspect.signature(config_class.__init__)
-        valid_fields = set(sig.parameters.keys()) - {'self'}
+        valid_fields = set(sig.parameters.keys()) - {"self"}
 
     # Filter kwargs
     filtered = {k: v for k, v in kwargs.items() if k in valid_fields}
@@ -443,9 +460,12 @@ def _register_implementations():
         register_attention("improved", ImprovedDilatedAttention)
         logger.debug("Registered improved dilated attention implementation")
 
-        from ..improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttention
+        from ..improved_multihead_dilated_attention import \
+            ImprovedMultiheadDilatedAttention
 
-        register_multihead_attention("multihead_improved", ImprovedMultiheadDilatedAttention)
+        register_multihead_attention(
+            "multihead_improved", ImprovedMultiheadDilatedAttention
+        )
         logger.debug("Registered improved multihead dilated attention implementation")
 
     except ImportError as e:
@@ -459,9 +479,12 @@ def _register_implementations():
         logger.debug("Registered ring dilated attention implementation")
 
         try:
-            from ..ring_multihead_dilated_attention import RingMultiheadDilatedAttention
+            from ..ring_multihead_dilated_attention import \
+                RingMultiheadDilatedAttention
 
-            register_multihead_attention("multihead_ring", RingMultiheadDilatedAttention)
+            register_multihead_attention(
+                "multihead_ring", RingMultiheadDilatedAttention
+            )
             logger.debug("Registered ring multihead dilated attention implementation")
         except ImportError:
             pass  # Multihead not refactored yet
@@ -471,9 +494,12 @@ def _register_implementations():
 
     try:
         # Register ring distributed implementation
-        from ..ring_distributed_refactored import RingDistributedDilatedAttention
+        from ..ring_distributed_refactored import \
+            RingDistributedDilatedAttention
 
-        register_multihead_attention("multihead_ring_distributed", RingDistributedDilatedAttention)
+        register_multihead_attention(
+            "multihead_ring_distributed", RingDistributedDilatedAttention
+        )
         logger.debug("Registered ring distributed dilated attention implementation")
 
     except ImportError as e:
@@ -481,33 +507,36 @@ def _register_implementations():
 
     try:
         # Register distributed implementations
-        from ..improved_distributed_dilated_attention import DistributedImprovedDilatedAttention
+        from ..improved_distributed_dilated_attention import \
+            DistributedImprovedDilatedAttention
 
         register_attention("distributed", DistributedImprovedDilatedAttention)
         register_attention("improved_distributed", DistributedImprovedDilatedAttention)
         logger.debug("Registered distributed dilated attention implementation")
 
-        from ..improved_distributed_dilated_attention import (
-            DistributedImprovedMultiheadDilatedAttention,
-        )
+        from ..improved_distributed_dilated_attention import \
+            DistributedImprovedMultiheadDilatedAttention
 
         register_multihead_attention(
             "multihead_distributed", DistributedImprovedMultiheadDilatedAttention
         )
         register_multihead_attention(
-            "multihead_improved_distributed", DistributedImprovedMultiheadDilatedAttention
+            "multihead_improved_distributed",
+            DistributedImprovedMultiheadDilatedAttention,
         )
-        logger.debug("Registered distributed multihead dilated attention implementation")
+        logger.debug(
+            "Registered distributed multihead dilated attention implementation"
+        )
 
     except ImportError as e:
         logger.warning(f"Failed to register distributed implementations: {e}")
 
     try:
         # Register block-sparse implementations
-        from ..block_sparse_ring_dilated_attention import BlockSparseRingDilatedAttention
-        from ..block_sparse_ring_multihead_dilated_attention import (
-            BlockSparseRingMultiheadDilatedAttention,
-        )
+        from ..block_sparse_ring_dilated_attention import \
+            BlockSparseRingDilatedAttention
+        from ..block_sparse_ring_multihead_dilated_attention import \
+            BlockSparseRingMultiheadDilatedAttention
 
         register_attention("block_sparse_ring", BlockSparseRingDilatedAttention)
         register_multihead_attention(

@@ -10,15 +10,10 @@ import pytest
 import torch
 from torch import nn
 
-
-from dilated_attention_pytorch import (
-    create_block_sparse_attention,
-    create_multihead_dilated_attention,
-)
-from dilated_attention_pytorch.core import (
-    DilatedAttentionConfig,
-    MultiheadConfig,
-)
+from dilated_attention_pytorch import (create_block_sparse_attention,
+                                       create_multihead_dilated_attention)
+from dilated_attention_pytorch.core import (DilatedAttentionConfig,
+                                            MultiheadConfig)
 
 # Explicitly import implementations to ensure they're registered
 # This helps with test isolation issues

@@ -41,10 +41,8 @@ from torch.utils.data import DataLoader, DistributedSampler
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from dilated_attention_pytorch.improved_distributed_dilated_attention import (
-    DeepSpeedDilatedAttentionEngine,
-    create_distributed_model,
-    get_recommended_config,
-)
+    DeepSpeedDilatedAttentionEngine, create_distributed_model,
+    get_recommended_config)
 
 try:
     import deepspeed
@@ -139,7 +137,9 @@ class DistributedTrainer:
             DeepSpeedDilatedAttentionEngine.create_config_file(
                 output_path=ds_config_path,
                 train_batch_size=self.config.get("train_batch_size", 16),
-                gradient_accumulation_steps=self.config.get("gradient_accumulation_steps", 1),
+                gradient_accumulation_steps=self.config.get(
+                    "gradient_accumulation_steps", 1
+                ),
                 learning_rate=self.config.get("learning_rate", 1e-4),
                 zero_stage=self.config.get("zero_stage", 2),
                 cpu_offload=self.config.get("cpu_offload", False),
@@ -255,9 +255,11 @@ class DistributedTrainer:
                             {
                                 "train/loss": batch_loss,
                                 "train/tokens_per_sec": tokens_per_sec,
-                                "train/learning_rate": self.optimizer.param_groups[0]["lr"]
-                                if self.optimizer
-                                else 0,
+                                "train/learning_rate": (
+                                    self.optimizer.param_groups[0]["lr"]
+                                    if self.optimizer
+                                    else 0
+                                ),
                                 "epoch": epoch,
                                 "step": step,
                             }
@@ -278,7 +280,9 @@ class DistributedTrainer:
                     )
 
         avg_loss = total_loss / num_batches
-        tokens_per_sec = total_tokens / (time.time() - start_time) if num_batches > 0 else 0
+        tokens_per_sec = (
+            total_tokens / (time.time() - start_time) if num_batches > 0 else 0
+        )
 
         return {"loss": avg_loss, "tokens_per_sec": tokens_per_sec}
 
@@ -338,7 +342,9 @@ class DistributedTrainer:
         if not self.is_main_process:
             return
 
-        checkpoint_path = os.path.join(self.checkpoint_dir, f"checkpoint_epoch_{epoch}.pt")
+        checkpoint_path = os.path.join(
+            self.checkpoint_dir, f"checkpoint_epoch_{epoch}.pt"
+        )
 
         if self.use_deepspeed:
             # DeepSpeed handles checkpointing
@@ -347,10 +353,12 @@ class DistributedTrainer:
             checkpoint = {
                 "epoch": epoch,
                 "model_state_dict": self.model.state_dict(),
-                "optimizer_state_dict": self.optimizer.state_dict() if self.optimizer else None,
-                "lr_scheduler_state_dict": self.lr_scheduler.state_dict()
-                if self.lr_scheduler
-                else None,
+                "optimizer_state_dict": (
+                    self.optimizer.state_dict() if self.optimizer else None
+                ),
+                "lr_scheduler_state_dict": (
+                    self.lr_scheduler.state_dict() if self.lr_scheduler else None
+                ),
                 "metrics": metrics,
                 "config": self.config,
             }
@@ -387,7 +395,9 @@ class DistributedTrainer:
             if current_val_loss < best_val_loss:
                 best_val_loss = current_val_loss
                 if self.is_main_process:
-                    best_checkpoint_path = os.path.join(self.checkpoint_dir, "best_model.pt")
+                    best_checkpoint_path = os.path.join(
+                        self.checkpoint_dir, "best_model.pt"
+                    )
                     if self.use_deepspeed:
                         self.model.save_checkpoint(self.checkpoint_dir, tag="best")
                     else:
@@ -438,7 +448,9 @@ def setup_distributed():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Distributed Dilated Attention Training")
+    parser = argparse.ArgumentParser(
+        description="Distributed Dilated Attention Training"
+    )
     parser.add_argument(
         "--model_size",
         type=str,
@@ -447,24 +459,49 @@ def main():
         help="Model size",
     )
     parser.add_argument("--vocab_size", type=int, default=50000, help="Vocabulary size")
-    parser.add_argument("--max_seq_len", type=int, default=16384, help="Maximum sequence length")
-    parser.add_argument("--num_epochs", type=int, default=10, help="Number of training epochs")
+    parser.add_argument(
+        "--max_seq_len", type=int, default=16384, help="Maximum sequence length"
+    )
+    parser.add_argument(
+        "--num_epochs", type=int, default=10, help="Number of training epochs"
+    )
     parser.add_argument("--batch_size", type=int, default=4, help="Batch size per GPU")
-    parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument(
-        "--gradient_accumulation_steps", type=int, default=1, help="Gradient accumulation steps"
+        "--learning_rate", type=float, default=1e-4, help="Learning rate"
     )
     parser.add_argument(
-        "--checkpoint_dir", type=str, default="./checkpoints", help="Checkpoint directory"
+        "--gradient_accumulation_steps",
+        type=int,
+        default=1,
+        help="Gradient accumulation steps",
     )
-    parser.add_argument("--use_deepspeed", action="store_true", help="Use DeepSpeed optimization")
-    parser.add_argument("--use_wandb", action="store_true", help="Use Weights & Biases logging")
     parser.add_argument(
-        "--deepspeed_config", type=str, default=None, help="DeepSpeed configuration file"
+        "--checkpoint_dir",
+        type=str,
+        default="./checkpoints",
+        help="Checkpoint directory",
     )
-    parser.add_argument("--cpu_offload", action="store_true", help="Offload to CPU memory")
     parser.add_argument(
-        "--zero_stage", type=int, default=2, choices=[1, 2, 3], help="DeepSpeed ZeRO stage"
+        "--use_deepspeed", action="store_true", help="Use DeepSpeed optimization"
+    )
+    parser.add_argument(
+        "--use_wandb", action="store_true", help="Use Weights & Biases logging"
+    )
+    parser.add_argument(
+        "--deepspeed_config",
+        type=str,
+        default=None,
+        help="DeepSpeed configuration file",
+    )
+    parser.add_argument(
+        "--cpu_offload", action="store_true", help="Offload to CPU memory"
+    )
+    parser.add_argument(
+        "--zero_stage",
+        type=int,
+        default=2,
+        choices=[1, 2, 3],
+        help="DeepSpeed ZeRO stage",
     )
 
     args = parser.parse_args()
@@ -481,7 +518,9 @@ def main():
         {
             "vocab_size": args.vocab_size,
             "max_seq_len": args.max_seq_len,
-            "train_batch_size": args.batch_size * world_size * args.gradient_accumulation_steps,
+            "train_batch_size": args.batch_size
+            * world_size
+            * args.gradient_accumulation_steps,
             "learning_rate": args.learning_rate,
             "gradient_accumulation_steps": args.gradient_accumulation_steps,
             "use_deepspeed": args.use_deepspeed and HAS_DEEPSPEED,
@@ -518,7 +557,9 @@ def main():
 
     # Create data loaders
     train_sampler = DistributedSampler(train_dataset) if is_distributed else None
-    val_sampler = DistributedSampler(val_dataset, shuffle=False) if is_distributed else None
+    val_sampler = (
+        DistributedSampler(val_dataset, shuffle=False) if is_distributed else None
+    )
 
     train_dataloader = DataLoader(
         train_dataset,
@@ -543,10 +584,15 @@ def main():
     lr_scheduler = None
     if not config["use_deepspeed"]:
         optimizer = torch.optim.AdamW(
-            model.parameters(), lr=args.learning_rate, betas=(0.9, 0.95), weight_decay=0.1
+            model.parameters(),
+            lr=args.learning_rate,
+            betas=(0.9, 0.95),
+            weight_decay=0.1,
         )
 
-        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.num_epochs)
+        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=args.num_epochs
+        )
 
     # Create trainer
     trainer = DistributedTrainer(

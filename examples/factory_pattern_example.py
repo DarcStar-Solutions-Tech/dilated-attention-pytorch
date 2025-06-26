@@ -10,18 +10,13 @@ import torch
 from torch import nn
 
 # Import factory functions (v0.2.0+)
-from dilated_attention_pytorch import (
-    create_adaptive_sparse_attention,
-    create_block_sparse_attention,
-    create_dilated_attention,
-    create_multihead_dilated_attention,
-)
-
+from dilated_attention_pytorch import (create_adaptive_sparse_attention,
+                                       create_block_sparse_attention,
+                                       create_dilated_attention,
+                                       create_multihead_dilated_attention)
 # For type hints
-from dilated_attention_pytorch.core import (
-    DilatedAttentionConfig,
-    MultiheadConfig,
-)
+from dilated_attention_pytorch.core import (DilatedAttentionConfig,
+                                            MultiheadConfig)
 
 
 def example_1_auto_selection():

@@ -11,18 +11,10 @@ import pytest
 import torch
 
 from dilated_attention_pytorch.utils.attention_utils import (
-    apply_dilated_attention_pattern,
-    apply_rotary_embeddings,
-    compute_alibi_bias,
-    compute_attention_scores,
-    compute_rotary_embeddings,
-    create_block_diagonal_mask,
-    create_dilated_mask,
-    merge_attention_heads,
-    optimize_attention_computation,
-    split_attention_heads,
-    standard_attention,
-)
+    apply_dilated_attention_pattern, apply_rotary_embeddings,
+    compute_alibi_bias, compute_attention_scores, compute_rotary_embeddings,
+    create_block_diagonal_mask, create_dilated_mask, merge_attention_heads,
+    optimize_attention_computation, split_attention_heads, standard_attention)
 
 
 class TestAttentionScores:
@@ -188,7 +180,6 @@ class TestAttentionComputation:
 
     @patch("dilated_attention_pytorch.core.attention_utils.HAS_FLASH_ATTN", True)
     @patch("dilated_attention_pytorch.core.attention_utils.flash_attn_func")
-
     def test_optimize_attention_flash(self, mock_flash_attn):
         """Test optimized attention with Flash Attention."""
         batch_size, seq_len, num_heads, head_dim = 2, 8, 4, 16
@@ -283,7 +274,12 @@ class TestHeadOperations:
         tensor = torch.randn(batch_size, seq_len, hidden_dim)
         split_tensor = split_attention_heads(tensor, num_heads)
 
-        assert split_tensor.shape == (batch_size, seq_len, num_heads, hidden_dim // num_heads)
+        assert split_tensor.shape == (
+            batch_size,
+            seq_len,
+            num_heads,
+            hidden_dim // num_heads,
+        )
 
         # Check content preservation
         merged = split_tensor.reshape(batch_size, seq_len, hidden_dim)
