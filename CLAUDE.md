@@ -464,7 +464,7 @@ tests/
 ├── multihead_memory_analysis.py # Multihead memory analysis
 └── simple_comparison.py     # Simple performance comparisons
 
-doc/                        # Extensive documentation
+docs/                       # Extensive documentation
 ├── README.md               # Documentation overview
 ├── ring-attention-guide.md # Ring attention usage guide
 ├── block-sparse-attention-guide.md # Block-sparse guide
