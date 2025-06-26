@@ -31,6 +31,7 @@ from typing import Any
 
 import torch
 import torch.distributed as dist
+import torch.nn.functional as F
 from torch import Tensor, nn
 
 # Import base Ring Attention implementation
@@ -734,6 +735,9 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
         if self.has_fa3 and HAS_FLASH_ATTN and not return_attention_weights:
             return self._fa3_block_sparse_attention(q, k, v, sparse_pattern, is_causal)
 
+        # Calculate number of blocks
+        num_blocks = seq_len // block_size
+        
         # Initialize output tensor with memory pool
         output = self._get_buffer(q.shape, q.dtype, q.device)
         output.zero_()
@@ -856,7 +860,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
         is_causal: bool,
         return_attention_weights: bool,
     ) -> tuple[Tensor, Tensor | None]:
-        """Process sparse blocks for a single ring step"""
+        """Process sparse blocks for a single ring step - OPTIMIZED VERSION"""
         batch, num_blocks, block_size, num_heads, head_dim = q_blocks.shape
 
         # Initialize output
@@ -872,28 +876,60 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
         # Find active block pairs for this ring step
         ring_pattern = self._get_ring_step_pattern(sparse_pattern, ring_step)
 
-        # Process active blocks efficiently
-        for batch_idx, head_idx, q_block_idx, k_block_idx in torch.nonzero(
-            ring_pattern, as_tuple=False
-        ):
-            # Extract block data
-            q_block = q_blocks[batch_idx, q_block_idx, :, head_idx, :]  # [block_size, head_dim]
-            k_block = k_blocks[batch_idx, k_block_idx, :, head_idx, :]
-            v_block = v_blocks[batch_idx, k_block_idx, :, head_idx, :]
-
-            # Compute block attention
-            block_output, block_weights = self._compute_block_attention(
-                q_block, k_block, v_block, is_causal, return_attention_weights
-            )
-
-            # Accumulate output
-            output_blocks[batch_idx, q_block_idx, :, head_idx, :] += block_output
-
+        # OPTIMIZATION: Process all blocks for each head in parallel
+        # This avoids the expensive Python loop over individual blocks
+        scale = 1.0 / math.sqrt(head_dim)
+        
+        for head_idx in range(num_heads):
+            # Get pattern for this head
+            if ring_pattern.dim() == 4:  # [batch, heads, blocks, blocks]
+                head_pattern = ring_pattern[:, head_idx]
+            else:  # Assume already head-specific
+                head_pattern = ring_pattern
+            
+            # Find all active block pairs for this head
+            active_indices = head_pattern.nonzero(as_tuple=True)
+            
+            if len(active_indices[0]) == 0:
+                continue  # No active blocks
+                
+            batch_indices, q_block_indices, k_block_indices = active_indices
+            num_active = len(batch_indices)
+            
+            # Extract all active blocks at once - much more efficient
+            q_active = q_blocks[batch_indices, q_block_indices, :, head_idx, :]
+            k_active = k_blocks[batch_indices, k_block_indices, :, head_idx, :]
+            v_active = v_blocks[batch_indices, k_block_indices, :, head_idx, :]
+            
+            # Batched attention computation
+            scores = torch.bmm(q_active, k_active.transpose(-2, -1)) * scale
+            
+            # Apply causal mask if needed
+            if is_causal:
+                causal_mask = torch.triu(
+                    torch.ones(block_size, block_size, device=scores.device, dtype=torch.bool),
+                    diagonal=1
+                )
+                scores.masked_fill_(causal_mask, float('-inf'))
+            
+            # Compute attention
+            attn_probs = F.softmax(scores, dim=-1)
+            block_outputs = torch.bmm(attn_probs, v_active)
+            
+            # Accumulate results
+            output_blocks[batch_indices, q_block_indices, :, head_idx, :] += block_outputs
+            
             # Store attention weights if requested
-            if return_attention_weights and block_weights is not None:
-                q_start, q_end = q_block_idx * block_size, (q_block_idx + 1) * block_size
-                k_start, k_end = k_block_idx * block_size, (k_block_idx + 1) * block_size
-                attention_weights[batch_idx, head_idx, q_start:q_end, k_start:k_end] = block_weights
+            if return_attention_weights:
+                for idx in range(num_active):
+                    b_idx = batch_indices[idx]
+                    q_idx = q_block_indices[idx]
+                    k_idx = k_block_indices[idx]
+                    q_start = q_idx * block_size
+                    q_end = (q_idx + 1) * block_size
+                    k_start = k_idx * block_size
+                    k_end = (k_idx + 1) * block_size
+                    attention_weights[b_idx, head_idx, q_start:q_end, k_start:k_end] = attn_probs[idx]
 
         return output_blocks, attention_weights
 

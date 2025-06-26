@@ -93,8 +93,8 @@ class BenchmarkRunner:
                 batch_size, seq_len, num_heads, head_dim, device=self.device, dtype=self.dtype
             )
 
-        # Move module to device
-        attention_module = attention_module.to(self.device)
+        # Move module to device and dtype
+        attention_module = attention_module.to(self.device, self.dtype)
 
         # Warmup
         for _ in range(warmup_steps):

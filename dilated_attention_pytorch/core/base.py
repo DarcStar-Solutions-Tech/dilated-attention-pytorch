@@ -8,7 +8,7 @@ and shared functionality for all dilated attention implementations.
 import threading
 from abc import ABC, abstractmethod
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 
 import torch
