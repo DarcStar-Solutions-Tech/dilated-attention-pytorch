@@ -33,13 +33,12 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "torch>=2.0.0",
     "einops>=0.8.0",
@@ -114,7 +113,7 @@ dependencies = [
 
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests}"
-test-cov = "pytest --cov=dilated_attention_pytorch --cov-report=term-missing {args:tests}"
+test-cov = "pytest --cov=dilated_attention_pytorch --cov-report=term-missing --cov-report=xml --cov-report=html {args:tests}"
 test-fast = "pytest -x {args:tests}"
 lint = "ruff check {args:.}"
 format = "ruff format {args:.}"
@@ -151,7 +150,7 @@ test-distributed = "pytest tests/ -k distributed {args}"
 
 # Tool configurations
 [tool.ruff]
-target-version = "py312"
+target-version = "py313"
 line-length = 100
 extend-include = ["*.pyx"]
 
@@ -194,7 +193,7 @@ line-ending = "auto"
 known-first-party = ["dilated_attention_pytorch"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

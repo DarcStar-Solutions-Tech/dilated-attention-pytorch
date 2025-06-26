@@ -71,7 +71,7 @@ Write clear, descriptive commit messages following the [Conventional Commits](ht
 ```bash
 git commit -m "feat: add support for Flash Attention 3"
 git commit -m "fix: resolve memory leak in ring attention forward pass"
-git commit -m "docs: update installation instructions for Python 3.12"
+git commit -m "docs: update installation instructions for Python 3.13"
 ```
 
 Pre-commit hooks will automatically run when you commit. If they fail, fix the issues and try again.

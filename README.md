@@ -1,10 +1,11 @@
 # dilated-attention-pytorch
 
-[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch 2.0+](https://img.shields.io/badge/pytorch-2.0+-red.svg)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://img.shields.io/badge/mypy-checked-blue)](http://mypy-lang.org/)
+[![codecov](https://codecov.io/gh/DarcStar-Solutions-Tech/dilated-attention-pytorch/branch/main/graph/badge.svg)](https://codecov.io/gh/DarcStar-Solutions-Tech/dilated-attention-pytorch)
 
 (Unofficial) Implementation of `DilatedAttention` from *[LongNet: Scaling Transformers to 1,000,000,000 Tokens](https://arxiv.org/abs/2307.02486)* in PyTorch.
 
@@ -60,7 +61,7 @@ See the [Migration Guide](doc/migration-guide-v0.2.md) for upgrading from v0.1.x
 ## Install
 
 **Requirements:**
-- Python >= 3.12
+- Python >= 3.13
 - PyTorch >= 2.0.0
 - CUDA 11.8+ (for GPU support)
 

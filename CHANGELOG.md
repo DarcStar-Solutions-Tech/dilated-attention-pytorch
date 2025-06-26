@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Contributing guidelines
   - `.gitattributes` for consistent line endings
   - `py.typed` file for PEP 561 compliance
+  - GPU testing workflow with cloud GPU support
+  - Code coverage reporting with Codecov integration
+  - Coverage HTML report generation as artifacts
+  - `.codecov.yml` configuration for coverage thresholds
 - **Development Tooling**:
   - Pre-commit hooks with Ruff and mypy
   - Ruff replaces Black, isort, and flake8
@@ -23,14 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Stricter mypy configuration
 
 ### Changed
-- **Python Support**: Minimum Python version raised to 3.12
+- **Python Support**: Minimum Python version raised to 3.13
 - **Linting**: Switched from Black/isort/flake8 to Ruff
 - **Repository URLs**: Updated to DarcStar-Solutions-Tech organization
 - **Dependencies**: Removed legacy linting tools from test dependencies
 - **Documentation**: Updated installation instructions and development workflow
+- **CI/CD**: Enhanced testing infrastructure with GPU support and coverage reporting
 
 ### Removed
-- Python 3.9, 3.10, and 3.11 support
+- Python 3.9, 3.10, 3.11, and 3.12 support
 - Poetry configuration files (using Hatch)
 - `setup.cfg` (moved all configuration to `pyproject.toml`)
 
