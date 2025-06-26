@@ -31,14 +31,9 @@ import torch.distributed as dist
 import torch.nn.functional as F
 from torch import Tensor
 
-from .core import (
-    GPU_TYPE,
-    HAS_FLASH_ATTN,
-    HAS_FLASH_ATTN_3,
-    BaseDilatedAttention,
-    RingAttentionConfig,
-    get_global_memory_pool,
-)
+from .core import (GPU_TYPE, HAS_FLASH_ATTN, HAS_FLASH_ATTN_3,
+                   BaseDilatedAttention, RingAttentionConfig,
+                   get_global_memory_pool)
 
 # Handle torch.nn.attention availability
 try:

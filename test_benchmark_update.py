@@ -13,22 +13,22 @@ def test_benchmark_includes_block_sparse():
     # Check if block sparse implementations are imported
     print("Checking benchmark_all.py includes block sparse implementations...")
 
-    with open('benchmark_all.py') as f:
+    with open("benchmark_all.py") as f:
         content = f.read()
 
     # Check imports
-    assert 'BlockSparseRingDilatedAttention' in content
-    assert 'BlockSparseRingMultiheadDilatedAttention' in content
-    assert 'SparsePatternConfig' in content
+    assert "BlockSparseRingDilatedAttention" in content
+    assert "BlockSparseRingMultiheadDilatedAttention" in content
+    assert "SparsePatternConfig" in content
     print("✓ Block sparse imports found")
 
     # Check that they're added to benchmarks
-    assert 'BlockSparseRingDilated_' in content
-    assert 'BlockSparseRingMultihead_' in content
+    assert "BlockSparseRingDilated_" in content
+    assert "BlockSparseRingMultihead_" in content
     print("✓ Block sparse implementations added to benchmark list")
 
     # Check sparsity configurations
-    assert '0.1, 0.25, 0.5' in content
+    assert "0.1, 0.25, 0.5" in content
     print("✓ Multiple sparsity ratios configured (10%, 25%, 50%)")
 
     # Run a minimal test
@@ -38,15 +38,15 @@ def test_benchmark_includes_block_sparse():
     proc = subprocess.Popen(
         [
             sys.executable,
-            'benchmark_all.py',
-            '--batch-sizes',
-            '1',
-            '--seq-lens',
-            '512',
-            '--num-heads',
-            '2',
-            '--head-dim',
-            '32',
+            "benchmark_all.py",
+            "--batch-sizes",
+            "1",
+            "--seq-lens",
+            "512",
+            "--num-heads",
+            "2",
+            "--head-dim",
+            "32",
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -71,7 +71,9 @@ def test_benchmark_includes_block_sparse():
             print("STDOUT:", stdout[:500])
             print("STDERR:", stderr[:500])
 
-    print("\n✅ benchmark_all.py successfully updated with block sparse implementations!")
+    print(
+        "\n✅ benchmark_all.py successfully updated with block sparse implementations!"
+    )
 
 
 if __name__ == "__main__":

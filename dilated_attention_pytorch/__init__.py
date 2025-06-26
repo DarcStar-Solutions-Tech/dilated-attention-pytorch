@@ -40,6 +40,7 @@ from .multihead_dilated_attention import MultiheadDilatedAttention
 
 # from .distributed_dilated_attention import DistributedMultiheadDilatedAttention  # Old implementation
 from .ring_dilated_attention import RingDilatedAttention
+from .ring_dilated_attention_unfold_v2 import UnfoldRingDilatedAttention
 from .ring_multihead_dilated_attention import RingMultiheadDilatedAttention
 from .transformer import DilatedTransformerDecoderLayer, DilatedTransformerEncoderLayer
 from .utils.sparse_pattern_utils import (
@@ -62,6 +63,7 @@ __all__ = [
     "DistributedImprovedMultiheadDilatedAttention",
     # "DistributedMultiheadDilatedAttention",  # Old implementation
     "RingDilatedAttention",
+    "UnfoldRingDilatedAttention",
     "RingMultiheadDilatedAttention",
     "DilatedTransformerEncoderLayer",
     "DilatedTransformerDecoderLayer",

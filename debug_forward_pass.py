@@ -1,20 +1,19 @@
 """
 Debug forward pass of block sparse implementation
 """
+
 import sys
 import time
 
 import torch
 
 from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention,
-    SparsePatternConfig,
-)
+    BlockSparseRingDilatedAttention, SparsePatternConfig)
 
 
 def debug_forward():
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    dtype = torch.float16 if device.type == 'cuda' else torch.float32
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    dtype = torch.float16 if device.type == "cuda" else torch.float32
 
     print(f"Using device: {device}, dtype: {dtype}")
 
@@ -25,7 +24,7 @@ def debug_forward():
 
     # Create module
     sparse_config = SparsePatternConfig(
-        pattern_type='dilated_sparse',
+        pattern_type="dilated_sparse",
         sparsity_ratio=0.1,  # 90% sparse
         block_size=32,
     )
@@ -44,9 +43,15 @@ def debug_forward():
 
     # Create inputs
     print("Creating inputs...")
-    query = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-    key = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-    value = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    query = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
+    key = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
+    value = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
 
     print("Starting forward pass...")
     sys.stdout.flush()
@@ -90,7 +95,9 @@ def debug_forward():
     except Exception as e:
         print(f"Forward pass failed: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     debug_forward()

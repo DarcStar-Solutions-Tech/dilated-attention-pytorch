@@ -4,7 +4,8 @@ Optimized version of RingDilatedAttention with improved dilation operations
 
 import torch
 
-from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
+from dilated_attention_pytorch.ring_dilated_attention import \
+    RingDilatedAttention
 
 
 class OptimizedRingDilatedAttention(RingDilatedAttention):

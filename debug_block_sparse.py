@@ -1,6 +1,7 @@
 """
 Debug script to find where block sparse implementation hangs
 """
+
 import sys
 
 print("Starting debug script...")
@@ -11,14 +12,14 @@ sys.stdout.flush()
 
 try:
     from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-        BlockSparseRingDilatedAttention,
-        SparsePatternConfig,
-    )
+        BlockSparseRingDilatedAttention, SparsePatternConfig)
+
     print("2. Import successful")
     sys.stdout.flush()
 except Exception as e:
     print(f"Import failed: {e}")
     import traceback
+
     traceback.print_exc()
     sys.exit(1)
 
@@ -27,7 +28,7 @@ sys.stdout.flush()
 
 try:
     sparse_config = SparsePatternConfig(
-        pattern_type='dilated_sparse',
+        pattern_type="dilated_sparse",
         sparsity_ratio=0.1,
         block_size=32,
     )
@@ -36,6 +37,7 @@ try:
 except Exception as e:
     print(f"Config creation failed: {e}")
     import traceback
+
     traceback.print_exc()
     sys.exit(1)
 
@@ -55,6 +57,7 @@ try:
 except Exception as e:
     print(f"Module creation failed: {e}")
     import traceback
+
     traceback.print_exc()
     sys.exit(1)
 
