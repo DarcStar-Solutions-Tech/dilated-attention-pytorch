@@ -3,13 +3,14 @@ import datetime
 import logging
 import math
 import os
+import sys
 import uuid
 from collections.abc import Callable
 from enum import Enum
 from functools import partial
 from math import ceil
 from timeit import Timer
-from typing import NamedTuple, List
+from typing import NamedTuple
 
 import plotly.graph_objects as go
 import torch
@@ -124,11 +125,11 @@ TOTAL_TOKENS: int = 2**args.total_tokens  # 64M
 NUM_HEADS: int = args.heads
 EMBED_DIM: int = args.embed_dim
 # Vanilla attention only
-VANILLA_SEQ_LENGTHS: List[int] = [2**i for i in range(13, args.vanilla_seq_lengths)]  # 8k - 128k
+VANILLA_SEQ_LENGTHS: list[int] = [2**i for i in range(13, args.vanilla_seq_lengths)]  # 8k - 128k
 
 # Dilated attention only
-SEGMENT_LENGTHS: List[int] = args.segment_lengths  # 8k - 64k
-DILATED_SEQ_LENGTHS: List[int] = [2**i for i in range(13, args.dilated_seq_lengths)]  # 8k - 64M
+SEGMENT_LENGTHS: list[int] = args.segment_lengths  # 8k - 64k
+DILATED_SEQ_LENGTHS: list[int] = [2**i for i in range(13, args.dilated_seq_lengths)]  # 8k - 64M
 
 BENCHMARK_VANILLA: bool = args.vanilla
 BENCHMARK_DILATED: bool = args.dilated
@@ -194,9 +195,9 @@ def benchmark(
 def calculate_segments_and_dilation_rates(seq_length: int):
     segment_lengths: list[int] = []
     dilation_rates: list[int] = []
-    for segment_length in SEGMENT_LENGTHS:
+    for seg_len in SEGMENT_LENGTHS:
         # We can't use segment lengths larger than the sequence length.
-        segment_length = min(segment_length, seq_length)
+        segment_length = min(seg_len, seq_length)
         exponent = segment_length // SEGMENT_LENGTHS[0] - 1
         dilation_rate = 2**exponent
         segment_lengths.append(segment_length)
@@ -306,15 +307,15 @@ def plot_results(seq_lengths: list[int], results: list[BenchmarkResult], name: s
 
 
 def benchmark_attention(
-    seq_lengths: List[int],
+    seq_lengths: list[int],
     device: device | str | None,
     embed_dim: int = EMBED_DIM,
     num_heads: int = NUM_HEADS,
     attention_type: AttentionType = AttentionType.DILATED,
     dtype: torch.dtype = torch.float16,
     op: xops.AttentionOp = xops.MemoryEfficientAttentionFlashAttentionOp,
-) -> List[BenchmarkResult]:
-    results: List[BenchmarkResult] = []
+) -> list[BenchmarkResult]:
+    results: list[BenchmarkResult] = []
     for seq_length in seq_lengths:
         torch.cuda.empty_cache()
         batch_size = TOTAL_TOKENS // seq_length
@@ -363,16 +364,16 @@ def benchmark_attention(
 def bench_and_plot(
     label: str,
     token_count: str,
-    seq_lengths: List[int],
+    seq_lengths: list[int],
     device: device | str | None,
     embed_dim: int = EMBED_DIM,
     num_heads: int = NUM_HEADS,
     attention_type: AttentionType = AttentionType.VANILLA,
-) -> List[BenchmarkResult]:
+) -> list[BenchmarkResult]:
     logging.info(
         f"Benchmark {label} against {token_count} tokens... with embed_dim {embed_dim} and num_heads {num_heads}"
     )
-    results: List[BenchmarkResult] = benchmark_attention(
+    results: list[BenchmarkResult] = benchmark_attention(
         seq_lengths=seq_lengths,
         device=device,
         embed_dim=embed_dim,
@@ -424,7 +425,7 @@ if __name__ == "__main__":
 
     if not torch.cuda.is_available():  # Check if CUDA is available
         logging.info("CUDA is not available. Exiting...")
-        exit()
+        sys.exit()
 
     gpu_count = torch.cuda.device_count()  # Get total number of GPUs
     logging.info(f"Number of GPUs: {gpu_count}")
