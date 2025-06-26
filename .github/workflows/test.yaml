@@ -15,7 +15,7 @@ jobs:
 
     strategy:
       matrix:
-        python: ["3.9", "3.10", "3.11", "3.12"]
+        python: ["3.13"]
 
     steps:
       - name: Checkout
@@ -41,10 +41,8 @@ jobs:
 
       - name: Format Check
         run: |
-          hatch run format
-          # Check if formatting changed any files
-          git diff --exit-code
-
+          hatch run format-check
+          
       - name: Lint
         run: |
           hatch run lint
@@ -57,17 +55,34 @@ jobs:
         run: |
           hatch run test-cov
 
-      - name: Upload coverage
-        if: matrix.python == '3.11'
-        uses: codecov/codecov-action@v3
+      - name: Upload coverage to Codecov
+        if: matrix.python == '3.13'
+        uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
-          fail_ci_if_error: false
+          fail_ci_if_error: true
+          verbose: true
+          
+      - name: Generate coverage report
+        if: matrix.python == '3.13'
+        run: |
+          pip install coverage[toml]
+          coverage html
+          
+      - name: Upload coverage HTML report
+        if: matrix.python == '3.13'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
 
   test-gpu:
     name: GPU Tests
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    container:
+      image: pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
+      options: --gpus all
     
     steps:
       - name: Checkout
@@ -76,19 +91,29 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
           cache: "pip"
+
+      - name: Check GPU availability
+        run: |
+          python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+          python -c "import torch; print(f'CUDA device count: {torch.cuda.device_count()}')"
+          nvidia-smi || echo "nvidia-smi not available"
 
       - name: Install Dependencies
         run: |
           pip install --upgrade pip
           pip install hatch
-          # Note: In a real CI with GPU, you'd install CUDA PyTorch
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install -e .[test]
+          # Install CUDA-enabled PyTorch
+          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+          pip install -e .[test,cuda]
 
-      - name: Run GPU Tests (Mock)
+      - name: Run GPU Tests
         run: |
-          # In real CI with GPU runners, this would run actual GPU tests
-          echo "GPU tests would run here with proper hardware"
-          # pytest tests/ -m gpu
+          # Run tests marked as requiring GPU
+          pytest tests/ -m gpu -v --tb=short
+          
+      - name: Run GPU Benchmarks
+        run: |
+          # Run a quick benchmark to verify GPU performance
+          python -m pytest tests/test_dilated_attention.py::test_forward -v --benchmark-only --benchmark-min-rounds=10

@@ -1,5 +1,12 @@
 # dilated-attention-pytorch
 
+[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![PyTorch 2.0+](https://img.shields.io/badge/pytorch-2.0+-red.svg)](https://pytorch.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![Checked with mypy](https://img.shields.io/badge/mypy-checked-blue)](http://mypy-lang.org/)
+[![codecov](https://codecov.io/gh/DarcStar-Solutions-Tech/dilated-attention-pytorch/branch/main/graph/badge.svg)](https://codecov.io/gh/DarcStar-Solutions-Tech/dilated-attention-pytorch)
+
 (Unofficial) Implementation of `DilatedAttention` from *[LongNet: Scaling Transformers to 1,000,000,000 Tokens](https://arxiv.org/abs/2307.02486)* in PyTorch.
 
 ## 🎉 New in v0.2.0: Core Architecture Refactoring
@@ -53,7 +60,12 @@ See the [Migration Guide](doc/migration-guide-v0.2.md) for upgrading from v0.1.x
 
 ## Install
 
-**NOTE**: This library depends on [facebookresearch/xformers](https://github.com/facebookresearch/xformers).  If you're not using `torch>=2.0.0`, you may need to install it from source.  See their [installation instructions](https://github.com/facebookresearch/xformers#installing-xformers).
+**Requirements:**
+- Python >= 3.13
+- PyTorch >= 2.0.0
+- CUDA 11.8+ (for GPU support)
+
+**NOTE**: This library depends on [facebookresearch/xformers](https://github.com/facebookresearch/xformers) for efficient attention operations. It will be installed automatically with CUDA support.
 
 ### From PyPI (Stable Release):
 
@@ -61,44 +73,37 @@ See the [Migration Guide](doc/migration-guide-v0.2.md) for upgrading from v0.1.x
 pip install dilated-attention-pytorch
 ```
 
-### From Source (Latest Development):
-
+### From source
 ```bash
-# Using pip
-pip install "dilated-attention-pytorch @ git+https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch.git"
-
-# Using uv (recommended for fast installation)
-uv pip install "git+https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch.git"
+pip install "dilated-attention-pytorch @ git+ssh://git@github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch.git"
 ```
 
-### For Contributors:
-
-We support multiple package managers. Choose the one that fits your workflow:
-
+### For contributors
 ```bash
-# Option 1: Using uv (fastest, recommended)
+# Clone the repository
 git clone https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch.git
 cd dilated-attention-pytorch
-uv pip install -e ".[dev]"
 
-# Option 2: Using Poetry (modern dependency management)
-poetry install --with dev
+# Install with all development dependencies
+pip install -e ".[all]"
 
-# Option 3: Using pip (traditional)
-pip install -e ".[dev]"
+# Setup pre-commit hooks
+pre-commit install
 ```
 
-### Optional Dependencies:
-
+### Optional dependencies
 ```bash
-# For distributed training
-pip install "dilated-attention-pytorch[distributed]"
+# For CUDA support (includes xformers and flash-attn)
+pip install "dilated-attention-pytorch[cuda]"
+
+# For development
+pip install "dilated-attention-pytorch[dev]"
 
 # For benchmarking
-pip install "dilated-attention-pytorch[benchmark]"  
+pip install "dilated-attention-pytorch[benchmark]"
 
-# For all optional features
-pip install "dilated-attention-pytorch[all]"
+# For distributed training
+pip install "dilated-attention-pytorch[distributed]"
 ```
 
 
@@ -351,6 +356,76 @@ with torch.no_grad():
 print(y.shape)
 # torch.Size([1, 32768, num_tokens])
 ```
+
+## Development
+
+### Code Quality
+
+This project uses modern Python tooling for code quality:
+
+- **Ruff** - Fast Python linter and formatter (replaces Black, isort, flake8)
+- **mypy** - Static type checking
+- **pre-commit** - Git hooks for automatic code quality checks
+
+### Running Tests
+
+```bash
+# Run all tests
+hatch run test
+
+# Run tests with coverage
+hatch run test-cov
+
+# Run specific test file
+hatch run test tests/test_dilated_attention.py
+
+# Run tests in parallel
+pytest -n auto tests/
+```
+
+### Code Formatting and Linting
+
+```bash
+# Format code
+hatch run format
+
+# Check linting
+hatch run lint
+
+# Fix linting issues automatically
+hatch run fix
+
+# Run type checking
+hatch run typecheck
+
+# Run all checks
+hatch run all
+```
+
+### Benchmarking
+
+```bash
+# Run benchmarks with default settings
+hatch run benchmark:run
+
+# Run with custom parameters
+hatch run benchmark:run --batch_size 2 --total_tokens 26 --heads 8
+
+# Profile benchmarks
+hatch run benchmark:profile
+```
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests and ensure all checks pass (`hatch run all`)
+5. Commit your changes (pre-commit hooks will run automatically)
+6. Push to your branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+Please read our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting PRs.
 
 ## Citations
 

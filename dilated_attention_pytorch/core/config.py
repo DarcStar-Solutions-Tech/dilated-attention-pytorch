@@ -6,8 +6,9 @@ implementations, ensuring type safety and validation of parameters.
 """
 
 from dataclasses import dataclass
-from typing import List, Optional, Union
+
 import torch
+
 from ..utils.validation import ValidationMixin
 
 
@@ -35,12 +36,12 @@ class DilatedAttentionConfig(ValidationMixin):
         ... )
     """
 
-    segment_lengths: List[int]
-    dilation_rates: List[int]
+    segment_lengths: list[int]
+    dilation_rates: list[int]
     dropout: float = 0.0
     use_tf32: bool = True
-    device: Optional[Union[torch.device, str]] = None
-    dtype: Optional[torch.dtype] = None
+    device: torch.device | str | None = None
+    dtype: torch.dtype | None = None
 
     def __post_init__(self) -> None:
         """Validate configuration after initialization."""
@@ -58,7 +59,7 @@ class DilatedAttentionConfig(ValidationMixin):
         if isinstance(self.device, str):
             self.device = torch.device(self.device)
         elif self.device is None:
-            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Set default dtype
         if self.dtype is None:
@@ -97,8 +98,8 @@ class MultiheadConfig(ValidationMixin):
     layer_norm: bool = True
     layer_norm_eps: float = 1e-5
     gamma_init: float = 1.0
-    device: Optional[Union[torch.device, str]] = None
-    dtype: Optional[torch.dtype] = None
+    device: torch.device | str | None = None
+    dtype: torch.dtype | None = None
 
     def __post_init__(self) -> None:
         """Validate multihead configuration."""
@@ -121,7 +122,7 @@ class MultiheadConfig(ValidationMixin):
         if isinstance(self.device, str):
             self.device = torch.device(self.device)
         elif self.device is None:
-            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Set default dtype
         if self.dtype is None:
@@ -144,7 +145,7 @@ class RingAttentionConfig(DilatedAttentionConfig):
     """
 
     block_size: int = 1024
-    ring_size: Optional[int] = None
+    ring_size: int | None = None
     use_checkpointing: bool = True
     use_memory_pool: bool = True
     max_cached_buffers: int = 50
@@ -207,7 +208,7 @@ class SparseAttentionConfig(DilatedAttentionConfig):
         }
         if self.pattern_type not in valid_patterns:
             raise ValueError(
-                f"Invalid pattern_type '{self.pattern_type}'. " f"Must be one of: {valid_patterns}"
+                f"Invalid pattern_type '{self.pattern_type}'. Must be one of: {valid_patterns}"
             )
 
         # Validate sparsity ratios
@@ -250,8 +251,8 @@ class DistributedConfig:
         gradient_compression_ratio: Compression ratio for gradients (default: None)
     """
 
-    world_size: Optional[int] = None
-    rank: Optional[int] = None
+    world_size: int | None = None
+    rank: int | None = None
     backend: str = "nccl"
     sequence_parallel: bool = False
     model_parallel: bool = False
@@ -260,7 +261,7 @@ class DistributedConfig:
     communication_optimization: bool = True
     bucket_size_mb: int = 25
     enable_async_communication: bool = True
-    gradient_compression_ratio: Optional[float] = None
+    gradient_compression_ratio: float | None = None
     zero_stage: int = 0  # DeepSpeed ZeRO optimization stage (0-3)
 
     def __post_init__(self) -> None:
@@ -268,9 +269,7 @@ class DistributedConfig:
         # Validate backend
         valid_backends = {"nccl", "gloo", "mpi"}
         if self.backend not in valid_backends:
-            raise ValueError(
-                f"Invalid backend '{self.backend}'. " f"Must be one of: {valid_backends}"
-            )
+            raise ValueError(f"Invalid backend '{self.backend}'. Must be one of: {valid_backends}")
 
         # Validate world size and rank
         if self.world_size is not None:
@@ -323,7 +322,7 @@ class MemoryPoolConfig:
     cleanup_threshold_mb: int = 100
     max_pool_size_mb: int = 1024
     enable_statistics: bool = True
-    device: Optional[torch.device] = None
+    device: torch.device | None = None
 
     def __post_init__(self) -> None:
         """Validate memory pool configuration and set defaults."""

@@ -1,4 +1,4 @@
-from typing import Callable, Tuple, Union
+from collections.abc import Callable
 
 import pytest
 import torch
@@ -11,12 +11,12 @@ SEQ_LEN = 16
 
 
 @pytest.fixture(params=[(4,), (4, 8, 16)])
-def segment_lengths(request) -> Tuple[int, ...]:
+def segment_lengths(request) -> tuple[int, ...]:
     return request.param
 
 
 @pytest.fixture()
-def dilation_rates(segment_lengths: Tuple[int, ...]):
+def dilation_rates(segment_lengths: tuple[int, ...]):
     return tuple([s // 4 for s in segment_lengths])
 
 
@@ -33,10 +33,10 @@ def test_long_net(
     nhead: int,
     num_layers: int,
     dim_feedforward: int,
-    segment_lengths: Tuple[int, ...],
-    dilation_rates: Tuple[int, ...],
+    segment_lengths: tuple[int, ...],
+    dilation_rates: tuple[int, ...],
     dropout: float,
-    activation: Union[str, Callable],
+    activation: str | Callable,
     is_causal: bool,
 ):
     net = LongNet(
@@ -75,10 +75,10 @@ def test_long_net_lm(
     nhead: int,
     num_layers: int,
     dim_feedforward: int,
-    segment_lengths: Tuple[int, ...],
-    dilation_rates: Tuple[int, ...],
+    segment_lengths: tuple[int, ...],
+    dilation_rates: tuple[int, ...],
     dropout: float,
-    activation: Union[str, Callable],
+    activation: str | Callable,
     is_causal: bool,
 ):
     net = LongNetLM(

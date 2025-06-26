@@ -2,22 +2,23 @@
 Constants and feature detection for Dilated Attention implementations.
 """
 
-import torch
 import logging
 
+import torch
+
 # PyTorch version checks
-TORCH_VERSION = tuple(int(x) for x in torch.__version__.split('.')[:2])
+TORCH_VERSION = tuple(int(x) for x in torch.__version__.split(".")[:2])
 
 # Feature detection
-HAS_SDPA = hasattr(torch.nn.functional, 'scaled_dot_product_attention')
-HAS_SDPA_KERNEL = hasattr(torch.backends.cuda, 'enable_flash_sdp')
+HAS_SDPA = hasattr(torch.nn.functional, "scaled_dot_product_attention")
+HAS_SDPA_KERNEL = hasattr(torch.backends.cuda, "enable_flash_sdp")
 
 # Flash Attention detection
 try:
     import flash_attn
 
     HAS_FLASH_ATTN = True
-    FLASH_ATTN_VERSION = getattr(flash_attn, '__version__', '0.0.0')
+    FLASH_ATTN_VERSION = getattr(flash_attn, "__version__", "0.0.0")
 
     # Check for Flash Attention 3
     try:
@@ -67,7 +68,7 @@ try:
     import apex
 
     HAS_APEX = True
-    APEX_VERSION = getattr(apex, '__version__', '0.0.0')
+    APEX_VERSION = getattr(apex, "__version__", "0.0.0")
 except ImportError:
     HAS_APEX = False
     APEX_VERSION = None
@@ -212,6 +213,6 @@ def _log_available_features() -> None:
 
 
 # Only log once per process
-if not hasattr(_log_available_features, '_called'):
+if not hasattr(_log_available_features, "_called"):
     _log_available_features()
     _log_available_features._called = True

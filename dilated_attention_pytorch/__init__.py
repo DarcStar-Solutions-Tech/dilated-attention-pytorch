@@ -1,57 +1,53 @@
 """
 Dilated Attention PyTorch Implementation
 
-Unofficial PyTorch implementation of DilatedAttention from LongNet, 
+Unofficial PyTorch implementation of DilatedAttention from LongNet,
 including Ring Attention for O(n) memory scaling.
 """
 
 __version__ = "0.2.0"
 
-from .dilated_attention import DilatedAttention
-from .multihead_dilated_attention import MultiheadDilatedAttention
-from .improved_dilated_attention import ImprovedDilatedAttention
-from .improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttention
-from .improved_distributed_dilated_attention import (
-    DistributedImprovedDilatedAttention,
-    DistributedImprovedMultiheadDilatedAttention
-)
-# from .distributed_dilated_attention import DistributedMultiheadDilatedAttention  # Old implementation
-from .ring_dilated_attention import RingDilatedAttention
-from .ring_multihead_dilated_attention import RingMultiheadDilatedAttention
-from .transformer import DilatedTransformerEncoderLayer, DilatedTransformerDecoderLayer
-from .long_net import LongNet, LongNetLM
 
 # Block-Sparse Ring Attention implementations
 from .block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention,
     BlockSparseMemoryPool,
+    BlockSparseRingDilatedAttention,
+    ContentAdaptiveSparsity,
     SparsePatternConfig,
-    ContentAdaptiveSparsity
-)
-from .block_sparse_ring_multihead_dilated_attention import (
-    BlockSparseRingMultiheadDilatedAttention,
-    create_block_sparse_multihead_attention,
-    create_adaptive_sparse_multihead_attention
 )
 from .block_sparse_ring_distributed_dilated_attention import (
     BlockSparseRingDistributedDilatedAttention,
     DistributedSparseConfig,
-    DistributedSparsePattern
+    DistributedSparsePattern,
 )
-from .utils.sparse_pattern_utils import (
-    PatternType,
-    PatternConfig,
-    SparsePatternGenerator,
-    PatternQualityAnalyzer,
-    PatternOptimizer
+from .block_sparse_ring_multihead_dilated_attention import (
+    BlockSparseRingMultiheadDilatedAttention,
+    create_adaptive_sparse_multihead_attention,
+    create_block_sparse_multihead_attention,
 )
 
 # Factory functions for easy creation
 from .core import (
+    create_adaptive_sparse_attention,
+    create_block_sparse_attention,
     create_dilated_attention,
     create_multihead_dilated_attention,
-    create_block_sparse_attention,
-    create_adaptive_sparse_attention,
+)
+from .dilated_attention import DilatedAttention
+from .improved_dilated_attention import ImprovedDilatedAttention
+from .long_net import LongNet
+from .multihead_dilated_attention import MultiheadDilatedAttention
+
+# from .distributed_dilated_attention import DistributedMultiheadDilatedAttention  # Old implementation
+from .ring_dilated_attention import RingDilatedAttention
+from .ring_multihead_dilated_attention import RingMultiheadDilatedAttention
+from .transformer import DilatedTransformerDecoderLayer, DilatedTransformerEncoderLayer
+from .utils.sparse_pattern_utils import (
+    PatternConfig,
+    PatternOptimizer,
+    PatternQualityAnalyzer,
+    PatternType,
+    SparsePatternGenerator,
 )
 
 # Note: Optimizations have been integrated into the main block-sparse implementations
@@ -59,7 +55,7 @@ from .core import (
 __all__ = [
     # Original implementations
     "DilatedAttention",
-    "MultiheadDilatedAttention", 
+    "MultiheadDilatedAttention",
     "ImprovedDilatedAttention",
     "ImprovedMultiheadDilatedAttention",
     "DistributedImprovedDilatedAttention",
@@ -70,13 +66,10 @@ __all__ = [
     "DilatedTransformerEncoderLayer",
     "DilatedTransformerDecoderLayer",
     "LongNet",
-    "LongNetLM",
-    
     # Block-Sparse implementations
     "BlockSparseRingDilatedAttention",
-    "BlockSparseRingMultiheadDilatedAttention", 
+    "BlockSparseRingMultiheadDilatedAttention",
     "BlockSparseRingDistributedDilatedAttention",
-    
     # Configuration and utility classes
     "BlockSparseMemoryPool",
     "SparsePatternConfig",
@@ -88,11 +81,9 @@ __all__ = [
     "SparsePatternGenerator",
     "PatternQualityAnalyzer",
     "PatternOptimizer",
-    
     # Convenience functions
     "create_block_sparse_multihead_attention",
     "create_adaptive_sparse_multihead_attention",
-    
     # Factory functions (v0.2.0+)
     "create_dilated_attention",
     "create_multihead_dilated_attention",
