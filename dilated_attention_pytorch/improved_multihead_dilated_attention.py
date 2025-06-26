@@ -67,8 +67,8 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         layer_norm: bool = True,
         layer_norm_eps: float = 1e-5,
         gamma_init: float = 1.0,
-        device: Optional[Union[torch.device, str]] = None,
-        dtype: Optional[torch.dtype] = None,
+        device: torch.device | str | None = None,
+        dtype: torch.dtype | None = None,
         use_tf32: bool = True,
     ):
         # Create configurations
@@ -138,7 +138,7 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
 
     def _reset_parameters(self):
         """Initialize parameters following MAGNETO architecture guidelines."""
-        if self.use_fused_qkv and hasattr(self, 'qkv_proj'):
+        if self.use_fused_qkv and hasattr(self, "qkv_proj"):
             # Split initialization for Q, K, V parts of the fused weight
             embed_dim = self.embed_dim
 
@@ -162,7 +162,7 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             super()._reset_parameters()
 
         # Initialize output projection with MAGNETO gain
-        if hasattr(self, 'out_proj'):
+        if hasattr(self, "out_proj"):
             nn.init.xavier_normal_(self.out_proj.weight, gain=self.multihead_config.gamma_init)
             if self.out_proj.bias is not None:
                 nn.init.constant_(self.out_proj.bias, 0)
@@ -170,14 +170,14 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
     def forward(
         self,
         query: Tensor,
-        key: Optional[Tensor] = None,
-        value: Optional[Tensor] = None,
-        key_padding_mask: Optional[Tensor] = None,
+        key: Tensor | None = None,
+        value: Tensor | None = None,
+        key_padding_mask: Tensor | None = None,
         need_weights: bool = False,
-        attn_mask: Optional[Tensor] = None,
+        attn_mask: Tensor | None = None,
         is_causal: bool = False,
         average_attn_weights: bool = True,
-    ) -> Union[Tensor, Tuple[Tensor, Optional[Tensor]]]:
+    ) -> Tensor | tuple[Tensor, Tensor | None]:
         """
         Forward pass for improved multihead dilated attention.
 
@@ -258,7 +258,7 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         attn_output = attn_output.view(batch_size, seq_len, self.embed_dim)
 
         # Apply post-attention layer norm if enabled (MAGNETO style)
-        if self.multihead_config.layer_norm and hasattr(self, 'q_ln'):
+        if self.multihead_config.layer_norm and hasattr(self, "q_ln"):
             attn_output = self.q_ln(attn_output)
 
         # Output projection
@@ -269,11 +269,11 @@ class ImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
 
     def _combine_masks(
         self,
-        attn_mask: Optional[Tensor],
-        key_padding_mask: Optional[Tensor],
+        attn_mask: Tensor | None,
+        key_padding_mask: Tensor | None,
         batch_size: int,
         seq_len: int,
-    ) -> Optional[Tensor]:
+    ) -> Tensor | None:
         """Combine attention mask and key padding mask."""
         # Note: ImprovedDilatedAttention doesn't support masks in segments
         # This is provided for interface compatibility

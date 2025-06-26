@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import pytest
 import torch
 
@@ -17,8 +15,8 @@ SEQ_LEN = 16
 @pytest.mark.parametrize("num_heads", [4, 8])
 @pytest.mark.parametrize("is_causal", [True, False])
 def test_dilated_attention(
-    segment_lengths: Tuple[int, ...],
-    dilation_rates: Tuple[int, ...],
+    segment_lengths: tuple[int, ...],
+    dilation_rates: tuple[int, ...],
     embed_dim: int,
     num_heads: int,
     is_causal: bool,
@@ -34,6 +32,7 @@ def test_dilated_attention(
     # Note: With the fallback to standard_attention, causal attention now works on CPU
     # The old test assumed xformers would raise NotImplementedError, but we now have a fallback
 
+
     out = dilated_attention(x, x, x, is_causal=is_causal)  # default: causal=False
     assert out.size(0) == 1
     assert out.size(1) == SEQ_LEN
@@ -48,8 +47,8 @@ def test_dilated_attention(
 @pytest.mark.parametrize("num_heads", [4, 8])
 @pytest.mark.parametrize("is_causal", [True, False])
 def test_multihead_dilated_attention(
-    segment_lengths: Tuple[int, ...],
-    dilation_rates: Tuple[int, ...],
+    segment_lengths: tuple[int, ...],
+    dilation_rates: tuple[int, ...],
     embed_dim: int,
     num_heads: int,
     is_causal: bool,

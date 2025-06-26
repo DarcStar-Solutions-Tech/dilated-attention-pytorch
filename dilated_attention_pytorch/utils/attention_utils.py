@@ -7,6 +7,7 @@ and optimization strategies used across all dilated attention implementations.
 
 import math
 import warnings
+
 from typing import Any, Dict, List, Optional, Tuple
 
 import torch
@@ -493,7 +494,7 @@ def create_4d_causal_mask(
         4D causal mask [1, 1, seq_len, seq_len]
     """
     mask = torch.triu(torch.ones(seq_len, seq_len, device=device, dtype=dtype), diagonal=1)
-    mask = mask.masked_fill(mask == 1, float('-inf'))
+    mask = mask.masked_fill(mask == 1, float("-inf"))
     return mask.unsqueeze(0).unsqueeze(0)
 
 
@@ -516,7 +517,7 @@ def apply_head_specific_masks(
     for h, mask in enumerate(head_masks):
         if mask is not None:
             attention_scores[..., h, :, :] = attention_scores[..., h, :, :].masked_fill(
-                mask.bool(), float('-inf')
+                mask.bool(), float("-inf")
             )
 
     return attention_scores
@@ -550,7 +551,7 @@ def compute_position_embeddings(
     return pos_emb
 
 
-def get_attention_backend_info() -> Dict[str, Any]:
+def get_attention_backend_info() -> dict[str, Any]:
     """
     Get information about available attention backends.
 
@@ -558,11 +559,11 @@ def get_attention_backend_info() -> Dict[str, Any]:
         Dictionary with backend availability info
     """
     info = {
-        'has_flash_attention': HAS_FLASH_ATTN,
-        'has_xformers': HAS_XFORMERS,
-        'has_sdpa': HAS_SDPA,
-        'torch_version': torch.__version__,
-        'cuda_available': torch.cuda.is_available(),
+        "has_flash_attention": HAS_FLASH_ATTN,
+        "has_xformers": HAS_XFORMERS,
+        "has_sdpa": HAS_SDPA,
+        "torch_version": torch.__version__,
+        "cuda_available": torch.cuda.is_available(),
     }
 
     if torch.cuda.is_available():

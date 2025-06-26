@@ -130,4 +130,53 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-/.venv1/
+
+# Ruff
+.ruff_cache/
+
+# Poetry (using Hatch instead)
+poetry.lock
+poetry.toml
+
+# Hatch
+.hatch/
+
+# Virtual environments
+.venv*/
+venv*/
+
+# Benchmarking outputs
+benchmark.prof
+*.png
+doc/*/
+
+# OS specific
+.DS_Store
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# Editor specific
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# Pre-commit
+.pre-commit-config.yaml.backup
+
+# Python profiling
+*.prof
+*.lprof
+*.stats
+
+# Distributed training
+deepspeed_config.json
+.deepspeed_*
+checkpoint/
+wandb/
+
+# Flash Attention build artifacts
+flash_attn_build/

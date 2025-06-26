@@ -33,14 +33,12 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.13"
 dependencies = [
     "torch>=2.0.0",
     "einops>=0.8.0",
@@ -56,9 +54,7 @@ test = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "pytest-xdist>=3.0.0",
-    "black>=23.0.0",
-    "isort>=5.12.0",
-    "flake8>=6.0.0",
+    "ruff>=0.1.0",
     "mypy>=1.0.0",
 ]
 dev = [
@@ -86,11 +82,11 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/fkodom/dilated-attention-pytorch"
-Documentation = "https://github.com/fkodom/dilated-attention-pytorch/blob/main/README.md"
-Repository = "https://github.com/fkodom/dilated-attention-pytorch"
-Issues = "https://github.com/fkodom/dilated-attention-pytorch/issues"
-Changelog = "https://github.com/fkodom/dilated-attention-pytorch/releases"
+Homepage = "https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch"
+Documentation = "https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch/blob/main/README.md"
+Repository = "https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch"
+Issues = "https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch/issues"
+Changelog = "https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch/releases"
 
 [tool.hatch.version]
 path = "dilated_attention_pytorch/__init__.py"
@@ -108,28 +104,22 @@ include = [
 ]
 
 [tool.hatch.envs.default]
+python = "3.13"
 dependencies = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
-    "black>=23.0.0",
-    "isort>=5.12.0",
-    "flake8>=6.0.0",
+    "ruff>=0.1.0",
     "mypy>=1.0.0",
 ]
 
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests}"
-test-cov = "pytest --cov=dilated_attention_pytorch --cov-report=term-missing {args:tests}"
+test-cov = "pytest --cov=dilated_attention_pytorch --cov-report=term-missing --cov-report=xml --cov-report=html {args:tests}"
 test-fast = "pytest -x {args:tests}"
-lint = [
-    "black --check --diff {args:.}",
-    "isort --check-only --diff {args:.}",
-    "flake8 {args:.}",
-]
-format = [
-    "black {args:.}",
-    "isort {args:.}",
-]
+lint = "ruff check {args:.}"
+format = "ruff format {args:.}"
+format-check = "ruff format --check {args:.}"
+fix = "ruff check --fix {args:.}"
 typecheck = "mypy {args:dilated_attention_pytorch}"
 all = [
     "format",
@@ -139,6 +129,7 @@ all = [
 ]
 
 [tool.hatch.envs.benchmark]
+python = "3.13"
 extra-dependencies = [
     "plotly>=5.16.0",
     "kaleido>=0.2.1",
@@ -150,6 +141,7 @@ run = "python benchmark.py {args}"
 profile = "python -m cProfile -o benchmark.prof benchmark.py {args}"
 
 [tool.hatch.envs.distributed]
+python = "3.13"
 extra-dependencies = [
     "deepspeed>=0.15.0",
     "fairscale>=0.4.0",
@@ -160,37 +152,51 @@ extra-dependencies = [
 test-distributed = "pytest tests/ -k distributed {args}"
 
 # Tool configurations
-[tool.black]
-target-version = ["py39", "py310", "py311", "py312"]
+[tool.ruff]
+target-version = "py313"
 line-length = 100
-skip-string-normalization = true
+extend-include = ["*.pyx"]
 
-[tool.isort]
-profile = "black"
-line_length = 100
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
-
-[tool.flake8]
-max-line-length = 100
-extend-ignore = ["E203", "W503"]
-exclude = [
-    ".git",
-    "__pycache__",
-    "build",
-    "dist",
-    ".eggs",
-    "*.egg-info",
-    ".venv",
-    "venv",
-    ".env",
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "ARG",  # flake8-unused-arguments
+    "SIM",  # flake8-simplify
+    "N",    # pep8-naming
+    "RUF",  # Ruff-specific rules
+    "PL",   # Pylint
+    "TRY",  # tryceratops
+    "PERF", # Perflint
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "W191",  # indentation contains tabs
+    "PLR0913", # Too many arguments
+    "PLR0915", # Too many statements
+    "PLR2004", # Magic value used in comparison
+    "N803",  # Argument name should be lowercase (for Q, K, V)
+    "N806",  # Variable in function should be lowercase (for Q, K, V)
 ]
 
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+known-first-party = ["dilated_attention_pytorch"]
+
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.13"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -212,6 +218,9 @@ module = [
     "fairscale.*",
     "plotly.*",
     "kaleido.*",
+    "timm.*",
+    "torchscale.*",
+    "einops.*",
 ]
 ignore_missing_imports = true
 

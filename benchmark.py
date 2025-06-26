@@ -4,11 +4,12 @@ import logging
 import math
 import os
 import uuid
+from collections.abc import Callable
 from enum import Enum
 from functools import partial
 from math import ceil
 from timeit import Timer
-from typing import Callable, List, NamedTuple
+from typing import NamedTuple
 
 import plotly.graph_objects as go
 import torch
@@ -23,7 +24,7 @@ from dilated_attention_pytorch.dilated_attention import DilatedAttention
 from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
 
 # Create the parser
-parser = argparse.ArgumentParser(description='Benchmarking parameters')
+parser = argparse.ArgumentParser(description="Benchmarking parameters")
 
 # Add the arguments
 parser.add_argument('--batch_size', type=int, default=1, help='Batch size for benchmarking')
@@ -140,7 +141,7 @@ class BenchmarkResult(NamedTuple):
         return f"BenchmarkResult(mean: {self.mean:.3e}, std: {self.std:.3e})"
 
     def __str__(self):
-        return f"({self.mean:.3e} \u00B1 {self.std:.3e}) s"
+        return f"({self.mean:.3e} \u00b1 {self.std:.3e}) s"
 
 
 def benchmark(
@@ -163,7 +164,7 @@ def benchmark(
     # Run the function once to warm up
     _ = timer.repeat(number=1, repeat=1)
 
-    times: List[float] = []
+    times: list[float] = []
     total_time = 0.0
     num_iterations = min_iterations or 1
 
@@ -185,8 +186,8 @@ def benchmark(
 
 
 def calculate_segments_and_dilation_rates(seq_length: int):
-    segment_lengths: List[int] = []
-    dilation_rates: List[int] = []
+    segment_lengths: list[int] = []
+    dilation_rates: list[int] = []
     for segment_length in SEGMENT_LENGTHS:
         # We can't use segment lengths larger than the sequence length.
         segment_length = min(segment_length, seq_length)
@@ -284,16 +285,16 @@ def attention_forward(x: torch.Tensor, attn: Callable):
     torch.cuda.synchronize()
 
 
-def plot_results(seq_lengths: List[int], results: List[BenchmarkResult], name: str):
+def plot_results(seq_lengths: list[int], results: list[BenchmarkResult], name: str):
     fig.add_trace(
         go.Scatter(
             x=seq_lengths,
             y=[r.mean for r in results],
-            error_y=dict(
-                type="data",
-                array=[r.std for r in results],
-                visible=True,
-            ),
+            error_y={
+                "type": "data",
+                "array": [r.std for r in results],
+                "visible": True,
+            },
             name=name,
         ),
     )
@@ -387,7 +388,7 @@ if __name__ == "__main__":
     # Get current date
     current_date = datetime.date.today()
 
-    token_count = f"{round(TOTAL_TOKENS / 2 ** 20, 2)}M"
+    token_count = f"{round(TOTAL_TOKENS / 2**20, 2)}M"
     bench_config = {
         "batch_size": BATCH_SIZE,
         "total_tokens": TOTAL_TOKENS,
@@ -472,7 +473,6 @@ if __name__ == "__main__":
 
     for embed_dim in embed_dims:  # loop over embed_dims
         for num_head in num_heads:  # loop over num_heads
-
             if embed_dim % num_head != 0:
                 logging.info(f"embed_dim ({embed_dim}) must be divisible by num_heads ({num_head})")
                 continue
@@ -493,7 +493,7 @@ if __name__ == "__main__":
             }
 
             if BENCHMARK_VANILLA:
-                vanilla_results: List[BenchmarkResult] = bench_and_plot(
+                vanilla_results: list[BenchmarkResult] = bench_and_plot(
                     label="Vanilla Attention",
                     token_count=token_count,
                     seq_lengths=VANILLA_SEQ_LENGTHS,
@@ -505,7 +505,7 @@ if __name__ == "__main__":
                 result_set["vanilla"] = vanilla_results
 
             if BENCHMARK_DILATED and embed_dim <= 128:
-                dilated_results: List[BenchmarkResult] = bench_and_plot(
+                dilated_results: list[BenchmarkResult] = bench_and_plot(
                     label="Dilated Attention",
                     token_count=token_count,
                     seq_lengths=DILATED_SEQ_LENGTHS,
@@ -523,7 +523,7 @@ if __name__ == "__main__":
                     )
 
                 else:
-                    mha_results: List[BenchmarkResult] = bench_and_plot(
+                    mha_results: list[BenchmarkResult] = bench_and_plot(
                         label="MH Dilated Attention",
                         token_count=token_count,
                         seq_lengths=DILATED_SEQ_LENGTHS,

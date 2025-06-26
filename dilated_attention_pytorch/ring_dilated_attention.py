@@ -54,7 +54,7 @@ except ImportError:
         MATH = "math"
 
 
-def get_flash_attention_version() -> Optional[str]:
+def get_flash_attention_version() -> str | None:
     """Get the version of Flash Attention if available."""
     if not HAS_FLASH_ATTN:
         return None
@@ -78,8 +78,8 @@ class RingAttentionMemoryPool:
         self.device = device
         self.max_pool_size = max_pool_size
         self.max_cache_size = max_cache_size
-        self._pools: Dict[tuple, torch.Tensor] = {}
-        self._usage_count: Dict[tuple, int] = {}
+        self._pools: dict[tuple, torch.Tensor] = {}
+        self._usage_count: dict[tuple, int] = {}
         # Optimization: Cache frequently used buffer keys for faster lookups
         self._hot_keys_cache = {}  # Maps simplified keys to full keys
         self._access_lock = threading.Lock()  # Thread-safe access
@@ -111,7 +111,7 @@ class RingAttentionMemoryPool:
                 if self.device.type == 'cuda' and pin_memory:
                     # Allocate pinned memory for faster GPU transfers
                     self._pools[pool_key] = torch.empty(
-                        shape, dtype=dtype, device='cpu', pin_memory=True
+                        shape, dtype=dtype, device="cpu", pin_memory=True
                     ).to(self.device, non_blocking=True)
                 else:
                     self._pools[pool_key] = torch.empty(shape, dtype=dtype, device=self.device)
@@ -188,6 +188,25 @@ class RingAttentionMemoryPool:
 
             # Update access order list to remove deleted keys
             self._access_order = [key for key in self._access_order if key in self._pools]
+    
+    def __getstate__(self):
+        """Support for pickling - exclude unpickleable objects."""
+        state = self.__dict__.copy()
+        # Remove the unpickleable lock
+        state['_access_lock'] = None
+        # Clear the pools to avoid pickling large tensors
+        state['_pools'] = {}
+        state['_hot_keys_cache'] = {}
+        state['_usage_count'] = {}
+        state['_access_order'] = []
+        return state
+    
+    def __setstate__(self, state):
+        """Support for unpickling - recreate lock."""
+        self.__dict__.update(state)
+        # Recreate the lock
+        self._access_lock = threading.RLock()
+
 
 
 class RingDilatedAttention(BaseDilatedAttention):
@@ -211,10 +230,10 @@ class RingDilatedAttention(BaseDilatedAttention):
         dropout: float = 0.0,
         use_tf32: bool = True,
         block_size: int = 1024,
-        ring_size: Optional[int] = None,
+        ring_size: int | None = None,
         use_checkpointing: bool = True,
-        device: Optional[Union[torch.device, str]] = None,
-        dtype: Optional[torch.dtype] = None,
+        device: torch.device | str | None = None,
+        dtype: torch.dtype | None = None,
     ):
         """
         Initialize Ring Dilated Attention.
@@ -313,7 +332,9 @@ class RingDilatedAttention(BaseDilatedAttention):
         if cache_key not in self._vectorized_patterns:
             # Pre-compute all dilation indices for all segments/dilations in batch
             all_indices = {}
-            for i, (r, s) in enumerate(zip(self.dilation_rates, self.segment_lengths)):
+            for i, (r, s) in enumerate(
+                zip(self.dilation_rates, self.segment_lengths, strict=False)
+            ):
                 for offset in range(r):
                     indices_key = (s, r, offset)
                     if indices_key not in all_indices:
@@ -326,7 +347,12 @@ class RingDilatedAttention(BaseDilatedAttention):
             for step in range(ring_size):
                 step_patterns = {}
                 for i, ((g, (hmin, hmax)), r, s) in enumerate(
-                    zip(zip(gs, head_ranges), self.dilation_rates, self.segment_lengths)
+                    zip(
+                        zip(gs, head_ranges, strict=False),
+                        self.dilation_rates,
+                        self.segment_lengths,
+                        strict=False,
+                    )
                 ):
                     indices_key = (s, r, i % r)
                     step_patterns[i] = {
@@ -364,7 +390,6 @@ class RingDilatedAttention(BaseDilatedAttention):
             or self._kv_send_buffer.shape != buffer_shape
             or self._kv_send_buffer.dtype != k.dtype
         ):
-
             # Acquire lock and check again to ensure atomicity
             with self._buffer_lock:
                 # Check again inside lock to prevent race condition
@@ -373,7 +398,6 @@ class RingDilatedAttention(BaseDilatedAttention):
                     or self._kv_send_buffer.shape != buffer_shape
                     or self._kv_send_buffer.dtype != k.dtype
                 ):
-
                     self._kv_send_buffer = self._ring_memory_pool.get_buffer(
                         buffer_shape, k.dtype, "kv_send"
                     )
@@ -442,7 +466,12 @@ class RingDilatedAttention(BaseDilatedAttention):
 
         # Process each dilation group using pre-computed patterns
         for i, ((g, (hmin, hmax)), r, s) in enumerate(
-            zip(zip(gs, head_ranges), self.dilation_rates, self.segment_lengths)
+            zip(
+                zip(gs, head_ranges, strict=False),
+                self.dilation_rates,
+                self.segment_lengths,
+                strict=False,
+            )
         ):
             # Skip if segments are larger than available sequence
             if n_q < s or n_kv < s:
@@ -464,10 +493,10 @@ class RingDilatedAttention(BaseDilatedAttention):
             # Apply dilation within segments using pre-computed indices
             if r > 1:
                 offset = i % r
-                cache_key = (effective_s, r, offset)
+                cache_key = (s, r, offset)
                 if cache_key not in self._cached_indices:
                     self._cached_indices[cache_key] = torch.arange(
-                        offset, effective_s, r, device=q.device
+                        offset, s, r, device=q.device
                     )
                 idx = self._cached_indices[cache_key]
                 # Ensure idx is on the same device as the tensors
@@ -870,8 +899,8 @@ class RingDilatedAttention(BaseDilatedAttention):
         rotation_handle['recv_req'].wait()
 
         # Unpack received data
-        k_size = rotation_handle['k_size']
-        packed_recv = rotation_handle['packed_recv']
+        k_size = rotation_handle["k_size"]
+        packed_recv = rotation_handle["packed_recv"]
         k_received_flat = packed_recv[:k_size]
         v_received_flat = packed_recv[k_size:]
 
@@ -943,10 +972,7 @@ class RingDilatedAttention(BaseDilatedAttention):
             return [SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH]
 
         # Prioritize Flash Attention on H100 with Flash Attention 3
-        if self._is_h100_gpu and self._flash_attn_3_available:
-            return [SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH]
-        # Standard priority for other hardware
-        elif self._flash_attn_3_available:
+        if (self._is_h100_gpu and self._flash_attn_3_available) or self._flash_attn_3_available:
             return [SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH]
         else:
             # Fallback for Flash Attention 2 or older
@@ -955,16 +981,16 @@ class RingDilatedAttention(BaseDilatedAttention):
     def _cleanup_ring_communication(self):
         """Clean up any pending ring communications and resources."""
         # Clean up communication buffers
-        if hasattr(self, '_kv_send_buffer'):
+        if hasattr(self, "_kv_send_buffer"):
             self._kv_send_buffer = None
-        if hasattr(self, '_kv_recv_buffer'):
+        if hasattr(self, "_kv_recv_buffer"):
             self._kv_recv_buffer = None
 
         # Cancel any pending async operations
-        if hasattr(self, '_pending_sends'):
-            for handle in getattr(self, '_pending_sends', []):
+        if hasattr(self, "_pending_sends"):
+            for handle in getattr(self, "_pending_sends", []):
                 try:
-                    if hasattr(handle, 'wait'):
+                    if hasattr(handle, "wait"):
                         # Try to complete the operation
                         handle.wait()
                 except Exception:
@@ -975,15 +1001,15 @@ class RingDilatedAttention(BaseDilatedAttention):
         if hasattr(self, '_pending_recvs'):
             for handle in getattr(self, '_pending_recvs', []):
                 try:
-                    if hasattr(handle, 'wait'):
+                    if hasattr(handle, "wait"):
                         handle.wait()
                 except Exception:
                     pass
             self._pending_recvs = []
 
         # Return any temporary buffers to pool
-        if hasattr(self, '_temp_buffers'):
-            for buffer in getattr(self, '_temp_buffers', []):
+        if hasattr(self, "_temp_buffers"):
+            for buffer in getattr(self, "_temp_buffers", []):
                 try:
                     if self._ring_memory_pool and buffer is not None:
                         # Check if buffer is still valid before returning
@@ -995,11 +1021,11 @@ class RingDilatedAttention(BaseDilatedAttention):
             self._temp_buffers = []
 
         # Clear any intermediate results
-        if hasattr(self, '_intermediate_outputs'):
+        if hasattr(self, "_intermediate_outputs"):
             self._intermediate_outputs = None
 
         # Synchronize device to ensure all operations complete
-        if self.device.type == 'cuda':
+        if self.device.type == "cuda":
             try:
                 torch.cuda.synchronize(self.device)
             except Exception:

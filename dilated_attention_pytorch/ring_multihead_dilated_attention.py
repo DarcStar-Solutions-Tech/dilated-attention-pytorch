@@ -66,15 +66,15 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         gamma_init: float = 1.0,
         # Ring attention specific parameters
         block_size: int = 1024,
-        ring_size: Optional[int] = None,
+        ring_size: int | None = None,
         use_checkpointing: bool = True,
         # Hardware optimization parameters
         use_tf32: bool = True,
         use_flash_attention: bool = True,
         compile_model: bool = False,
         # Device parameters
-        device: Optional[Union[torch.device, str]] = None,
-        dtype: Optional[torch.dtype] = None,
+        device: torch.device | str | None = None,
+        dtype: torch.dtype | None = None,
     ):
         """
         Initialize Ring Multihead Dilated Attention.
@@ -180,7 +180,7 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
 
     def _reset_parameters(self):
         """Initialize parameters following MAGNETO architecture guidelines."""
-        if self.use_fused_qkv and hasattr(self, 'qkv_proj'):
+        if self.use_fused_qkv and hasattr(self, "qkv_proj"):
             embed_dim = self.embed_dim
 
             # Initialize fused QKV projection with proper gains
@@ -250,7 +250,7 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
 
         # Ensure buffers match current input dimensions - use resize for efficiency
         buffers = self._qkv_output_buffers[buffer_key]
-        if buffers['q'].shape != target_shape:
+        if buffers["q"].shape != target_shape:
             # Validate target shape is reasonable before allocation
             total_elements = 1
             for dim in target_shape:
@@ -273,13 +273,13 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
                 # Enhanced fallback with error recovery
                 try:
                     # Clear old buffers first
-                    del buffers['q'], buffers['k'], buffers['v']
+                    del buffers["q"], buffers["k"], buffers["v"]
                     torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
                     # Recreate buffers
-                    buffers['q'] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
-                    buffers['k'] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
-                    buffers['v'] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
+                    buffers["q"] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
+                    buffers["k"] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
+                    buffers["v"] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
                     self._qkv_output_buffers[buffer_key] = buffers
                 except RuntimeError as alloc_error:
                     # Ultimate fallback: use smaller batch processing
@@ -306,9 +306,9 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             v_flat = qkv[:, :, 2 * self.embed_dim :].view(target_shape)
 
             # Copy to pre-allocated buffers
-            buffers['q'].copy_(q_flat)
-            buffers['k'].copy_(k_flat)
-            buffers['v'].copy_(v_flat)
+            buffers["q"].copy_(q_flat)
+            buffers["k"].copy_(k_flat)
+            buffers["v"].copy_(v_flat)
         else:
             # Cross-attention: separate projections (less common case)
             # Use separate projections for cross-attention
@@ -326,14 +326,14 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
     def forward(
         self,
         query: Tensor,
-        key: Optional[Tensor] = None,
-        value: Optional[Tensor] = None,
-        key_padding_mask: Optional[Tensor] = None,
+        key: Tensor | None = None,
+        value: Tensor | None = None,
+        key_padding_mask: Tensor | None = None,
         need_weights: bool = False,
-        attn_mask: Optional[Tensor] = None,
+        attn_mask: Tensor | None = None,
         is_causal: bool = False,
         average_attn_weights: bool = True,
-    ) -> Union[Tensor, Tuple[Tensor, Optional[Tensor]]]:
+    ) -> Tensor | tuple[Tensor, Tensor | None]:
         """
         Forward pass through Ring Multihead Dilated Attention.
 
@@ -381,7 +381,7 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         batch_size, seq_len, _ = query.shape
 
         # Apply fused QKV projections
-        if self.use_fused_qkv and hasattr(self, 'qkv_proj'):
+        if self.use_fused_qkv and hasattr(self, "qkv_proj"):
             # Use fused projection with caching
             q, k, v = self._apply_fused_qkv_projection(query, key, value)
         else:
@@ -431,7 +431,7 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         attn_output = attn_output.reshape(batch_size, seq_len, self.embed_dim)
 
         # Apply post-attention layer norm if enabled (MAGNETO style)
-        if self.multihead_config.layer_norm and hasattr(self, 'q_ln'):
+        if self.multihead_config.layer_norm and hasattr(self, "q_ln"):
             attn_output = self.q_ln(attn_output)
 
         # Output projection
@@ -461,7 +461,7 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             self._output_projection_cache.clear()
 
         # Clear attention module cache
-        if hasattr(self.attention, 'clear_cache'):
+        if hasattr(self.attention, "clear_cache"):
             self.attention.clear_cache()
 
     def get_memory_info(self) -> Dict[str, Any]:
@@ -489,7 +489,7 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
         )
 
         # Include ring attention memory info if available
-        if hasattr(self.attention, 'get_memory_info'):
+        if hasattr(self.attention, "get_memory_info"):
             ring_info = self.attention.get_memory_info()
             info.update({f"ring_{k}": v for k, v in ring_info.items()})
 

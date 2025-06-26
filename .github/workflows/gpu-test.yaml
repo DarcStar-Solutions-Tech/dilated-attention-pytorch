@@ -1,0 +1,131 @@
+name: GPU Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      gpu_type:
+        description: 'GPU type to test on'
+        required: false
+        default: 'T4'
+        type: choice
+        options:
+          - T4
+          - V100
+          - A100
+  schedule:
+    # Run GPU tests weekly on Sunday at midnight
+    - cron: '0 0 * * 0'
+  pull_request:
+    paths:
+      - 'dilated_attention_pytorch/**/*.py'
+      - 'tests/**/*.py'
+      - '.github/workflows/gpu-test.yaml'
+
+jobs:
+  gpu-test-gradient:
+    name: GPU Test on Gradient
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' || 
+      github.event_name == 'schedule' ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'gpu-test'))
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run GPU tests on Gradient
+        uses: gradient-ai/gradient-github-actions@v2
+        id: gradient
+        with:
+          api_key: ${{ secrets.GRADIENT_API_KEY }}
+          machine_type: ${{ github.event.inputs.gpu_type || 'T4' }}
+          project_id: ${{ secrets.GRADIENT_PROJECT_ID }}
+          container: pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
+          command: |
+            # Install dependencies
+            pip install --upgrade pip
+            pip install -e .[test,cuda]
+            
+            # Check GPU
+            python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, Devices: {torch.cuda.device_count()}')"
+            nvidia-smi
+            
+            # Run GPU tests
+            pytest tests/ -m gpu -v --tb=short --junitxml=gpu-test-results.xml
+            
+            # Run benchmarks
+            python benchmark.py --batch_size 4 --total_tokens 32 --heads 8 --gpu
+
+      - name: Upload GPU test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpu-test-results
+          path: gpu-test-results.xml
+
+  gpu-test-colab:
+    name: GPU Test on Colab (Manual)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Generate Colab notebook
+        run: |
+          cat > gpu_test_colab.ipynb << 'EOF'
+          {
+            "cells": [
+              {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": ["# GPU Testing for dilated-attention-pytorch\\n", "Run this notebook in Google Colab with GPU runtime"]
+              },
+              {
+                "cell_type": "code",
+                "metadata": {},
+                "source": [
+                  "!git clone https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch.git\\n",
+                  "!cd dilated-attention-pytorch && pip install -e .[test,cuda]\\n",
+                  "!cd dilated-attention-pytorch && python -c 'import torch; print(f\"CUDA: {torch.cuda.is_available()}\")'\\n",
+                  "!cd dilated-attention-pytorch && pytest tests/ -m gpu -v"
+                ]
+              }
+            ],
+            "metadata": {
+              "kernelspec": {
+                "display_name": "Python 3",
+                "language": "python",
+                "name": "python3"
+              }
+            },
+            "nbformat": 4,
+            "nbformat_minor": 4
+          }
+          EOF
+          
+      - name: Upload Colab notebook
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpu-test-colab-notebook
+          path: gpu_test_colab.ipynb
+
+  # Alternative: Use RunPod or other GPU cloud services
+  gpu-test-runpod:
+    name: GPU Test on RunPod
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.gpu_type == 'A100'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Deploy to RunPod
+        env:
+          RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+        run: |
+          # This is a placeholder for RunPod API integration
+          echo "Would deploy to RunPod with A100 GPU here"
+          # In practice, you'd use RunPod's API to create a pod, run tests, and retrieve results

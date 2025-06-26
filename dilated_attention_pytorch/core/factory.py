@@ -21,24 +21,24 @@ logger = logging.getLogger("dilated_attention_pytorch.factory")
 
 
 # Registry for attention implementations
-_ATTENTION_REGISTRY: Dict[str, Type[BaseDilatedAttention]] = {}
-_MULTIHEAD_REGISTRY: Dict[str, Type[BaseMultiheadDilatedAttention]] = {}
+_ATTENTION_REGISTRY: dict[str, type[BaseDilatedAttention]] = {}
+_MULTIHEAD_REGISTRY: dict[str, type[BaseMultiheadDilatedAttention]] = {}
 
 
-def register_attention(name: str, cls: Type[BaseDilatedAttention]) -> None:
+def register_attention(name: str, cls: type[BaseDilatedAttention]) -> None:
     """Register a dilated attention implementation."""
     _ATTENTION_REGISTRY[name] = cls
 
 
-def register_multihead_attention(name: str, cls: Type[BaseMultiheadDilatedAttention]) -> None:
+def register_multihead_attention(name: str, cls: type[BaseMultiheadDilatedAttention]) -> None:
     """Register a multihead dilated attention implementation."""
     _MULTIHEAD_REGISTRY[name] = cls
 
 
 def create_dilated_attention(
     attention_type: str = "auto",
-    segment_lengths: Optional[list] = None,
-    dilation_rates: Optional[list] = None,
+    segment_lengths: list | None = None,
+    dilation_rates: list | None = None,
     **kwargs,
 ) -> BaseDilatedAttention:
     """
@@ -83,9 +83,7 @@ def create_dilated_attention(
     # Validate type
     if attention_type not in _ATTENTION_REGISTRY:
         available = list(_ATTENTION_REGISTRY.keys())
-        raise ValueError(
-            f"Unknown attention type '{attention_type}'. " f"Available types: {available}"
-        )
+        raise ValueError(f"Unknown attention type '{attention_type}'. Available types: {available}")
 
     # Create configuration
     config_class = _get_config_class(attention_type)
@@ -120,8 +118,8 @@ def create_multihead_dilated_attention(
     attention_type: str = "auto",
     embed_dim: int = 768,
     num_heads: int = 12,
-    segment_lengths: Optional[list] = None,
-    dilation_rates: Optional[list] = None,
+    segment_lengths: list | None = None,
+    dilation_rates: list | None = None,
     **kwargs,
 ) -> BaseMultiheadDilatedAttention:
     """
@@ -148,7 +146,6 @@ def create_multihead_dilated_attention(
     """
     # Ensure implementations are registered
     _ensure_implementations_registered()
-
     # Set defaults
     if segment_lengths is None:
         segment_lengths = [2048, 4096, 8192]
@@ -164,10 +161,8 @@ def create_multihead_dilated_attention(
 
     # Validate type
     if multihead_type not in _MULTIHEAD_REGISTRY:
-        available = [t.replace("multihead_", "") for t in _MULTIHEAD_REGISTRY.keys()]
-        raise ValueError(
-            f"Unknown attention type '{attention_type}'. " f"Available types: {available}"
-        )
+        available = [t.replace("multihead_", "") for t in _MULTIHEAD_REGISTRY]
+        raise ValueError(f"Unknown attention type '{attention_type}'. Available types: {available}")
 
     # Check if configs were passed directly
     multihead_config_passed = kwargs.get("multihead_config", None)
@@ -243,12 +238,13 @@ def create_multihead_dilated_attention(
 
     # Handle legacy constructors for improved implementations
     if attention_type in ["improved", "improved_distributed"]:
+
         # These implementations haven't been fully refactored yet
         module = cls(
             embed_dim=multihead_config.embed_dim,
             num_heads=multihead_config.num_heads,
-            dilation_rates=attention_config.dilation_rates,
             segment_lengths=attention_config.segment_lengths,
+            dilation_rates=attention_config.dilation_rates,
             dropout=attention_config.dropout,
             bias=multihead_config.bias,
             layer_norm=multihead_config.layer_norm,
@@ -375,28 +371,23 @@ def _select_best_attention_type() -> str:
             return "improved"  # Fallback to improved
 
     # V100 or older: Use simpler implementation
-    elif gpu_type == "v100":
-        return "improved"  # Use improved since standard has circular import
-
-    # CPU: Use improved implementation
-    elif gpu_type == "cpu":
+    elif gpu_type == "v100" or gpu_type == "cpu":
         return "improved"  # Use improved since standard has circular import
 
     # Default: Use improved if Flash Attention available
+    elif HAS_FLASH_ATTN:
+        return "improved"
     else:
-        if HAS_FLASH_ATTN:
-            return "improved"
-        else:
-            return "improved"  # Fallback to improved
+        return "improved"  # Fallback to improved
 
 
-def _filter_kwargs(config_class: Type, kwargs: dict) -> dict:
+def _filter_kwargs(config_class: type, kwargs: dict) -> dict:
     """Filter kwargs to only include valid parameters for the config class."""
     import inspect
     from dataclasses import fields
 
     # Get valid field names for dataclass
-    if hasattr(config_class, '__dataclass_fields__'):
+    if hasattr(config_class, "__dataclass_fields__"):
         valid_fields = {f.name for f in fields(config_class)}
     else:
         # Fallback for non-dataclass configs
@@ -414,7 +405,7 @@ def _filter_kwargs(config_class: Type, kwargs: dict) -> dict:
     return filtered
 
 
-def _get_config_class(attention_type: str) -> Type:
+def _get_config_class(attention_type: str) -> type:
     """Get the appropriate config class for attention type."""
     config_mapping = {
         "standard": DilatedAttentionConfig,
@@ -477,6 +468,16 @@ def _register_implementations():
 
     except ImportError as e:
         logger.warning(f"Failed to register ring implementations: {e}")
+
+    try:
+        # Register ring distributed implementation
+        from ..ring_distributed_refactored import RingDistributedDilatedAttention
+
+        register_multihead_attention("multihead_ring_distributed", RingDistributedDilatedAttention)
+        logger.debug("Registered ring distributed dilated attention implementation")
+
+    except ImportError as e:
+        logger.warning(f"Failed to register ring distributed implementation: {e}")
 
     try:
         # Register distributed implementations

@@ -1,0 +1,22 @@
+# Treat notebooks as documentation
+*.ipynb linguist-documentation
+
+# Ensure consistent line endings
+*.py text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.txt text eol=lf
+*.sh text eol=lf
+
+# Mark generated files
+*.lock linguist-generated
+**/doc/*.png linguist-generated
+
+# Exclude from diffs
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary

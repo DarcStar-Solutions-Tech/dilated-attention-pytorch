@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Sequence, Union
+from collections.abc import Callable, Sequence
 
 import torch
 import torch.nn.functional as F
@@ -6,6 +6,13 @@ from torch import Tensor, nn
 from torch.nn.modules.transformer import _get_activation_fn
 
 from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
+
+# Import refactored versions
+from .transformer_refactored import (
+    TransformerLayerConfig,
+    create_encoder_layer,
+    create_decoder_layer,
+)
 
 
 class DilatedTransformerEncoderLayer(nn.Module):
@@ -21,11 +28,11 @@ class DilatedTransformerEncoderLayer(nn.Module):
         dilation_rates: Sequence[int],
         dim_feedforward: int = 2048,
         dropout: float = 0.1,
-        activation: Union[str, Callable[[Tensor], Tensor]] = F.relu,
+        activation: str | Callable[[Tensor], Tensor] = F.relu,
         layer_norm_eps: float = 1e-5,
         gamma_init: float = 1.0,
-        device: Optional[Union[torch.device, str]] = None,
-        dtype: Optional[torch.dtype] = None,
+        device: torch.device | str | None = None,
+        dtype: torch.dtype | None = None,
     ) -> None:
         super().__init__()
         # Legacy string support for activation function.
@@ -37,9 +44,7 @@ class DilatedTransformerEncoderLayer(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
         # Self-attention block
-        self.norm1 = nn.LayerNorm(
-            d_model, eps=layer_norm_eps, device=device, dtype=dtype
-        )
+        self.norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps, device=device, dtype=dtype)
         self.self_attn = MultiheadDilatedAttention(  # type: ignore
             embed_dim=d_model,
             num_heads=nhead,
@@ -53,13 +58,9 @@ class DilatedTransformerEncoderLayer(nn.Module):
             dtype=dtype,
         )
         # Feedforward block
-        self.norm2 = nn.LayerNorm(
-            d_model, eps=layer_norm_eps, device=device, dtype=dtype
-        )
+        self.norm2 = nn.LayerNorm(d_model, eps=layer_norm_eps, device=device, dtype=dtype)
         self.linear1 = nn.Linear(d_model, dim_feedforward, device=device, dtype=dtype)
-        self.norm3 = nn.LayerNorm(
-            dim_feedforward, eps=layer_norm_eps, device=device, dtype=dtype
-        )
+        self.norm3 = nn.LayerNorm(dim_feedforward, eps=layer_norm_eps, device=device, dtype=dtype)
         self.linear2 = nn.Linear(dim_feedforward, d_model, device=device, dtype=dtype)
 
         self._reset_parameters()
@@ -76,7 +77,8 @@ class DilatedTransformerEncoderLayer(nn.Module):
 
     def _self_attention_block(self, x: Tensor, is_causal: bool = False) -> Tensor:
         x = self.norm1(x)
-        x, _ = self.self_attn(x, x, x, is_causal=is_causal)
+        # Always request weights to ensure consistent return type
+        x, _ = self.self_attn(x, x, x, is_causal=is_causal, need_weights=True)
         x = self.dropout(x)
         return x
 
@@ -109,11 +111,11 @@ class DilatedTransformerDecoderLayer(nn.Module):
         dilation_rates: Sequence[int],
         dim_feedforward: int = 2048,
         dropout: float = 0.1,
-        activation: Union[str, Callable[[Tensor], Tensor]] = F.relu,
+        activation: str | Callable[[Tensor], Tensor] = F.relu,
         layer_norm_eps: float = 1e-5,
         gamma_init: float = 1.0,
-        device: Optional[Union[torch.device, str]] = None,
-        dtype: Optional[torch.dtype] = None,
+        device: torch.device | str | None = None,
+        dtype: torch.dtype | None = None,
     ) -> None:
         super().__init__()
         # Legacy string support for activation function.
@@ -125,9 +127,7 @@ class DilatedTransformerDecoderLayer(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
         # Self-attention block
-        self.norm1 = nn.LayerNorm(
-            d_model, eps=layer_norm_eps, device=device, dtype=dtype
-        )
+        self.norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps, device=device, dtype=dtype)
         self.self_attn = MultiheadDilatedAttention(  # type: ignore
             embed_dim=d_model,
             num_heads=nhead,
@@ -140,9 +140,7 @@ class DilatedTransformerDecoderLayer(nn.Module):
             dtype=dtype,
         )
         # Multi-head attention block
-        self.norm2 = nn.LayerNorm(
-            d_model, eps=layer_norm_eps, device=device, dtype=dtype
-        )
+        self.norm2 = nn.LayerNorm(d_model, eps=layer_norm_eps, device=device, dtype=dtype)
         self.multihead_attn = MultiheadDilatedAttention(  # type: ignore
             embed_dim=d_model,
             num_heads=nhead,
@@ -155,13 +153,9 @@ class DilatedTransformerDecoderLayer(nn.Module):
             dtype=dtype,
         )
         # Feedforward block
-        self.norm3 = nn.LayerNorm(
-            d_model, eps=layer_norm_eps, device=device, dtype=dtype
-        )
+        self.norm3 = nn.LayerNorm(d_model, eps=layer_norm_eps, device=device, dtype=dtype)
         self.linear1 = nn.Linear(d_model, dim_feedforward, device=device, dtype=dtype)
-        self.norm4 = nn.LayerNorm(
-            dim_feedforward, eps=layer_norm_eps, device=device, dtype=dtype
-        )
+        self.norm4 = nn.LayerNorm(dim_feedforward, eps=layer_norm_eps, device=device, dtype=dtype)
         self.linear2 = nn.Linear(dim_feedforward, d_model, device=device, dtype=dtype)
 
         self._reset_parameters()
@@ -178,7 +172,8 @@ class DilatedTransformerDecoderLayer(nn.Module):
 
     def _self_attention_block(self, x: Tensor, is_causal: bool = False) -> Tensor:
         x = self.norm1(x)
-        x, _ = self.self_attn(x, x, x, is_causal=is_causal)
+        # Always request weights to ensure consistent return type
+        x, _ = self.self_attn(x, x, x, is_causal=is_causal, need_weights=True)
         x = self.dropout(x)
         return x
 
@@ -186,7 +181,8 @@ class DilatedTransformerDecoderLayer(nn.Module):
         self, x: Tensor, memory: Tensor, is_causal: bool = False
     ) -> Tensor:
         x = self.norm2(x)
-        x, _ = self.multihead_attn(x, memory, memory, is_causal=is_causal)
+        # Always request weights to ensure consistent return type
+        x, _ = self.multihead_attn(x, memory, memory, is_causal=is_causal, need_weights=True)
         x = self.dropout(x)
         return x
 

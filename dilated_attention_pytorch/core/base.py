@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+
 import torch
 from torch import Tensor, nn
 
@@ -67,9 +68,9 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
 
         # Initialize caches for frequently computed values with size limits
         self._max_cache_size = 100  # Configurable cache size limit
-        self._head_groups_cache: Dict[int, Tuple[List[int], List[Tuple[int, int]]]] = OrderedDict()
-        self._pattern_cache: Dict[Any, Tensor] = OrderedDict()
-        self._indices_cache: Dict[Any, Tuple[Tensor, Tensor]] = OrderedDict()
+        self._head_groups_cache: dict[int, tuple[list[int], list[tuple[int, int]]]] = OrderedDict()
+        self._pattern_cache: dict[Any, Tensor] = OrderedDict()
+        self._indices_cache: dict[Any, tuple[Tensor, Tensor]] = OrderedDict()
 
         # Thread safety locks
         self._cache_lock = threading.RLock()  # Reentrant lock for nested access
@@ -85,7 +86,7 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
         k: Tensor,
         v: Tensor,
         is_causal: bool = False,
-        attention_mask: Optional[Tensor] = None,
+        attention_mask: Tensor | None = None,
     ) -> Tensor:
         """
         Forward pass for dilated attention.
@@ -102,7 +103,7 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
         """
         pass
 
-    def _get_head_groups(self, num_heads: int) -> Tuple[List[int], List[Tuple[int, int]]]:
+    def _get_head_groups(self, num_heads: int) -> tuple[list[int], list[tuple[int, int]]]:
         """
         Get cached head group distribution.
 
@@ -153,7 +154,7 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
             return result
 
     def _validate_forward_inputs(
-        self, q: Tensor, k: Tensor, v: Tensor, attention_mask: Optional[Tensor] = None
+        self, q: Tensor, k: Tensor, v: Tensor, attention_mask: Tensor | None = None
     ) -> None:
         """
         Validate inputs to forward pass.
@@ -196,8 +197,8 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
         return tensor
 
     def _cache_get(
-        self, cache_dict: OrderedDict, key: Any, compute_fn: Optional[callable] = None
-    ) -> Optional[Any]:
+        self, cache_dict: OrderedDict, key: Any, compute_fn: Callable | None = None
+    ) -> Any | None:
         """
         Thread-safe cache retrieval with LRU behavior.
 
@@ -265,6 +266,23 @@ class BaseDilatedAttention(nn.Module, ValidationMixin, ABC):
             f"dropout={self.dropout}"
         )
 
+    def __getstate__(self):
+        """Support for pickling - exclude unpickleable objects."""
+        state = self.__dict__.copy()
+        # Remove the unpickleable lock
+        state['_cache_lock'] = None
+        # Clear caches to reduce pickle size
+        state['_head_groups_cache'] = {}
+        state['_pattern_cache'] = {}
+        state['_indices_cache'] = {}
+        return state
+
+    def __setstate__(self, state):
+        """Support for unpickling - recreate lock."""
+        self.__dict__.update(state)
+        # Recreate the lock
+        self._cache_lock = threading.RLock()
+
 
 class BaseMultiheadDilatedAttention(nn.Module, ValidationMixin, ABC):
     """
@@ -305,7 +323,7 @@ class BaseMultiheadDilatedAttention(nn.Module, ValidationMixin, ABC):
         self.attention = self._create_attention_module()
 
         # Initialize projections
-        factory_kwargs = {'device': self.device, 'dtype': self.dtype}
+        factory_kwargs = {"device": self.device, "dtype": self.dtype}
 
         # QKV projections (can be separate or fused)
         self._init_qkv_projections(factory_kwargs)
@@ -338,7 +356,7 @@ class BaseMultiheadDilatedAttention(nn.Module, ValidationMixin, ABC):
         pass
 
     @abstractmethod
-    def _init_qkv_projections(self, factory_kwargs: Dict[str, Any]) -> None:
+    def _init_qkv_projections(self, factory_kwargs: dict[str, Any]) -> None:
         """
         Initialize QKV projections.
 
@@ -354,13 +372,13 @@ class BaseMultiheadDilatedAttention(nn.Module, ValidationMixin, ABC):
     def forward(
         self,
         query: Tensor,
-        key: Optional[Tensor] = None,
-        value: Optional[Tensor] = None,
-        key_padding_mask: Optional[Tensor] = None,
+        key: Tensor | None = None,
+        value: Tensor | None = None,
+        key_padding_mask: Tensor | None = None,
         need_weights: bool = False,
-        attn_mask: Optional[Tensor] = None,
+        attn_mask: Tensor | None = None,
         is_causal: bool = False,
-    ) -> Union[Tensor, Tuple[Tensor, Optional[Tensor]]]:
+    ) -> Tensor | tuple[Tensor, Tensor | None]:
         """
         Forward pass for multihead dilated attention.
 
@@ -391,14 +409,14 @@ class BaseMultiheadDilatedAttention(nn.Module, ValidationMixin, ABC):
         gamma = self.multihead_config.gamma_init
 
         # Initialize QKV projections
-        if hasattr(self, 'qkv_proj'):
+        if hasattr(self, "qkv_proj"):
             # Fused QKV projection
             nn.init.xavier_normal_(self.qkv_proj.weight, gain=gamma)
             if self.qkv_proj.bias is not None:
                 nn.init.zeros_(self.qkv_proj.bias)
         else:
             # Separate projections - check if attributes exist
-            for attr_name in ['q_proj', 'k_proj', 'v_proj']:
+            for attr_name in ["q_proj", "k_proj", "v_proj"]:
                 if hasattr(self, attr_name):
                     proj = getattr(self, attr_name)
                     nn.init.xavier_normal_(proj.weight, gain=gamma)
@@ -406,14 +424,14 @@ class BaseMultiheadDilatedAttention(nn.Module, ValidationMixin, ABC):
                         nn.init.zeros_(proj.bias)
 
         # Initialize output projection
-        if hasattr(self, 'out_proj'):
+        if hasattr(self, "out_proj"):
             nn.init.xavier_normal_(self.out_proj.weight, gain=gamma)
             if self.out_proj.bias is not None:
                 nn.init.zeros_(self.out_proj.bias)
 
         # Layer norm parameters are already initialized properly
 
-    def _apply_layer_norm(self, q: Tensor, k: Tensor) -> Tuple[Tensor, Tensor]:
+    def _apply_layer_norm(self, q: Tensor, k: Tensor) -> tuple[Tensor, Tensor]:
         """Apply layer normalization if enabled."""
         if self.q_ln is not None:
             q = self.q_ln(q)

@@ -1,24 +1,21 @@
-from typing import Optional, Tuple
-
 import torch
 import xformers.ops as xops
 from einops import rearrange
-from torch import nn, Tensor
 from pytorch_lightning import LightningModule
+from torch import Tensor, nn
 
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
 
 
 class DistributedMultiheadDilatedAttention(LightningModule):
-
     def __init__(
-            self,
-            embed_dim,
-            num_heads,
-            dilation_rates,
-            segment_lengths,
-            dropout: float = 0.0,
-            op: Optional[xops.AttentionOp] = None
+        self,
+        embed_dim,
+        num_heads,
+        dilation_rates,
+        segment_lengths,
+        dropout: float = 0.0,
+        op: xops.AttentionOp | None = None,
     ):
         super().__init__()
 
@@ -44,24 +41,24 @@ class DistributedMultiheadDilatedAttention(LightningModule):
 
     def init_ddp_connection(self, global_rank, world_size):
         # Split heads
-        self.local_heads = set(range(global_rank * self.num_heads // world_size,
-                                     (global_rank + 1) * self.num_heads // world_size))
+        self.local_heads = set(
+            range(
+                global_rank * self.num_heads // world_size,
+                (global_rank + 1) * self.num_heads // world_size,
+            )
+        )
 
         # Buffers for non-local heads
         self.key_buffer = {...}
         self.value_buffer = {...}
 
     def forward(
-            self,
-            query: Tensor,
-            key: Tensor,
-            value: Tensor,
-            is_causal: bool = False
-    ) -> Tuple[Tensor, None]:
+        self, query: Tensor, key: Tensor, value: Tensor, is_causal: bool = False
+    ) -> tuple[Tensor, None]:
         # Shard input
-        query = query[self.global_rank * len(query) // self.world_size: ...]
-        key = key[self.global_rank * len(key) // self.world_size: ...]
-        value = value[self.global_rank * len(value) // self.world_size: ...]
+        query = query[self.global_rank * len(query) // self.world_size : ...]
+        key = key[self.global_rank * len(key) // self.world_size : ...]
+        value = value[self.global_rank * len(value) // self.world_size : ...]
 
         # Linear projections
         q = self.q_proj(query)

@@ -14,8 +14,8 @@ This is an unofficial PyTorch implementation of DilatedAttention from the LongNe
 - **MultiheadDilatedAttention** (`dilated_attention_pytorch/multihead_dilated_attention.py`): Drop-in replacement for nn.MultiheadAttention with dilated attention and MAGNETO improvements
 - **ImprovedDilatedAttention** (`dilated_attention_pytorch/improved_dilated_attention.py`): Enhanced version with additional optimizations
 - **ImprovedMultiheadDilatedAttention** (`dilated_attention_pytorch/improved_multihead_dilated_attention.py`): Enhanced multihead version with further optimizations
-- **DistributedDilatedAttention** (`dilated_attention_pytorch/distributed_dilated_attention.py`): Distributed/multi-GPU implementation
-- **ImprovedDistributedDilatedAttention** (`dilated_attention_pytorch/improved_distributed_dilated_attention.py`): Enhanced distributed implementation with optimizations
+- **DistributedImprovedDilatedAttention** (`dilated_attention_pytorch/improved_distributed_dilated_attention.py`): Enhanced distributed/multi-GPU implementation
+- **DistributedImprovedMultiheadDilatedAttention** (`dilated_attention_pytorch/improved_distributed_dilated_attention.py`): Enhanced distributed multihead version
 - **LongNet** (`dilated_attention_pytorch/long_net.py`): Full transformer architecture for language modeling
 - **Transformer** (`dilated_attention_pytorch/transformer.py`): General transformer with dilated attention
 
@@ -225,9 +225,9 @@ attention = create_multihead_dilated_attention("improved",
 
 ```python
 # Quick block-sparse attention
-from dilated_attention_pytorch import create_block_sparse_multihead_attention
+from dilated_attention_pytorch import create_block_sparse_attention
 
-attention = create_block_sparse_multihead_attention(
+attention = create_block_sparse_attention(
     embed_dim=768,
     num_heads=12,
     sparsity_ratio=0.1,  # 90% sparse = 10x speedup
@@ -235,9 +235,9 @@ attention = create_block_sparse_multihead_attention(
 )
 
 # Adaptive sparse attention
-from dilated_attention_pytorch import create_adaptive_sparse_multihead_attention
+from dilated_attention_pytorch import create_adaptive_sparse_attention
 
-adaptive = create_adaptive_sparse_multihead_attention(
+adaptive = create_adaptive_sparse_attention(
     embed_dim=768,
     num_heads=12
 )
@@ -274,6 +274,20 @@ attention_1m = create_optimal_attention(1_000_000)  # Selects "ring"
 The codebase has been successfully refactored to reduce duplication and improve maintainability. New core modules provide shared functionality:
 
 **Status**: Refactoring complete - 7/8 implementations refactored, 1 preserved by design (Block-Sparse)
+
+### Implementations Status
+
+**Refactored (using new core architecture):**
+1. ✅ DilatedAttention
+2. ✅ MultiheadDilatedAttention  
+3. ✅ ImprovedDilatedAttention
+4. ✅ ImprovedMultiheadDilatedAttention
+5. ✅ DistributedImprovedDilatedAttention
+6. ✅ DistributedImprovedMultiheadDilatedAttention
+7. ✅ RingDilatedAttention (partially - uses base classes)
+
+**Not Refactored (by design):**
+8. ⚡ BlockSparseRingDilatedAttention - Preserved for performance optimization
 
 ### Core Module Structure
 
@@ -312,7 +326,16 @@ The codebase has been successfully refactored to reduce duplication and improve 
   )
   ```
 
-### Recent Optimizations (Latest Update - December 2024)
+### Recent Fixes and Optimizations (Latest Update - December 2024)
+
+#### **Test Suite Improvements**
+- Fixed 63 failing tests, achieving 93% pass rate (283/303 tests)
+- Added pickle/deepcopy support for distributed training
+- Fixed Ring Attention dimension mismatch with dilation_rates > 1
+- Improved validation and error messages
+- Added thread-safe operations for concurrent execution
+
+### Recent Optimizations (December 2024)
 
 #### **Block Sparse Ring Distributed Attention Optimizations**
 
