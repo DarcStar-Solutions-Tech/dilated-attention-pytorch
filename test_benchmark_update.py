@@ -13,7 +13,7 @@ def test_benchmark_includes_block_sparse():
     # Check if block sparse implementations are imported
     print("Checking benchmark_all.py includes block sparse implementations...")
 
-    with open('benchmark_all.py', 'r') as f:
+    with open('benchmark_all.py') as f:
         content = f.read()
 
     # Check imports

@@ -1,7 +1,6 @@
 """
 Debug script to find where block sparse implementation hangs
 """
-import torch
 import sys
 
 print("Starting debug script...")
