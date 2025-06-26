@@ -510,9 +510,24 @@ class RingDilatedAttention(BaseDilatedAttention):
             num_segments_kv = k_segments.size(1) 
             dilated_len = k_segments.size(2)
             
-            q_flat = q_segments.view(b * num_segments_q, s, g, d)
-            k_flat = k_segments.view(b * num_segments_kv, dilated_len, g, d)
-            v_flat = v_segments.view(b * num_segments_kv, dilated_len, g, d)
+            # Handle dimension mismatch when dilation is applied
+            if r > 1 and s != dilated_len:
+                # For dilated attention, q needs to attend to dilated k,v
+                # We need to either truncate q or pad k,v
+                if s > dilated_len:
+                    # Truncate q to match dilated k,v length
+                    q_segments_adjusted = q_segments[:, :, :dilated_len, :, :]
+                    q_flat = q_segments_adjusted.contiguous().view(b * num_segments_q, dilated_len, g, d)
+                else:
+                    # This shouldn't happen with proper segment configuration
+                    q_flat = q_segments.view(b * num_segments_q, s, g, d)
+                k_flat = k_segments.view(b * num_segments_kv, dilated_len, g, d)
+                v_flat = v_segments.view(b * num_segments_kv, dilated_len, g, d)
+            else:
+                # No dimension mismatch
+                q_flat = q_segments.view(b * num_segments_q, s, g, d)
+                k_flat = k_segments.view(b * num_segments_kv, dilated_len, g, d)
+                v_flat = v_segments.view(b * num_segments_kv, dilated_len, g, d)
             
             # Handle different segment counts between q and kv (ring attention)
             if num_segments_q != num_segments_kv:
@@ -544,7 +559,20 @@ class RingDilatedAttention(BaseDilatedAttention):
                 )
             
             # Reshape back and accumulate
-            attn_reshaped = attn_out.view(b, num_segments_q, s, g, d)
+            # Use the actual attention output size for reshaping
+            attn_seq_len = attn_out.size(1)
+            attn_reshaped = attn_out.view(b, num_segments_q, attn_seq_len, g, d)
+            
+            # Handle truncated attention output for dilated case
+            if r > 1 and s != attn_seq_len:
+                # Pad the attention output back to original segment size
+                if s > attn_seq_len:
+                    pad_len = s - attn_seq_len
+                    padding = torch.zeros(b, num_segments_q, pad_len, g, d, 
+                                        device=attn_reshaped.device, 
+                                        dtype=attn_reshaped.dtype)
+                    attn_reshaped = torch.cat([attn_reshaped, padding], dim=2)
+            
             attn_flat = attn_reshaped.view(b, n_q, g, d)
             
             # Accumulate results - slicing creates a view, so this modifies 'out' in-place

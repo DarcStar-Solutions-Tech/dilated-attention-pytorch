@@ -102,6 +102,10 @@ class MultiheadConfig(ValidationMixin):
 
     def __post_init__(self) -> None:
         """Validate multihead configuration."""
+        # Validate embed_dim is positive
+        if self.embed_dim <= 0:
+            raise ValueError(f"embed_dim must be positive, got {self.embed_dim}")
+        
         # Validate and compute head dimension
         self.head_dim = self.validate_head_dim(self.embed_dim, self.num_heads)
 
