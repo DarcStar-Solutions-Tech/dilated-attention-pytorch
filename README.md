@@ -15,7 +15,7 @@ We've completely refactored the codebase to reduce duplication and improve maint
 ### Quick Start with New Factory Pattern
 
 ```python
-from dilated_attention_pytorch.core import create_multihead_dilated_attention
+from dilated_attention_pytorch import create_multihead_dilated_attention
 
 # Auto-select best implementation based on your hardware
 attention = create_multihead_dilated_attention("auto",
@@ -55,23 +55,50 @@ See the [Migration Guide](doc/migration-guide-v0.2.md) for upgrading from v0.1.x
 
 **NOTE**: This library depends on [facebookresearch/xformers](https://github.com/facebookresearch/xformers).  If you're not using `torch>=2.0.0`, you may need to install it from source.  See their [installation instructions](https://github.com/facebookresearch/xformers#installing-xformers).
 
-PyPI:
+### From PyPI (Stable Release):
 
 ```bash
 pip install dilated-attention-pytorch
 ```
 
-From source:
+### From Source (Latest Development):
+
 ```bash
-pip install "dilated-attention-pytorch @ git+ssh://git@github.com/fkodom/dilated-attention-pytorch.git"
+# Using pip
+pip install "dilated-attention-pytorch @ git+https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch.git"
+
+# Using uv (recommended for fast installation)
+uv pip install "git+https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch.git"
 ```
 
-For contributors:
+### For Contributors:
+
+We support multiple package managers. Choose the one that fits your workflow:
+
 ```bash
-# Install all dev dependencies (tests etc.)
-pip install "dilated-attention-pytorch[all] @ git+ssh://git@github.com/fkodom/dilated-attention-pytorch.git"
-# Setup pre-commit hooks
-pre-commit install
+# Option 1: Using uv (fastest, recommended)
+git clone https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch.git
+cd dilated-attention-pytorch
+uv pip install -e ".[dev]"
+
+# Option 2: Using Poetry (modern dependency management)
+poetry install --with dev
+
+# Option 3: Using pip (traditional)
+pip install -e ".[dev]"
+```
+
+### Optional Dependencies:
+
+```bash
+# For distributed training
+pip install "dilated-attention-pytorch[distributed]"
+
+# For benchmarking
+pip install "dilated-attention-pytorch[benchmark]"  
+
+# For all optional features
+pip install "dilated-attention-pytorch[all]"
 ```
 
 
@@ -94,7 +121,7 @@ The easiest way to use dilated attention is through our factory functions:
 
 ```python
 import torch
-from dilated_attention_pytorch.core import create_multihead_dilated_attention
+from dilated_attention_pytorch import create_multihead_dilated_attention
 
 # Auto-select best implementation for your hardware
 attention = create_multihead_dilated_attention("auto",
@@ -133,7 +160,7 @@ The LongNet paper introduces a new attention mechanism called `DilatedAttention`
 #### Using Factory Pattern (Recommended):
 ```python
 import torch
-from dilated_attention_pytorch.core import create_dilated_attention
+from dilated_attention_pytorch import create_dilated_attention
 
 # Create dilated attention using factory
 dilated_attention = create_dilated_attention("improved",
@@ -185,7 +212,7 @@ print(out.shape)
 
 #### Using Factory Pattern (Recommended):
 ```python
-from dilated_attention_pytorch.core import create_multihead_dilated_attention
+from dilated_attention_pytorch import create_multihead_dilated_attention
 
 # Auto-select best implementation
 mhda = create_multihead_dilated_attention("auto",
@@ -234,10 +261,12 @@ print(y.shape)
 The new architecture uses type-safe configuration dataclasses for better validation and cleaner APIs:
 
 ```python
+from dilated_attention_pytorch import (
+    create_multihead_dilated_attention
+)
 from dilated_attention_pytorch.core import (
     DilatedAttentionConfig,
-    MultiheadConfig,
-    create_multihead_dilated_attention
+    MultiheadConfig
 )
 
 # Create configurations

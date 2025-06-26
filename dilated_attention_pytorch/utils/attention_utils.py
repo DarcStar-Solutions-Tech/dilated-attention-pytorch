@@ -310,26 +310,39 @@ def standard_attention(
     Returns:
         Attention output [..., seq_len, num_heads, head_dim]
     """
+    # Handle multi-head attention by reshaping
+    # [..., seq_len, num_heads, head_dim] -> [..., num_heads, seq_len, head_dim]
+    q = q.transpose(-3, -2)
+    k = k.transpose(-3, -2)
+    v = v.transpose(-3, -2)
+    
+    # Get dimensions
+    *batch_dims, num_heads, seq_len, head_dim = q.shape
+    
+    # Compute attention scores for each head
+    # We need to handle this head by head or reshape
+    # Reshape to [...*num_heads, seq_len, head_dim]
+    q_reshaped = q.reshape(-1, seq_len, head_dim)
+    k_reshaped = k.reshape(-1, seq_len, head_dim)
+    v_reshaped = v.reshape(-1, seq_len, head_dim)
+    
     # Compute attention scores
-    scores = compute_attention_scores(q, k, None, attention_mask, is_causal)
+    scores = compute_attention_scores(q_reshaped, k_reshaped, None, attention_mask, is_causal)
     
     # Apply softmax
     attn_weights = F.softmax(scores, dim=-1)
     
     # Apply dropout
-    if dropout_p > 0 and q.training:
-        attn_weights = F.dropout(attn_weights, p=dropout_p)
+    if dropout_p > 0:
+        attn_weights = F.dropout(attn_weights, p=dropout_p, training=True)
     
     # Apply attention to values
-    # attn_weights: [..., seq_len, seq_len]
-    # v: [..., seq_len, num_heads, head_dim]
-    # We need to transpose v to [..., num_heads, seq_len, head_dim] for proper matmul
-    v_transposed = v.transpose(-3, -2)  # [..., num_heads, seq_len, head_dim]
-    attn_weights_expanded = attn_weights.unsqueeze(-3)  # [..., 1, seq_len, seq_len]
+    # attn_weights: [...*num_heads, seq_len, seq_len]
+    # v_reshaped: [...*num_heads, seq_len, head_dim]
+    output = torch.matmul(attn_weights, v_reshaped)
     
-    # Perform batched matmul: [..., 1, seq_len, seq_len] x [..., num_heads, seq_len, head_dim]
-    # Result: [..., num_heads, seq_len, head_dim]
-    output = torch.matmul(attn_weights_expanded, v_transposed)
+    # Reshape back to [..., num_heads, seq_len, head_dim]
+    output = output.reshape(*batch_dims, num_heads, seq_len, head_dim)
     
     # Transpose back to [..., seq_len, num_heads, head_dim]
     output = output.transpose(-3, -2)

@@ -211,6 +211,11 @@ class SparsePatternConfig:
     adaptation_rate: float = 0.1  # For adaptive patterns
     min_sparsity: float = 0.05  # Minimum sparsity to maintain
     max_sparsity: float = 0.95  # Maximum sparsity to maintain
+    
+    def __post_init__(self):
+        """Validate configuration parameters."""
+        if self.block_size <= 0:
+            raise ValueError(f"block_size must be positive, got {self.block_size}")
 
 
 class SparsePatternGenerator:
@@ -286,15 +291,34 @@ class SparsePatternGenerator:
         """Create dilated sparsity pattern matching Ring Attention structure"""
         pattern = torch.zeros(num_blocks, num_blocks, dtype=torch.bool, device=device)
         
-        # Multiple dilation rates for hierarchical attention
-        dilation_rates = [1, 2, 4, 8, 16]
+        # Calculate connections per row based on sparsity ratio
+        connections_per_row = max(1, int(num_blocks * self.config.sparsity_ratio))
         
-        for dilation in dilation_rates:
-            for i in range(num_blocks):
-                # Attend to positions at dilation intervals
-                for j in range(0, num_blocks, dilation):
-                    if abs(i - j) <= num_blocks * self.config.sparsity_ratio:
-                        pattern[i, j] = True
+        # Multiple dilation rates for hierarchical attention
+        dilation_rates = [1, 2, 4, 8]
+        
+        for i in range(num_blocks):
+            # Always connect to self
+            pattern[i, i] = True
+            
+            connections_made = 1  # Count self-connection
+            
+            # Add connections at different dilation rates
+            for dilation in dilation_rates:
+                if connections_made >= connections_per_row:
+                    break
+                    
+                # Add forward connections
+                j = i + dilation
+                if j < num_blocks and connections_made < connections_per_row:
+                    pattern[i, j] = True
+                    connections_made += 1
+                
+                # Add backward connections
+                j = i - dilation
+                if j >= 0 and connections_made < connections_per_row:
+                    pattern[i, j] = True
+                    connections_made += 1
                         
         return pattern
         
@@ -340,26 +364,36 @@ class SparsePatternGenerator:
         
     def _enforce_target_sparsity(self, pattern: torch.Tensor, target_sparsity: float) -> torch.Tensor:
         """Ensure pattern meets target sparsity ratio"""
+        # Handle empty patterns
+        if pattern.numel() == 0:
+            return pattern
+            
         current_sparsity = pattern.float().mean().item()
         
-        if current_sparsity < self.config.min_sparsity:
-            # Pattern too dense, remove some connections
-            num_remove = int((current_sparsity - self.config.min_sparsity) * pattern.numel())
+        # Small tolerance to avoid unnecessary adjustments
+        tolerance = 0.02
+        
+        if abs(current_sparsity - target_sparsity) < tolerance:
+            return pattern
+        
+        if current_sparsity > target_sparsity:
+            # Pattern too dense (too many connections), remove some
+            num_remove = int((current_sparsity - target_sparsity) * pattern.numel())
             active_indices = torch.nonzero(pattern, as_tuple=False)
             if len(active_indices) > num_remove:
-                # Randomly remove connections (preserving diagonal and global tokens)
+                # Randomly remove connections (preserving diagonal)
                 remove_indices = torch.randperm(len(active_indices))[:num_remove]
                 for idx in remove_indices:
                     i, j = active_indices[idx]
-                    if i != j and i >= 4 and j >= 4:  # Preserve diagonal and first 4 global blocks
+                    if i != j:  # Preserve diagonal
                         pattern[i, j] = False
                         
-        elif current_sparsity > self.config.max_sparsity:
-            # Pattern too sparse, add some connections
-            num_add = int((self.config.max_sparsity - current_sparsity) * pattern.numel())
+        else:
+            # Pattern too sparse (too few connections), add some
+            num_add = int((target_sparsity - current_sparsity) * pattern.numel())
             inactive_indices = torch.nonzero(~pattern, as_tuple=False)
             if len(inactive_indices) > num_add:
-                # Add connections near diagonal for locality
+                # Add connections randomly
                 add_indices = torch.randperm(len(inactive_indices))[:num_add]
                 for idx in add_indices:
                     i, j = inactive_indices[idx]
@@ -702,8 +736,16 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
                                    return_attention_weights: bool) -> Tuple[Tensor, Optional[Tensor]]:
         """Execute block-sparse ring attention computation"""
         batch, seq_len, num_heads, head_dim = q.shape
-        num_blocks = seq_len // self.sparse_config.block_size
         block_size = self.sparse_config.block_size
+        
+        # Handle case where sequence is shorter than block size
+        if seq_len < block_size:
+            # Treat entire sequence as one block
+            num_blocks = 1
+            effective_block_size = seq_len
+        else:
+            num_blocks = seq_len // block_size
+            effective_block_size = block_size
         
         # Check for Flash Attention 3 optimization
         if self.has_fa3 and HAS_FLASH_ATTN and not return_attention_weights:
@@ -721,9 +763,15 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
             attention_weights_full.zero_()
             
         # Reshape inputs to blocks
-        q_blocks = q.view(batch, num_blocks, block_size, num_heads, head_dim)
-        k_blocks = k.view(batch, num_blocks, block_size, num_heads, head_dim)
-        v_blocks = v.view(batch, num_blocks, block_size, num_heads, head_dim)
+        if seq_len < block_size:
+            # Don't reshape if sequence is shorter than block size
+            q_blocks = q.unsqueeze(1)  # Add block dimension
+            k_blocks = k.unsqueeze(1)
+            v_blocks = v.unsqueeze(1)
+        else:
+            q_blocks = q.view(batch, num_blocks, block_size, num_heads, head_dim)
+            k_blocks = k.view(batch, num_blocks, block_size, num_heads, head_dim)
+            v_blocks = v.view(batch, num_blocks, block_size, num_heads, head_dim)
         
         # Process each ring step
         for ring_step in range(self.ring_size):

@@ -401,7 +401,7 @@ class RingDistributedDilatedAttention(nn.Module):
         )
         
         # Store ring size for reference
-        self.ring_size = self.attention_core.ring_attention.ring_size
+        self.ring_size = self.attention_core.attention.ring_size
     
     def _setup_deepspeed_integration(self):
         """Setup DeepSpeed integration for memory optimization."""

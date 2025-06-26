@@ -153,6 +153,17 @@ class SparsePatternGenerator:
                 self.pattern_cache[cache_key] = pattern.cpu()
                 
         return pattern
+    
+    def create_pattern(self, seq_len: int, num_heads: int = 1, device: Optional[torch.device] = None) -> torch.Tensor:
+        """Alias for generate_pattern for backward compatibility."""
+        pattern = self.generate_pattern(seq_len, num_heads, device)
+        # For backward compatibility with tests that expect 2D pattern
+        # Average over heads to get a single 2D pattern
+        if pattern.dim() == 3:
+            # Use any() to combine patterns from different heads
+            # This gives us a pattern where a connection exists if ANY head attends
+            pattern = pattern.any(dim=0)
+        return pattern
         
     def _generate_local_window_pattern(self, num_blocks: int, num_heads: int, device: torch.device) -> torch.Tensor:
         """Generate local window attention pattern"""
@@ -171,9 +182,8 @@ class SparsePatternGenerator:
         """Generate dilated sparse attention pattern"""
         pattern = torch.zeros(num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device)
         
-        # Calculate how many connections to keep based on sparsity ratio
-        total_connections = num_blocks * num_blocks
-        target_connections = int(total_connections * (1 - self.config.sparsity_ratio))
+        # Calculate how many connections per row to keep based on sparsity ratio
+        connections_per_row = max(1, int(num_blocks * self.config.sparsity_ratio))
         
         for h in range(num_heads):
             # Use different dilation rates for different heads
@@ -182,12 +192,23 @@ class SparsePatternGenerator:
             
             # Create dilated pattern
             for i in range(num_blocks):
+                # Always connect to self
+                pattern[h, i, i] = True
+                
                 # Connect to positions at multiples of dilation
-                for offset in range(-target_connections // (2 * num_blocks), 
-                                  target_connections // (2 * num_blocks) + 1):
-                    j = i + offset * dilation
-                    if 0 <= j < num_blocks:
-                        pattern[h, i, j] = True
+                # Half connections before, half after current position
+                half_connections = (connections_per_row - 1) // 2
+                
+                for k in range(1, half_connections + 1):
+                    # Forward connections
+                    j_forward = i + k * dilation
+                    if j_forward < num_blocks:
+                        pattern[h, i, j_forward] = True
+                    
+                    # Backward connections
+                    j_backward = i - k * dilation
+                    if j_backward >= 0:
+                        pattern[h, i, j_backward] = True
                             
         return pattern
         

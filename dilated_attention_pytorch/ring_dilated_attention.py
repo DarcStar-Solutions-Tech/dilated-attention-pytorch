@@ -186,6 +186,24 @@ class RingAttentionMemoryPool:
             
             # Update access order list to remove deleted keys
             self._access_order = [key for key in self._access_order if key in self._pools]
+    
+    def __getstate__(self):
+        """Support for pickling - exclude unpickleable objects."""
+        state = self.__dict__.copy()
+        # Remove the unpickleable lock
+        state['_access_lock'] = None
+        # Clear the pools to avoid pickling large tensors
+        state['_pools'] = {}
+        state['_hot_keys_cache'] = {}
+        state['_usage_count'] = {}
+        state['_access_order'] = []
+        return state
+    
+    def __setstate__(self, state):
+        """Support for unpickling - recreate lock."""
+        self.__dict__.update(state)
+        # Recreate the lock
+        self._access_lock = threading.RLock()
 
 class RingDilatedAttention(BaseDilatedAttention):
     """
@@ -250,7 +268,17 @@ class RingDilatedAttention(BaseDilatedAttention):
         # Ring attention configuration
         self.world_size = dist.get_world_size() if dist.is_initialized() else 1
         self.rank = dist.get_rank() if dist.is_initialized() else 0
-        self.ring_size = self.config.ring_size or self.world_size
+        
+        # If distributed is not initialized, ignore ring_size and use single GPU
+        if not dist.is_initialized():
+            self.ring_size = 1
+        else:
+            self.ring_size = self.config.ring_size or self.world_size
+            # Validate ring size only in distributed mode
+            if self.ring_size > self.world_size:
+                raise ValueError(
+                    f"ring_size ({self.ring_size}) cannot exceed world_size ({self.world_size})"
+                )
         
         # Ring-specific caches and buffers
         self._cached_indices = {}  # Cache for dilation indices
@@ -459,17 +487,17 @@ class RingDilatedAttention(BaseDilatedAttention):
             v_slice = v[:, :, hmin:hmax, :].view(b, n_kv, g, d)
             
             # Segment and apply dilation
-            q_segments = self._segment_tensor(q_slice, effective_s, n_q)
-            k_segments = self._segment_tensor(k_slice, effective_s, n_kv)
-            v_segments = self._segment_tensor(v_slice, effective_s, n_kv)
+            q_segments = self._segment_tensor(q_slice, s, n_q)
+            k_segments = self._segment_tensor(k_slice, s, n_kv)
+            v_segments = self._segment_tensor(v_slice, s, n_kv)
             
             # Apply dilation within segments using pre-computed indices
             if r > 1:
                 offset = i % r
-                cache_key = (effective_s, r, offset)
+                cache_key = (s, r, offset)
                 if cache_key not in self._cached_indices:
                     self._cached_indices[cache_key] = torch.arange(
-                        offset, effective_s, r, device=q.device
+                        offset, s, r, device=q.device
                     )
                 idx = self._cached_indices[cache_key]
                 
@@ -482,9 +510,24 @@ class RingDilatedAttention(BaseDilatedAttention):
             num_segments_kv = k_segments.size(1) 
             dilated_len = k_segments.size(2)
             
-            q_flat = q_segments.view(b * num_segments_q, effective_s, g, d)
-            k_flat = k_segments.view(b * num_segments_kv, dilated_len, g, d)
-            v_flat = v_segments.view(b * num_segments_kv, dilated_len, g, d)
+            # Handle dimension mismatch when dilation is applied
+            if r > 1 and s != dilated_len:
+                # For dilated attention, q needs to attend to dilated k,v
+                # We need to either truncate q or pad k,v
+                if s > dilated_len:
+                    # Truncate q to match dilated k,v length
+                    q_segments_adjusted = q_segments[:, :, :dilated_len, :, :]
+                    q_flat = q_segments_adjusted.contiguous().view(b * num_segments_q, dilated_len, g, d)
+                else:
+                    # This shouldn't happen with proper segment configuration
+                    q_flat = q_segments.view(b * num_segments_q, s, g, d)
+                k_flat = k_segments.view(b * num_segments_kv, dilated_len, g, d)
+                v_flat = v_segments.view(b * num_segments_kv, dilated_len, g, d)
+            else:
+                # No dimension mismatch
+                q_flat = q_segments.view(b * num_segments_q, s, g, d)
+                k_flat = k_segments.view(b * num_segments_kv, dilated_len, g, d)
+                v_flat = v_segments.view(b * num_segments_kv, dilated_len, g, d)
             
             # Handle different segment counts between q and kv (ring attention)
             if num_segments_q != num_segments_kv:
@@ -516,7 +559,20 @@ class RingDilatedAttention(BaseDilatedAttention):
                 )
             
             # Reshape back and accumulate
-            attn_reshaped = attn_out.view(b, num_segments_q, effective_s, g, d)
+            # Use the actual attention output size for reshaping
+            attn_seq_len = attn_out.size(1)
+            attn_reshaped = attn_out.view(b, num_segments_q, attn_seq_len, g, d)
+            
+            # Handle truncated attention output for dilated case
+            if r > 1 and s != attn_seq_len:
+                # Pad the attention output back to original segment size
+                if s > attn_seq_len:
+                    pad_len = s - attn_seq_len
+                    padding = torch.zeros(b, num_segments_q, pad_len, g, d, 
+                                        device=attn_reshaped.device, 
+                                        dtype=attn_reshaped.dtype)
+                    attn_reshaped = torch.cat([attn_reshaped, padding], dim=2)
+            
             attn_flat = attn_reshaped.view(b, n_q, g, d)
             
             # Accumulate results - slicing creates a view, so this modifies 'out' in-place

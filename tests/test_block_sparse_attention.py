@@ -596,7 +596,7 @@ class TestSparsePatternUtils:
         # Create test pattern
         pattern = torch.rand(4, 16, 16) > 0.7
         
-        stats = pattern_statistics(pattern)
+        stats = analyze_pattern_statistics(pattern)
         
         # Check required statistics
         assert 'sparsity_ratio' in stats

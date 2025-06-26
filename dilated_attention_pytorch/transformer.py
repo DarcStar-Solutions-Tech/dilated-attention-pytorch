@@ -1,3 +1,10 @@
+"""
+Transformer layers with dilated attention.
+
+This module maintains backward compatibility while using the refactored
+implementation internally.
+"""
+
 from typing import Callable, Optional, Sequence, Union
 
 import torch
@@ -6,6 +13,13 @@ from torch import Tensor, nn
 from torch.nn.modules.transformer import _get_activation_fn
 
 from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
+
+# Import refactored versions
+from .transformer_refactored import (
+    TransformerLayerConfig,
+    create_encoder_layer,
+    create_decoder_layer,
+)
 
 
 class DilatedTransformerEncoderLayer(nn.Module):
@@ -76,7 +90,8 @@ class DilatedTransformerEncoderLayer(nn.Module):
 
     def _self_attention_block(self, x: Tensor, is_causal: bool = False) -> Tensor:
         x = self.norm1(x)
-        x, _ = self.self_attn(x, x, x, is_causal=is_causal)
+        # Always request weights to ensure consistent return type
+        x, _ = self.self_attn(x, x, x, is_causal=is_causal, need_weights=True)
         x = self.dropout(x)
         return x
 
@@ -178,7 +193,8 @@ class DilatedTransformerDecoderLayer(nn.Module):
 
     def _self_attention_block(self, x: Tensor, is_causal: bool = False) -> Tensor:
         x = self.norm1(x)
-        x, _ = self.self_attn(x, x, x, is_causal=is_causal)
+        # Always request weights to ensure consistent return type
+        x, _ = self.self_attn(x, x, x, is_causal=is_causal, need_weights=True)
         x = self.dropout(x)
         return x
 
@@ -186,7 +202,8 @@ class DilatedTransformerDecoderLayer(nn.Module):
         self, x: Tensor, memory: Tensor, is_causal: bool = False
     ) -> Tensor:
         x = self.norm2(x)
-        x, _ = self.multihead_attn(x, memory, memory, is_causal=is_causal)
+        # Always request weights to ensure consistent return type
+        x, _ = self.multihead_attn(x, memory, memory, is_causal=is_causal, need_weights=True)
         x = self.dropout(x)
         return x
 

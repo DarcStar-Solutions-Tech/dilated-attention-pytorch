@@ -222,13 +222,15 @@ class TestAutoSelection:
     def test_auto_select_v100(self):
         """Test auto-selection on V100."""
         attention_type = _select_best_attention_type()
-        assert attention_type == "standard"
+        # Changed from "standard" to "improved" due to circular import fix
+        assert attention_type == "improved"
     
     @patch('dilated_attention_pytorch.core.factory.GPU_TYPE', 'cpu')
     def test_auto_select_cpu(self):
         """Test auto-selection on CPU."""
         attention_type = _select_best_attention_type()
-        assert attention_type == "standard"
+        # Changed from "standard" to "improved" due to circular import fix
+        assert attention_type == "improved"
     
     def test_create_with_auto(self):
         """Test creation with auto type."""

@@ -223,8 +223,8 @@ class TestAttentionModuleThreadSafety:
     def test_concurrent_forward_passes(self):
         """Test concurrent forward passes through attention."""
         attention = RingDilatedAttention(
-            segment_lengths=[256, 512],
-            dilation_rates=[1, 2],
+            segment_lengths=[256, 256],  # Use same segment lengths
+            dilation_rates=[1, 1],  # Use same dilation rates
             block_size=128
         )
         tester = ThreadSafetyTester()

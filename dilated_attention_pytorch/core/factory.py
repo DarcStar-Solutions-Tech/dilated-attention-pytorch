@@ -67,6 +67,9 @@ def create_dilated_attention(
         ...     dropout=0.1
         ... )
     """
+    # Ensure implementations are registered
+    _ensure_initialized()
+    
     # Set defaults
     if segment_lengths is None:
         segment_lengths = [2048, 4096, 8192]
@@ -127,6 +130,9 @@ def create_multihead_dilated_attention(
         ...     dropout=0.1
         ... )
     """
+    # Ensure implementations are registered
+    _ensure_initialized()
+    
     # Set defaults
     if segment_lengths is None:
         segment_lengths = [2048, 4096, 8192]
@@ -199,14 +205,14 @@ def create_multihead_dilated_attention(
     # Create and return module
     cls = _MULTIHEAD_REGISTRY[multihead_type]
     
-    # Handle legacy constructors for improved implementations
-    if attention_type in ["improved", "improved_distributed"]:
+    # Handle legacy constructors for implementations that haven't been refactored
+    if attention_type in ["improved", "improved_distributed", "ring"]:
         # These implementations haven't been fully refactored yet
         module = cls(
             embed_dim=multihead_config.embed_dim,
             num_heads=multihead_config.num_heads,
-            dilation_rates=attention_config.dilation_rates,
             segment_lengths=attention_config.segment_lengths,
+            dilation_rates=attention_config.dilation_rates,
             dropout=attention_config.dropout,
             bias=multihead_config.bias,
             layer_norm=multihead_config.layer_norm,
@@ -215,6 +221,13 @@ def create_multihead_dilated_attention(
             device=multihead_config.device,
             dtype=multihead_config.dtype,
             **remaining_kwargs,  # Pass through any extra kwargs
+        )
+    elif attention_type == "ring_distributed":
+        # Ring distributed uses special initialization
+        module = cls(
+            multihead_config=multihead_config,
+            ring_config=attention_config,
+            **remaining_kwargs
         )
     else:
         # New style with configs
@@ -421,6 +434,16 @@ def _register_implementations():
         logger.warning(f"Failed to register ring implementations: {e}")
 
     try:
+        # Register ring distributed implementation
+        from ..ring_distributed_refactored import RingDistributedDilatedAttention
+
+        register_multihead_attention("multihead_ring_distributed", RingDistributedDilatedAttention)
+        logger.debug("Registered ring distributed dilated attention implementation")
+
+    except ImportError as e:
+        logger.warning(f"Failed to register ring distributed implementation: {e}")
+
+    try:
         # Register distributed implementations
         from ..improved_distributed_dilated_attention import DistributedImprovedDilatedAttention
 
@@ -460,5 +483,12 @@ def _register_implementations():
         pass  # Block-sparse not refactored yet
 
 
-# Initialize registry
-_register_implementations()
+# Initialize registry - use lazy initialization to avoid import issues
+_initialized = False
+
+def _ensure_initialized():
+    """Ensure implementations are registered."""
+    global _initialized
+    if not _initialized:
+        _register_implementations()
+        _initialized = True

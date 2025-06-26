@@ -321,19 +321,17 @@ class HierarchicalSparsePatternGenerator:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         pattern = torch.zeros(num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device)
         
-        # Dense local attention window
-        local_window = min(512, num_blocks // 4) // self.config.block_size
+        # Dense local attention window - wider window for higher density
+        local_window_size = max(1, int(num_blocks * self.config.local_sparsity * 0.5))
         
         for h in range(num_heads):
             for i in range(num_blocks):
                 # Local window around each position
-                start = max(0, i - local_window)
-                end = min(num_blocks, i + local_window + 1)
+                start = max(0, i - local_window_size)
+                end = min(num_blocks, i + local_window_size + 1)
                 
-                # Apply local sparsity
-                window_size = end - start
-                keep_indices = torch.randperm(window_size)[:int(window_size * self.config.local_sparsity)]
-                pattern[h, i, start:start + len(keep_indices)] = True
+                # Set all connections in the local window
+                pattern[h, i, start:end] = True
                 
         with self._pattern_lock:
             self.local_patterns[cache_key] = pattern
@@ -351,24 +349,15 @@ class HierarchicalSparsePatternGenerator:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         pattern = torch.zeros(num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device)
         
-        # Global landmark tokens (first few blocks attend to everything)
-        global_blocks = min(16, num_blocks // 8)
+        # For global pattern, randomly select connections based on global_sparsity
+        # This is sparser than local pattern but denser than inter-node
+        connections_per_block = max(1, int(num_blocks * self.config.global_sparsity))
         
         for h in range(num_heads):
-            # Global tokens attend to everything with sparsity
-            for i in range(global_blocks):
-                keep_indices = torch.randperm(num_blocks)[:int(num_blocks * self.config.global_sparsity)]
+            for i in range(num_blocks):
+                # Randomly select which blocks to attend to
+                keep_indices = torch.randperm(num_blocks)[:connections_per_block]
                 pattern[h, i, keep_indices] = True
-                
-            # Everything attends to global tokens
-            pattern[h, :, :global_blocks] = True
-            
-            # Dilated attention for remaining blocks
-            for dilation in [1, 2, 4, 8]:
-                for i in range(global_blocks, num_blocks):
-                    for j in range(0, num_blocks, dilation):
-                        if torch.rand(1).item() < self.config.global_sparsity:
-                            pattern[h, i, j] = True
                             
         with self._pattern_lock:
             self.global_patterns[cache_key] = pattern
@@ -764,6 +753,8 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
     """
     
     def __init__(self,
+                 embed_dim: int,
+                 num_heads: int,
                  segment_lengths: Sequence[int],
                  dilation_rates: Sequence[int],
                  distributed_config: Optional[DistributedSparseConfig] = None,
@@ -775,6 +766,8 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
         Initialize Block-Sparse Ring Distributed Dilated Attention.
         
         Args:
+            embed_dim: Total embedding dimension
+            num_heads: Number of attention heads
             segment_lengths: Sequence of segment lengths for dilated attention
             dilation_rates: Corresponding dilation rates
             distributed_config: Configuration for distributed sparse patterns
@@ -783,7 +776,7 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
             monitoring_interval: Interval for performance monitoring
             **kwargs: Additional arguments for base class
         """
-        super().__init__(segment_lengths, dilation_rates, **kwargs)
+        super().__init__(embed_dim, num_heads, segment_lengths, dilation_rates, **kwargs)
         
         # Distributed configuration
         self.distributed_config = distributed_config or DistributedSparseConfig()
