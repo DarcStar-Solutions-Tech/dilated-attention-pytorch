@@ -53,25 +53,50 @@ See the [Migration Guide](doc/migration-guide-v0.2.md) for upgrading from v0.1.x
 
 ## Install
 
-**NOTE**: This library depends on [facebookresearch/xformers](https://github.com/facebookresearch/xformers).  If you're not using `torch>=2.0.0`, you may need to install it from source.  See their [installation instructions](https://github.com/facebookresearch/xformers#installing-xformers).
+**Requirements:**
+- Python >= 3.12
+- PyTorch >= 2.0.0
+- CUDA 11.8+ (for GPU support)
 
-PyPI:
+**NOTE**: This library depends on [facebookresearch/xformers](https://github.com/facebookresearch/xformers) for efficient attention operations. It will be installed automatically with CUDA support.
+
+### PyPI
 
 ```bash
 pip install dilated-attention-pytorch
 ```
 
-From source:
+### From source
 ```bash
-pip install "dilated-attention-pytorch @ git+ssh://git@github.com/fkodom/dilated-attention-pytorch.git"
+pip install "dilated-attention-pytorch @ git+ssh://git@github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch.git"
 ```
 
-For contributors:
+### For contributors
 ```bash
-# Install all dev dependencies (tests etc.)
-pip install "dilated-attention-pytorch[all] @ git+ssh://git@github.com/fkodom/dilated-attention-pytorch.git"
+# Clone the repository
+git clone https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch.git
+cd dilated-attention-pytorch
+
+# Install with all development dependencies
+pip install -e ".[all]"
+
 # Setup pre-commit hooks
 pre-commit install
+```
+
+### Optional dependencies
+```bash
+# For CUDA support (includes xformers and flash-attn)
+pip install "dilated-attention-pytorch[cuda]"
+
+# For development
+pip install "dilated-attention-pytorch[dev]"
+
+# For benchmarking
+pip install "dilated-attention-pytorch[benchmark]"
+
+# For distributed training
+pip install "dilated-attention-pytorch[distributed]"
 ```
 
 
@@ -322,6 +347,76 @@ with torch.no_grad():
 print(y.shape)
 # torch.Size([1, 32768, num_tokens])
 ```
+
+## Development
+
+### Code Quality
+
+This project uses modern Python tooling for code quality:
+
+- **Ruff** - Fast Python linter and formatter (replaces Black, isort, flake8)
+- **mypy** - Static type checking
+- **pre-commit** - Git hooks for automatic code quality checks
+
+### Running Tests
+
+```bash
+# Run all tests
+hatch run test
+
+# Run tests with coverage
+hatch run test-cov
+
+# Run specific test file
+hatch run test tests/test_dilated_attention.py
+
+# Run tests in parallel
+pytest -n auto tests/
+```
+
+### Code Formatting and Linting
+
+```bash
+# Format code
+hatch run format
+
+# Check linting
+hatch run lint
+
+# Fix linting issues automatically
+hatch run fix
+
+# Run type checking
+hatch run typecheck
+
+# Run all checks
+hatch run all
+```
+
+### Benchmarking
+
+```bash
+# Run benchmarks with default settings
+hatch run benchmark:run
+
+# Run with custom parameters
+hatch run benchmark:run --batch_size 2 --total_tokens 26 --heads 8
+
+# Profile benchmarks
+hatch run benchmark:profile
+```
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests and ensure all checks pass (`hatch run all`)
+5. Commit your changes (pre-commit hooks will run automatically)
+6. Push to your branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+Please read our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting PRs.
 
 ## Citations
 
