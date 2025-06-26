@@ -77,22 +77,20 @@ The project is configured with modern Python tooling via Hatch:
 # Using Hatch (recommended)
 hatch run test                         # Run tests with coverage
 hatch run test-fast                    # Run tests (exit on first failure)
-hatch run lint                         # Run all linting (black, isort, flake8)
-hatch run format                       # Format code (black, isort)
+hatch run lint                         # Run all linting (ruff)
+hatch run format                       # Format code (ruff)
 hatch run typecheck                    # Type checking (mypy)
 hatch run all                          # Run all checks (format, lint, typecheck, test)
 
 # Using uv + direct tools
 uv run pytest tests/                   # Run tests
-uv run black .                         # Format code
-uv run isort .                         # Sort imports
-uv run flake8 .                        # Lint code
+uv run ruff format .                   # Format code
+uv run ruff check .                    # Lint code (includes import sorting)
 uv run mypy dilated_attention_pytorch  # Type check
 
 # Legacy approach
-black .
-isort .
-flake8 .
+ruff format .
+ruff check .
 mypy .
 pytest tests/
 ```
