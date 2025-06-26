@@ -38,7 +38,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "torch>=2.0.0",
     "einops>=0.8.0",
