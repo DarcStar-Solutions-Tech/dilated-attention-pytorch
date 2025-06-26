@@ -2,7 +2,8 @@ import pytest
 import torch
 
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
-from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
+from dilated_attention_pytorch.multihead_dilated_attention import \
+    MultiheadDilatedAttention
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 DTYPE = torch.float16 if torch.cuda.is_available() else torch.float32
@@ -32,7 +33,6 @@ def test_dilated_attention(
     # Note: With the fallback to standard_attention, causal attention now works on CPU
     # The old test assumed xformers would raise NotImplementedError, but we now have a fallback
 
-
     out = dilated_attention(x, x, x, is_causal=is_causal)  # default: causal=False
     assert out.size(0) == 1
     assert out.size(1) == SEQ_LEN
@@ -55,7 +55,9 @@ def test_multihead_dilated_attention(
 ):
     if len(segment_lengths) != len(dilation_rates):
         with pytest.raises(ValueError):
-            MultiheadDilatedAttention(embed_dim, num_heads, segment_lengths, dilation_rates)
+            MultiheadDilatedAttention(
+                embed_dim, num_heads, segment_lengths, dilation_rates
+            )
         return
 
     mhda = MultiheadDilatedAttention(

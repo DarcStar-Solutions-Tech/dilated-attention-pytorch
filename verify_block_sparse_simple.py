@@ -14,21 +14,18 @@ def main():
     print("=" * 60)
 
     from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-        BlockSparseRingDilatedAttention,
-        SparsePatternConfig,
-    )
-    from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import (
-        BlockSparseRingMultiheadDilatedAttention,
-    )
+        BlockSparseRingDilatedAttention, SparsePatternConfig)
+    from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import \
+        BlockSparseRingMultiheadDilatedAttention
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"\nDevice: {device}")
 
     # Test 1: Basic functionality
     print("\n1. Testing basic BlockSparseRingDilatedAttention...")
 
     sparse_config = SparsePatternConfig(
-        pattern_type='dilated_sparse', sparsity_ratio=0.25, block_size=32  # 75% sparse
+        pattern_type="dilated_sparse", sparsity_ratio=0.25, block_size=32  # 75% sparse
     )
 
     attention = BlockSparseRingDilatedAttention(
@@ -72,7 +69,7 @@ def main():
 
     for sparsity in sparsity_levels:
         sparse_config = SparsePatternConfig(
-            pattern_type='dilated_sparse', sparsity_ratio=sparsity, block_size=32
+            pattern_type="dilated_sparse", sparsity_ratio=sparsity, block_size=32
         )
 
         attention = BlockSparseRingDilatedAttention(
@@ -86,7 +83,9 @@ def main():
         output = attention(q, k, v, is_causal=False)
         info = attention.get_memory_info()
 
-        print(f"✓ Sparsity {sparsity:.0%}: Memory reduction = {info['memory_reduction']}")
+        print(
+            f"✓ Sparsity {sparsity:.0%}: Memory reduction = {info['memory_reduction']}"
+        )
 
     # Test 4: Multihead version
     print("\n4. Testing BlockSparseRingMultiheadDilatedAttention...")
@@ -95,7 +94,7 @@ def main():
     num_heads = 8
 
     sparse_config = SparsePatternConfig(
-        pattern_type='dilated_sparse', sparsity_ratio=0.25, block_size=32
+        pattern_type="dilated_sparse", sparsity_ratio=0.25, block_size=32
     )
 
     multihead_attention = BlockSparseRingMultiheadDilatedAttention(
@@ -123,7 +122,7 @@ def main():
 
     # Test 5: Pattern types
     print("\n5. Testing different sparse patterns...")
-    patterns = ['local_window', 'dilated_sparse', 'global_local']
+    patterns = ["local_window", "dilated_sparse", "global_local"]
 
     for pattern in patterns:
         try:

@@ -15,10 +15,10 @@ def test_interface_compatibility():
 
         sys.path.append("dilated_attention_pytorch")
 
-        from dilated_attention_pytorch.improved_multihead_dilated_attention import (
-            ImprovedMultiheadDilatedAttention,
-        )
-        from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
+        from dilated_attention_pytorch.improved_multihead_dilated_attention import \
+            ImprovedMultiheadDilatedAttention
+        from dilated_attention_pytorch.multihead_dilated_attention import \
+            MultiheadDilatedAttention
 
         # Test parameters
         embed_dim = 512
@@ -83,9 +83,8 @@ def test_forward_compatibility():
     try:
         import torch
 
-        from dilated_attention_pytorch.improved_multihead_dilated_attention import (
-            ImprovedMultiheadDilatedAttention,
-        )
+        from dilated_attention_pytorch.improved_multihead_dilated_attention import \
+            ImprovedMultiheadDilatedAttention
 
         # Test parameters
         batch_size = 2
@@ -122,7 +121,9 @@ def test_forward_compatibility():
         if output.shape == expected_shape:
             print("✓ Output shape is correct")
         else:
-            print(f"✗ Output shape mismatch. Expected {expected_shape}, got {output.shape}")
+            print(
+                f"✗ Output shape mismatch. Expected {expected_shape}, got {output.shape}"
+            )
             return False
 
         if attn_weights is None:
@@ -153,9 +154,8 @@ def test_feature_compatibility():
     try:
         import torch
 
-        from dilated_attention_pytorch.improved_multihead_dilated_attention import (
-            ImprovedMultiheadDilatedAttention,
-        )
+        from dilated_attention_pytorch.improved_multihead_dilated_attention import \
+            ImprovedMultiheadDilatedAttention
 
         # Test TF32 option
         model_tf32 = ImprovedMultiheadDilatedAttention(
@@ -179,7 +179,11 @@ def test_feature_compatibility():
 
         # Test bias option
         model_no_bias = ImprovedMultiheadDilatedAttention(
-            embed_dim=128, num_heads=4, segment_lengths=[64, 128], dilation_rates=[1, 2], bias=False
+            embed_dim=128,
+            num_heads=4,
+            segment_lengths=[64, 128],
+            dilation_rates=[1, 2],
+            bias=False,
         )
         features_tested.append("✓ Bias option works")
 
@@ -224,7 +228,11 @@ def main():
     print("Testing ImprovedMultiheadDilatedAttention Implementation")
     print("=" * 60)
 
-    tests = [test_interface_compatibility, test_forward_compatibility, test_feature_compatibility]
+    tests = [
+        test_interface_compatibility,
+        test_forward_compatibility,
+        test_feature_compatibility,
+    ]
 
     results = []
     for test in tests:

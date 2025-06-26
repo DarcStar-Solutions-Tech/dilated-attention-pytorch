@@ -1,0 +1,92 @@
+[2025-06-26 00:08:30,224] [INFO] [real_accelerator.py:254:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-06-26 00:08:32,096] [INFO] [logging.py:107:log_dist] [Rank -1] [TorchCheckpointEngine] Initialized with serialization = False
+================================================================================
+SEQUENCE LENGTH LIMIT BENCHMARK
+================================================================================
+Device: cuda
+Dtype: torch.float16
+Batch size: 1
+Num heads: 8
+Head dim: 64pl
+GPU: NVIDIA GeForce GTX 1080
+GPU Memory: 8192.0MB
+
+Testing sequence lengths: [1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576]
+================================================================================
+
+DilatedAttention:
+  Testing DilatedAttention at seq_len=1024.../home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/utils/attention_utils.py:250: UserWarning: PyTorch SDPA failed, falling back: 'Tensor' object has no attribute 'training'
+  warnings.warn(f"PyTorch SDPA failed, falling back: {e}")
+ ✓ 1.6ms, 0.00GB, 642869 tok/s
+  Testing DilatedAttention at seq_len=2048... ✓ 1.7ms, 0.01GB, 1213897 tok/s
+  Testing DilatedAttention at seq_len=4096... ✓ 4.3ms, 0.04GB, 957025 tok/s
+  Testing DilatedAttention at seq_len=8192... ✓ 7.8ms, 0.08GB, 1055746 tok/s
+  Testing DilatedAttention at seq_len=16384... ✓ 13.1ms, 0.15GB, 1249964 tok/s
+  Testing DilatedAttention at seq_len=32768... ✓ 46.7ms, 0.30GB, 701685 tok/s
+  Testing DilatedAttention at seq_len=65536... ✓ 149.8ms, 0.59GB, 437532 tok/s
+  Testing DilatedAttention at seq_len=131072... ✓ 368.8ms, 1.19GB, 355421 tok/s
+  Testing DilatedAttention at seq_len=262144... ✓ 896.0ms, 2.38GB, 292578 tok/s
+  Testing DilatedAttention at seq_len=524288... ✗ CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.88 GiB of which 1022.56 MiB is free. Process 2349839 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 3.33 GiB memory in use. Of the allocated memory 3.20 GiB is allocated by PyTorch, and 11.88 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+
+ImprovedDilatedAttention:
+  Testing ImprovedDilatedAttention at seq_len=1024... ✓ 8.0ms, 0.00GB, 127684 tok/s
+  Testing ImprovedDilatedAttention at seq_len=2048... ✓ 19.7ms, 0.01GB, 103929 tok/s
+  Testing ImprovedDilatedAttention at seq_len=4096... ✓ 39.6ms, 0.01GB, 103504 tok/s
+  Testing ImprovedDilatedAttention at seq_len=8192... ✓ 67.0ms, 0.03GB, 122289 tok/s
+  Testing ImprovedDilatedAttention at seq_len=16384... ✓ 211.2ms, 0.05GB, 77560 tok/s
+  Testing ImprovedDilatedAttention at seq_len=32768... ✓ 282.8ms, 0.10GB, 115857 tok/s
+  Testing ImprovedDilatedAttention at seq_len=65536... ✓ 608.8ms, 0.19GB, 107656 tok/s
+  Testing ImprovedDilatedAttention at seq_len=131072... ✓ 1324.5ms, 0.38GB, 98959 tok/s
+  Testing ImprovedDilatedAttention at seq_len=262144... ✓ 2613.6ms, 0.77GB, 100301 tok/s
+  Testing ImprovedDilatedAttention at seq_len=524288... ✓ 5556.0ms, 1.53GB, 94365 tok/s
+  Testing ImprovedDilatedAttention at seq_len=1048576... ✗ CUDA out of memory. Tried to allocate 384.00 MiB. GPU 0 has a total capacity of 7.88 GiB of which 168.00 MiB is free. Process 2349839 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 4.14 GiB memory in use. Of the allocated memory 4.01 GiB is allocated by PyTorch, and 11.88 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+
+RingDilatedAttention:
+  Testing RingDilatedAttention at seq_len=1024... ✓ 11.2ms, 0.00GB, 91574 tok/s
+  Testing RingDilatedAttention at seq_len=2048... ✓ 16.2ms, 0.01GB, 126616 tok/s
+  Testing RingDilatedAttention at seq_len=4096... ✓ 33.6ms, 0.02GB, 122015 tok/s
+  Testing RingDilatedAttention at seq_len=8192... ✓ 79.4ms, 0.04GB, 103222 tok/s
+  Testing RingDilatedAttention at seq_len=16384... ✓ 204.3ms, 0.07GB, 80190 tok/s
+  Testing RingDilatedAttention at seq_len=32768... ✓ 522.3ms, 0.14GB, 62735 tok/s
+  Testing RingDilatedAttention at seq_len=65536... ✓ 846.1ms, 0.29GB, 77456 tok/s
+  Testing RingDilatedAttention at seq_len=131072... ✓ 1499.1ms, 0.57GB, 87433 tok/s
+  Testing RingDilatedAttention at seq_len=262144... ✓ 3085.6ms, 1.14GB, 84958 tok/s
+  Testing RingDilatedAttention at seq_len=524288... ✗ CUDA out of memory. Tried to allocate 96.00 MiB. GPU 0 has a total capacity of 7.88 GiB of which 143.56 MiB is free. Process 2349839 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 4.14 GiB memory in use. Of the allocated memory 4.01 GiB is allocated by PyTorch, and 13.86 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+
+BlockSparseRing_10%:
+  Testing BlockSparseRing_10% at seq_len=1024... ✓ 2.3ms, 0.00GB, 453909 tok/s
+  Testing BlockSparseRing_10% at seq_len=2048... ✓ 10.7ms, 0.01GB, 191776 tok/s
+  Testing BlockSparseRing_10% at seq_len=4096... ✓ 56.1ms, 0.04GB, 72948 tok/s
+  Testing BlockSparseRing_10% at seq_len=8192... ✓ 271.7ms, 0.15GB, 30152 tok/s
+  Testing BlockSparseRing_10% at seq_len=16384... ✓ 985.2ms, 0.58GB, 16631 tok/s
+  Testing BlockSparseRing_10% at seq_len=32768... ✓ 4513.1ms, 2.31GB, 7261 tok/s
+  Testing BlockSparseRing_10% at seq_len=65536... ✗ CUDA out of memory. Tried to allocate 1.53 GiB. GPU 0 has a total capacity of 7.88 GiB of which 1.58 GiB is free. Process 2349839 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 2.75 GiB memory in use. Of the allocated memory 2.61 GiB is allocated by PyTorch, and 16.79 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+
+BlockSparseRing_25%:
+  Testing BlockSparseRing_25% at seq_len=1024... ✓ 26.5ms, 0.01GB, 38626 tok/s
+  Testing BlockSparseRing_25% at seq_len=2048... ✓ 9.5ms, 0.03GB, 216508 tok/s
+  Testing BlockSparseRing_25% at seq_len=4096... ✓ 174.7ms, 0.09GB, 23450 tok/s
+  Testing BlockSparseRing_25% at seq_len=8192... ✓ 721.8ms, 0.35GB, 11349 tok/s
+  Testing BlockSparseRing_25% at seq_len=16384... ✓ 2826.1ms, 1.35GB, 5797 tok/s
+  Testing BlockSparseRing_25% at seq_len=32768... ✗ CUDA out of memory. Tried to allocate 452.00 MiB. GPU 0 has a total capacity of 7.88 GiB of which 511.81 MiB is free. Process 2349839 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 3.83 GiB memory in use. Of the allocated memory 3.69 GiB is allocated by PyTorch, and 13.15 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+
+MultiheadDilatedAttention:
+  Testing MultiheadDilatedAttention at seq_len=1024... ✓ 1.9ms, 0.01GB, 533641 tok/s
+  Testing MultiheadDilatedAttention at seq_len=2048... ✓ 40.4ms, 0.02GB, 50726 tok/s
+  Testing MultiheadDilatedAttention at seq_len=4096... ✓ 39.1ms, 0.05GB, 104665 tok/s
+  Testing MultiheadDilatedAttention at seq_len=8192... ✓ 77.8ms, 0.10GB, 105278 tok/s
+  Testing MultiheadDilatedAttention at seq_len=16384... ✓ 177.5ms, 0.20GB, 92313 tok/s
+  Testing MultiheadDilatedAttention at seq_len=32768... ✓ 580.5ms, 0.39GB, 56445 tok/s
+  Testing MultiheadDilatedAttention at seq_len=65536... ✓ 1081.1ms, 0.78GB, 60621 tok/s
+  Testing MultiheadDilatedAttention at seq_len=131072... ✓ 2265.1ms, 1.56GB, 57867 tok/s
+  Testing MultiheadDilatedAttention at seq_len=262144... ✗ CUDA out of memory. Tried to allocate 512.00 MiB. GPU 0 has a total capacity of 7.88 GiB of which 435.12 MiB is free. Process 2349839 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 3.90 GiB memory in use. Of the allocated memory 3.63 GiB is allocated by PyTorch, and 141.87 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+
+ImprovedMultiheadDilated:
+  Testing ImprovedMultiheadDilated at seq_len=1024... ✓ 19.1ms, 0.01GB, 53573 tok/s
+  Testing ImprovedMultiheadDilated at seq_len=2048... ✓ 31.0ms, 0.02GB, 65969 tok/s
+  Testing ImprovedMultiheadDilated at seq_len=4096... ✓ 151.7ms, 0.05GB, 26996 tok/s
+  Testing ImprovedMultiheadDilated at seq_len=8192... ✓ 357.6ms, 0.10GB, 22911 tok/s
+  Testing ImprovedMultiheadDilated at seq_len=16384... ✓ 747.0ms, 0.19GB, 21932 tok/s
+  Testing ImprovedMultiheadDilated at seq_len=32768... ✓ 1286.0ms, 0.38GB, 25480 tok/s
+  Testing ImprovedMultiheadDilated at seq_len=65536... ✓ 2415.7ms, 0.75GB, 27129 tok/s
+  Testing ImprovedMultiheadDilated at seq_len=131072...

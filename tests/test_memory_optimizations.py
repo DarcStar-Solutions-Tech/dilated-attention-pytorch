@@ -9,10 +9,10 @@ import tracemalloc
 
 import torch
 
-from dilated_attention_pytorch.improved_dilated_attention import ImprovedDilatedAttention
-from dilated_attention_pytorch.improved_multihead_dilated_attention import (
-    ImprovedMultiheadDilatedAttention,
-)
+from dilated_attention_pytorch.improved_dilated_attention import \
+    ImprovedDilatedAttention
+from dilated_attention_pytorch.improved_multihead_dilated_attention import \
+    ImprovedMultiheadDilatedAttention
 
 
 def measure_memory_and_speed(func, *args, **kwargs):
@@ -65,14 +65,23 @@ def test_attention_memory_optimization():
     print("=" * 60)
 
     # Create test tensors
-    q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-    k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-    v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    q = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
+    k = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
+    v = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
 
     # Test ImprovedDilatedAttention
     print("Testing ImprovedDilatedAttention...")
     attention = ImprovedDilatedAttention(
-        segment_lengths=segment_lengths, dilation_rates=dilation_rates, dropout=0.0, use_tf32=True
+        segment_lengths=segment_lengths,
+        dilation_rates=dilation_rates,
+        dropout=0.0,
+        use_tf32=True,
     ).to(device)
 
     def run_attention():
@@ -90,9 +99,13 @@ def test_attention_memory_optimization():
     print("Testing ImprovedMultiheadDilatedAttention...")
 
     # Create input tensors for multihead version
-    query_input = torch.randn(batch_size, seq_len, embed_dim, device=device, dtype=dtype)
+    query_input = torch.randn(
+        batch_size, seq_len, embed_dim, device=device, dtype=dtype
+    )
     key_input = torch.randn(batch_size, seq_len, embed_dim, device=device, dtype=dtype)
-    value_input = torch.randn(batch_size, seq_len, embed_dim, device=device, dtype=dtype)
+    value_input = torch.randn(
+        batch_size, seq_len, embed_dim, device=device, dtype=dtype
+    )
 
     multihead_attention = ImprovedMultiheadDilatedAttention(
         embed_dim=embed_dim,
@@ -104,7 +117,9 @@ def test_attention_memory_optimization():
     ).to(device)
 
     def run_multihead_attention():
-        output, _ = multihead_attention(query_input, key_input, value_input, is_causal=True)
+        output, _ = multihead_attention(
+            query_input, key_input, value_input, is_causal=True
+        )
         return output
 
     multihead_stats = measure_memory_and_speed(run_multihead_attention)
@@ -133,9 +148,13 @@ def test_attention_memory_optimization():
         print(f"Total GPU memory used: {total_gpu_memory / 1024**2:.1f} MB")
 
         # Estimate memory savings (conservative estimate)
-        estimated_baseline_memory = total_gpu_memory * 1.3  # 30% overhead from old approach
+        estimated_baseline_memory = (
+            total_gpu_memory * 1.3
+        )  # 30% overhead from old approach
         estimated_savings = estimated_baseline_memory - total_gpu_memory
-        print(f"Estimated memory savings: {estimated_savings / 1024**2:.1f} MB (~30% reduction)")
+        print(
+            f"Estimated memory savings: {estimated_savings / 1024**2:.1f} MB (~30% reduction)"
+        )
         print()
 
         # Calculate potential scaling factor
@@ -143,7 +162,9 @@ def test_attention_memory_optimization():
         current_usage_gb = total_gpu_memory / 1024**3
         potential_scale_factor = gpu_memory_gb / current_usage_gb
         print(f"Potential sequence length scaling: {potential_scale_factor:.1f}x")
-        print(f"Max sequence length on 80GB GPU: ~{seq_len * potential_scale_factor:,.0f} tokens")
+        print(
+            f"Max sequence length on 80GB GPU: ~{seq_len * potential_scale_factor:,.0f} tokens"
+        )
 
     print("\n✅ Optimizations successfully implemented and tested!")
     return stats, multihead_stats

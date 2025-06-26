@@ -9,12 +9,12 @@ import pytest
 import torch
 
 from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention,
-    SparsePatternConfig,
-)
+    BlockSparseRingDilatedAttention, SparsePatternConfig)
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
-from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
-from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
+from dilated_attention_pytorch.multihead_dilated_attention import \
+    MultiheadDilatedAttention
+from dilated_attention_pytorch.ring_dilated_attention import \
+    RingDilatedAttention
 
 
 class TestInputValidation:
@@ -40,8 +40,9 @@ class TestInputValidation:
 
         # Invalid dropout
         with pytest.raises(ValueError, match="must be between 0 and 1"):
-            DilatedAttention(segment_lengths=[512], dilation_rates=[1], attention_dropout=1.5)
-
+            DilatedAttention(
+                segment_lengths=[512], dilation_rates=[1], attention_dropout=1.5
+            )
 
     def test_multihead_attention_validation(self):
         """Test MultiheadDilatedAttention validation."""
@@ -191,14 +192,18 @@ class TestSparsityPatterns:
     def test_extreme_sparsity_ratios(self):
         """Test with very high and very low sparsity."""
         # Very sparse (99%)
-        config_sparse = SparsePatternConfig(sparsity_ratio=0.99, pattern_type="dilated_sparse")
+        config_sparse = SparsePatternConfig(
+            sparsity_ratio=0.99, pattern_type="dilated_sparse"
+        )
 
         attention_sparse = BlockSparseRingDilatedAttention(
             segment_lengths=[256], dilation_rates=[1], sparse_config=config_sparse
         )
 
         # Very dense (1%)
-        config_dense = SparsePatternConfig(sparsity_ratio=0.01, pattern_type="dilated_sparse")
+        config_dense = SparsePatternConfig(
+            sparsity_ratio=0.01, pattern_type="dilated_sparse"
+        )
 
         attention_dense = BlockSparseRingDilatedAttention(
             segment_lengths=[256], dilation_rates=[1], sparse_config=config_dense
@@ -279,7 +284,9 @@ class TestCausalMasking:
 
             # Need to handle segment length compatibility
             if i >= 64 and i % 64 == 0:  # Must be divisible by segment length
-                output_partial = attention(q_partial, k_partial, v_partial, is_causal=True)
+                output_partial = attention(
+                    q_partial, k_partial, v_partial, is_causal=True
+                )
                 outputs_incremental.append(output_partial[:, -1:, :, :])
 
         # Incremental processing should match full processing
@@ -347,7 +354,9 @@ class TestDeviceCompatibility:
 
     def test_cpu_device_explicit(self):
         """Test explicit CPU device specification."""
-        attention = RingDilatedAttention(segment_lengths=[64], dilation_rates=[1], device="cpu")
+        attention = RingDilatedAttention(
+            segment_lengths=[64], dilation_rates=[1], device="cpu"
+        )
 
         q = torch.randn(1, 64, 4, 32)
         k = torch.randn(1, 64, 4, 32)
@@ -359,7 +368,9 @@ class TestDeviceCompatibility:
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
     def test_mixed_device_inputs(self):
         """Test handling of mixed device inputs."""
-        attention = RingDilatedAttention(segment_lengths=[64], dilation_rates=[1], device="cuda:0")
+        attention = RingDilatedAttention(
+            segment_lengths=[64], dilation_rates=[1], device="cuda:0"
+        )
 
         # CPU inputs (should auto-move or error clearly)
         q = torch.randn(1, 64, 4, 32)

@@ -8,23 +8,18 @@ from unittest.mock import patch
 
 import pytest
 
-from dilated_attention_pytorch.core import (
-    BaseDilatedAttention,
-    BaseMultiheadDilatedAttention,
-    DilatedAttentionConfig,
-    create_adaptive_sparse_attention,
-    create_block_sparse_attention,
-    create_dilated_attention,
-    create_multihead_dilated_attention,
-    register_attention,
-    register_multihead_attention,
-)
+from dilated_attention_pytorch.core import (BaseDilatedAttention,
+                                            BaseMultiheadDilatedAttention,
+                                            DilatedAttentionConfig,
+                                            create_adaptive_sparse_attention,
+                                            create_block_sparse_attention,
+                                            create_dilated_attention,
+                                            create_multihead_dilated_attention,
+                                            register_attention,
+                                            register_multihead_attention)
 from dilated_attention_pytorch.core.factory import (
-    _ATTENTION_REGISTRY,
-    _MULTIHEAD_REGISTRY,
-    _get_config_class,
-    _select_best_attention_type,
-)
+    _ATTENTION_REGISTRY, _MULTIHEAD_REGISTRY, _get_config_class,
+    _select_best_attention_type)
 
 
 # Mock implementations for testing
@@ -84,8 +79,12 @@ class TestFactoryCreation:
         register_attention("standard", MockDilatedAttention)
         register_attention("improved", MockDilatedAttention)
         register_multihead_attention("multihead_test", MockMultiheadDilatedAttention)
-        register_multihead_attention("multihead_standard", MockMultiheadDilatedAttention)
-        register_multihead_attention("multihead_improved", MockMultiheadDilatedAttention)
+        register_multihead_attention(
+            "multihead_standard", MockMultiheadDilatedAttention
+        )
+        register_multihead_attention(
+            "multihead_improved", MockMultiheadDilatedAttention
+        )
 
     def test_create_dilated_attention_basic(self):
         """Test basic dilated attention creation."""
@@ -156,12 +155,17 @@ class TestSpecializedFactories:
 
         # Register required implementations
         register_attention("block_sparse_ring", MockDilatedAttention)
-        register_multihead_attention("multihead_block_sparse_ring", MockMultiheadDilatedAttention)
+        register_multihead_attention(
+            "multihead_block_sparse_ring", MockMultiheadDilatedAttention
+        )
 
     def test_create_block_sparse_attention(self):
         """Test block-sparse attention creation."""
         attention = create_block_sparse_attention(
-            sparsity_ratio=0.9, pattern_type="dilated_sparse", embed_dim=768, num_heads=12
+            sparsity_ratio=0.9,
+            pattern_type="dilated_sparse",
+            embed_dim=768,
+            num_heads=12,
         )
 
         assert isinstance(attention, MockMultiheadDilatedAttention)
@@ -192,8 +196,12 @@ class TestAutoSelection:
         # Register implementations
         register_attention("standard", MockDilatedAttention)
         register_attention("improved", MockDilatedAttention)
-        register_multihead_attention("multihead_standard", MockMultiheadDilatedAttention)
-        register_multihead_attention("multihead_improved", MockMultiheadDilatedAttention)
+        register_multihead_attention(
+            "multihead_standard", MockMultiheadDilatedAttention
+        )
+        register_multihead_attention(
+            "multihead_improved", MockMultiheadDilatedAttention
+        )
 
     @patch("dilated_attention_pytorch.core.factory.GPU_TYPE", "h100")
     @patch("dilated_attention_pytorch.core.factory.HAS_FLASH_ATTN_3", True)
@@ -221,7 +229,6 @@ class TestAutoSelection:
         """Test auto-selection on CPU."""
         attention_type = _select_best_attention_type()
         assert attention_type == "standard"
-
 
     def test_create_with_auto(self):
         """Test creation with auto type."""

@@ -1,8 +1,8 @@
 import os
+from distutils.core import setup
 from subprocess import getoutput
 
 import setuptools
-from distutils.core import setup
 
 
 def get_version_tag() -> str:

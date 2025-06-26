@@ -14,36 +14,35 @@ import torch.nn.functional as F
 
 # Import implementations to test
 from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention,
-    ContentAdaptiveSparsity,
-    SparsePatternConfig,
-    SparsePatternGenerator,
-)
+    BlockSparseRingDilatedAttention, ContentAdaptiveSparsity,
+    SparsePatternConfig, SparsePatternGenerator)
 from dilated_attention_pytorch.block_sparse_ring_distributed_dilated_attention import (
-    BlockSparseRingDistributedDilatedAttention,
-    DistributedSparseConfig,
-    DistributedSparsePattern,
-    HierarchicalSparsePatternGenerator,
-)
+    BlockSparseRingDistributedDilatedAttention, DistributedSparseConfig,
+    DistributedSparsePattern, HierarchicalSparsePatternGenerator)
 from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import (
-    FusedQKVProjection,
-    create_adaptive_sparse_multihead_attention,
-    create_block_sparse_multihead_attention,
-)
+    FusedQKVProjection, create_adaptive_sparse_multihead_attention,
+    create_block_sparse_multihead_attention)
 from dilated_attention_pytorch.utils.sparse_pattern_utils import (
-    PatternConfig,
-    PatternOptimizer,
-    PatternQualityAnalyzer,
-    PatternType,
-)
-from dilated_attention_pytorch.utils.sparse_pattern_utils import (
-    SparsePatternGenerator as UtilsSparsePatternGenerator,
-)
+    PatternConfig, PatternOptimizer, PatternQualityAnalyzer, PatternType)
+from dilated_attention_pytorch.utils.sparse_pattern_utils import \
+    SparsePatternGenerator as UtilsSparsePatternGenerator
 
 # Test configurations
 TEST_CONFIGS = {
-    "small": {"batch_size": 2, "seq_len": 1024, "num_heads": 4, "head_dim": 32, "embed_dim": 128},
-    "medium": {"batch_size": 4, "seq_len": 4096, "num_heads": 8, "head_dim": 64, "embed_dim": 512},
+    "small": {
+        "batch_size": 2,
+        "seq_len": 1024,
+        "num_heads": 4,
+        "head_dim": 32,
+        "embed_dim": 128,
+    },
+    "medium": {
+        "batch_size": 4,
+        "seq_len": 4096,
+        "num_heads": 8,
+        "head_dim": 64,
+        "embed_dim": 512,
+    },
     "large": {
         "batch_size": 2,
         "seq_len": 16384,
@@ -174,7 +173,9 @@ class TestBlockSparseRingDilatedAttention:
         config = TEST_CONFIGS["small"]
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        sparse_config = SparsePatternConfig(pattern_type="local_window", sparsity_ratio=0.5)
+        sparse_config = SparsePatternConfig(
+            pattern_type="local_window", sparsity_ratio=0.5
+        )
 
         attention = BlockSparseRingDilatedAttention(
             segment_lengths=[512, 1024],
@@ -208,10 +209,15 @@ class TestBlockSparseRingDilatedAttention:
         config = TEST_CONFIGS["small"]
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        sparse_config = SparsePatternConfig(pattern_type="local_window", sparsity_ratio=0.3)
+        sparse_config = SparsePatternConfig(
+            pattern_type="local_window", sparsity_ratio=0.3
+        )
 
         attention = BlockSparseRingDilatedAttention(
-            segment_lengths=[512], dilation_rates=[1], sparse_config=sparse_config, device=device
+            segment_lengths=[512],
+            dilation_rates=[1],
+            sparse_config=sparse_config,
+            device=device,
         )
 
         batch = config["batch_size"]
@@ -235,10 +241,15 @@ class TestBlockSparseRingDilatedAttention:
         config = TEST_CONFIGS["small"]
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        sparse_config = SparsePatternConfig(pattern_type="dilated_sparse", sparsity_ratio=0.25)
+        sparse_config = SparsePatternConfig(
+            pattern_type="dilated_sparse", sparsity_ratio=0.25
+        )
 
         attention = BlockSparseRingDilatedAttention(
-            segment_lengths=[512], dilation_rates=[1], sparse_config=sparse_config, device=device
+            segment_lengths=[512],
+            dilation_rates=[1],
+            sparse_config=sparse_config,
+            device=device,
         )
 
         batch = config["batch_size"]
@@ -292,7 +303,11 @@ class TestBlockSparseRingMultiheadDilatedAttention:
 
         # Check output
         assert output.shape == (batch, seq_len, embed_dim)
-        assert attention_weights.shape == (batch, seq_len, seq_len)  # Averaged over heads
+        assert attention_weights.shape == (
+            batch,
+            seq_len,
+            seq_len,
+        )  # Averaged over heads
         assert not torch.isnan(output).any()
 
     def test_multihead_compatibility(self):
@@ -323,7 +338,9 @@ class TestBlockSparseRingMultiheadDilatedAttention:
 
         # Forward passes
         sparse_output, sparse_weights = sparse_attention(query, need_weights=True)
-        dense_output, dense_weights = dense_attention(query, query, query, need_weights=True)
+        dense_output, dense_weights = dense_attention(
+            query, query, query, need_weights=True
+        )
 
         # Shapes should match
         assert sparse_output.shape == dense_output.shape
@@ -339,7 +356,9 @@ class TestBlockSparseRingMultiheadDilatedAttention:
         num_heads = 8
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        projection = FusedQKVProjection(embed_dim=embed_dim, num_heads=num_heads, device=device)
+        projection = FusedQKVProjection(
+            embed_dim=embed_dim, num_heads=num_heads, device=device
+        )
 
         batch = 2
         seq_len = 1024
@@ -358,7 +377,9 @@ class TestBlockSparseRingMultiheadDilatedAttention:
         assert v.shape == expected_shape
 
         # Test output projection
-        attention_output = torch.randn(batch, seq_len, num_heads, head_dim, device=device)
+        attention_output = torch.randn(
+            batch, seq_len, num_heads, head_dim, device=device
+        )
         output = projection.project_output(attention_output)
 
         assert output.shape == (batch, seq_len, embed_dim)
@@ -430,7 +451,9 @@ class TestBlockSparseAdvancedDistributedAttention:
 
     def test_load_balancing(self):
         """Test load balancing functionality"""
-        config = DistributedSparseConfig(enable_load_balancing=True, load_balance_threshold=0.15)
+        config = DistributedSparseConfig(
+            enable_load_balancing=True, load_balance_threshold=0.15
+        )
 
         world_size = 4
         rank = 0
@@ -495,11 +518,14 @@ class TestSparsePatternUtils:
     """Test sparse pattern utilities"""
 
     @pytest.mark.parametrize(
-        "pattern_type", [PatternType.LOCAL_WINDOW, PatternType.DILATED_SPARSE, PatternType.RANDOM]
+        "pattern_type",
+        [PatternType.LOCAL_WINDOW, PatternType.DILATED_SPARSE, PatternType.RANDOM],
     )
     def test_utils_pattern_generation(self, pattern_type):
         """Test pattern generation using utilities"""
-        config = PatternConfig(pattern_type=pattern_type, sparsity_ratio=0.3, block_size=128)
+        config = PatternConfig(
+            pattern_type=pattern_type, sparsity_ratio=0.3, block_size=128
+        )
 
         generator = UtilsSparsePatternGenerator(config)
 
@@ -545,10 +571,14 @@ class TestSparsePatternUtils:
         # Create suboptimal pattern
         num_heads = 2
         num_blocks = 8
-        initial_pattern = torch.rand(num_heads, num_blocks, num_blocks) > 0.9  # Very sparse
+        initial_pattern = (
+            torch.rand(num_heads, num_blocks, num_blocks) > 0.9
+        )  # Very sparse
 
         # Optimize pattern
-        optimized_pattern = optimizer.optimize_pattern(initial_pattern, max_iterations=3)
+        optimized_pattern = optimizer.optimize_pattern(
+            initial_pattern, max_iterations=3
+        )
 
         assert optimized_pattern.shape == initial_pattern.shape
         assert optimized_pattern.dtype == torch.bool

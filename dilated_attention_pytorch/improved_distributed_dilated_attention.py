@@ -48,13 +48,8 @@ except ImportError:
     HAS_APEX = False
 
 # Import from core architecture
-from .core import (
-    BaseDilatedAttention,
-    BaseMultiheadDilatedAttention,
-    DilatedAttentionConfig,
-    DistributedConfig,
-    MultiheadConfig,
-)
+from .core import (BaseDilatedAttention, BaseMultiheadDilatedAttention,
+                   DilatedAttentionConfig, DistributedConfig, MultiheadConfig)
 from .improved_dilated_attention import ImprovedDilatedAttention
 
 
@@ -224,7 +219,9 @@ class DistributedImprovedDilatedAttention(BaseDilatedAttention):
         tensor_list = [torch.empty_like(tensor) for _ in range(self.world_size)]
 
         # Start asynchronous all_gather
-        gather_handle = dist.all_gather(tensor_list, tensor, group=self.sp_group, async_op=True)
+        gather_handle = dist.all_gather(
+            tensor_list, tensor, group=self.sp_group, async_op=True
+        )
 
         # Can do other work here while communication happens
         # For now, just wait, but this allows for future optimization
@@ -289,7 +286,11 @@ class DistributedImprovedDilatedAttention(BaseDilatedAttention):
         if torch.cuda.is_available():
             with torch.cuda.amp.autocast(enabled=True, dtype=torch.bfloat16):
                 output = self.local_attention(
-                    query, key, value, is_causal=is_causal, attention_mask=attention_mask
+                    query,
+                    key,
+                    value,
+                    is_causal=is_causal,
+                    attention_mask=attention_mask,
                 )
         else:
             output = self.local_attention(
@@ -389,7 +390,9 @@ class DistributedImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention
         self.rank = dist.get_rank() if dist.is_initialized() else 0
 
         # Initialize with model parallelism if enabled
-        self.use_model_parallel = self.distributed_config.model_parallel and HAS_FAIRSCALE
+        self.use_model_parallel = (
+            self.distributed_config.model_parallel and HAS_FAIRSCALE
+        )
         if self.use_model_parallel:
             self._init_model_parallel_projections()
         else:
@@ -404,7 +407,8 @@ class DistributedImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention
 
     def _init_model_parallel_projections(self):
         """Initialize model parallel projections using FairScale."""
-        from fairscale.nn.model_parallel.layers import ColumnParallelLinear, RowParallelLinear
+        from fairscale.nn.model_parallel.layers import (ColumnParallelLinear,
+                                                        RowParallelLinear)
 
         # Use fused QKV projection with column parallelism for 3x efficiency
         self.qkv_proj = ColumnParallelLinear(
@@ -448,7 +452,9 @@ class DistributedImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention
             # Use base class MAGNETO initialization
             super()._reset_parameters()
 
-    def _setup_optimizations(self, cpu_offload: bool = False, compile_model: bool = False):
+    def _setup_optimizations(
+        self, cpu_offload: bool = False, compile_model: bool = False
+    ):
         """Setup advanced optimizations."""
 
         # CPU offloading for large models
@@ -598,10 +604,14 @@ class DistributedImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention
             v = split_attention_heads(v, self.num_heads)
 
         # Combine masks if provided
-        combined_mask = self._combine_masks(attn_mask, key_padding_mask, batch_size, seq_len)
+        combined_mask = self._combine_masks(
+            attn_mask, key_padding_mask, batch_size, seq_len
+        )
 
         # Apply distributed dilated attention
-        attn_output = self.attention(q, k, v, is_causal=is_causal, attention_mask=combined_mask)
+        attn_output = self.attention(
+            q, k, v, is_causal=is_causal, attention_mask=combined_mask
+        )
 
         # Merge heads back
         attn_output = attn_output.view(batch_size, seq_len, self.embed_dim)
@@ -711,7 +721,9 @@ class DeepSpeedDilatedAttentionEngine:
             Tuple of (model_engine, optimizer, train_dataloader, lr_scheduler)
         """
         if not HAS_DEEPSPEED:
-            raise ImportError("DeepSpeed not available. Install with: pip install deepspeed")
+            raise ImportError(
+                "DeepSpeed not available. Install with: pip install deepspeed"
+            )
 
         # Default DeepSpeed configuration for dilated attention
         default_config = {
@@ -820,7 +832,10 @@ class DeepSpeedDilatedAttentionEngine:
                     "device": "cpu" if cpu_offload else "none",
                     "pin_memory": True,
                 },
-                "offload_param": {"device": "cpu" if cpu_offload else "none", "pin_memory": True},
+                "offload_param": {
+                    "device": "cpu" if cpu_offload else "none",
+                    "pin_memory": True,
+                },
                 "allgather_partitions": True,
                 "reduce_scatter": True,
                 "overlap_comm": True,
@@ -942,7 +957,9 @@ def create_distributed_model(
             batch_size, seq_len = input_ids.shape
 
             if position_ids is None:
-                position_ids = torch.arange(0, seq_len, device=input_ids.device).unsqueeze(0)
+                position_ids = torch.arange(
+                    0, seq_len, device=input_ids.device
+                ).unsqueeze(0)
 
             # Embeddings
             token_embeds = self.token_embedding(input_ids)

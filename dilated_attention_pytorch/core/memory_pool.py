@@ -36,7 +36,9 @@ class BufferStats:
     def __post_init__(self):
         """Calculate size in bytes."""
         self.size_bytes = (
-            torch.prod(torch.tensor(self.shape)).item() * torch.finfo(self.dtype).bits // 8
+            torch.prod(torch.tensor(self.shape)).item()
+            * torch.finfo(self.dtype).bits
+            // 8
         )
 
 
@@ -439,11 +441,11 @@ class UnifiedMemoryPool:
         """Support for pickling - exclude unpickleable objects."""
         state = self.__dict__.copy()
         # Remove the unpickleable locks
-        state['_lock'] = None
+        state["_lock"] = None
         # Clear the pools to avoid pickling large tensors
-        state['_pools'] = {}
-        state['_hot_cache'] = {}
-        state['_active_buffers'] = {}
+        state["_pools"] = {}
+        state["_hot_cache"] = {}
+        state["_active_buffers"] = {}
         return state
 
     def __setstate__(self, state):
