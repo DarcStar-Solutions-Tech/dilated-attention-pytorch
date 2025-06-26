@@ -1,0 +1,64 @@
+{
+  "DilatedAttention": {
+    "b1_s2048_h8_d64": {
+      "execution_time_ms": 1.0358886793255806,
+      "memory_allocated_mb": 16.0,
+      "memory_reserved_mb": 22.0,
+      "flops": null,
+      "cuda_time_ms": 1.6915296554565429
+    },
+    "b1_s4096_h8_d64": {
+      "execution_time_ms": 1.4639515429735184,
+      "memory_allocated_mb": 44.0,
+      "memory_reserved_mb": 62.0,
+      "flops": null,
+      "cuda_time_ms": 3.2106399536132812
+    },
+    "b1_s8192_h8_d64": {
+      "execution_time_ms": 1.0082060471177101,
+      "memory_allocated_mb": 88.0,
+      "memory_reserved_mb": 126.0,
+      "flops": null,
+      "cuda_time_ms": 6.023987197875977
+    }
+  },
+  "ImprovedDilatedAttention": {
+    "b1_s2048_h8_d64": {
+      "execution_time_ms": 0.7765972055494785,
+      "memory_allocated_mb": 16.0078125,
+      "memory_reserved_mb": 44.0,
+      "flops": null,
+      "cuda_time_ms": 2.009881591796875
+    },
+    "b1_s4096_h8_d64": {
+      "execution_time_ms": 0.8662060834467411,
+      "memory_allocated_mb": 44.0234375,
+      "memory_reserved_mb": 84.0,
+      "flops": null,
+      "cuda_time_ms": 3.702579116821289
+    },
+    "b1_s8192_h8_d64": {
+      "execution_time_ms": 0.8373450487852097,
+      "memory_allocated_mb": 64.03125,
+      "memory_reserved_mb": 122.0,
+      "flops": null,
+      "cuda_time_ms": 7.2460479736328125
+    }
+  },
+  "MultiheadDilatedAttention": {
+    "b1_s2048_h8_d64": {
+      "execution_time_ms": 1.336085144430399,
+      "memory_allocated_mb": 28.140625,
+      "memory_reserved_mb": 66.0,
+      "flops": null,
+      "cuda_time_ms": 2.9072256088256836
+    },
+    "b1_s4096_h8_d64": {
+      "execution_time_ms": 1.3355943374335766,
+      "memory_allocated_mb": 44.140625,
+      "memory_reserved_mb": 106.0,
+      "flops": null,
+      "cuda_time_ms": 78.05726928710938
+    }
+  }
+}

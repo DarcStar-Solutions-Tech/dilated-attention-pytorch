@@ -1,0 +1,91 @@
+name: Performance Regression Tests
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main ]
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  performance-regression:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[perf]')
+    
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install Hatch
+      run: |
+        pip install --upgrade pip
+        pip install hatch
+    
+    - name: Install dependencies
+      run: |
+        hatch env create
+    
+    - name: Run performance regression tests
+      run: |
+        hatch run python scripts/run_performance_regression.py
+    
+    - name: Upload performance results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: performance-results-${{ matrix.python-version }}
+        path: |
+          tests/performance_baselines/
+          performance_dashboard.html
+          performance_comparison.html
+    
+    - name: Comment PR with results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          
+          // Read performance history
+          const historyPath = 'tests/performance_baselines/history.json';
+          if (fs.existsSync(historyPath)) {
+            const history = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
+            const recentEntries = history.slice(-10);
+            
+            let comment = '## Performance Regression Test Results\n\n';
+            let hasRegression = false;
+            
+            recentEntries.forEach(entry => {
+              const icon = entry.passed ? '✅' : '❌';
+              const regression = entry.regression_pct.toFixed(1);
+              comment += `${icon} ${entry.implementation} ${entry.config}: ${regression}%\n`;
+              
+              if (!entry.passed) {
+                hasRegression = true;
+              }
+            });
+            
+            if (hasRegression) {
+              comment += '\n⚠️ **Performance regression detected!**';
+            } else {
+              comment += '\n✅ **All performance tests passed.**';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }

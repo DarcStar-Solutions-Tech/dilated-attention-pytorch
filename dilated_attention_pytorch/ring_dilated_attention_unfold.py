@@ -133,8 +133,6 @@ class UnfoldRingDilatedAttention(BaseDilatedAttention):
             if n_q < s or n_kv < s:
                 continue
 
-            effective_s = min(s, n_kv)
-
             # Extract head groups
             q_heads = q[:, :, hmin:hmax, :]
             k_heads = k[:, :, hmin:hmax, :]

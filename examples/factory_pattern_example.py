@@ -107,7 +107,7 @@ def example_3_block_sparse():
 
         start.record()
         for _ in range(10):
-            output = attention(x, x, x)
+            _ = attention(x, x, x)
         end.record()
 
         torch.cuda.synchronize()
@@ -223,7 +223,7 @@ def example_6_type_safe_config():
     )
 
     # Create attention with configs
-    attention = create_multihead_dilated_attention(
+    create_multihead_dilated_attention(
         "improved",
         multihead_config=multihead_config,
         attention_config=attention_config,

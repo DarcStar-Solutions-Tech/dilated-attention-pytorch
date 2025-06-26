@@ -28,14 +28,13 @@ import torch.nn.functional as F
 # Optional imports for visualization
 try:
     import matplotlib.pyplot as plt
-    import seaborn as sns
 
     HAS_MATPLOTLIB = True
 except ImportError:
     HAS_MATPLOTLIB = False
 
 try:
-    import numpy as np
+    import numpy  # noqa: F401
 
     HAS_NUMPY = True
 except ImportError:
@@ -599,8 +598,6 @@ class PatternOptimizer:
         num_heads, num_blocks, _ = pattern.shape
 
         # Add some random long-range connections
-        num_global = max(1, num_blocks // 8)
-
         for h in range(num_heads):
             for i in range(num_blocks):
                 # Add a few random long-range connections
@@ -778,7 +775,7 @@ def load_sparse_pattern(filepath: str) -> torch.Tensor:
 
         with gzip.open(filepath + ".gz", "rb") as f:
             pattern_data = pickle.load(f)
-    except:
+    except (OSError, EOFError):
         # Fall back to uncompressed
         with open(filepath, "rb") as f:
             pattern_data = pickle.load(f)

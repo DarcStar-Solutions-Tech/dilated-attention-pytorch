@@ -70,6 +70,9 @@ def benchmark_implementation(
     cpu_memory = tracemalloc.get_traced_memory()[1] / 1024**2  # MB
     tracemalloc.stop()
 
+    # Store output shape before deletion
+    output_shape = list(output.shape)
+
     # Clear memory
     del model, q, k, v, output
     gc.collect()
@@ -81,7 +84,7 @@ def benchmark_implementation(
         "max_time": max(times),
         "gpu_memory_mb": gpu_memory,
         "cpu_memory_mb": cpu_memory,
-        "output_shape": list(output.shape) if "output" in locals() else None,
+        "output_shape": output_shape,
     }
 
 

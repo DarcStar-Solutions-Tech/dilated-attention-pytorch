@@ -58,14 +58,14 @@ from .ring_distributed_dilated_attention import RingDistributedDilatedAttention
 
 # Optional imports for enterprise features
 try:
-    import deepspeed
+    import deepspeed  # noqa: F401
 
     HAS_DEEPSPEED = True
 except ImportError:
     HAS_DEEPSPEED = False
 
 try:
-    import apex
+    import apex  # noqa: F401
 
     HAS_APEX = True
 except ImportError:
@@ -592,8 +592,6 @@ class OptimizedGradientCommunicator:
 
     def _compress_bucket(self, bucket: list[tuple[str, torch.Tensor]]) -> dict[str, Any]:
         """Compress gradient bucket using top-k sparsification."""
-        compressed_grads = []
-        indices_list = []
         shapes_list = []
 
         total_elements = sum(grad.numel() for _, grad in bucket)
@@ -1244,7 +1242,6 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
             # Check cache first
             if name in self._buffer_cache:
                 cached_buffer = self._buffer_cache[name]
-                cached_shape = cached_buffer.shape
 
                 # Try to reuse with resize if possible
                 if cached_buffer.numel() == torch.prod(torch.tensor(shape)):
@@ -1259,7 +1256,7 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
                     try:
                         cached_buffer.resize_(*shape)
                         return cached_buffer
-                    except:
+                    except RuntimeError:
                         # Resize failed, allocate new
                         pass
 
@@ -1385,7 +1382,7 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
                 if isinstance(output, tuple):
                     return output[0].float(), output[1]
                 return output.float()
-            except:
+            except Exception:
                 pass
 
         # Try with gradient checkpointing
@@ -1406,7 +1403,7 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
         if hasattr(self, "gradient_communicator") and self.gradient_communicator:
             try:
                 self.gradient_communicator.synchronize_gradients()
-            except:
+            except Exception:
                 pass
 
         # Clear communication buffers
@@ -1463,7 +1460,7 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
                     output[1][:, :, :seq_len, :seq_len] if output[1] is not None else None
                 )
             return output[:, :seq_len]
-        except:
+        except Exception:
             # Final fallback
             return self._strategy_checkpoint_recovery(
                 q[:, :seq_len],

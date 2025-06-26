@@ -95,18 +95,22 @@ def test_forward_compatibility():
         segment_lengths = [1024, 2048]
         dilation_rates = [1, 2]
 
+        # Determine device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
         # Create model
         model = ImprovedMultiheadDilatedAttention(
             embed_dim=embed_dim,
             num_heads=num_heads,
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
+            device=device,
         )
 
-        # Create test data
-        query = torch.randn(batch_size, seq_len, embed_dim)
-        key = torch.randn(batch_size, seq_len, embed_dim)
-        value = torch.randn(batch_size, seq_len, embed_dim)
+        # Create test data on same device
+        query = torch.randn(batch_size, seq_len, embed_dim, device=device)
+        key = torch.randn(batch_size, seq_len, embed_dim, device=device)
+        value = torch.randn(batch_size, seq_len, embed_dim, device=device)
 
         print(f"Input shapes - Q: {query.shape}, K: {key.shape}, V: {value.shape}")
 
@@ -158,7 +162,7 @@ def test_feature_compatibility():
         )
 
         # Test TF32 option
-        model_tf32 = ImprovedMultiheadDilatedAttention(
+        ImprovedMultiheadDilatedAttention(
             embed_dim=128,
             num_heads=4,
             segment_lengths=[64, 128],
@@ -168,7 +172,7 @@ def test_feature_compatibility():
         features_tested.append("✓ TF32 option works")
 
         # Test layer norm option
-        model_no_norm = ImprovedMultiheadDilatedAttention(
+        ImprovedMultiheadDilatedAttention(
             embed_dim=128,
             num_heads=4,
             segment_lengths=[64, 128],
@@ -178,7 +182,7 @@ def test_feature_compatibility():
         features_tested.append("✓ Layer norm option works")
 
         # Test bias option
-        model_no_bias = ImprovedMultiheadDilatedAttention(
+        ImprovedMultiheadDilatedAttention(
             embed_dim=128,
             num_heads=4,
             segment_lengths=[64, 128],
@@ -189,7 +193,7 @@ def test_feature_compatibility():
 
         # Test device/dtype options
         if torch.cuda.is_available():
-            model_cuda = ImprovedMultiheadDilatedAttention(
+            ImprovedMultiheadDilatedAttention(
                 embed_dim=128,
                 num_heads=4,
                 segment_lengths=[64, 128],
@@ -202,7 +206,7 @@ def test_feature_compatibility():
             features_tested.append("⚠ CUDA not available for device test")
 
         # Test gamma_init option
-        model_gamma = ImprovedMultiheadDilatedAttention(
+        ImprovedMultiheadDilatedAttention(
             embed_dim=128,
             num_heads=4,
             segment_lengths=[64, 128],

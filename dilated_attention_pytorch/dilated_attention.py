@@ -170,15 +170,20 @@ class DilatedAttention(BaseDilatedAttention):
             x = rearrange(x, "(b n) s h d -> b n s h d", b=b)
 
             # Gather outputs with proper indexing
-            out_seg = rearrange(out, "b (n s) h d -> b n s h d", s=s)
-            out_seg[:, :, offset::r, hmin:hmax, :] += x
-            out = rearrange(out_seg, "b n s h d -> b (n s) h d", s=s)
-
-        # Apply dropout if configured
-        out = self._apply_dropout(out)
+            # Thread-safe accumulation: avoid in-place operations on shared tensors
+            with self._cache_lock:
+                out_seg = rearrange(out, "b (n s) h d -> b n s h d", s=s)
+                out_seg[:, :, offset::r, hmin:hmax, :] = out_seg[:, :, offset::r, hmin:hmax, :] + x
+                out = rearrange(out_seg, "b n s h d -> b (n s) h d", s=s)
 
         # Normalize by number of groups (Eq. 10 from paper)
-        return out / self.num_groups
+        # NOTE: Normalization must happen before dropout for mathematical correctness
+        out = out / self.num_groups
+
+        # Apply dropout if configured (after normalization)
+        out = self._apply_dropout(out)
+
+        return out
 
     def extra_repr(self) -> str:
         """Extra representation for printing."""

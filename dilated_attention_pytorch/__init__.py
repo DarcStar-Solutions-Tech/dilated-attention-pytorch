@@ -35,6 +35,11 @@ from .core import (
 )
 from .dilated_attention import DilatedAttention
 from .improved_dilated_attention import ImprovedDilatedAttention
+from .improved_distributed_dilated_attention import (
+    DistributedImprovedDilatedAttention,
+    DistributedImprovedMultiheadDilatedAttention,
+)
+from .improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttention
 from .long_net import LongNet
 from .multihead_dilated_attention import MultiheadDilatedAttention
 

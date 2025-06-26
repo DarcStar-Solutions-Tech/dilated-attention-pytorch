@@ -190,7 +190,7 @@ class TestAttentionComputation:
         """Test optimized attention with Flash Attention."""
         # Skip if flash_attn is not installed
         try:
-            import flash_attn
+            import flash_attn  # noqa: F401
         except ImportError:
             pytest.skip("flash_attn not installed")
 

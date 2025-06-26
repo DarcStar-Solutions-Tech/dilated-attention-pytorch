@@ -39,7 +39,7 @@ from .ring_dilated_attention import RingDilatedAttention
 
 # Handle torch.nn.attention availability for older PyTorch versions
 try:
-    from torch.nn.attention import SDPBackend, sdpa_kernel
+    from torch.nn.attention import SDPBackend
 
     HAS_SDPA_KERNEL = True
 except ImportError:
@@ -459,7 +459,6 @@ class ContentAdaptiveSparsity(nn.Module):
         k_importance = self.importance_predictor(k_block_avg)
 
         # Predict block-pair interactions
-        num_pairs = num_blocks * num_blocks
         q_expanded = q_block_avg.unsqueeze(2).expand(-1, -1, num_blocks, -1, -1)
         k_expanded = k_block_avg.unsqueeze(1).expand(-1, num_blocks, -1, -1, -1)
 
@@ -628,7 +627,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
                         version = flash_attn.__version__
                         major = int(version.split(".")[0])
                         self.has_fa3 = major >= 3 and self.is_h100
-                except:
+                except Exception:
                     pass
         else:
             self.is_h100 = False

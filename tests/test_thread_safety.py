@@ -337,7 +337,7 @@ class TestDeadlockPrevention:
         def thread1():
             """Thread 1: Get buffer then clear."""
             for _ in range(100):
-                buffer = pool.get_buffer((50, 50), torch.float32, "key1")
+                _ = pool.get_buffer((50, 50), torch.float32, "key1")
                 pool.clear_unused_buffers()
                 time.sleep(0.0001)
 
@@ -345,7 +345,7 @@ class TestDeadlockPrevention:
             """Thread 2: Clear then get buffer."""
             for _ in range(100):
                 pool.clear_unused_buffers()
-                buffer = pool.get_buffer((60, 60), torch.float32, "key2")
+                _ = pool.get_buffer((60, 60), torch.float32, "key2")
                 time.sleep(0.0001)
 
         # Run with timeout to detect deadlock

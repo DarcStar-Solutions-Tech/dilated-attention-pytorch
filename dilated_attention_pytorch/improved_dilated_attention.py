@@ -206,11 +206,12 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
             else:
                 out[:, :, hmin:hmax, :].add_(x_reshaped.reshape(b, n, g, d))
 
+        # Normalize by number of groups (in-place for efficiency)
+        # NOTE: Normalization must happen before dropout for mathematical correctness
+        out.div_(self.num_groups)
+
         # Apply dropout if configured (from base class)
         out = self._apply_dropout(out)
-
-        # Normalize by number of groups (in-place for efficiency)
-        out.div_(self.num_groups)
 
         return out
 

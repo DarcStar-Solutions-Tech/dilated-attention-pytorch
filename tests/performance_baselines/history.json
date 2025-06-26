@@ -1,0 +1,86 @@
+[
+  {
+    "timestamp": "2025-06-26T16:52:19.784232",
+    "implementation": "DilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 1.0189146734774113,
+      "memory_allocated_mb": 16.0,
+      "memory_reserved_mb": 22.0,
+      "flops": null,
+      "cuda_time_ms": 1.6355167388916017
+    },
+    "passed": true,
+    "regression_pct": -1.6385936237106404
+  },
+  {
+    "timestamp": "2025-06-26T16:52:19.829525",
+    "implementation": "DilatedAttention",
+    "config": "b1_s4096_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9401753544807434,
+      "memory_allocated_mb": 32.0,
+      "memory_reserved_mb": 62.0,
+      "flops": null,
+      "cuda_time_ms": 3.1261695861816405
+    },
+    "passed": true,
+    "regression_pct": -35.778246281902355
+  },
+  {
+    "timestamp": "2025-06-26T16:52:19.910266",
+    "implementation": "DilatedAttention",
+    "config": "b1_s8192_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9751636534929276,
+      "memory_allocated_mb": 64.0,
+      "memory_reserved_mb": 98.0,
+      "flops": null,
+      "cuda_time_ms": 6.080659103393555
+    },
+    "passed": true,
+    "regression_pct": -3.2773453124235026
+  },
+  {
+    "timestamp": "2025-06-26T16:53:28.499735",
+    "implementation": "DilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9560491889715195,
+      "memory_allocated_mb": 16.0,
+      "memory_reserved_mb": 22.0,
+      "flops": null,
+      "cuda_time_ms": 1.5778688430786132
+    },
+    "passed": true,
+    "regression_pct": -7.7073426853202935
+  },
+  {
+    "timestamp": "2025-06-26T16:53:28.544929",
+    "implementation": "DilatedAttention",
+    "config": "b1_s4096_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9759142063558102,
+      "memory_allocated_mb": 32.0,
+      "memory_reserved_mb": 62.0,
+      "flops": null,
+      "cuda_time_ms": 3.0187519073486326
+    },
+    "passed": true,
+    "regression_pct": -33.33698707174602
+  },
+  {
+    "timestamp": "2025-06-26T16:53:28.626025",
+    "implementation": "DilatedAttention",
+    "config": "b1_s8192_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9978580288589001,
+      "memory_allocated_mb": 64.0,
+      "memory_reserved_mb": 98.0,
+      "flops": null,
+      "cuda_time_ms": 6.076723098754883
+    },
+    "passed": true,
+    "regression_pct": -1.0263793089114344
+  }
+]

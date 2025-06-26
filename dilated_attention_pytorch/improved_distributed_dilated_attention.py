@@ -20,7 +20,6 @@ from torch import Tensor, nn
 # Advanced distributed training libraries
 try:
     import deepspeed
-    from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
 
     HAS_DEEPSPEED = True
 except ImportError:
@@ -28,11 +27,8 @@ except ImportError:
     warnings.warn("DeepSpeed not available. Install with: pip install deepspeed")
 
 try:
-    import fairscale
-    from fairscale.nn import ShardedDataParallel as ShardedDDP
+    import fairscale  # noqa: F401
     from fairscale.nn.model_parallel import initialize_model_parallel
-    from fairscale.nn.pipe import Pipe
-    from fairscale.optim.oss import OSS
 
     HAS_FAIRSCALE = True
 except ImportError:
@@ -40,8 +36,7 @@ except ImportError:
     warnings.warn("FairScale not available. Install with: pip install fairscale")
 
 try:
-    from apex import amp
-    from apex.parallel import DistributedDataParallel as ApexDDP
+    import apex  # noqa: F401
 
     HAS_APEX = True
 except ImportError:
@@ -576,6 +571,9 @@ class DistributedImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention
     ) -> Tensor | tuple[Tensor, Tensor | None]:
         """Implementation of forward pass."""
         from .utils.attention_utils import split_attention_heads
+
+        # Extract dimensions
+        batch_size, seq_len, _ = query.shape
 
         # Apply projections based on model parallelism
         if self.use_model_parallel and hasattr(self, "qkv_proj"):
