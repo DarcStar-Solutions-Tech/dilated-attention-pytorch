@@ -10,11 +10,16 @@ __version__ = "0.2.0"
 from .dilated_attention import DilatedAttention
 from .multihead_dilated_attention import MultiheadDilatedAttention
 from .improved_dilated_attention import ImprovedDilatedAttention
+from .improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttention
+from .improved_distributed_dilated_attention import (
+    DistributedImprovedDilatedAttention,
+    DistributedImprovedMultiheadDilatedAttention
+)
 # from .distributed_dilated_attention import DistributedMultiheadDilatedAttention  # Old implementation
 from .ring_dilated_attention import RingDilatedAttention
 from .ring_multihead_dilated_attention import RingMultiheadDilatedAttention
 from .transformer import DilatedTransformerEncoderLayer, DilatedTransformerDecoderLayer
-from .long_net import LongNet
+from .long_net import LongNet, LongNetLM
 
 # Block-Sparse Ring Attention implementations
 from .block_sparse_ring_dilated_attention import (
@@ -56,12 +61,16 @@ __all__ = [
     "DilatedAttention",
     "MultiheadDilatedAttention", 
     "ImprovedDilatedAttention",
+    "ImprovedMultiheadDilatedAttention",
+    "DistributedImprovedDilatedAttention",
+    "DistributedImprovedMultiheadDilatedAttention",
     # "DistributedMultiheadDilatedAttention",  # Old implementation
     "RingDilatedAttention",
     "RingMultiheadDilatedAttention",
     "DilatedTransformerEncoderLayer",
     "DilatedTransformerDecoderLayer",
     "LongNet",
+    "LongNetLM",
     
     # Block-Sparse implementations
     "BlockSparseRingDilatedAttention",
