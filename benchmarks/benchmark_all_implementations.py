@@ -24,6 +24,7 @@ import torch
 # Import unified benchmark output management
 sys.path.insert(0, str(Path(__file__).parent))
 from core import BenchmarkOutputManager
+
 matplotlib.use("Agg")  # Non-interactive backend
 
 # Add parent directory to path
@@ -489,15 +490,15 @@ def save_results(results: dict[str, list[BenchmarkResult]], output_dir: str, arg
             "num_heads": args.num_heads if args else 8,
             "head_dim": args.head_dim if args else 64,
             "num_runs": args.num_runs if args else 10,
-        }
+        },
     )
-    
+
     # Add results for each implementation
     for impl_name, impl_results in results.items():
         # Convert BenchmarkResult objects to dicts
         results_as_dicts = [asdict(r) for r in impl_results]
         output_manager.add_result(impl_name, results_as_dicts)
-    
+
     # Calculate summary statistics
     summary = {}
     for impl_name, impl_results in results.items():
@@ -510,9 +511,9 @@ def save_results(results: dict[str, list[BenchmarkResult]], output_dir: str, arg
                 "max_time_ms": max(mean_times),
                 "num_configs": len(successful_results),
             }
-    
+
     output_manager.set_summary(summary)
-    
+
     # Save results
     output_paths = output_manager.save_results()
     print(f"\nResults saved to:")

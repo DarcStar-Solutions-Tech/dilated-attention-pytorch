@@ -16,10 +16,11 @@ import torch
 from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
 
 
-
 # Import unified benchmark output management
 sys.path.insert(0, str(Path(__file__).parent))
 from core import BenchmarkOutputManager
+
+
 @dataclass
 class BenchmarkResult:
     seq_len: int
@@ -297,13 +298,12 @@ if __name__ == "__main__":
 
     # Use unified benchmark output management
     output_manager = BenchmarkOutputManager(
-        benchmark_type="ring-billion-tokens",
-        parameters={}
+        benchmark_type="ring-billion-tokens", parameters={}
     )
-    
+
     # Add results
     output_manager.add_result("results", results)
-    
+
     # Save results
     output_paths = output_manager.save_results()
     print(f"\nResults saved to:")

@@ -359,7 +359,7 @@ class BenchmarkRunner:
                     )
 
                     self.results.append(result)
-                    
+
                     # Store results by implementation for aggregation
                     impl_name = result["name"]
                     if impl_name not in self.all_results_by_impl:
@@ -469,7 +469,7 @@ def main():
         head_dim=args.head_dim,
     )
     runner.print_summary()
-    
+
     # Save results using unified benchmark output management
     output_manager = BenchmarkOutputManager(
         benchmark_type="all-implementations",
@@ -480,13 +480,13 @@ def main():
             "seq_lens": args.seq_lens,
             "num_heads": args.num_heads,
             "head_dim": args.head_dim,
-        }
+        },
     )
-    
+
     # Add results organized by implementation
     for impl_name, impl_results in runner.all_results_by_impl.items():
         output_manager.add_result(impl_name, impl_results)
-    
+
     # Calculate and add summary statistics
     summary_stats = {}
     for impl_name, impl_results in runner.all_results_by_impl.items():
@@ -499,9 +499,9 @@ def main():
                 "max_time_ms": np.max(mean_times),
                 "num_configs_tested": len(successful_results),
             }
-    
+
     output_manager.set_summary(summary_stats)
-    
+
     # Save all outputs
     output_paths = output_manager.save_results()
     print(f"\nResults saved to:")
