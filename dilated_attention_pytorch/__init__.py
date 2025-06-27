@@ -31,6 +31,13 @@ from .block_sparse_hierarchical import (
     create_hierarchical_attention,
     get_hierarchical_presets,
 )
+from .block_sparse_adaptive import (
+    BlockSparseAdaptive,
+    AdaptiveConfig,
+    ImportanceScorer,
+    AdaptiveSparsityTrainer,
+    create_adaptive_block_sparse,
+)
 
 # Factory functions for easy creation
 from .core import (
@@ -80,6 +87,11 @@ __all__ = [
     "HierarchicalConfig",
     "create_hierarchical_attention",
     "get_hierarchical_presets",
+    "BlockSparseAdaptive",
+    "AdaptiveConfig",
+    "ImportanceScorer",
+    "AdaptiveSparsityTrainer",
+    "create_adaptive_block_sparse",
     # Ring Attention implementations
     "RingDilatedAttentionV2",
     "RingDilatedAttentionProduction",
