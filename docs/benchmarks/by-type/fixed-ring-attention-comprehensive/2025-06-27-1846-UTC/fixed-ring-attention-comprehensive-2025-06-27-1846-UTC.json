@@ -1,0 +1,2062 @@
+{
+  "metadata": {
+    "benchmark_type": "fixed-ring-attention-comprehensive",
+    "timestamp": "2025-06-27-1846-UTC",
+    "git_commit": "e90c6132041dfef5c8e18346478bd0a04e8beabc",
+    "git_dirty": true,
+    "hardware": {
+      "platform": "Linux-6.12.10-76061203-generic-x86_64-with-glibc2.35",
+      "processor": "x86_64",
+      "cpu_count": 6,
+      "gpu_count": 2,
+      "gpu_names": [
+        "NVIDIA GeForce GTX 1080",
+        "NVIDIA GeForce GTX 1080"
+      ],
+      "gpu_memory_gb": [
+        7.8841552734375,
+        7.91705322265625
+      ],
+      "cuda_capability": [
+        "6.1",
+        "6.1"
+      ]
+    },
+    "python_version": "3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:27:36) [GCC 11.2.0]",
+    "torch_version": "2.7.1+cu126",
+    "cuda_version": "12.6",
+    "command_line": "benchmarks/benchmark_fixed_ring_attention.py",
+    "parameters": {
+      "tests": [
+        "memory_scaling",
+        "extreme_sequences",
+        "performance"
+      ],
+      "implementations": [
+        "current",
+        "fixed",
+        "true"
+      ]
+    }
+  },
+  "results": {
+    "memory_scaling_results": [
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 29.84831513216098,
+        "memory_gb": 0.0334625244140625,
+        "throughput_tokens_per_sec": 137227.17620287515,
+        "times": [
+          30.50361480563879,
+          29.77261319756508,
+          29.268717393279076
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.46987490107615787,
+        "memory_gb": 0.0306549072265625,
+        "throughput_tokens_per_sec": 8717213.859729264,
+        "times": [
+          0.48177409917116165,
+          0.497329980134964,
+          0.430520623922348
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 15.61229241391023,
+        "memory_gb": 0.0335845947265625,
+        "throughput_tokens_per_sec": 262357.37144857395,
+        "times": [
+          15.552795492112637,
+          15.720676630735397,
+          15.563405118882656
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 27.73687553902467,
+        "memory_gb": 0.0427398681640625,
+        "throughput_tokens_per_sec": 147673.4462840666,
+        "times": [
+          29.113142751157284,
+          27.23674476146698,
+          26.86073910444975
+        ],
+        "ring_size": 2
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.4401030018925667,
+        "memory_gb": 0.0306549072265625,
+        "throughput_tokens_per_sec": 9306912.205520181,
+        "times": [
+          0.43449271470308304,
+          0.44388044625520706,
+          0.44193584471940994
+        ],
+        "ring_size": 2
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 15.645049512386322,
+        "memory_gb": 0.0374908447265625,
+        "throughput_tokens_per_sec": 261808.05607276355,
+        "times": [
+          15.644711442291737,
+          15.644426457583904,
+          15.646010637283325
+        ],
+        "ring_size": 2
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 27.69854695846637,
+        "memory_gb": 0.0427398681640625,
+        "throughput_tokens_per_sec": 147877.7932337715,
+        "times": [
+          28.82846351712942,
+          26.833523996174335,
+          27.433653362095356
+        ],
+        "ring_size": 4
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.5783426264921824,
+        "memory_gb": 0.0306549072265625,
+        "throughput_tokens_per_sec": 7082306.944662615,
+        "times": [
+          0.44528860598802567,
+          0.8529676124453545,
+          0.4367716610431671
+        ],
+        "ring_size": 4
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 15.756538758675257,
+        "memory_gb": 0.0374908447265625,
+        "throughput_tokens_per_sec": 259955.56909634225,
+        "times": [
+          15.71621559560299,
+          15.753919258713722,
+          15.79948142170906
+        ],
+        "ring_size": 4
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 27.778475855787594,
+        "memory_gb": 0.0427398681640625,
+        "throughput_tokens_per_sec": 147452.29440464804,
+        "times": [
+          29.308075085282326,
+          27.231869287788868,
+          26.79548319429159
+        ],
+        "ring_size": 8
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.7369195421536764,
+        "memory_gb": 0.0306549072265625,
+        "throughput_tokens_per_sec": 5558273.007700785,
+        "times": [
+          0.6703147664666176,
+          0.8512046188116074,
+          0.6892392411828041
+        ],
+        "ring_size": 8
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 19.220865331590176,
+        "memory_gb": 0.0374908447265625,
+        "throughput_tokens_per_sec": 213101.74798780147,
+        "times": [
+          19.232393242418766,
+          19.313947297632694,
+          19.116255454719067
+        ],
+        "ring_size": 8
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 61.73463476200899,
+        "memory_gb": 0.0781402587890625,
+        "throughput_tokens_per_sec": 132696.98657132566,
+        "times": [
+          63.51297814399004,
+          59.82183013111353,
+          61.869096010923386
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.827886164188385,
+        "memory_gb": 0.0533599853515625,
+        "throughput_tokens_per_sec": 9895080.21073283,
+        "times": [
+          0.9483685716986656,
+          0.7753325626254082,
+          0.7599573582410812
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 33.537037360171475,
+        "memory_gb": 0.0592193603515625,
+        "throughput_tokens_per_sec": 244267.2533063044,
+        "times": [
+          34.914721734821796,
+          32.841430976986885,
+          32.85495936870575
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 58.60365989307562,
+        "memory_gb": 0.0781402587890625,
+        "throughput_tokens_per_sec": 139786.49140593922,
+        "times": [
+          58.076185174286366,
+          59.710451401770115,
+          58.024343103170395
+        ],
+        "ring_size": 2
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 1.001346545914809,
+        "memory_gb": 0.0533599853515625,
+        "throughput_tokens_per_sec": 8180983.9295106,
+        "times": [
+          0.8216695860028267,
+          0.826023519039154,
+          1.356346532702446
+        ],
+        "ring_size": 2
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (8192) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 2
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 63.66956606507301,
+        "memory_gb": 0.0781402587890625,
+        "throughput_tokens_per_sec": 128664.29765874997,
+        "times": [
+          65.16982708126307,
+          64.09322656691074,
+          61.74564454704523
+        ],
+        "ring_size": 4
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.9403185298045477,
+        "memory_gb": 0.0533599853515625,
+        "throughput_tokens_per_sec": 8711941.475515503,
+        "times": [
+          1.1790720745921135,
+          0.8191270753741264,
+          0.822756439447403
+        ],
+        "ring_size": 4
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (8192) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 4
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 59.91709263374408,
+        "memory_gb": 0.0781402587890625,
+        "throughput_tokens_per_sec": 136722.25470076353,
+        "times": [
+          64.1575139015913,
+          59.6398189663887,
+          55.95394503325224
+        ],
+        "ring_size": 8
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.749678040544192,
+        "memory_gb": 0.0533599853515625,
+        "throughput_tokens_per_sec": 10927357.554789012,
+        "times": [
+          0.7751621305942535,
+          0.7370207458734512,
+          0.7368512451648712
+        ],
+        "ring_size": 8
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (8192) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 8
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 75.76744972417752,
+        "memory_gb": 0.0781402587890625,
+        "throughput_tokens_per_sec": 108120.30799270677,
+        "times": [
+          87.05103304237127,
+          70.53427491337061,
+          69.71704121679068
+        ],
+        "ring_size": 16
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.9788945317268372,
+        "memory_gb": 0.0533599853515625,
+        "throughput_tokens_per_sec": 8368623.722464513,
+        "times": [
+          0.8683698251843452,
+          1.248410902917385,
+          0.8199028670787811
+        ],
+        "ring_size": 16
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (8192) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 16
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 121.00111196438472,
+        "memory_gb": 0.1427154541015625,
+        "throughput_tokens_per_sec": 135403.7143462156,
+        "times": [
+          120.27371488511562,
+          117.72714555263519,
+          125.00247545540333
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 1.7475876957178116,
+        "memory_gb": 0.0987701416015625,
+        "throughput_tokens_per_sec": 9375209.061122604,
+        "times": [
+          1.54877919703722,
+          1.5771826729178429,
+          2.116801217198372
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 78.26874622454245,
+        "memory_gb": 0.1104888916015625,
+        "throughput_tokens_per_sec": 209330.0428372331,
+        "times": [
+          79.60963808000088,
+          77.1910808980465,
+          78.00551969558
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 128.09263480206332,
+        "memory_gb": 0.1427154541015625,
+        "throughput_tokens_per_sec": 127907.43219013,
+        "times": [
+          132.33722187578678,
+          126.60119403153658,
+          125.33948849886656
+        ],
+        "ring_size": 4
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 1.7113868768016498,
+        "memory_gb": 0.0987701416015625,
+        "throughput_tokens_per_sec": 9573522.049333157,
+        "times": [
+          1.6902368515729904,
+          1.8496103584766388,
+          1.59431342035532
+        ],
+        "ring_size": 4
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (16384) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 4
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 126.32565169284742,
+        "memory_gb": 0.1427154541015625,
+        "throughput_tokens_per_sec": 129696.54049231921,
+        "times": [
+          125.94890221953392,
+          128.72174568474293,
+          124.30630717426538
+        ],
+        "ring_size": 8
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 1.5972740948200226,
+        "memory_gb": 0.0987701416015625,
+        "throughput_tokens_per_sec": 10257475.566111973,
+        "times": [
+          1.6312934458255768,
+          1.6617067158222198,
+          1.4988221228122711
+        ],
+        "ring_size": 8
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (16384) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 8
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 132.12087377905846,
+        "memory_gb": 0.1427154541015625,
+        "throughput_tokens_per_sec": 124007.65701412513,
+        "times": [
+          147.1381839364767,
+          123.35451785475016,
+          125.8699195459485
+        ],
+        "ring_size": 16
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 1.5302030369639397,
+        "memory_gb": 0.0987701416015625,
+        "throughput_tokens_per_sec": 10707075.861323167,
+        "times": [
+          1.5274891629815102,
+          1.5418976545333862,
+          1.5212222933769226
+        ],
+        "ring_size": 16
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (16384) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 16
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 115.9640181188782,
+        "memory_gb": 0.1427154541015625,
+        "throughput_tokens_per_sec": 141285.2043743799,
+        "times": [
+          115.94463791698217,
+          114.74708374589682,
+          117.20033269375563
+        ],
+        "ring_size": 32
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 1.7031679550806682,
+        "memory_gb": 0.0987701416015625,
+        "throughput_tokens_per_sec": 9619720.680585489,
+        "times": [
+          1.915966160595417,
+          1.6102828085422516,
+          1.5832548961043358
+        ],
+        "ring_size": 32
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (16384) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 32
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 249.29094531883797,
+        "memory_gb": 0.2755279541015625,
+        "throughput_tokens_per_sec": 131444.80622066077,
+        "times": [
+          258.98931454867125,
+          236.98897566646338,
+          251.89454574137926
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 3.924403339624405,
+        "memory_gb": 0.1895904541015625,
+        "throughput_tokens_per_sec": 8349804.330544716,
+        "times": [
+          4.4404324144124985,
+          4.442370496690273,
+          2.890407107770443
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 212.70665402213731,
+        "memory_gb": 0.2130279541015625,
+        "throughput_tokens_per_sec": 154052.53846261758,
+        "times": [
+          232.12737310677767,
+          221.62854298949242,
+          184.3640459701419
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 281.5935779362917,
+        "memory_gb": 0.2755279541015625,
+        "throughput_tokens_per_sec": 116366.29016949207,
+        "times": [
+          246.85882590711117,
+          279.75334972143173,
+          318.1685581803322
+        ],
+        "ring_size": 8
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 3.463156521320343,
+        "memory_gb": 0.1895904541015625,
+        "throughput_tokens_per_sec": 9461888.250868622,
+        "times": [
+          3.1038224697113037,
+          4.17617242783308,
+          3.109474666416645
+        ],
+        "ring_size": 8
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (32768) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 8
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 263.0543389047186,
+        "memory_gb": 0.2755279541015625,
+        "throughput_tokens_per_sec": 124567.41879429315,
+        "times": [
+          260.9176645055413,
+          263.71376123279333,
+          264.531590975821
+        ],
+        "ring_size": 16
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 3.455348312854767,
+        "memory_gb": 0.1895904541015625,
+        "throughput_tokens_per_sec": 9483269.712085111,
+        "times": [
+          3.390745259821415,
+          3.9712218567728996,
+          3.004077821969986
+        ],
+        "ring_size": 16
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (32768) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 16
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 309.79108437895775,
+        "memory_gb": 0.2755279541015625,
+        "throughput_tokens_per_sec": 105774.50950756198,
+        "times": [
+          255.38316648453474,
+          279.3266670778394,
+          394.66341957449913
+        ],
+        "ring_size": 32
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 3.4393928945064545,
+        "memory_gb": 0.1895904541015625,
+        "throughput_tokens_per_sec": 9527262.806275623,
+        "times": [
+          3.128032200038433,
+          3.779977560043335,
+          3.4101689234375954
+        ],
+        "ring_size": 32
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (32768) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 32
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 309.546185657382,
+        "memory_gb": 0.2755279541015625,
+        "throughput_tokens_per_sec": 105858.19344021549,
+        "times": [
+          295.4311743378639,
+          337.6829521730542,
+          295.5244304612279
+        ],
+        "ring_size": 64
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 2.9422522832949958,
+        "memory_gb": 0.1895904541015625,
+        "throughput_tokens_per_sec": 11137046.332173623,
+        "times": [
+          2.788115292787552,
+          2.8683068230748177,
+          3.1703347340226173
+        ],
+        "ring_size": 64
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (32768) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 64
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 539.0904446442922,
+        "memory_gb": 0.5431060791015625,
+        "throughput_tokens_per_sec": 121567.72699475796,
+        "times": [
+          530.5651156231761,
+          541.2058243528008,
+          545.5003939568996
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 7.344497367739677,
+        "memory_gb": 0.3712310791015625,
+        "throughput_tokens_per_sec": 8923142.962493727,
+        "times": [
+          5.628066137433052,
+          10.34053135663271,
+          6.064894609153271
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "CUDA error: invalid configuration argument\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 1023.8050396243731,
+        "memory_gb": 0.5431060791015625,
+        "throughput_tokens_per_sec": 64012.18734383717,
+        "times": [
+          1343.1393885985017,
+          1086.7309924215078,
+          641.5447378531098
+        ],
+        "ring_size": 16
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 6.063288077712059,
+        "memory_gb": 0.3712310791015625,
+        "throughput_tokens_per_sec": 10808656.814592516,
+        "times": [
+          6.021373905241489,
+          5.922083742916584,
+          6.246406584978104
+        ],
+        "ring_size": 16
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (65536) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 16
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 586.8602596844236,
+        "memory_gb": 0.5431060791015625,
+        "throughput_tokens_per_sec": 111672.24039883213,
+        "times": [
+          587.3771402984858,
+          543.7969248741865,
+          629.4067138805985
+        ],
+        "ring_size": 32
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 6.884941520790259,
+        "memory_gb": 0.3712310791015625,
+        "throughput_tokens_per_sec": 9518744.61127997,
+        "times": [
+          6.063963286578655,
+          6.9032711908221245,
+          7.687590084969997
+        ],
+        "ring_size": 32
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (65536) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 32
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 613.9020994305611,
+        "memory_gb": 0.5431060791015625,
+        "throughput_tokens_per_sec": 106753.17784511474,
+        "times": [
+          528.8921659812331,
+          763.9784747734666,
+          548.8356575369835
+        ],
+        "ring_size": 64
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 6.531383531788985,
+        "memory_gb": 0.3712310791015625,
+        "throughput_tokens_per_sec": 10034014.949670134,
+        "times": [
+          6.442750804126263,
+          6.502057425677776,
+          6.649342365562916
+        ],
+        "ring_size": 64
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (65536) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 64
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 635.9714223071933,
+        "memory_gb": 0.5431060791015625,
+        "throughput_tokens_per_sec": 103048.6554918566,
+        "times": [
+          537.5878941267729,
+          799.967285245657,
+          570.35908754915
+        ],
+        "ring_size": 128
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 7.3574865236878395,
+        "memory_gb": 0.3712310791015625,
+        "throughput_tokens_per_sec": 8907389.743630951,
+        "times": [
+          7.785498164594173,
+          7.766944356262684,
+          6.520017050206661
+        ],
+        "ring_size": 128
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (65536) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 128
+      }
+    ],
+    "extreme_sequence_results": [
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.8386140689253807,
+        "memory_gb": 0.0533447265625,
+        "throughput_tokens_per_sec": 9768498.172821518,
+        "times": [
+          0.8524609729647636,
+          0.8247671648859978
+        ],
+        "ring_size": 1,
+        "estimated_memory_gb": 0.03125
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 41.9652652926743,
+        "memory_gb": 0.0592041015625,
+        "throughput_tokens_per_sec": 195209.06022796052,
+        "times": [
+          41.01874493062496,
+          42.911785654723644
+        ],
+        "ring_size": 1,
+        "estimated_memory_gb": 0.03125
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 1.7366185784339905,
+        "memory_gb": 0.0987548828125,
+        "throughput_tokens_per_sec": 9434426.306077182,
+        "times": [
+          1.6780141741037369,
+          1.795222982764244
+        ],
+        "ring_size": 1,
+        "estimated_memory_gb": 0.0625
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 78.58877256512642,
+        "memory_gb": 0.1104736328125,
+        "throughput_tokens_per_sec": 208477.61665220818,
+        "times": [
+          80.7956950739026,
+          76.38185005635023
+        ],
+        "ring_size": 1,
+        "estimated_memory_gb": 0.0625
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 3.2384046353399754,
+        "memory_gb": 0.1895751953125,
+        "throughput_tokens_per_sec": 10118562.59171885,
+        "times": [
+          3.0046217143535614,
+          3.4721875563263893
+        ],
+        "ring_size": 1,
+        "estimated_memory_gb": 0.125
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 167.21875360235572,
+        "memory_gb": 0.2130126953125,
+        "throughput_tokens_per_sec": 195958.88196799942,
+        "times": [
+          161.42239328473806,
+          173.01511391997337
+        ],
+        "ring_size": 1,
+        "estimated_memory_gb": 0.125
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 6.925433874130249,
+        "memory_gb": 0.3712158203125,
+        "throughput_tokens_per_sec": 9463089.416651247,
+        "times": [
+          5.744452588260174,
+          8.106415160000324
+        ],
+        "ring_size": 1,
+        "estimated_memory_gb": 0.25
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 65536,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "CUDA error: invalid configuration argument\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 1,
+        "estimated_memory_gb": 0.25
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 131072,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 12.752232607454062,
+        "memory_gb": 0.7344970703125,
+        "throughput_tokens_per_sec": 10278357.055954617,
+        "times": [
+          12.808532454073429,
+          12.695932760834694
+        ],
+        "ring_size": 1,
+        "estimated_memory_gb": 0.5
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 131072,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "CUDA error: invalid configuration argument\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 1,
+        "estimated_memory_gb": 0.5
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 262144,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 64.73841797560453,
+        "memory_gb": 1.4610595703125,
+        "throughput_tokens_per_sec": 4049280.2913222886,
+        "times": [
+          62.29374371469021,
+          67.18309223651886
+        ],
+        "ring_size": 1,
+        "estimated_memory_gb": 1.0
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 262144,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "CUDA error: invalid configuration argument\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 1,
+        "estimated_memory_gb": 1.0
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 524288,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 118.86189505457878,
+        "memory_gb": 2.9141845703125,
+        "throughput_tokens_per_sec": 4410900.564552318,
+        "times": [
+          137.20799516886473,
+          100.51579494029284
+        ],
+        "ring_size": 1,
+        "estimated_memory_gb": 2.0
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 524288,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "CUDA error: invalid configuration argument\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 1,
+        "estimated_memory_gb": 2.0
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 1048576,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "OOM",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 1,
+        "estimated_memory_gb": 4.0
+      }
+    ],
+    "performance_comparison_results": [
+      {
+        "implementation": "DilatedAttention (baseline)",
+        "seq_len": 1024,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 8.288010023534298,
+        "memory_gb": 0.01385498046875,
+        "throughput_tokens_per_sec": 123551.97412796208,
+        "times": [
+          8.485379628837109,
+          7.893489673733711,
+          8.485160768032074
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 1024,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.4042318711678187,
+        "memory_gb": 0.01361083984375,
+        "throughput_tokens_per_sec": 2533199.5645016367,
+        "times": [
+          0.35625603049993515,
+          0.49759726971387863,
+          0.35884231328964233
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 1024,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 5.134019690255324,
+        "memory_gb": 0.01434326171875,
+        "throughput_tokens_per_sec": 199453.8513250374,
+        "times": [
+          5.571627989411354,
+          5.2485717460513115,
+          4.581859335303307
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "DilatedAttention (baseline)",
+        "seq_len": 2048,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 19.61519631246726,
+        "memory_gb": 0.019775390625,
+        "throughput_tokens_per_sec": 104408.84543675497,
+        "times": [
+          19.911804236471653,
+          18.24343577027321,
+          20.69034893065691
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 2048,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.4090530176957448,
+        "memory_gb": 0.019287109375,
+        "throughput_tokens_per_sec": 5006685.958550513,
+        "times": [
+          0.45040249824523926,
+          0.3802301362156868,
+          0.39652641862630844
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 2048,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 9.629497614999613,
+        "memory_gb": 0.020751953125,
+        "throughput_tokens_per_sec": 212679.83874983102,
+        "times": [
+          9.762638248503208,
+          9.130527265369892,
+          9.995327331125736
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "DilatedAttention (baseline)",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 35.21563671529293,
+        "memory_gb": 0.0316162109375,
+        "throughput_tokens_per_sec": 116311.96769534056,
+        "times": [
+          33.485617488622665,
+          36.5473348647356,
+          35.61395779252052
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 35.60291479031245,
+        "memory_gb": 0.04273223876953125,
+        "throughput_tokens_per_sec": 115046.76019151448,
+        "times": [
+          32.884069718420506,
+          37.60643023997545,
+          36.31824441254139
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.8813928191860517,
+        "memory_gb": 0.03064727783203125,
+        "throughput_tokens_per_sec": 4647190.118683486,
+        "times": [
+          0.45211613178253174,
+          0.4441943019628525,
+          1.7478680238127708
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 19.908477862675984,
+        "memory_gb": 0.03357696533203125,
+        "throughput_tokens_per_sec": 205741.49506824423,
+        "times": [
+          18.421458080410957,
+          22.681976668536663,
+          18.621998839080334
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "DilatedAttention (baseline)",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 67.89272464811802,
+        "memory_gb": 0.0552978515625,
+        "throughput_tokens_per_sec": 120660.94036523665,
+        "times": [
+          69.97807044535875,
+          67.61438213288784,
+          66.08572136610746
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 72.36174400895834,
+        "memory_gb": 0.07813262939453125,
+        "throughput_tokens_per_sec": 113208.9906371775,
+        "times": [
+          75.53817145526409,
+          71.57228142023087,
+          69.97477915138006
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.9320154786109924,
+        "memory_gb": 0.05335235595703125,
+        "throughput_tokens_per_sec": 8789553.594333816,
+        "times": [
+          0.819643959403038,
+          1.0758927091956139,
+          0.9005097672343254
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 40.9670394534866,
+        "memory_gb": 0.05921173095703125,
+        "throughput_tokens_per_sec": 199965.63357479326,
+        "times": [
+          39.82716333121061,
+          41.84999596327543,
+          41.22395906597376
+        ],
+        "ring_size": 1
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 33.96854177117348,
+        "memory_gb": 0.04273223876953125,
+        "throughput_tokens_per_sec": 120582.15591332696,
+        "times": [
+          32.53795485943556,
+          34.3862222507596,
+          34.98144820332527
+        ],
+        "ring_size": 4
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.47335152824719745,
+        "memory_gb": 0.03064727783203125,
+        "throughput_tokens_per_sec": 8653188.498550603,
+        "times": [
+          0.4768781363964081,
+          0.45921746641397476,
+          0.48395898193120956
+        ],
+        "ring_size": 4
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 4096,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (4096) must match the size of tensor b (2048) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 4
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 70.16184118886788,
+        "memory_gb": 0.07813262939453125,
+        "throughput_tokens_per_sec": 116758.62350801265,
+        "times": [
+          73.7693551927805,
+          69.59957163780928,
+          67.11659673601389
+        ],
+        "ring_size": 4
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.9644761060674986,
+        "memory_gb": 0.05335235595703125,
+        "throughput_tokens_per_sec": 8493730.377003955,
+        "times": [
+          1.03093683719635,
+          0.8180486038327217,
+          1.0444428771734238
+        ],
+        "ring_size": 4
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (8192) must match the size of tensor b (2048) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 4
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 138.66223332782587,
+        "memory_gb": 0.14270782470703125,
+        "throughput_tokens_per_sec": 118157.62379410747,
+        "times": [
+          140.9152541309595,
+          136.28552574664354,
+          138.78592010587454
+        ],
+        "ring_size": 4
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 1.5412674595912297,
+        "memory_gb": 0.09876251220703125,
+        "throughput_tokens_per_sec": 10630212.10111405,
+        "times": [
+          1.54054444283247,
+          1.549065113067627,
+          1.5341928228735924
+        ],
+        "ring_size": 4
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (16384) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 4
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 68.73644360651572,
+        "memory_gb": 0.07813262939453125,
+        "throughput_tokens_per_sec": 119179.86398736895,
+        "times": [
+          70.27525920420885,
+          69.24428883939981,
+          66.68978277593851
+        ],
+        "ring_size": 8
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 0.8185285453995069,
+        "memory_gb": 0.05335235595703125,
+        "throughput_tokens_per_sec": 10008203.191009855,
+        "times": [
+          0.8210213854908943,
+          0.816764310002327,
+          0.8177999407052994
+        ],
+        "ring_size": 8
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 8192,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (8192) must match the size of tensor b (2048) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 8
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 138.23411303261915,
+        "memory_gb": 0.14270782470703125,
+        "throughput_tokens_per_sec": 118523.5658591296,
+        "times": [
+          137.9875810816884,
+          138.5627742856741,
+          138.15198373049498
+        ],
+        "ring_size": 8
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 1.5079208339254062,
+        "memory_gb": 0.09876251220703125,
+        "throughput_tokens_per_sec": 10865291.884952154,
+        "times": [
+          1.5140250325202942,
+          1.5067076310515404,
+          1.5030298382043839
+        ],
+        "ring_size": 8
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 16384,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (16384) must match the size of tensor b (2048) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 8
+      },
+      {
+        "implementation": "RingDilatedAttention (current)",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 275.127502468725,
+        "memory_gb": 0.27552032470703125,
+        "throughput_tokens_per_sec": 119101.14294635043,
+        "times": [
+          268.0115895345807,
+          278.5060200840235,
+          278.86489778757095
+        ],
+        "ring_size": 8
+      },
+      {
+        "implementation": "RingDilatedAttentionFixed",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": true,
+        "error": null,
+        "time_ms": 3.0391567076245942,
+        "memory_gb": 0.18958282470703125,
+        "throughput_tokens_per_sec": 10781938.265240518,
+        "times": [
+          3.0136415734887123,
+          3.1026341021060944,
+          3.0011944472789764
+        ],
+        "ring_size": 8
+      },
+      {
+        "implementation": "TrueRingDilatedAttention",
+        "seq_len": 32768,
+        "batch_size": 1,
+        "num_heads": 8,
+        "head_dim": 64,
+        "success": false,
+        "error": "The size of tensor a (32768) must match the size of tensor b (4096) at non-singleton dimension 1",
+        "time_ms": null,
+        "memory_gb": null,
+        "throughput_tokens_per_sec": null,
+        "ring_size": 8
+      }
+    ],
+    "plot_paths": [
+      "docs/benchmarks/fixed-ring-attention-benchmark-2025-06-27-1847-UTC.png",
+      "docs/benchmarks/max-sequence-lengths-2025-06-27-1847-UTC.png"
+    ]
+  },
+  "summary": {}
+}
