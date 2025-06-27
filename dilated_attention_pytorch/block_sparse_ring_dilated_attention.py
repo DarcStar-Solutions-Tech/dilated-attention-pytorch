@@ -15,7 +15,9 @@ from dataclasses import dataclass
 import torch
 from torch import Tensor
 
+from .core.constants import GPU_TYPE, HAS_FLASH_ATTN_3
 from .ring_dilated_attention import RingDilatedAttention
+from .utils.flash_attention_3_utils import create_fa3_block_sparse_mask, get_fa3_config
 
 
 @dataclass
@@ -78,6 +80,11 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
         self.pattern_cache: dict[tuple, tuple[Tensor, Tensor]] = {}
         self._cache_lock = threading.Lock()
 
+        # Check for Flash Attention 3 support
+        self.use_fa3 = HAS_FLASH_ATTN_3 and str(GPU_TYPE) in ["h100", "h800"]
+        if self.use_fa3:
+            self.fa3_config = None  # Will be set dynamically based on sequence length
+
     def forward(
         self,
         q: Tensor,
@@ -112,8 +119,18 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
         # Initialize output
         output = torch.zeros_like(q)
 
-        # Process attention in blocks
-        if return_attention_weights:
+        # Try Flash Attention 3 first if available
+        fa3_weights = None
+        if self.use_fa3:
+            fa3_weights = self._compute_sparse_attention_fa3(
+                q, k, v, output, block_indices, is_causal
+            )
+
+        # If FA3 was successful and we don't need weights, we're done
+        if fa3_weights is not None or (self.use_fa3 and not return_attention_weights):
+            attention_data = None
+        # Fall back to standard sparse computation
+        elif return_attention_weights:
             attention_data = self._compute_sparse_attention_with_weights(
                 q, k, v, output, block_indices, is_causal
             )
@@ -232,6 +249,75 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
                     col_indices.append(j)
 
         return row_indices, col_indices
+
+    def _compute_sparse_attention_fa3(
+        self,
+        q: Tensor,
+        k: Tensor,
+        v: Tensor,
+        output: Tensor,
+        block_indices: tuple[Tensor, Tensor],  # noqa: ARG002
+        is_causal: bool,
+    ) -> Tensor | None:
+        """
+        Compute sparse attention using Flash Attention 3 optimizations.
+
+        Returns attention weights if available, otherwise None.
+        """
+        if not self.use_fa3:
+            return None
+
+        try:
+            from flash_attn_interface import flash_attn_func_v3
+
+            batch, seq_len, num_heads, head_dim = q.shape
+
+            # Get FA3 configuration for this sequence length
+            if self.fa3_config is None or self.fa3_config.get("seq_len") != seq_len:
+                self.fa3_config = get_fa3_config(
+                    seq_len=seq_len,
+                    num_heads=num_heads,
+                    head_dim=head_dim,
+                    use_fp8=str(GPU_TYPE) == "h100" and q.dtype == torch.float16,
+                    enable_async=True,
+                )
+                self.fa3_config["seq_len"] = seq_len
+
+            # Create FA3 block-sparse mask
+            mask = create_fa3_block_sparse_mask(
+                seq_len=seq_len,
+                block_size=self.block_size,
+                sparsity_ratio=1.0 - self.sparse_config.sparsity_ratio,
+                pattern_type=self.sparse_config.pattern_type,
+                device=q.device,
+            )
+
+            # Call FA3 with block-sparse support
+            fa3_output = flash_attn_func_v3(
+                q,
+                k,
+                v,
+                causal=is_causal,
+                block_sparse_mask=mask,
+                block_size=self.fa3_config["block_size"],
+                use_fp8=self.fa3_config["use_fp8"],
+                enable_async=self.fa3_config["enable_async"],
+                warp_specialized=self.fa3_config["warp_specialized"],
+                num_splits=self.fa3_config["num_splits"],
+            )
+
+            # Copy FA3 output to our output tensor
+            output.copy_(fa3_output)
+
+        except Exception as e:
+            # Fall back to standard sparse computation
+            import warnings
+
+            warnings.warn(f"Flash Attention 3 sparse computation failed: {e}", stacklevel=2)
+            return None
+        else:
+            # FA3 doesn't return attention weights in sparse mode
+            return None
 
     def _compute_sparse_attention(
         self,

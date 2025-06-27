@@ -117,7 +117,7 @@ def create_dilated_attention(
     return module
 
 
-def create_multihead_dilated_attention(
+def create_multihead_dilated_attention(  # noqa: PLR0912
     attention_type: str = "auto",
     embed_dim: int = 768,
     num_heads: int = 12,
@@ -372,22 +372,41 @@ def create_adaptive_sparse_attention(
     )
 
 
-def _select_best_attention_type() -> str:
+def _select_best_attention_type() -> str:  # noqa: PLR0911, PLR0912
     """Automatically select the best attention type based on hardware."""
     gpu_type = str(GPU_TYPE)
 
-    # H100/A100: Use most advanced implementation
-    if gpu_type in ["h100", "a100"]:
+    # H100/H800: Optimized for Flash Attention 3
+    if gpu_type in ["h100", "h800"]:
         if HAS_FLASH_ATTN_3:
-            return "improved"  # Best with FA3
+            logger.info(
+                "H100/H800 detected with FA3 - using block_sparse_ring for maximum performance"
+            )
+            return "block_sparse_ring"  # Best with FA3 block-sparse optimizations
         elif HAS_FLASH_ATTN:
             return "improved"  # Still good with FA2
         else:
             return "improved"  # Fallback to improved
 
+    # A100: Use most advanced implementation
+    elif gpu_type == "a100":
+        if HAS_FLASH_ATTN_3:
+            return "improved"  # FA3 available but not optimized for A100
+        elif HAS_FLASH_ATTN:
+            return "improved"  # Best with FA2
+        else:
+            return "improved"  # Fallback
+
     # V100 or older: Use simpler implementation
-    elif gpu_type == "v100" or gpu_type == "cpu":
+    elif gpu_type in ("v100", "cpu"):
         return "improved"  # Use improved since standard has circular import
+
+    # AMD MI300/MI250: Check for ROCm optimizations
+    elif gpu_type == "amd_instinct":
+        if HAS_FLASH_ATTN:
+            return "improved"
+        else:
+            return "improved"  # Standard PyTorch
 
     # Default: Use improved if Flash Attention available
     elif HAS_FLASH_ATTN:
@@ -590,7 +609,7 @@ _implementations_registered = False
 
 def _ensure_implementations_registered():
     """Ensure implementations are registered (lazy loading to avoid circular imports)."""
-    global _implementations_registered
+    global _implementations_registered  # noqa: PLW0603
     if not _implementations_registered:
         _register_implementations()
         _implementations_registered = True
