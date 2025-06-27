@@ -22,6 +22,10 @@ from .block_sparse_ring_multihead_dilated_attention import (
     BlockSparseRingMultiheadDilatedAttention,
 )
 
+# Optimized Block-Sparse implementations
+from .block_sparse_optimized import BlockSparseOptimized
+from .block_sparse_torch_sparse import BlockSparseTorchSparse
+
 # Factory functions for easy creation
 from .core import (
     create_adaptive_sparse_attention,
@@ -64,6 +68,8 @@ __all__ = [
     "BlockSparseRingDilatedAttention",
     "BlockSparseRingDistributedDilatedAttention",
     "BlockSparseRingMultiheadDilatedAttention",
+    "BlockSparseOptimized",
+    "BlockSparseTorchSparse",
     # Ring Attention implementations
     "RingDilatedAttentionV2",
     "RingDilatedAttentionProduction",
