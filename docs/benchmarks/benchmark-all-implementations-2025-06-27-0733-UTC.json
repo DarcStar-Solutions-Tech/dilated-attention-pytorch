@@ -1,0 +1,186 @@
+{
+  "BlockSparseRingDilatedAttention": [
+    {
+      "implementation": "BlockSparseRingDilatedAttention",
+      "seq_len": 2048,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 17.37362425774336,
+      "std_time_ms": 0.07067816187576055,
+      "peak_memory_mb": 143.2724609375,
+      "samples": [
+        17.3259312286973,
+        17.473543994128704,
+        17.321397550404072
+      ],
+      "error": null
+    },
+    {
+      "implementation": "BlockSparseRingDilatedAttention",
+      "seq_len": 4096,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 560.0323351100087,
+      "std_time_ms": 283.2266293155838,
+      "peak_memory_mb": 512.21337890625,
+      "samples": [
+        865.6371301040053,
+        182.99731891602278,
+        631.462556309998
+      ],
+      "error": null
+    },
+    {
+      "implementation": "BlockSparseRingDilatedAttention",
+      "seq_len": 8192,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 3856.0916104664407,
+      "std_time_ms": 268.1925067560682,
+      "peak_memory_mb": 1931.603515625,
+      "samples": [
+        3867.2643480822444,
+        3522.180389612913,
+        4178.830093704164
+      ],
+      "error": null
+    }
+  ],
+  "BlockSparseRingDilatedAttentionV2": [
+    {
+      "implementation": "BlockSparseRingDilatedAttentionV2",
+      "seq_len": 2048,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 20.611360979576904,
+      "std_time_ms": 1.296260888099425,
+      "peak_memory_mb": 24.751953125,
+      "samples": [
+        19.72759049385786,
+        19.662328995764256,
+        22.4441634491086
+      ],
+      "error": null
+    },
+    {
+      "implementation": "BlockSparseRingDilatedAttentionV2",
+      "seq_len": 4096,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 68.9516110966603,
+      "std_time_ms": 26.63180595624679,
+      "peak_memory_mb": 40.7529296875,
+      "samples": [
+        106.09789192676544,
+        55.763171054422855,
+        44.99377030879259
+      ],
+      "error": null
+    },
+    {
+      "implementation": "BlockSparseRingDilatedAttentionV2",
+      "seq_len": 8192,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 241.33957518885532,
+      "std_time_ms": 68.5964412301411,
+      "peak_memory_mb": 72.763671875,
+      "samples": [
+        338.33510521799326,
+        194.2937020212412,
+        191.38991832733154
+      ],
+      "error": null
+    }
+  ],
+  "BlockSparseRingMultiheadDilatedAttention": [
+    {
+      "implementation": "BlockSparseRingMultiheadDilatedAttention",
+      "seq_len": 2048,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 2399.4498228033385,
+      "std_time_ms": 367.78091506428177,
+      "peak_memory_mb": 585.1337890625,
+      "samples": [
+        2303.9416735991836,
+        2889.9824507534504,
+        2004.4253440573812
+      ],
+      "error": null
+    },
+    {
+      "implementation": "BlockSparseRingMultiheadDilatedAttention",
+      "seq_len": 4096,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 9633.974408730865,
+      "std_time_ms": 603.0929791911244,
+      "peak_memory_mb": 2181.01171875,
+      "samples": [
+        8807.771779596806,
+        10230.443179607391,
+        9863.708266988397
+      ],
+      "error": null
+    },
+    {
+      "implementation": "BlockSparseRingMultiheadDilatedAttention",
+      "seq_len": 8192,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 0,
+      "std_time_ms": 0,
+      "peak_memory_mb": 0,
+      "samples": [],
+      "error": "CUDA out of memory. Tried to allocate 2.00 GiB. GPU 0 has a total capacity of 7.88 GiB of which 1.57 GiB is free. Process 3093175 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 2.37 GiB memory in use. Of the allocated memory 2.23 GiB is allocated by PyTorch, and 12.85 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)"
+    }
+  ],
+  "BlockSparseRingMultiheadDilatedAttentionV2": [
+    {
+      "implementation": "BlockSparseRingMultiheadDilatedAttentionV2",
+      "seq_len": 2048,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 0,
+      "std_time_ms": 0,
+      "peak_memory_mb": 0,
+      "samples": [],
+      "error": "too many values to unpack (expected 3)"
+    },
+    {
+      "implementation": "BlockSparseRingMultiheadDilatedAttentionV2",
+      "seq_len": 4096,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 0,
+      "std_time_ms": 0,
+      "peak_memory_mb": 0,
+      "samples": [],
+      "error": "too many values to unpack (expected 3)"
+    },
+    {
+      "implementation": "BlockSparseRingMultiheadDilatedAttentionV2",
+      "seq_len": 8192,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 0,
+      "std_time_ms": 0,
+      "peak_memory_mb": 0,
+      "samples": [],
+      "error": "too many values to unpack (expected 3)"
+    }
+  ]
+}

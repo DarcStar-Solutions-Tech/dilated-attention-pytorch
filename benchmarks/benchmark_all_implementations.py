@@ -234,10 +234,10 @@ def create_attention_module(  # noqa: PLR0911, PLR0912
         elif impl_name == "BlockSparseRingDilatedAttention" and BLOCK_SPARSE_AVAILABLE:
             # BlockSparseRingDilatedAttention uses sparse_config parameter
             sparse_config = SparsePatternConfig(
-                sparsity_ratio=0.9,
+                sparsity_ratio=0.1,  # Keep 10% of blocks (90% sparse)
                 block_size=64,
                 local_window_size=256,
-                pattern_type="local_window",
+                pattern_type="dilated_sparse",
             )
             return (
                 BlockSparseRingDilatedAttention(
@@ -252,10 +252,10 @@ def create_attention_module(  # noqa: PLR0911, PLR0912
         elif impl_name == "BlockSparseRingMultiheadDilatedAttention" and BLOCK_SPARSE_AVAILABLE:
             # BlockSparseRingMultiheadDilatedAttention uses sparse_config parameter
             sparse_config = SparsePatternConfig(
-                sparsity_ratio=0.9,
+                sparsity_ratio=0.1,  # Keep 10% of blocks (90% sparse)
                 block_size=64,
                 local_window_size=256,
-                pattern_type="local_window",
+                pattern_type="dilated_sparse",
             )
             return (
                 BlockSparseRingMultiheadDilatedAttention(
