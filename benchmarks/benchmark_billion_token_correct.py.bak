@@ -17,7 +17,7 @@ from typing import Dict, List
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.ring_attention_correct import RingAttentionCorrect
+from dilated_attention_pytorch.ring_dilated_attention_v2 import RingAttentionCorrect
 
 # Import unified benchmark output management
 sys.path.insert(0, str(Path(__file__).parent))
@@ -135,7 +135,7 @@ def test_sequence_length(
 
         try:
             # Create Ring Attention module
-            ring_attention = RingAttentionCorrect(device=device, dtype=dtype)
+            ring_attention = RingDilatedAttentionV2(device=device, dtype=dtype)
 
             # Clear memory
             if device.type == "cuda":

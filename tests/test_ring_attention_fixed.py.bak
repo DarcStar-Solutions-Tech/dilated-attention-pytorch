@@ -8,7 +8,7 @@ Test Fixed Ring Attention implementation to verify:
 import pytest
 import torch
 
-from dilated_attention_pytorch.ring_dilated_attention_fixed import (
+from dilated_attention_pytorch.ring_dilated_attention_v2 import (
     RingDilatedAttentionFixed,
 )
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
@@ -54,7 +54,7 @@ class TestRingAttentionFixed:
         torch.cuda.reset_peak_memory_stats()
 
         # Create module
-        module = RingDilatedAttentionFixed(
+        module = RingDilatedAttentionV2(
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
             ring_size=ring_size,
@@ -130,7 +130,7 @@ class TestRingAttentionFixed:
 
         # Ring attention with different ring sizes
         for ring_size in [1, 2, 4, 8]:
-            ring_module = RingDilatedAttentionFixed(
+            ring_module = RingDilatedAttentionV2(
                 segment_lengths=segment_lengths,
                 dilation_rates=dilation_rates,
                 ring_size=ring_size,
@@ -175,7 +175,7 @@ class TestRingAttentionFixed:
 
         try:
             # Create module
-            module = RingDilatedAttentionFixed(
+            module = RingDilatedAttentionV2(
                 segment_lengths=segment_lengths,
                 dilation_rates=dilation_rates,
                 ring_size=ring_size,

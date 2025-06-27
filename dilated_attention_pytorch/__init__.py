@@ -39,8 +39,15 @@ from .improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttent
 from .long_net import LongNet
 from .multihead_dilated_attention import MultiheadDilatedAttention
 
-# Note: Deprecated Ring Attention implementations have been removed in favor of corrected V2 implementations
-# Use create_multihead_dilated_attention('ring') for Ring Attention functionality
+# Ring Attention implementations
+from .ring_dilated_attention_v2 import RingDilatedAttentionV2
+from .ring_dilated_attention_production import (
+    RingDilatedAttentionProduction,
+    RingAttentionConfig,
+    create_production_ring_attention,
+)
+
+# Note: Use create_multihead_dilated_attention('ring') for Ring Attention functionality
 from .transformer import DilatedTransformerDecoderLayer, DilatedTransformerEncoderLayer
 from .utils.sparse_pattern_utils import (
     PatternConfig,
@@ -57,6 +64,11 @@ __all__ = [
     "BlockSparseRingDilatedAttention",
     "BlockSparseRingDistributedDilatedAttention",
     "BlockSparseRingMultiheadDilatedAttention",
+    # Ring Attention implementations
+    "RingDilatedAttentionV2",
+    "RingDilatedAttentionProduction",
+    "RingAttentionConfig",
+    "create_production_ring_attention",
     # Original implementations
     "DilatedAttention",
     "DilatedTransformerDecoderLayer",

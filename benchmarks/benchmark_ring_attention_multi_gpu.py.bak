@@ -19,7 +19,10 @@ from typing import Dict, Optional
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.ring_dilated_attention_v2 import RingDilatedAttentionV2
+from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
+from dilated_attention_pytorch.ring_dilated_attention_fixed import (
+    RingDilatedAttentionFixed,
+)
 
 # Import unified benchmark output management
 sys.path.insert(0, str(Path(__file__).parent))
@@ -70,7 +73,7 @@ def benchmark_ring_attention_gpu(
     try:
         # Create module based on implementation
         if implementation == "current":
-            module = RingDilatedAttentionV2(
+            module = RingDilatedAttention(
                 segment_lengths=segment_lengths,
                 dilation_rates=dilation_rates,
                 ring_size=world_size,
@@ -78,7 +81,7 @@ def benchmark_ring_attention_gpu(
                 dtype=dtype,
             )
         else:  # "fixed"
-            module = RingDilatedAttentionV2(
+            module = RingDilatedAttentionFixed(
                 segment_lengths=segment_lengths,
                 dilation_rates=dilation_rates,
                 ring_size=world_size,
@@ -181,7 +184,7 @@ def run_single_gpu_baseline(seq_len: int, implementation: str) -> Dict:
     try:
         # Create module
         if implementation == "current":
-            module = RingDilatedAttentionV2(
+            module = RingDilatedAttention(
                 segment_lengths=segment_lengths,
                 dilation_rates=dilation_rates,
                 ring_size=1,
@@ -189,7 +192,7 @@ def run_single_gpu_baseline(seq_len: int, implementation: str) -> Dict:
                 dtype=dtype,
             )
         else:
-            module = RingDilatedAttentionV2(
+            module = RingDilatedAttentionFixed(
                 segment_lengths=segment_lengths,
                 dilation_rates=dilation_rates,
                 ring_size=1,

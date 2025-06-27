@@ -225,11 +225,11 @@ class TestRingAttentionV2:
         v = torch.randn_like(q)
 
         # RingAttentionCorrectV2 (reference with proper normalization)
-        from dilated_attention_pytorch.ring_attention_correct_v2 import (
+        from dilated_attention_pytorch.ring_dilated_attention_v2 import (
             RingAttentionCorrectV2,
         )
 
-        correct_impl = RingAttentionCorrectV2(device=device, dtype=dtype)
+        correct_impl = RingDilatedAttentionV2(device=device, dtype=dtype)
         with torch.no_grad():
             expected = correct_impl(q, k, v, ring_size=ring_size)
 

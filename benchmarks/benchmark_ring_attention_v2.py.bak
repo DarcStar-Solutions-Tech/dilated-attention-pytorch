@@ -22,7 +22,7 @@ from datetime import datetime
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.ring_attention_correct_v2 import RingAttentionCorrectV2
+from dilated_attention_pytorch.ring_dilated_attention_v2 import RingAttentionCorrectV2
 from dilated_attention_pytorch.ring_dilated_attention_v2 import RingDilatedAttentionV2
 
 # Import unified benchmark output management
@@ -67,7 +67,7 @@ def benchmark_implementation(
 
             # Create implementation
             if implementation == "RingAttentionCorrectV2":
-                module = RingAttentionCorrectV2(device=device, dtype=dtype)
+                module = RingDilatedAttentionV2(device=device, dtype=dtype)
             elif implementation == "RingDilatedAttentionV2":
                 # Use simple segment lengths for fair comparison
                 segment_lengths = [min(1024, seq_len // 2)]

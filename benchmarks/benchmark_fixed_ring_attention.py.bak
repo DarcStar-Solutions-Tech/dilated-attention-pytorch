@@ -22,7 +22,7 @@ from typing import Dict
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
-from dilated_attention_pytorch.ring_dilated_attention_fixed import (
+from dilated_attention_pytorch.ring_dilated_attention_v2 import (
     RingDilatedAttentionFixed,
 )
 from dilated_attention_pytorch.true_ring_dilated_attention import (
@@ -204,7 +204,7 @@ def test_memory_scaling():
             implementations.append(
                 (
                     "RingDilatedAttentionFixed",
-                    RingDilatedAttentionFixed(
+                    RingDilatedAttentionV2(
                         segment_lengths=segment_lengths,
                         dilation_rates=dilation_rates,
                         ring_size=ring_size,
@@ -276,7 +276,7 @@ def test_extreme_sequences():
         implementations = [
             (
                 "RingDilatedAttentionFixed",
-                RingDilatedAttentionFixed(
+                RingDilatedAttentionV2(
                     segment_lengths=[min(s, seq_len) for s in segment_lengths],
                     dilation_rates=dilation_rates,
                     ring_size=ring_size,
@@ -367,7 +367,7 @@ def test_performance_comparison():
             [
                 (
                     "RingDilatedAttentionFixed",
-                    RingDilatedAttentionFixed(
+                    RingDilatedAttentionV2(
                         segment_lengths=[min(s, seq_len) for s in segment_lengths],
                         dilation_rates=dilation_rates,
                         ring_size=ring_size,
