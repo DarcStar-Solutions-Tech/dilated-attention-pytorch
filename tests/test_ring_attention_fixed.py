@@ -7,8 +7,6 @@ Test Fixed Ring Attention implementation to verify:
 
 import pytest
 import torch
-import torch.nn.functional as F
-from torch.testing import assert_close
 
 from dilated_attention_pytorch.ring_dilated_attention_fixed import (
     RingDilatedAttentionFixed,

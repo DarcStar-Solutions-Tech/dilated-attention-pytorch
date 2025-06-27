@@ -502,17 +502,18 @@ def _register_implementations():
         # Create a wrapper to match the expected interface
         class RingDilatedAttentionV2Wrapper(BaseDilatedAttention):
             """Wrapper to make RingDilatedAttentionV2 compatible with factory."""
+
             def __init__(self, config):
                 super().__init__(config)
                 self.ring_attention = RingDilatedAttentionV2(
                     segment_lengths=config.segment_lengths,
                     dilation_rates=config.dilation_rates,
                     dropout=config.dropout,
-                    ring_size=getattr(config, 'ring_size', None),
+                    ring_size=getattr(config, "ring_size", None),
                     device=config.device,
                     dtype=config.dtype,
                 )
-            
+
             def forward(self, query, key, value, is_causal=False, attention_mask=None):
                 return self.ring_attention(query, key, value, is_causal, attention_mask)
 
@@ -524,20 +525,8 @@ def _register_implementations():
         # properly wrap the ring attention
 
     except ImportError as e:
-        logger.warning(f"Failed to register ring V2 implementations: {e}")
-        
-        # Fall back to broken implementation with warning
-        try:
-            from ..ring_dilated_attention import RingDilatedAttention
-            
-            logger.warning(
-                "Using deprecated RingDilatedAttention. This implementation is broken "
-                "and will be removed in v0.3.0. Please update your code."
-            )
-            register_attention("ring", RingDilatedAttention)
-            
-        except ImportError as e2:
-            logger.warning(f"Failed to register any ring implementation: {e2}")
+        logger.error(f"Failed to register ring V2 implementations: {e}")
+        logger.error("Ring attention is not available. Please check installation.")
 
     try:
         # Register ring distributed implementation

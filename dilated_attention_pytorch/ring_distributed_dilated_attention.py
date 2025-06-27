@@ -62,8 +62,8 @@ try:
 except ImportError:
     HAS_WANDB = False
 
-from .ring_dilated_attention import RingDilatedAttention
-from .ring_multihead_dilated_attention import RingMultiheadDilatedAttention
+from .ring_dilated_attention_v2 import RingDilatedAttentionV2
+# Note: RingMultiheadDilatedAttention has been removed - using V2 implementation directly
 
 
 class RingDistributedDilatedAttention(nn.Module):
@@ -389,7 +389,7 @@ class RingDistributedDilatedAttention(nn.Module):
             self.norm = None
 
         # Ring attention (handles its own parallelism)
-        self.ring_attention = RingDilatedAttention(
+        self.ring_attention = RingDilatedAttentionV2(
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
             dropout=dropout,

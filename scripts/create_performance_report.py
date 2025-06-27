@@ -13,8 +13,6 @@ docs_benchmarks_dir = Path(__file__).parent.parent / "docs" / "benchmarks"
 benchmarks_dir = Path(__file__).parent.parent / "benchmarks"
 sys.path.insert(0, str(benchmarks_dir))
 
-from core import BenchmarkAggregator, BenchmarkOutputManager
-
 
 def get_all_benchmark_data():
     """Load all benchmark data organized by commit and type."""

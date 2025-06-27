@@ -193,7 +193,7 @@ class RingAttentionCorrect(nn.Module):
         """
         Demonstrate memory savings with different ring sizes.
         """
-        print(f"\nDemonstrating Ring Attention Memory Savings")
+        print("\nDemonstrating Ring Attention Memory Savings")
         print(
             f"Sequence length: {seq_len}, Batch: {batch_size}, Heads: {num_heads}, Dim: {head_dim}"
         )

@@ -9,7 +9,6 @@ Comprehensive benchmark for ALL dilated attention implementations including:
 
 import argparse
 import datetime
-import json
 import os
 import sys
 import time
@@ -516,7 +515,7 @@ def save_results(results: dict[str, list[BenchmarkResult]], output_dir: str, arg
 
     # Save results
     output_paths = output_manager.save_results()
-    print(f"\nResults saved to:")
+    print("\nResults saved to:")
     for path_type, path in output_paths.items():
         print(f"  {path_type}: {path}")
 

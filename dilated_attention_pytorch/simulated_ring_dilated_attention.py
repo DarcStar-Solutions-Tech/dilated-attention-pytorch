@@ -16,7 +16,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 from typing import Optional, List
-import gc
 
 
 class SimulatedRingDilatedAttention(nn.Module):

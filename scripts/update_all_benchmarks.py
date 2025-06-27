@@ -16,8 +16,6 @@ from pathlib import Path
 benchmarks_dir = Path(__file__).parent.parent / "benchmarks"
 sys.path.insert(0, str(benchmarks_dir))
 
-from core import BenchmarkOutputManager
-
 
 def find_benchmark_scripts():
     """Find all benchmark scripts that need updating."""

@@ -3,7 +3,6 @@
 Update all benchmark scripts to use BenchmarkOutputManager.
 """
 
-import sys
 from pathlib import Path
 
 # Scripts that need updating
@@ -159,11 +158,11 @@ def add_all_implementations_output(content: str) -> str:
                 break
 
         if insert_point:
-            save_code = f"""
+            save_code = """
     # Use unified benchmark output management
     output_manager = BenchmarkOutputManager(
         benchmark_type="all-implementations",
-        parameters={{}}
+        parameters={}
     )
     
     # Add all results
@@ -173,7 +172,7 @@ def add_all_implementations_output(content: str) -> str:
     output_paths = output_manager.save_results()
     print(f"\\nResults saved to:")
     for path_type, path in output_paths.items():
-        print(f"  {{path_type}}: {{path}}")
+        print(f"  {path_type}: {path}")
 
 """
             content = content[:insert_point] + save_code + content[insert_point:]
@@ -268,7 +267,7 @@ def add_generic_output(content: str, benchmark_type: str) -> str:
     for var in result_vars:
         if f"{var} = " in content or f"{var}[" in content:
             # Found results variable
-            save_code = f'''
+            save_code = f"""
     # Use unified benchmark output management
     output_manager = BenchmarkOutputManager(
         benchmark_type="{benchmark_type}",
@@ -283,7 +282,7 @@ def add_generic_output(content: str, benchmark_type: str) -> str:
     print(f"\\nResults saved to:")
     for path_type, path in output_paths.items():
         print(f"  {{path_type}}: {{path}}")
-'''
+"""
 
             # Find end of main or end of file
             if "if __name__" in content:

@@ -10,7 +10,6 @@ This script:
 """
 
 import json
-import os
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -178,7 +177,7 @@ def migrate_file(file_path: Path) -> bool:
         elif format_type == "old_list":
             converted_data = convert_old_list_format(data, file_path.name)
         else:
-            print(f"  ✗ Unknown format, creating minimal wrapper")
+            print("  ✗ Unknown format, creating minimal wrapper")
             converted_data = {
                 "metadata": {
                     "benchmark_type": benchmark_type,
@@ -210,7 +209,7 @@ def migrate_file(file_path: Path) -> bool:
         # Save
         output_paths = output_manager.save_results()
 
-        print(f"  ✓ Migrated successfully")
+        print("  ✓ Migrated successfully")
         print(f"  Saved to: {output_paths['json']}")
 
         # Archive original

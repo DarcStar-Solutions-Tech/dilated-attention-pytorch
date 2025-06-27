@@ -15,7 +15,6 @@ import torch
 
 # Import unified benchmark output management
 sys.path.insert(0, str(Path(__file__).parent))
-from core import BenchmarkOutputManager
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

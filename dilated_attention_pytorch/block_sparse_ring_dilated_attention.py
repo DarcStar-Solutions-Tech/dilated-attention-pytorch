@@ -16,7 +16,7 @@ import torch
 from torch import Tensor
 
 from .core.constants import GPU_TYPE, HAS_FLASH_ATTN_3
-from .ring_dilated_attention import RingDilatedAttention
+from .ring_dilated_attention_v2 import RingDilatedAttentionV2
 from .utils.flash_attention_3_utils import create_fa3_block_sparse_mask, get_fa3_config
 
 
@@ -33,7 +33,7 @@ class SparsePatternConfig:
     global_tokens: int = 64  # For global+local patterns
 
 
-class BlockSparseRingDilatedAttention(RingDilatedAttention):
+class BlockSparseRingDilatedAttention(RingDilatedAttentionV2):
     """
     Memory-efficient block-sparse ring dilated attention.
 

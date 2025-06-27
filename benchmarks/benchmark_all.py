@@ -504,7 +504,7 @@ def main():
 
     # Save all outputs
     output_paths = output_manager.save_results()
-    print(f"\nResults saved to:")
+    print("\nResults saved to:")
     for path_type, path in output_paths.items():
         print(f"  {path_type}: {path}")
 

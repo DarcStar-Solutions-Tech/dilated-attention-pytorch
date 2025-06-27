@@ -404,7 +404,7 @@ def main():
     output_manager.add_result("num_gpus", num_gpus)
 
     json_path, md_path = output_manager.save_results()
-    print(f"\nResults saved to:")
+    print("\nResults saved to:")
     print(f"  JSON: {json_path}")
     print(f"  Markdown: {md_path}")
 

@@ -14,7 +14,7 @@ from pathlib import Path
 import sys
 import torch
 import matplotlib.pyplot as plt
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -355,7 +355,7 @@ def main():
 
     # Save and print output paths
     json_path, md_path = output_manager.save_results()
-    print(f"\nResults saved to:")
+    print("\nResults saved to:")
     print(f"  JSON: {json_path}")
     print(f"  Markdown: {md_path}")
     print(f"  Plot: {plot_path}")
