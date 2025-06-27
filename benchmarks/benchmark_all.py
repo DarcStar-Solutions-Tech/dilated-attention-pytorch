@@ -5,11 +5,17 @@ Comprehensive benchmark script for all dilated attention implementations.
 
 import argparse
 import gc
+import sys
 import time
+from pathlib import Path
 
 import numpy as np
 import torch
 from tabulate import tabulate
+
+# Import unified benchmark output management
+sys.path.insert(0, str(Path(__file__).parent))
+from core import BenchmarkOutputManager
 
 # Import all implementations
 from dilated_attention_pytorch import (
@@ -54,6 +60,7 @@ class BenchmarkRunner:
         self.device = torch.device(device)
         self.dtype = dtype
         self.results = []
+        self.all_results_by_impl = {}  # Store results by implementation name
 
     def benchmark_implementation(
         self,
@@ -352,6 +359,12 @@ class BenchmarkRunner:
                     )
 
                     self.results.append(result)
+                    
+                    # Store results by implementation for aggregation
+                    impl_name = result["name"]
+                    if impl_name not in self.all_results_by_impl:
+                        self.all_results_by_impl[impl_name] = []
+                    self.all_results_by_impl[impl_name].append(result)
 
                     if result["success"]:
                         print(f" ✓ {result['mean_time_ms']:.2f}ms")
@@ -456,6 +469,44 @@ def main():
         head_dim=args.head_dim,
     )
     runner.print_summary()
+    
+    # Save results using unified benchmark output management
+    output_manager = BenchmarkOutputManager(
+        benchmark_type="all-implementations",
+        parameters={
+            "device": args.device,
+            "dtype": args.dtype,
+            "batch_sizes": args.batch_sizes,
+            "seq_lens": args.seq_lens,
+            "num_heads": args.num_heads,
+            "head_dim": args.head_dim,
+        }
+    )
+    
+    # Add results organized by implementation
+    for impl_name, impl_results in runner.all_results_by_impl.items():
+        output_manager.add_result(impl_name, impl_results)
+    
+    # Calculate and add summary statistics
+    summary_stats = {}
+    for impl_name, impl_results in runner.all_results_by_impl.items():
+        successful_results = [r for r in impl_results if r.get("success", False)]
+        if successful_results:
+            mean_times = [r["mean_time_ms"] for r in successful_results]
+            summary_stats[impl_name] = {
+                "avg_time_ms": np.mean(mean_times),
+                "min_time_ms": np.min(mean_times),
+                "max_time_ms": np.max(mean_times),
+                "num_configs_tested": len(successful_results),
+            }
+    
+    output_manager.set_summary(summary_stats)
+    
+    # Save all outputs
+    output_paths = output_manager.save_results()
+    print(f"\nResults saved to:")
+    for path_type, path in output_paths.items():
+        print(f"  {path_type}: {path}")
 
 
 if __name__ == "__main__":

@@ -14,11 +14,16 @@ import sys
 import time
 from dataclasses import asdict, dataclass
 
+from pathlib import Path
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
 # Add parent directory to path
+
+# Import unified benchmark output management
+sys.path.insert(0, str(Path(__file__).parent))
+from core import BenchmarkOutputManager
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
@@ -622,6 +627,25 @@ def main():  # noqa: PLR0912
                             f"Comm: {result.communication_overhead_ms:.1f}ms"
                         )
                     else:
+
+    # Use unified benchmark output management
+    if rank == 0:  # Only save from rank 0
+        output_manager = BenchmarkOutputManager(
+            benchmark_type="distributed",
+            parameters={
+                "world_size": world_size,
+                "backend": backend,
+            }
+        )
+        
+        # Add results
+        output_manager.add_result("distributed_results", results)
+        
+        # Save results
+        output_paths = output_manager.save_results()
+        print(f"\nResults saved to:")
+        for path_type, path in output_paths.items():
+            print(f"  {path_type}: {path}")
                         print(f"  {impl:40s}: FAILED - {result.error}")
 
 

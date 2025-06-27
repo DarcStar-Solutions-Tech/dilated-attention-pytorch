@@ -134,18 +134,18 @@ class TestNumericalStability:
 
             # Check gradients are stable
             grad = x.grad
-            assert not torch.isnan(
-                grad
-            ).any(), f"NaN gradients at magnitude {magnitude}"
-            assert not torch.isinf(
-                grad
-            ).any(), f"Inf gradients at magnitude {magnitude}"
+            assert not torch.isnan(grad).any(), (
+                f"NaN gradients at magnitude {magnitude}"
+            )
+            assert not torch.isinf(grad).any(), (
+                f"Inf gradients at magnitude {magnitude}"
+            )
 
             # Check gradient magnitude is reasonable
             grad_norm = grad.norm().item()
-            assert (
-                grad_norm < 1e10
-            ), f"Gradient explosion at magnitude {magnitude}: {grad_norm}"
+            assert grad_norm < 1e10, (
+                f"Gradient explosion at magnitude {magnitude}: {grad_norm}"
+            )
 
             # Clear gradients
             attention.zero_grad()

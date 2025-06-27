@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """Enhanced linting fixes with automatic resolution strategies."""
 
-import json
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 

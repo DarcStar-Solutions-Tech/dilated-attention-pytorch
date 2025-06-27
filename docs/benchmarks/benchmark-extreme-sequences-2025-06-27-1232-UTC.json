@@ -1,0 +1,56 @@
+{
+  "metadata": {
+    "timestamp": "2025-06-27-1232-UTC",
+    "device": "cuda",
+    "gpu": "NVIDIA GeForce GTX 1080",
+    "total_memory_gb": 7.8841552734375,
+    "batch_size": 1,
+    "num_heads": 8,
+    "head_dim": 64,
+    "dtype": "torch.float16"
+  },
+  "results": {
+    "RingDilatedAttention": [
+      {
+        "success": false,
+        "seq_len": 131072,
+        "batch_size": 1,
+        "error": "CUDA error: invalid configuration argument\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n"
+      },
+      {
+        "success": false,
+        "seq_len": 262144,
+        "batch_size": 1,
+        "error": "CUDA error: invalid configuration argument\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n"
+      }
+    ],
+    "BlockSparseRingDilatedAttention": [
+      {
+        "success": true,
+        "seq_len": 131072,
+        "batch_size": 1,
+        "mean_time_ms": 625.1500002108514,
+        "throughput_mtoks": 0.20966488035798106,
+        "peak_memory_gb": 0.6340789794921875,
+        "memory_per_token_mb": 0.004953742027282715,
+        "times": [
+          610.5324570089579,
+          639.767543412745
+        ]
+      },
+      {
+        "success": true,
+        "seq_len": 262144,
+        "batch_size": 1,
+        "mean_time_ms": 2334.9893945269287,
+        "throughput_mtoks": 0.11226774760281541,
+        "peak_memory_gb": 1.259185791015625,
+        "memory_per_token_mb": 0.004918694496154785,
+        "times": [
+          2502.536970190704,
+          2167.4418188631535
+        ]
+      }
+    ]
+  }
+}

@@ -17,8 +17,13 @@ from dataclasses import asdict, dataclass
 
 import matplotlib
 import matplotlib.pyplot as plt
+from pathlib import Path
 import torch
 
+
+# Import unified benchmark output management
+sys.path.insert(0, str(Path(__file__).parent))
+from core import BenchmarkOutputManager
 matplotlib.use("Agg")  # Non-interactive backend
 
 # Add parent directory to path
@@ -473,23 +478,46 @@ def plot_results(results: dict[str, list[BenchmarkResult]], output_dir: str):
     plt.close()
 
 
-def save_results(results: dict[str, list[BenchmarkResult]], output_dir: str):
+def save_results(results: dict[str, list[BenchmarkResult]], output_dir: str, args=None):
     """Save results to JSON file."""
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H%M-UTC")
-
-    # Convert results to dict format
-    results_dict = {}
-    for impl_name, impl_results in results.items():
-        results_dict[impl_name] = [asdict(r) for r in impl_results]
-
-    # Save to file
-    json_path = os.path.join(
-        output_dir, f"benchmark-all-implementations-{timestamp}.json"
+    # Use unified benchmark output management
+    output_manager = BenchmarkOutputManager(
+        benchmark_type="all-implementations",
+        parameters={
+            "sequence_lengths": args.sequence_lengths if args else [],
+            "batch_size": args.batch_size if args else 1,
+            "num_heads": args.num_heads if args else 8,
+            "head_dim": args.head_dim if args else 64,
+            "num_runs": args.num_runs if args else 10,
+        }
     )
-    with open(json_path, "w") as f:
-        json.dump(results_dict, f, indent=2)
-
-    print(f"Results saved to: {json_path}")
+    
+    # Add results for each implementation
+    for impl_name, impl_results in results.items():
+        # Convert BenchmarkResult objects to dicts
+        results_as_dicts = [asdict(r) for r in impl_results]
+        output_manager.add_result(impl_name, results_as_dicts)
+    
+    # Calculate summary statistics
+    summary = {}
+    for impl_name, impl_results in results.items():
+        successful_results = [r for r in impl_results if r.error is None]
+        if successful_results:
+            mean_times = [r.mean_time_ms for r in successful_results]
+            summary[impl_name] = {
+                "avg_time_ms": sum(mean_times) / len(mean_times),
+                "min_time_ms": min(mean_times),
+                "max_time_ms": max(mean_times),
+                "num_configs": len(successful_results),
+            }
+    
+    output_manager.set_summary(summary)
+    
+    # Save results
+    output_paths = output_manager.save_results()
+    print(f"\nResults saved to:")
+    for path_type, path in output_paths.items():
+        print(f"  {path_type}: {path}")
 
 
 def main():
@@ -585,7 +613,7 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
     # Save and plot results
-    save_results(results, args.output_dir)
+    save_results(results, args.output_dir, args)
     plot_results(results, args.output_dir)
 
     # Print summary

@@ -9,11 +9,17 @@ import gc
 import time
 from dataclasses import dataclass
 
+from pathlib import Path
+import sys
 import torch
 
 from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
 
 
+
+# Import unified benchmark output management
+sys.path.insert(0, str(Path(__file__).parent))
+from core import BenchmarkOutputManager
 @dataclass
 class BenchmarkResult:
     seq_len: int
@@ -288,3 +294,18 @@ def run_scaling_benchmark():
 
 if __name__ == "__main__":
     run_scaling_benchmark()
+
+    # Use unified benchmark output management
+    output_manager = BenchmarkOutputManager(
+        benchmark_type="ring-billion-tokens",
+        parameters={}
+    )
+    
+    # Add results
+    output_manager.add_result("results", results)
+    
+    # Save results
+    output_paths = output_manager.save_results()
+    print(f"\nResults saved to:")
+    for path_type, path in output_paths.items():
+        print(f"  {path_type}: {path}")

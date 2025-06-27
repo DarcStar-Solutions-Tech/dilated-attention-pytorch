@@ -17,8 +17,13 @@ from dataclasses import asdict, dataclass
 
 import matplotlib
 import matplotlib.pyplot as plt
+from pathlib import Path
 import torch
 
+
+# Import unified benchmark output management
+sys.path.insert(0, str(Path(__file__).parent))
+from core import BenchmarkOutputManager
 matplotlib.use("Agg")
 
 # Add parent directory to path
@@ -617,3 +622,18 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    # Use unified benchmark output management
+    output_manager = BenchmarkOutputManager(
+        benchmark_type="long-sequences",
+        parameters={}
+    )
+    
+    # Add results
+    output_manager.add_result("results", results)
+    
+    # Save results
+    output_paths = output_manager.save_results()
+    print(f"\nResults saved to:")
+    for path_type, path in output_paths.items():
+        print(f"  {path_type}: {path}")

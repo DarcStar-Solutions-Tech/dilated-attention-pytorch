@@ -334,7 +334,9 @@ class TestPerformanceRegressionAll:
         if device.type == "cuda":
             print(f"  Memory:   {metrics.memory_allocated_mb:.1f}MB allocated")
 
-        assert passed, f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
+        assert passed, (
+            f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
+        )
 
     @pytest.mark.parametrize("batch_size,seq_len,num_heads,head_dim", CONFIGS)
     def test_improved_dilated_attention_performance(
@@ -376,7 +378,9 @@ class TestPerformanceRegressionAll:
         print(f"  Current:  {metrics.execution_time_ms:.2f}ms")
         print(f"  Change:   {regression_pct:+.1f}%")
 
-        assert passed, f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
+        assert passed, (
+            f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
+        )
 
     @pytest.mark.parametrize(
         "batch_size,seq_len,num_heads,head_dim", CONFIGS[:2]
@@ -426,7 +430,9 @@ class TestPerformanceRegressionAll:
         print(f"  Current:  {metrics.execution_time_ms:.2f}ms")
         print(f"  Change:   {regression_pct:+.1f}%")
 
-        assert passed, f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
+        assert passed, (
+            f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
+        )
 
     @pytest.mark.skipif(not RING_AVAILABLE, reason="Ring implementations not available")
     @pytest.mark.parametrize("batch_size,seq_len,num_heads,head_dim", RING_CONFIGS)
@@ -477,7 +483,9 @@ class TestPerformanceRegressionAll:
         print(f"  Current:  {metrics.execution_time_ms:.2f}ms")
         print(f"  Change:   {regression_pct:+.1f}%")
 
-        assert passed, f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
+        assert passed, (
+            f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
+        )
 
     @pytest.mark.skipif(not RING_AVAILABLE, reason="Ring implementations not available")
     @pytest.mark.parametrize("batch_size,seq_len,num_heads,head_dim", RING_CONFIGS[:2])
@@ -532,7 +540,9 @@ class TestPerformanceRegressionAll:
         print(f"  Current:  {metrics.execution_time_ms:.2f}ms")
         print(f"  Change:   {regression_pct:+.1f}%")
 
-        assert passed, f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
+        assert passed, (
+            f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
+        )
 
     @pytest.mark.skipif(
         not BLOCK_SPARSE_AVAILABLE, reason="Block sparse implementations not available"
@@ -590,7 +600,9 @@ class TestPerformanceRegressionAll:
         print(f"  Current:  {metrics.execution_time_ms:.2f}ms")
         print(f"  Change:   {regression_pct:+.1f}%")
 
-        assert passed, f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
+        assert passed, (
+            f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
+        )
 
 
 @pytest.mark.benchmark
