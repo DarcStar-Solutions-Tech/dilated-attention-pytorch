@@ -24,6 +24,10 @@ from dilated_attention_pytorch import create_dilated_attention, create_multihead
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
 from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
 
+# Import unified benchmark output management
+sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+from core import BenchmarkOutputManager
+
 # Create the parser
 parser = argparse.ArgumentParser(description="Benchmarking parameters")
 
@@ -545,12 +549,45 @@ if __name__ == "__main__":
 
             results.append(result_set)
 
-    with open(
-        os.path.join(b_dir, f"results-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"),
-        "w",
-    ) as f:
-        f.write(str(results))
+    # Use unified benchmark output management
+    output_manager = BenchmarkOutputManager(
+        benchmark_type="attention-comparison",
+        parameters={
+            "total_tokens": TOTAL_TOKENS,
+            "token_count": token_count,
+            "embed_dim": EMBED_DIM,
+            "heads": NUM_HEADS,
+            "benchmark_vanilla": BENCHMARK_VANILLA,
+            "benchmark_dilated": BENCHMARK_DILATED,
+            "benchmark_multihead": BENCHMARK_MULTIHEAD,
+            "is_causal": IS_CAUSAL,
+        }
+    )
 
+    # Add results to output manager
+    for i, result_set in enumerate(results):
+        output_manager.add_result(f"sequence_length_{i}", result_set)
+
+    # Set summary metrics
+    if results:
+        # Calculate average performance across all sequence lengths
+        total_runtime = 0
+        for r in results:
+            if r is not None:
+                for impl in ["vanilla", "dilated", "multihead"]:
+                    if impl in r and r[impl] is not None and isinstance(r[impl], dict):
+                        total_runtime += r[impl].get("runtime", 0)
+        
+        output_manager.set_summary({
+            "total_configurations": len(results),
+            "total_runtime_seconds": total_runtime,
+            "average_runtime_per_config": total_runtime / len(results) if results else 0,
+        })
+
+    # Save all outputs
+    output_paths = output_manager.save_results()
+
+    # Update plot and save it
     fig.update_layout(
         title=f"Attention Benchmark on {current_date} <br>"
         f"(Total Tokens = {token_count}) <br>"
@@ -562,6 +599,27 @@ if __name__ == "__main__":
         yaxis_type="log",
     )
 
-    fig.write_image(
-        os.path.join(b_dir, f"tokens-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.png")
-    )
+    # Save plot to temporary location first
+    temp_plot = f"tokens-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.png"
+    plot_path = None
+    
+    try:
+        fig.write_image(temp_plot)
+        
+        # Move plot to organized location using output manager
+        from pathlib import Path
+        plot_path = output_manager.save_plot(Path(temp_plot))
+        
+        # Clean up temporary plot
+        if os.path.exists(temp_plot):
+            os.remove(temp_plot)
+            
+    except Exception as e:
+        logging.warning(f"Could not save plot: {e}")
+        logging.info("Install kaleido for plot export: pip install -U kaleido")
+
+    logging.info(f"Benchmark results saved:")
+    for output_type, path in output_paths.items():
+        logging.info(f"  {output_type}: {path}")
+    if plot_path:
+        logging.info(f"  plot: {plot_path}")

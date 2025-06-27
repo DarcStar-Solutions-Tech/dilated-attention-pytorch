@@ -1,0 +1,29 @@
+{
+  "timestamp": "2025-06-27-1021-UTC",
+  "system": {
+    "gpu": "NVIDIA GeForce GTX 1080",
+    "gpu_type": "generic_cuda",
+    "has_fa2": false,
+    "has_fa3": false
+  },
+  "backend_comparison": {
+    "config": {
+      "batch_size": 2,
+      "seq_len": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "dtype": "torch.float16",
+      "num_runs": 5
+    },
+    "backends": {
+      "pytorch": {
+        "time_ms": 0.5312320232391358,
+        "memory_mb": 42.125
+      },
+      "sdpa": {
+        "time_ms": 1365.826171875,
+        "memory_mb": 42.125
+      }
+    }
+  }
+}

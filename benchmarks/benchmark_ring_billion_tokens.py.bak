@@ -11,11 +11,9 @@ from dataclasses import dataclass
 
 import torch
 
-from benchmarks.core import BenchmarkOutputManager
 from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
 
 
-from benchmarks.core import BenchmarkOutputManager
 @dataclass
 class BenchmarkResult:
     seq_len: int

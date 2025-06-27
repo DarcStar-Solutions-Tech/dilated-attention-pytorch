@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "timestamp": "2025-06-27-1022-UTC",
+    "device": "cuda",
+    "gpu": "NVIDIA GeForce GTX 1080",
+    "total_memory_gb": 7.8841552734375,
+    "batch_size": 1,
+    "num_heads": 8,
+    "head_dim": 64,
+    "dtype": "torch.float16"
+  },
+  "results": {
+    "BlockSparseRingDilatedAttention": [
+      {
+        "success": true,
+        "seq_len": 262144,
+        "batch_size": 1,
+        "mean_time_ms": 2815.838605786363,
+        "throughput_mtoks": 0.09309624474261817,
+        "peak_memory_gb": 1.259185791015625,
+        "memory_per_token_mb": 0.004918694496154785,
+        "times": [
+          2115.8787859603763,
+          2913.3966490626335,
+          3418.24038233608
+        ]
+      }
+    ]
+  }
+}

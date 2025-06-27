@@ -1,0 +1,55 @@
+{
+  "metadata": {
+    "benchmark_type": "attention-comparison",
+    "timestamp": "2025-06-27-1600-UTC",
+    "git_commit": "0bcc7082703f8112ee61ca6392062ca307b8bc2b",
+    "git_dirty": true,
+    "hardware": {
+      "platform": "Linux-6.12.10-76061203-generic-x86_64-with-glibc2.35",
+      "processor": "x86_64",
+      "cpu_count": 6,
+      "gpu_count": 2,
+      "gpu_names": [
+        "NVIDIA GeForce GTX 1080",
+        "NVIDIA GeForce GTX 1080"
+      ],
+      "gpu_memory_gb": [
+        7.8841552734375,
+        7.91705322265625
+      ],
+      "cuda_capability": [
+        "6.1",
+        "6.1"
+      ]
+    },
+    "python_version": "3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:27:36) [GCC 11.2.0]",
+    "torch_version": "2.7.1+cu126",
+    "cuda_version": "12.6",
+    "command_line": "benchmark.py --total_tokens 10 --batch_size 1 --heads 4 --embed_dim 32 --vanilla_seq_lengths 10 --dilated_seq_lengths 10 --no-vanilla --no-multihead --no-permutation",
+    "parameters": {
+      "total_tokens": 1024,
+      "token_count": "0.0M",
+      "embed_dim": 32,
+      "heads": 4,
+      "benchmark_vanilla": false,
+      "benchmark_dilated": true,
+      "benchmark_multihead": false,
+      "is_causal": false
+    }
+  },
+  "results": {
+    "sequence_length_0": {
+      "embed_dim": 32,
+      "num_heads": 4,
+      "token_count": "0.0M",
+      "vanilla": null,
+      "dilated": [],
+      "multihead": null
+    }
+  },
+  "summary": {
+    "total_configurations": 1,
+    "total_runtime_seconds": 0,
+    "average_runtime_per_config": 0.0
+  }
+}

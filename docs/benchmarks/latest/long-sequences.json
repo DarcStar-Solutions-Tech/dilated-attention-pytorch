@@ -1,1 +1,172 @@
-docs/benchmarks/by-type/long-sequences/2025-06-27-0653-UTC/benchmark-long-sequences-2025-06-27-0653-UTC.json
+{
+  "metadata": {
+    "timestamp": "2025-06-27-0653-UTC",
+    "device": "NVIDIA GeForce GTX 1080",
+    "total_memory_gb": 7.8841552734375,
+    "dtype": "float16",
+    "num_heads": 8,
+    "head_dim": 64
+  },
+  "results": {
+    "ImprovedDilatedAttention": [
+      {
+        "implementation": "ImprovedDilatedAttention",
+        "seq_len": 32768,
+        "batch_size": 4,
+        "num_heads": 8,
+        "head_dim": 64,
+        "ring_size": null,
+        "mean_time_ms": 1452.2104328498244,
+        "std_time_ms": 42.17889811843634,
+        "peak_memory_mb": 688.0625,
+        "memory_per_token": 0.005249500274658203,
+        "throughput_tokens_per_sec": 90256.89186296762,
+        "success": true,
+        "error": null
+      },
+      {
+        "implementation": "ImprovedDilatedAttention",
+        "seq_len": 65536,
+        "batch_size": 2,
+        "num_heads": 8,
+        "head_dim": 64,
+        "ring_size": null,
+        "mean_time_ms": 3529.6664675697684,
+        "std_time_ms": 593.9465072005987,
+        "peak_memory_mb": 696.25,
+        "memory_per_token": 0.0053119659423828125,
+        "throughput_tokens_per_sec": 37134.38683350871,
+        "success": true,
+        "error": null
+      }
+    ],
+    "ImprovedMultiheadDilatedAttention": [
+      {
+        "implementation": "ImprovedMultiheadDilatedAttention",
+        "seq_len": 32768,
+        "batch_size": 4,
+        "num_heads": 8,
+        "head_dim": 64,
+        "ring_size": null,
+        "mean_time_ms": 4562.791756354272,
+        "std_time_ms": 393.571350723505,
+        "peak_memory_mb": 1850.1953125,
+        "memory_per_token": 0.014115869998931885,
+        "throughput_tokens_per_sec": 28726.27264162679,
+        "success": true,
+        "error": null
+      },
+      {
+        "implementation": "ImprovedMultiheadDilatedAttention",
+        "seq_len": 65536,
+        "batch_size": 2,
+        "num_heads": 8,
+        "head_dim": 64,
+        "ring_size": null,
+        "mean_time_ms": 4993.801534175873,
+        "std_time_ms": 171.16371542215347,
+        "peak_memory_mb": 1850.2578125,
+        "memory_per_token": 0.014116346836090088,
+        "throughput_tokens_per_sec": 26246.93814982193,
+        "success": true,
+        "error": null
+      }
+    ],
+    "RingDilatedAttention": [
+      {
+        "implementation": "RingDilatedAttention",
+        "seq_len": 32768,
+        "batch_size": 4,
+        "num_heads": 8,
+        "head_dim": 64,
+        "ring_size": 1,
+        "mean_time_ms": 3144.4286736659706,
+        "std_time_ms": 221.64723882451653,
+        "peak_memory_mb": 824.1875,
+        "memory_per_token": 0.006288051605224609,
+        "throughput_tokens_per_sec": 41683.883974759745,
+        "success": true,
+        "error": null
+      },
+      {
+        "implementation": "RingDilatedAttention",
+        "seq_len": 65536,
+        "batch_size": 2,
+        "num_heads": 8,
+        "head_dim": 64,
+        "ring_size": 1,
+        "mean_time_ms": 2438.745290506631,
+        "std_time_ms": 347.06509904935956,
+        "peak_memory_mb": 824.25,
+        "memory_per_token": 0.0062885284423828125,
+        "throughput_tokens_per_sec": 53745.67016499324,
+        "success": true,
+        "error": null
+      }
+    ],
+    "RingMultiheadDilatedAttention": [
+      {
+        "implementation": "RingMultiheadDilatedAttention",
+        "seq_len": 32768,
+        "batch_size": 4,
+        "num_heads": 8,
+        "head_dim": 64,
+        "ring_size": null,
+        "mean_time_ms": 5652.547460049391,
+        "std_time_ms": 748.2395712286234,
+        "peak_memory_mb": 1931.1953125,
+        "memory_per_token": 0.014733850955963135,
+        "throughput_tokens_per_sec": 23188.129056214013,
+        "success": true,
+        "error": null
+      },
+      {
+        "implementation": "RingMultiheadDilatedAttention",
+        "seq_len": 65536,
+        "batch_size": 2,
+        "num_heads": 8,
+        "head_dim": 64,
+        "ring_size": null,
+        "mean_time_ms": 4814.16795309633,
+        "std_time_ms": 1.827244646847248,
+        "peak_memory_mb": 1931.2578125,
+        "memory_per_token": 0.014734327793121338,
+        "throughput_tokens_per_sec": 27226.303958859262,
+        "success": true,
+        "error": null
+      }
+    ],
+    "BlockSparseRingDilatedAttention": [
+      {
+        "implementation": "BlockSparseRingDilatedAttention",
+        "seq_len": 32768,
+        "batch_size": 4,
+        "num_heads": 8,
+        "head_dim": 64,
+        "ring_size": 1,
+        "mean_time_ms": 0,
+        "std_time_ms": 0,
+        "peak_memory_mb": 0,
+        "memory_per_token": 0,
+        "throughput_tokens_per_sec": 0,
+        "success": false,
+        "error": "CUDA out of memory. Tried to allocate 3.80 GiB. GPU 0 has a total capacity of 7.88 GiB of which 3.08 GiB is free. Process 3093175 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 896.00 MiB memory in use. Of the allocated memory 653.89 MiB is allocated by PyTorch, and 116.11 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)"
+      },
+      {
+        "implementation": "BlockSparseRingDilatedAttention",
+        "seq_len": 65536,
+        "batch_size": 2,
+        "num_heads": 8,
+        "head_dim": 64,
+        "ring_size": 1,
+        "mean_time_ms": 0,
+        "std_time_ms": 0,
+        "peak_memory_mb": 0,
+        "memory_per_token": 0,
+        "throughput_tokens_per_sec": 0,
+        "success": false,
+        "error": "CUDA out of memory. Tried to allocate 7.60 GiB. GPU 0 has a total capacity of 7.88 GiB of which 3.10 GiB is free. Process 3093175 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 896.00 MiB memory in use. Of the allocated memory 659.78 MiB is allocated by PyTorch, and 110.22 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)"
+      }
+    ]
+  }
+}

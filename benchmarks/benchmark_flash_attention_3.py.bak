@@ -17,7 +17,6 @@ from datetime import datetime
 
 import torch
 
-from benchmarks.core import BenchmarkOutputManager
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -25,13 +24,10 @@ from dilated_attention_pytorch import (
     BlockSparseRingDilatedAttention,
 )
 from dilated_attention_pytorch.core.constants import GPU_TYPE, HAS_FLASH_ATTN, HAS_FLASH_ATTN_3
-from benchmarks.core import BenchmarkOutputManager
 from dilated_attention_pytorch.utils.attention_utils import get_flash_attention_info
-from benchmarks.core import BenchmarkOutputManager
 from dilated_attention_pytorch.utils.flash_attention_3_utils import benchmark_fa3_vs_fa2
 
 
-from benchmarks.core import BenchmarkOutputManager
 def print_system_info():
     """Print system and Flash Attention information."""
     print("=" * 80)

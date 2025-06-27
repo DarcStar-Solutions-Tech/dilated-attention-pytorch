@@ -10,7 +10,6 @@ import GPUtil
 import psutil
 import torch
 
-from benchmarks.core import BenchmarkOutputManager
 # Import all implementations
 from dilated_attention_pytorch import (
     DilatedAttention,
@@ -25,11 +24,9 @@ from dilated_attention_pytorch.improved_multihead_dilated_attention import (
     ImprovedMultiheadDilatedAttention,
 )
 from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
-from benchmarks.core import BenchmarkOutputManager
 from dilated_attention_pytorch.ring_multihead_dilated_attention import RingMultiheadDilatedAttention
 
 
-from benchmarks.core import BenchmarkOutputManager
 @dataclass
 class BenchmarkResult:
     implementation: str
