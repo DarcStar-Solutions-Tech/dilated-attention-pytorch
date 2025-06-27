@@ -534,7 +534,12 @@ class TestPerformanceRegressionAll:
         # Create module
         segment_lengths = [seq_len // 4, seq_len // 2, seq_len]
         dilation_rates = [1, 2, 4]
-        sparsity_config = {"sparsity_ratio": 0.9, "local_blocks": 2, "pattern_type": "local_window"}
+        sparsity_config = {
+            "sparsity_ratio": 0.1,
+            "block_size": 64,
+            "pattern_type": "local_window",
+            "local_window_size": 256,
+        }
 
         module = BlockSparseRingDilatedAttention(
             segment_lengths=segment_lengths,

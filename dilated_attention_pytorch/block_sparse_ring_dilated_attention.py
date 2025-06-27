@@ -66,7 +66,12 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
 
         super().__init__(segment_lengths, dilation_rates, **filtered_kwargs)
 
-        self.sparse_config = sparse_config or SparsePatternConfig()
+        # Handle both dict and SparsePatternConfig
+        if isinstance(sparse_config, dict):
+            self.sparse_config = SparsePatternConfig(**sparse_config)
+        else:
+            self.sparse_config = sparse_config or SparsePatternConfig()
+
         self.block_size = self.sparse_config.block_size
 
         # Pattern cache - stores only block indices, not full matrices
