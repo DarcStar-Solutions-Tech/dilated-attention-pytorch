@@ -1,0 +1,149 @@
+{
+  "metadata": {
+    "benchmark_type": "memory-pool-performance",
+    "timestamp": "2025-06-27-1616-UTC",
+    "git_commit": "fbade2bf898a470e92f5d76553762e79e8f2b909",
+    "git_dirty": true,
+    "hardware": {
+      "platform": "Linux-6.12.10-76061203-generic-x86_64-with-glibc2.35",
+      "processor": "x86_64",
+      "cpu_count": 6,
+      "gpu_count": 2,
+      "gpu_names": [
+        "NVIDIA GeForce GTX 1080",
+        "NVIDIA GeForce GTX 1080"
+      ],
+      "gpu_memory_gb": [
+        7.8841552734375,
+        7.91705322265625
+      ],
+      "cuda_capability": [
+        "6.1",
+        "6.1"
+      ]
+    },
+    "python_version": "3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:27:36) [GCC 11.2.0]",
+    "torch_version": "2.7.1+cu126",
+    "cuda_version": "12.6",
+    "command_line": "benchmarks/benchmark_memory_pool_improvements.py",
+    "parameters": {
+      "device": "cuda",
+      "test_iterations": 100,
+      "fragmentation_threshold": 0.3
+    }
+  },
+  "results": {
+    "basic_results": [
+      {
+        "test_name": "basic_test_0",
+        "allocation_time_ms": 1.1036759242415428,
+        "reuse_time_ms": 1.011882908642292,
+        "fragmentation_score": 0.1,
+        "memory_used_mb": 0.0146484375,
+        "cache_hits": 4,
+        "bucket_efficiency": 0.5
+      },
+      {
+        "test_name": "basic_test_1",
+        "allocation_time_ms": 2.6593683287501335,
+        "reuse_time_ms": 3.2502543181180954,
+        "fragmentation_score": 0.1,
+        "memory_used_mb": 4.0146484375,
+        "cache_hits": 1,
+        "bucket_efficiency": 0.35714285714285715
+      },
+      {
+        "test_name": "basic_test_2",
+        "allocation_time_ms": 2.185555174946785,
+        "reuse_time_ms": 2.2420231252908707,
+        "fragmentation_score": 0.0,
+        "memory_used_mb": 68.0146484375,
+        "cache_hits": 1,
+        "bucket_efficiency": 0.3333333333333333
+      },
+      {
+        "test_name": "basic_test_3",
+        "allocation_time_ms": 1.9601844251155853,
+        "reuse_time_ms": 1.949322409927845,
+        "fragmentation_score": 0.0,
+        "memory_used_mb": 68.0146484375,
+        "cache_hits": 3,
+        "bucket_efficiency": 0.3157894736842105
+      }
+    ],
+    "enhanced_results": [
+      {
+        "test_name": "enhanced_test_0",
+        "allocation_time_ms": 1.0636979714035988,
+        "reuse_time_ms": 1.017903909087181,
+        "fragmentation_score": 0.1,
+        "memory_used_mb": 0.0146484375,
+        "cache_hits": 4,
+        "bucket_efficiency": 0.5
+      },
+      {
+        "test_name": "enhanced_test_1",
+        "allocation_time_ms": 2.5384463369846344,
+        "reuse_time_ms": 2.5028344243764877,
+        "fragmentation_score": 0.1,
+        "memory_used_mb": 4.0146484375,
+        "cache_hits": 1,
+        "bucket_efficiency": 0.35714285714285715
+      },
+      {
+        "test_name": "enhanced_test_2",
+        "allocation_time_ms": 2.1562669426202774,
+        "reuse_time_ms": 2.1326718851923943,
+        "fragmentation_score": 0.0,
+        "memory_used_mb": 68.0146484375,
+        "cache_hits": 1,
+        "bucket_efficiency": 0.3333333333333333
+      },
+      {
+        "test_name": "enhanced_test_3",
+        "allocation_time_ms": 2.103523351252079,
+        "reuse_time_ms": 2.052750438451767,
+        "fragmentation_score": 0.0,
+        "memory_used_mb": 68.0146484375,
+        "cache_hits": 3,
+        "bucket_efficiency": 0.3157894736842105
+      }
+    ],
+    "fragmentation_test": {
+      "test_name": "fragmented_allocation",
+      "allocation_time_ms": 1.362355425953865,
+      "reuse_time_ms": 1.31931621581316,
+      "fragmentation_score": 0.0,
+      "memory_used_mb": 68.0146484375,
+      "cache_hits": 0,
+      "bucket_efficiency": 0.3157894736842105
+    },
+    "numa_results": [
+      {
+        "test_name": "numa_node_0_device_cuda:0",
+        "allocation_time_ms": 1.8287207931280136,
+        "reuse_time_ms": 1.8206676468253136,
+        "fragmentation_score": 0.0,
+        "memory_used_mb": 68.0146484375,
+        "cache_hits": 0,
+        "bucket_efficiency": 0.3157894736842105
+      },
+      {
+        "test_name": "numa_node_1_device_cuda:1",
+        "allocation_time_ms": 1.7689960077404976,
+        "reuse_time_ms": 1.8444424495100975,
+        "fragmentation_score": 0.0,
+        "memory_used_mb": 68.0146484375,
+        "cache_hits": 0,
+        "bucket_efficiency": 0.3157894736842105
+      }
+    ]
+  },
+  "summary": {
+    "allocation_improvement_pct": 0.5923698467921308,
+    "reuse_improvement_pct": 8.840404906631788,
+    "memory_improvement_pct": 0.0,
+    "avg_bucket_efficiency": 0.3765664160401002,
+    "fragmentation_handled": true
+  }
+}

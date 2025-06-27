@@ -1,0 +1,195 @@
+{
+  "metadata": {
+    "benchmark_type": "attention-memory-efficiency",
+    "timestamp": "2025-06-27-1617-UTC",
+    "git_commit": "fbade2bf898a470e92f5d76553762e79e8f2b909",
+    "git_dirty": true,
+    "hardware": {
+      "platform": "Linux-6.12.10-76061203-generic-x86_64-with-glibc2.35",
+      "processor": "x86_64",
+      "cpu_count": 6,
+      "gpu_count": 2,
+      "gpu_names": [
+        "NVIDIA GeForce GTX 1080",
+        "NVIDIA GeForce GTX 1080"
+      ],
+      "gpu_memory_gb": [
+        7.8841552734375,
+        7.91705322265625
+      ],
+      "cuda_capability": [
+        "6.1",
+        "6.1"
+      ]
+    },
+    "python_version": "3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:27:36) [GCC 11.2.0]",
+    "torch_version": "2.7.1+cu126",
+    "cuda_version": "12.6",
+    "command_line": "benchmarks/benchmark_attention_memory_efficiency.py",
+    "parameters": {
+      "device": "cuda",
+      "test_configs": 4,
+      "implementations": [
+        "improved",
+        "improved_multihead"
+      ]
+    }
+  },
+  "results": {
+    "implementations": {
+      "improved": [
+        {
+          "allocated_gb": 0.140655517578125,
+          "reserved_gb": 0.333984375,
+          "init_overhead_gb": 0.093780517578125,
+          "avg_forward_ms": 16.49340456351638,
+          "min_forward_ms": 16.06209296733141,
+          "pool_buffers": 0,
+          "pool_hot_cache": 0,
+          "bucket_count": 0,
+          "fragmentation_score": 0.0,
+          "test_name": "medium_sequence",
+          "implementation": "improved"
+        },
+        {
+          "allocated_gb": 0.28131103515625,
+          "reserved_gb": 0.642578125,
+          "init_overhead_gb": 0.18756103515625,
+          "avg_forward_ms": 30.74215278029442,
+          "min_forward_ms": 28.910615481436253,
+          "pool_buffers": 0,
+          "pool_hot_cache": 0,
+          "bucket_count": 0,
+          "fragmentation_score": 0.0,
+          "test_name": "long_sequence",
+          "implementation": "improved"
+        },
+        {
+          "allocated_gb": 0.1406402587890625,
+          "reserved_gb": 0.333984375,
+          "init_overhead_gb": 0.0937652587890625,
+          "avg_forward_ms": 26.550248079001904,
+          "min_forward_ms": 15.575956553220749,
+          "pool_buffers": 0,
+          "pool_hot_cache": 0,
+          "bucket_count": 0,
+          "fragmentation_score": 0.0,
+          "test_name": "larger_batch",
+          "implementation": "improved"
+        },
+        {
+          "allocated_gb": 0.2813720703125,
+          "reserved_gb": 0.642578125,
+          "init_overhead_gb": 0.1876220703125,
+          "avg_forward_ms": 38.100244756788015,
+          "min_forward_ms": 33.30265358090401,
+          "pool_buffers": 0,
+          "pool_hot_cache": 0,
+          "bucket_count": 0,
+          "fragmentation_score": 0.0,
+          "test_name": "very_long_sequence",
+          "implementation": "improved"
+        }
+      ],
+      "improved_multihead": [
+        {
+          "allocated_gb": 0.15740203857421875,
+          "reserved_gb": 0.494140625,
+          "init_overhead_gb": 0.11052703857421875,
+          "avg_forward_ms": 158.73701684176922,
+          "min_forward_ms": 69.00413427501917,
+          "pool_buffers": 0,
+          "pool_hot_cache": 0,
+          "bucket_count": 0,
+          "fragmentation_score": 0.0,
+          "test_name": "medium_sequence",
+          "implementation": "improved_multihead"
+        },
+        {
+          "allocated_gb": 0.29012298583984375,
+          "reserved_gb": 0.923828125,
+          "init_overhead_gb": 0.19637298583984375,
+          "avg_forward_ms": 356.77130902186036,
+          "min_forward_ms": 121.79895956069231,
+          "pool_buffers": 0,
+          "pool_hot_cache": 0,
+          "bucket_count": 0,
+          "fragmentation_score": 0.0,
+          "test_name": "long_sequence",
+          "implementation": "improved_multihead"
+        },
+        {
+          "allocated_gb": 0.14945220947265625,
+          "reserved_gb": 0.474609375,
+          "init_overhead_gb": 0.10257720947265625,
+          "avg_forward_ms": 92.7386911585927,
+          "min_forward_ms": 70.54311595857143,
+          "pool_buffers": 0,
+          "pool_hot_cache": 0,
+          "bucket_count": 0,
+          "fragmentation_score": 0.0,
+          "test_name": "larger_batch",
+          "implementation": "improved_multihead"
+        },
+        {
+          "allocated_gb": 0.29018402099609375,
+          "reserved_gb": 0.923828125,
+          "init_overhead_gb": 0.19643402099609375,
+          "avg_forward_ms": 386.408400349319,
+          "min_forward_ms": 161.58580593764782,
+          "pool_buffers": 0,
+          "pool_hot_cache": 0,
+          "bucket_count": 0,
+          "fragmentation_score": 0.0,
+          "test_name": "very_long_sequence",
+          "implementation": "improved_multihead"
+        }
+      ]
+    },
+    "pool_stats": {
+      "total_buffers": 0,
+      "hot_cache_size": 0,
+      "pool_sizes": {
+        "default": 0,
+        "ring": 0,
+        "sparse": 0,
+        "distributed": 0
+      },
+      "bucket_stats": {},
+      "total_allocated_bytes": 0,
+      "memory_by_pool": {
+        "default": 0,
+        "ring": 0,
+        "sparse": 0,
+        "distributed": 0
+      },
+      "active_buffers": 0,
+      "fragmentation_stats": {},
+      "numa_stats": {
+        "numa_node_0": {
+          "devices": [
+            "cuda:0"
+          ],
+          "buffers": 0
+        },
+        "numa_node_1": {
+          "devices": [
+            "cuda:1"
+          ],
+          "buffers": 0
+        }
+      },
+      "config": {
+        "fragmentation_threshold": 0.3,
+        "aggressive_threshold": 0.1,
+        "conservative_threshold": 0.5
+      }
+    }
+  },
+  "summary": {
+    "total_tests": 8,
+    "avg_memory_gb": 0.21639251708984375,
+    "total_pool_buffers": 0,
+    "memory_pool_efficiency": 0.0
+  }
+}
