@@ -25,6 +25,12 @@ from .block_sparse_ring_multihead_dilated_attention import (
 # Optimized Block-Sparse implementations
 from .block_sparse_optimized import BlockSparseOptimized
 from .block_sparse_torch_sparse import BlockSparseTorchSparse
+from .block_sparse_hierarchical import (
+    BlockSparseHierarchical,
+    HierarchicalConfig,
+    create_hierarchical_attention,
+    get_hierarchical_presets,
+)
 
 # Factory functions for easy creation
 from .core import (
@@ -70,6 +76,10 @@ __all__ = [
     "BlockSparseRingMultiheadDilatedAttention",
     "BlockSparseOptimized",
     "BlockSparseTorchSparse",
+    "BlockSparseHierarchical",
+    "HierarchicalConfig",
+    "create_hierarchical_attention",
+    "get_hierarchical_presets",
     # Ring Attention implementations
     "RingDilatedAttentionV2",
     "RingDilatedAttentionProduction",
