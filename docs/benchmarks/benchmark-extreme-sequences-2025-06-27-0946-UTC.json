@@ -1,0 +1,159 @@
+{
+  "metadata": {
+    "timestamp": "2025-06-27-0946-UTC",
+    "device": "cuda",
+    "gpu": "NVIDIA GeForce GTX 1080",
+    "total_memory_gb": 7.8841552734375,
+    "batch_size": 1,
+    "num_heads": 8,
+    "head_dim": 64,
+    "dtype": "torch.float16"
+  },
+  "results": {
+    "BlockSparseRingDilatedAttention": [
+      {
+        "success": true,
+        "seq_len": 32768,
+        "batch_size": 1,
+        "mean_time_ms": 155.93045856803656,
+        "throughput_mtoks": 0.2101449601374863,
+        "peak_memory_gb": 0.16529464721679688,
+        "memory_per_token_mb": 0.005165457725524902,
+        "times": [
+          155.62007948756218,
+          156.24083764851093
+        ]
+      },
+      {
+        "success": true,
+        "seq_len": 65536,
+        "batch_size": 1,
+        "mean_time_ms": 294.890864752233,
+        "throughput_mtoks": 0.22223814920500595,
+        "peak_memory_gb": 0.32155609130859375,
+        "memory_per_token_mb": 0.005024313926696777,
+        "times": [
+          295.97531259059906,
+          293.806416913867
+        ]
+      },
+      {
+        "success": true,
+        "seq_len": 131072,
+        "batch_size": 1,
+        "mean_time_ms": 612.1818562969565,
+        "throughput_mtoks": 0.21410631277582282,
+        "peak_memory_gb": 0.6340789794921875,
+        "memory_per_token_mb": 0.004953742027282715,
+        "times": [
+          613.1020598113537,
+          611.2616527825594
+        ]
+      },
+      {
+        "success": true,
+        "seq_len": 262144,
+        "batch_size": 1,
+        "mean_time_ms": 2138.903721701354,
+        "throughput_mtoks": 0.12255998123724901,
+        "peak_memory_gb": 1.259185791015625,
+        "memory_per_token_mb": 0.004918694496154785,
+        "times": [
+          2172.789671458304,
+          2105.0177719444036
+        ]
+      },
+      {
+        "success": true,
+        "seq_len": 524288,
+        "batch_size": 1,
+        "mean_time_ms": 8496.941775083542,
+        "throughput_mtoks": 0.06170314142170819,
+        "peak_memory_gb": 2.50946044921875,
+        "memory_per_token_mb": 0.004901289939880371,
+        "times": [
+          9721.064486540854,
+          7272.81906362623
+        ]
+      }
+    ],
+    "RingDilatedAttention": [
+      {
+        "success": true,
+        "seq_len": 32768,
+        "batch_size": 1,
+        "mean_time_ms": 286.5617969073355,
+        "throughput_mtoks": 0.11434880836748827,
+        "peak_memory_gb": 0.1954345703125,
+        "memory_per_token_mb": 0.006107330322265625,
+        "times": [
+          277.1834982559085,
+          295.94009555876255
+        ]
+      },
+      {
+        "success": false,
+        "seq_len": 65536,
+        "batch_size": 1,
+        "error": "CUDA error: invalid configuration argument\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n"
+      },
+      {
+        "success": false,
+        "seq_len": 131072,
+        "batch_size": 1,
+        "error": "CUDA error: invalid configuration argument\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n"
+      },
+      {
+        "success": false,
+        "seq_len": 262144,
+        "batch_size": 1,
+        "error": "CUDA error: invalid configuration argument\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n"
+      },
+      {
+        "success": false,
+        "seq_len": 524288,
+        "batch_size": 1,
+        "error": "CUDA error: invalid configuration argument\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n"
+      }
+    ],
+    "ImprovedDilatedAttention": [
+      {
+        "success": true,
+        "seq_len": 32768,
+        "batch_size": 1,
+        "mean_time_ms": 146.22300444170833,
+        "throughput_mtoks": 0.22409606563010362,
+        "peak_memory_gb": 0.1954345703125,
+        "memory_per_token_mb": 0.006107330322265625,
+        "times": [
+          149.42065346986055,
+          143.0253554135561
+        ]
+      },
+      {
+        "success": false,
+        "seq_len": 65536,
+        "batch_size": 1,
+        "error": "CUDA error: invalid configuration argument\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n"
+      },
+      {
+        "success": false,
+        "seq_len": 131072,
+        "batch_size": 1,
+        "error": "CUDA error: invalid configuration argument\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n"
+      },
+      {
+        "success": false,
+        "seq_len": 262144,
+        "batch_size": 1,
+        "error": "CUDA error: invalid configuration argument\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n"
+      },
+      {
+        "success": false,
+        "seq_len": 524288,
+        "batch_size": 1,
+        "error": "CUDA error: invalid configuration argument\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n"
+      }
+    ]
+  }
+}

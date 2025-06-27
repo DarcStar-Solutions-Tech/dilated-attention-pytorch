@@ -1,0 +1,58 @@
+{
+  "metadata": {
+    "timestamp": "2025-06-27-0947-UTC",
+    "device": "cuda",
+    "gpu": "NVIDIA GeForce GTX 1080",
+    "total_memory_gb": 7.8841552734375,
+    "batch_size": 1,
+    "num_heads": 8,
+    "head_dim": 64,
+    "dtype": "torch.float16"
+  },
+  "results": {
+    "BlockSparseRingDilatedAttention": [
+      {
+        "success": true,
+        "seq_len": 524288,
+        "batch_size": 1,
+        "mean_time_ms": 10696.901243180037,
+        "throughput_mtoks": 0.0490130728592327,
+        "peak_memory_gb": 2.00946044921875,
+        "memory_per_token_mb": 0.003924727439880371,
+        "times": [
+          10696.901243180037
+        ]
+      },
+      {
+        "success": true,
+        "seq_len": 786432,
+        "batch_size": 1,
+        "mean_time_ms": 15754.926906898618,
+        "throughput_mtoks": 0.04991657559868746,
+        "peak_memory_gb": 3.009674072265625,
+        "memory_per_token_mb": 0.003918846448262532,
+        "times": [
+          15754.926906898618
+        ]
+      },
+      {
+        "success": false,
+        "seq_len": 1048576,
+        "batch_size": 1,
+        "error": "OOM"
+      },
+      {
+        "success": false,
+        "seq_len": 1572864,
+        "batch_size": 1,
+        "error": "OOM"
+      },
+      {
+        "success": false,
+        "seq_len": 2097152,
+        "batch_size": 1,
+        "error": "OOM"
+      }
+    ]
+  }
+}
