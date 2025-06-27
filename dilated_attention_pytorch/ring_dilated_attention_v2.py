@@ -74,6 +74,243 @@ class RingDilatedAttentionV2(nn.Module):
         self._kv_send_buffer = None
         self._kv_recv_buffer = None
 
+        # Cache for dilated attention indices
+        self._dilated_indices_cache = {}
+
+    def _apply_dilated_attention_pattern(
+        self, query: Tensor, key: Tensor, value: Tensor, is_causal: bool
+    ) -> Tensor:
+        """
+        Apply dilated attention patterns to Q, K, V tensors.
+
+        This method divides attention heads into groups, where each group
+        processes different segment lengths with different dilation rates.
+        """
+        b, n, h, d = query.shape
+        device, dtype = query.device, query.dtype
+
+        # Pre-allocate output
+        output = torch.zeros(b, n, h, d, device=device, dtype=dtype)
+
+        # Calculate head groups for different segment lengths
+        heads_per_group = self._calculate_head_groups(h)
+
+        head_start = 0
+        for i, (segment_len, dilation_rate, group_size) in enumerate(
+            zip(self.segment_lengths, self.dilation_rates, heads_per_group)
+        ):
+            if group_size == 0:
+                continue
+
+            # If sequence is shorter than segment, use the full sequence
+            effective_segment_len = min(segment_len, n)
+
+            head_end = head_start + group_size
+
+            # Apply dilated attention for this head group
+            group_output = self._process_dilated_segment(
+                query[:, :, head_start:head_end, :],
+                key[:, :, head_start:head_end, :],
+                value[:, :, head_start:head_end, :],
+                effective_segment_len,
+                dilation_rate,
+                i,  # offset
+                is_causal,
+            )
+
+            output[:, :, head_start:head_end, :] = group_output
+            head_start = head_end
+
+        return output
+
+    def _calculate_head_groups(self, num_heads: int) -> list[int]:
+        """Calculate how to distribute heads across different segment lengths."""
+        num_segments = len(self.segment_lengths)
+        base_heads = num_heads // num_segments
+        extra_heads = num_heads % num_segments
+
+        head_groups = [base_heads] * num_segments
+
+        # Distribute extra heads to larger segments (later in the list)
+        for i in range(extra_heads):
+            head_groups[-(i + 1)] += 1
+
+        return head_groups
+
+    def _process_dilated_segment(
+        self,
+        q: Tensor,
+        k: Tensor,
+        v: Tensor,
+        segment_len: int,
+        dilation_rate: int,
+        offset: int,
+        is_causal: bool,
+    ) -> Tensor:
+        """
+        Process one dilated segment with the specified dilation rate.
+        """
+        b, n, h, d = q.shape
+
+        # Handle small sequences that don't fit the segment length
+        if n < segment_len:
+            # Use simple attention for small sequences
+            return self._simple_attention(q, k, v, is_causal)
+
+        # Reshape into segments
+        num_segments = n // segment_len
+
+        # Skip if no complete segments
+        if num_segments == 0:
+            return self._simple_attention(q, k, v, is_causal)
+
+        q_seg = q[:, : num_segments * segment_len, :, :].view(
+            b, num_segments, segment_len, h, d
+        )
+        k_seg = k[:, : num_segments * segment_len, :, :].view(
+            b, num_segments, segment_len, h, d
+        )
+        v_seg = v[:, : num_segments * segment_len, :, :].view(
+            b, num_segments, segment_len, h, d
+        )
+
+        # Apply dilation if needed
+        if dilation_rate > 1 or offset > 0:
+            q_seg, k_seg, v_seg = self._apply_dilation(
+                q_seg, k_seg, v_seg, dilation_rate, offset, segment_len
+            )
+
+        # Compute attention within each segment
+        # Reshape for batch matrix multiplication: [b * num_segments, h, segment_len, d]
+        q_flat = q_seg.transpose(2, 3).reshape(b * num_segments, h, segment_len, d)
+        k_flat = k_seg.transpose(2, 3).reshape(b * num_segments, h, segment_len, d)
+        v_flat = v_seg.transpose(2, 3).reshape(b * num_segments, h, segment_len, d)
+
+        # Attention computation
+        scores = torch.matmul(q_flat, k_flat.transpose(-2, -1)) / math.sqrt(d)
+
+        if is_causal:
+            # Apply causal mask within segments
+            causal_mask = torch.triu(
+                torch.ones(segment_len, segment_len, device=q.device), diagonal=1
+            ).bool()
+            scores.masked_fill_(causal_mask.unsqueeze(0).unsqueeze(1), float("-inf"))
+
+        attn_weights = F.softmax(scores, dim=-1)
+        if self.dropout > 0 and self.training:
+            attn_weights = F.dropout(attn_weights, p=self.dropout)
+
+        # Apply attention
+        out_flat = torch.matmul(attn_weights, v_flat)
+
+        # Reshape back: [b, num_segments, h, segment_len, d] -> [b, n, h, d]
+        out_seg = out_flat.reshape(b, num_segments, h, segment_len, d).transpose(2, 3)
+        output = out_seg.reshape(b, num_segments * segment_len, h, d)
+
+        # Handle remaining tokens if sequence length isn't perfectly divisible
+        if num_segments * segment_len < n:
+            remaining_len = n - num_segments * segment_len
+            # Simple attention for remaining tokens
+            q_remain = q[:, -remaining_len:, :, :]
+            k_remain = k[:, -remaining_len:, :, :]
+            v_remain = v[:, -remaining_len:, :, :]
+
+            scores_remain = torch.matmul(
+                q_remain.transpose(1, 2), k_remain.transpose(1, 2).transpose(-2, -1)
+            ) / math.sqrt(d)
+
+            if is_causal:
+                causal_mask_remain = torch.triu(
+                    torch.ones(remaining_len, remaining_len, device=q.device),
+                    diagonal=1,
+                ).bool()
+                scores_remain.masked_fill_(
+                    causal_mask_remain.unsqueeze(0).unsqueeze(1), float("-inf")
+                )
+
+            attn_remain = F.softmax(scores_remain, dim=-1)
+            if self.dropout > 0 and self.training:
+                attn_remain = F.dropout(attn_remain, p=self.dropout)
+
+            out_remain = torch.matmul(attn_remain, v_remain.transpose(1, 2)).transpose(
+                1, 2
+            )
+
+            # Combine outputs
+            full_output = torch.zeros(b, n, h, d, device=q.device, dtype=q.dtype)
+            full_output[:, : num_segments * segment_len, :, :] = output
+            full_output[:, -remaining_len:, :, :] = out_remain
+            output = full_output
+
+        return output
+
+    def _apply_dilation(
+        self,
+        q: Tensor,
+        k: Tensor,
+        v: Tensor,
+        dilation_rate: int,
+        offset: int,
+        segment_len: int,
+    ) -> tuple[Tensor, Tensor, Tensor]:
+        """Apply dilation pattern to the segment tensors."""
+        device = q.device
+        cache_key = (segment_len, dilation_rate, offset, device)
+
+        if cache_key not in self._dilated_indices_cache:
+            # Create dilated indices
+            indices = torch.arange(0, segment_len, device=device)
+            if dilation_rate > 1:
+                # Apply dilation by stepping through with dilation_rate
+                dilated_indices = torch.arange(
+                    offset, segment_len, dilation_rate, device=device
+                )
+                # Pad if necessary to maintain segment length
+                if len(dilated_indices) < segment_len:
+                    # Repeat pattern to fill segment
+                    repeats = (segment_len + len(dilated_indices) - 1) // len(
+                        dilated_indices
+                    )
+                    extended = dilated_indices.repeat(repeats)
+                    dilated_indices = extended[:segment_len]
+
+                self._dilated_indices_cache[cache_key] = dilated_indices % segment_len
+            else:
+                self._dilated_indices_cache[cache_key] = indices
+
+        dilated_indices = self._dilated_indices_cache[cache_key]
+
+        # Apply dilated indexing to K and V
+        k_dilated = k.index_select(
+            2, dilated_indices
+        )  # [b, num_segments, segment_len, h, d]
+        v_dilated = v.index_select(2, dilated_indices)
+
+        return q, k_dilated, v_dilated
+
+    def _simple_attention(
+        self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool
+    ) -> Tensor:
+        """Simple attention for small sequences or fallback cases."""
+        # Standard attention computation
+        scores = torch.matmul(
+            q.transpose(1, 2), k.transpose(1, 2).transpose(-2, -1)
+        ) / math.sqrt(q.size(-1))
+
+        if is_causal:
+            seq_len = q.size(1)
+            causal_mask = torch.triu(
+                torch.ones(seq_len, seq_len, device=q.device), diagonal=1
+            ).bool()
+            scores.masked_fill_(causal_mask.unsqueeze(0).unsqueeze(1), float("-inf"))
+
+        attn = F.softmax(scores, dim=-1)
+        if self.dropout > 0 and self.training:
+            attn = F.dropout(attn, p=self.dropout)
+
+        output = torch.matmul(attn, v.transpose(1, 2)).transpose(1, 2)
+        return output
+
     def forward(
         self,
         query: Tensor,
@@ -116,25 +353,8 @@ class RingDilatedAttentionV2(nn.Module):
     def _single_device_forward(
         self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool
     ) -> Tensor:
-        """Standard dilated attention without ring."""
-        # For now, just do standard attention
-        # In practice, implement dilated attention pattern here
-        scores = torch.matmul(
-            q.transpose(1, 2), k.transpose(1, 2).transpose(-2, -1)
-        ) / math.sqrt(q.size(-1))
-
-        if is_causal:
-            causal_mask = torch.triu(
-                torch.ones(q.size(1), k.size(1), device=q.device), diagonal=1
-            ).bool()
-            scores.masked_fill_(causal_mask.unsqueeze(0).unsqueeze(1), float("-inf"))
-
-        attn = F.softmax(scores, dim=-1)
-        if self.dropout > 0 and self.training:
-            attn = F.dropout(attn, p=self.dropout)
-
-        output = torch.matmul(attn, v.transpose(1, 2)).transpose(1, 2)
-        return output
+        """Dilated attention without ring for single device."""
+        return self._apply_dilated_attention_pattern(q, k, v, is_causal)
 
     def _simulated_ring_forward(
         self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool
@@ -144,15 +364,28 @@ class RingDilatedAttentionV2(nn.Module):
         This demonstrates the memory savings without needing multiple GPUs.
         """
         b, n, h, d = q.shape
-        _ = n // self.ring_size
+        chunk_size = n // self.ring_size
 
-        # Process using the corrected V2 implementation with proper normalization
-        from .ring_attention_correct_v2 import RingAttentionCorrectV2
+        # For simulated ring mode, we process the dilated attention in chunks
+        # to simulate the memory savings of ring attention
+        output = torch.zeros_like(q)
 
-        ring_correct = RingAttentionCorrectV2(
-            dropout=self.dropout, device=self.device, dtype=self.dtype
-        )
-        return ring_correct(q, k, v, ring_size=self.ring_size, is_causal=is_causal)
+        # Process each chunk sequentially to simulate ring behavior
+        for i in range(self.ring_size):
+            start_idx = i * chunk_size
+            end_idx = min((i + 1) * chunk_size, n)
+
+            # Apply dilated attention pattern to this chunk
+            chunk_output = self._apply_dilated_attention_pattern(
+                q[:, start_idx:end_idx],
+                k[:, start_idx:end_idx],
+                v[:, start_idx:end_idx],
+                is_causal,
+            )
+
+            output[:, start_idx:end_idx] = chunk_output
+
+        return output
 
     def _distributed_ring_forward(
         self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool
