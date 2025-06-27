@@ -56,8 +56,13 @@ def analyze_block_sparse(seq_len=4096, num_heads=8, head_dim=64, sparsity_ratio=
     key = torch.randn_like(query)
     value = torch.randn_like(query)
 
-    # Configuration
-    segment_lengths = [1024, 2048, 4096]
+    # Configuration - adjust segment lengths based on sequence length
+    if seq_len <= 2048:
+        segment_lengths = [512, 1024, 2048]
+    elif seq_len <= 4096:
+        segment_lengths = [1024, 2048, 4096]
+    else:
+        segment_lengths = [2048, 4096, 8192]
     dilation_rates = [1, 2, 4]
 
     sparse_config = SparsePatternConfig(
@@ -82,21 +87,32 @@ def analyze_block_sparse(seq_len=4096, num_heads=8, head_dim=64, sparsity_ratio=
     print("\n1. Analyzing Pattern Generation")
     print("-" * 40)
 
-    # Time pattern generation
+    # Time pattern generation by running a dummy forward pass
+    dummy_q = torch.randn(1, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    dummy_k = torch.randn_like(dummy_q)
+    dummy_v = torch.randn_like(dummy_q)
+
+    # Clear pattern cache first
+    model.pattern_cache.clear()
+
     start = time.perf_counter()
-    pattern = model._generate_sparse_pattern(seq_len)
+    with torch.no_grad():
+        _ = model(dummy_q, dummy_k, dummy_v, is_causal=False)
     pattern_time = (time.perf_counter() - start) * 1000
-    print(f"Pattern generation time: {pattern_time:.2f} ms")
-    print(f"Pattern shape: {pattern.shape}")
-    print(f"Pattern sparsity: {(pattern == 0).sum().item() / pattern.numel():.2%}")
+    print(f"First forward pass (includes pattern generation): {pattern_time:.2f} ms")
 
     # Check if pattern is cached
     start = time.perf_counter()
-    _ = model._generate_sparse_pattern(seq_len)
+    with torch.no_grad():
+        _ = model(dummy_q, dummy_k, dummy_v, is_causal=False)
     pattern_time2 = (time.perf_counter() - start) * 1000
-    print(
-        f"Second pattern generation: {pattern_time2:.2f} ms (should be faster if cached)"
-    )
+    print(f"Second forward pass (cached pattern): {pattern_time2:.2f} ms")
+
+    cache_benefit = pattern_time - pattern_time2
+    print(f"Cache benefit: {cache_benefit:.2f} ms saved")
+
+    # Check pattern cache content
+    print(f"Pattern cache size: {len(model.pattern_cache)} entries")
 
     print("\n2. Profiling Forward Pass Components")
     print("-" * 40)
