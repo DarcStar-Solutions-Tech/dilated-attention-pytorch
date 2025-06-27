@@ -1,0 +1,72 @@
+[2025-06-27 09:12:30,550] [INFO] [real_accelerator.py:254:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-06-27 09:12:31,685] [INFO] [logging.py:107:log_dist] [Rank -1] [TorchCheckpointEngine] Initialized with serialization = False
+Device: NVIDIA GeForce GTX 1080
+Total Memory: 7.88 GB
+Data Type: float16
+Sequence Lengths: ['16K', '32K']
+
+Implementations to benchmark: ['ImprovedDilatedAttention', 'ImprovedMultiheadDilatedAttention', 'RingDilatedAttention', 'RingMultiheadDilatedAttention', 'BlockSparseRingDilatedAttention']
+
+============================================================
+Benchmarking sequence length: 16K tokens
+============================================================
+Using batch size: 8
+
+ImprovedDilatedAttention:
+  ImprovedDilatedAttention @ 16K: 884.2ms, 776MB (0.006MB/tok), 0.15M tok/s
+
+ImprovedMultiheadDilatedAttention:
+  ImprovedMultiheadDilatedAttention @ 16K: 1609.3ms, 1938MB (0.015MB/tok), 0.08M tok/s
+
+RingDilatedAttention:
+  RingDilatedAttention @ 16K: 1394.4ms, 976MB (0.007MB/tok), 0.09M tok/s
+
+RingMultiheadDilatedAttention:
+  RingMultiheadDilatedAttention @ 16K: 1926.5ms, 1931MB (0.015MB/tok), 0.07M tok/s
+
+BlockSparseRingDilatedAttention:
+  BlockSparseRingDilatedAttention @ 16K: 887.8ms, 530MB (0.004MB/tok), 0.15M tok/s
+
+============================================================
+Benchmarking sequence length: 32K tokens
+============================================================
+Using batch size: 4
+
+ImprovedDilatedAttention:
+  ImprovedDilatedAttention @ 32K: 1280.5ms, 696MB (0.005MB/tok), 0.10M tok/s
+
+ImprovedMultiheadDilatedAttention:
+  ImprovedMultiheadDilatedAttention @ 32K: 2372.5ms, 1850MB (0.014MB/tok), 0.06M tok/s
+
+RingDilatedAttention:
+  RingDilatedAttention @ 32K: 1163.6ms, 824MB (0.006MB/tok), 0.11M tok/s
+
+RingMultiheadDilatedAttention:
+  RingMultiheadDilatedAttention @ 32K: 2365.0ms, 1931MB (0.015MB/tok), 0.06M tok/s
+
+BlockSparseRingDilatedAttention:
+  BlockSparseRingDilatedAttention @ 32K: 703.5ms, 525MB (0.004MB/tok), 0.19M tok/s
+
+Results saved to: docs/benchmarks/benchmark-long-sequences-2025-06-27-0913-UTC.json
+
+Plot saved to: docs/benchmarks/benchmark-long-sequences-2025-06-27-0913-UTC.png
+
+============================================================
+LONG SEQUENCE BENCHMARK SUMMARY
+============================================================
+
+Sequence Length: 16K tokens
+----------------------------------------
+ImprovedDilatedAttention           :    884.2ms, Mem/tok: 0.006MB, Throughput: 0.15M tok/s
+ImprovedMultiheadDilatedAttention  :   1609.3ms, Mem/tok: 0.015MB, Throughput: 0.08M tok/s
+RingDilatedAttention               :   1394.4ms, Mem/tok: 0.007MB, Throughput: 0.09M tok/s
+RingMultiheadDilatedAttention      :   1926.5ms, Mem/tok: 0.015MB, Throughput: 0.07M tok/s
+BlockSparseRingDilatedAttention    :    887.8ms, Mem/tok: 0.004MB, Throughput: 0.15M tok/s
+
+Sequence Length: 32K tokens
+----------------------------------------
+ImprovedDilatedAttention           :   1280.5ms, Mem/tok: 0.005MB, Throughput: 0.10M tok/s
+ImprovedMultiheadDilatedAttention  :   2372.5ms, Mem/tok: 0.014MB, Throughput: 0.06M tok/s
+RingDilatedAttention               :   1163.6ms, Mem/tok: 0.006MB, Throughput: 0.11M tok/s
+RingMultiheadDilatedAttention      :   2365.0ms, Mem/tok: 0.015MB, Throughput: 0.06M tok/s
+BlockSparseRingDilatedAttention    :    703.5ms, Mem/tok: 0.004MB, Throughput: 0.19M tok/s

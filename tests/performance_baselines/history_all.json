@@ -1,0 +1,780 @@
+[
+  {
+    "timestamp": "2025-06-27T09:16:15.004556",
+    "implementation": "DilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 1.3625366613268852,
+      "memory_allocated_mb": 16.0,
+      "memory_reserved_mb": 22.0,
+      "flops": null,
+      "cuda_time_ms": 1.6053247451782227,
+      "implementation_details": {
+        "segment_lengths": [
+          512,
+          1024,
+          2048
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": false,
+    "regression_pct": 45.054674631682786
+  },
+  {
+    "timestamp": "2025-06-27T09:16:15.053768",
+    "implementation": "DilatedAttention",
+    "config": "b1_s4096_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9193253703415394,
+      "memory_allocated_mb": 44.0,
+      "memory_reserved_mb": 62.0,
+      "flops": null,
+      "cuda_time_ms": 2.9319103240966795,
+      "implementation_details": {
+        "segment_lengths": [
+          1024,
+          2048,
+          4096
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": -4.822382403175833
+  },
+  {
+    "timestamp": "2025-06-27T09:16:15.135721",
+    "implementation": "DilatedAttention",
+    "config": "b1_s8192_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9539289399981499,
+      "memory_allocated_mb": 76.0,
+      "memory_reserved_mb": 114.0,
+      "flops": null,
+      "cuda_time_ms": 5.905475234985351,
+      "implementation_details": {
+        "segment_lengths": [
+          2048,
+          4096,
+          8192
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": -10.950131909031672
+  },
+  {
+    "timestamp": "2025-06-27T09:16:15.171759",
+    "implementation": "DilatedAttention",
+    "config": "b2_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9363099001348019,
+      "memory_allocated_mb": 44.0,
+      "memory_reserved_mb": 114.0,
+      "flops": null,
+      "cuda_time_ms": 2.6067968368530274,
+      "implementation_details": {
+        "segment_lengths": [
+          512,
+          1024,
+          2048
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": -0.37043162816196046
+  },
+  {
+    "timestamp": "2025-06-27T09:16:15.207872",
+    "implementation": "ImprovedDilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.6942398846149445,
+      "memory_allocated_mb": 28.0078125,
+      "memory_reserved_mb": 116.0,
+      "flops": null,
+      "cuda_time_ms": 1.552076816558838,
+      "implementation_details": {
+        "segment_lengths": [
+          512,
+          1024,
+          2048
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": -14.26443336627341
+  },
+  {
+    "timestamp": "2025-06-27T09:16:15.248846",
+    "implementation": "ImprovedDilatedAttention",
+    "config": "b1_s4096_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.6900476291775703,
+      "memory_allocated_mb": 44.015625,
+      "memory_reserved_mb": 116.0,
+      "flops": null,
+      "cuda_time_ms": 2.9210111618041994,
+      "implementation_details": {
+        "segment_lengths": [
+          1024,
+          2048,
+          4096
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": -22.149854382897225
+  },
+  {
+    "timestamp": "2025-06-27T09:16:15.327208",
+    "implementation": "ImprovedDilatedAttention",
+    "config": "b1_s8192_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.6929035298526287,
+      "memory_allocated_mb": 64.03125,
+      "memory_reserved_mb": 118.0,
+      "flops": null,
+      "cuda_time_ms": 5.9270782470703125,
+      "implementation_details": {
+        "segment_lengths": [
+          2048,
+          4096,
+          8192
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": -6.75867235790056
+  },
+  {
+    "timestamp": "2025-06-27T09:16:15.365968",
+    "implementation": "ImprovedDilatedAttention",
+    "config": "b2_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.719490647315979,
+      "memory_allocated_mb": 32.0078125,
+      "memory_reserved_mb": 118.0,
+      "flops": null,
+      "cuda_time_ms": 2.7624448776245116,
+      "implementation_details": {
+        "segment_lengths": [
+          512,
+          1024,
+          2048
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": 2.4567834514222056
+  },
+  {
+    "timestamp": "2025-06-27T09:16:15.418594",
+    "implementation": "MultiheadDilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 1.192899327725172,
+      "memory_allocated_mb": 28.140625,
+      "memory_reserved_mb": 118.0,
+      "flops": null,
+      "cuda_time_ms": 2.2675455093383787,
+      "implementation_details": {}
+    },
+    "passed": true,
+    "regression_pct": -3.6920339785414513
+  },
+  {
+    "timestamp": "2025-06-27T09:16:15.530125",
+    "implementation": "MultiheadDilatedAttention",
+    "config": "b1_s4096_h8_d64",
+    "metrics": {
+      "execution_time_ms": 1.3693908229470253,
+      "memory_allocated_mb": 44.140625,
+      "memory_reserved_mb": 118.0,
+      "flops": null,
+      "cuda_time_ms": 8.86169891357422,
+      "implementation_details": {}
+    },
+    "passed": true,
+    "regression_pct": 13.250348772842571
+  },
+  {
+    "timestamp": "2025-06-27T09:16:15.576498",
+    "implementation": "RingDilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.824656430631876,
+      "memory_allocated_mb": 24.1328125,
+      "memory_reserved_mb": 120.0,
+      "flops": null,
+      "cuda_time_ms": 2.9295616149902344,
+      "implementation_details": {
+        "segment_lengths": [
+          512,
+          1024,
+          2048
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ],
+        "ring_size": 1
+      }
+    },
+    "passed": true,
+    "regression_pct": -6.899270213285632
+  },
+  {
+    "timestamp": "2025-06-27T09:16:15.654302",
+    "implementation": "RingDilatedAttention",
+    "config": "b1_s4096_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.8503174409270287,
+      "memory_allocated_mb": 40.140625,
+      "memory_reserved_mb": 120.0,
+      "flops": null,
+      "cuda_time_ms": 5.480755233764649,
+      "implementation_details": {
+        "segment_lengths": [
+          1024,
+          2048,
+          4096
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ],
+        "ring_size": 1
+      }
+    },
+    "passed": true,
+    "regression_pct": 2.805071402810442
+  },
+  {
+    "timestamp": "2025-06-27T09:16:15.927995",
+    "implementation": "RingDilatedAttention",
+    "config": "b1_s8192_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.8227560669183731,
+      "memory_allocated_mb": 72.15625,
+      "memory_reserved_mb": 160.0,
+      "flops": null,
+      "cuda_time_ms": 23.218893432617186,
+      "implementation_details": {
+        "segment_lengths": [
+          2048,
+          4096,
+          8192
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ],
+        "ring_size": 1
+      }
+    },
+    "passed": true,
+    "regression_pct": -6.809262114654782
+  },
+  {
+    "timestamp": "2025-06-27T09:16:16.880439",
+    "implementation": "RingMultiheadDilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 73.97003574296832,
+      "memory_allocated_mb": 41.0234375,
+      "memory_reserved_mb": 160.0,
+      "flops": null,
+      "cuda_time_ms": 83.30127563476563,
+      "implementation_details": {}
+    },
+    "passed": false,
+    "regression_pct": 330.20794751701357
+  },
+  {
+    "timestamp": "2025-06-27T09:16:17.559147",
+    "implementation": "RingMultiheadDilatedAttention",
+    "config": "b1_s4096_h8_d64",
+    "metrics": {
+      "execution_time_ms": 42.89306839928031,
+      "memory_allocated_mb": 97.0546875,
+      "memory_reserved_mb": 232.0,
+      "flops": null,
+      "cuda_time_ms": 44.91304931640625,
+      "implementation_details": {}
+    },
+    "passed": true,
+    "regression_pct": 16.335268557266865
+  },
+  {
+    "timestamp": "2025-06-27T09:17:12.584590",
+    "implementation": "DilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9499164298176765,
+      "memory_allocated_mb": 16.0,
+      "memory_reserved_mb": 22.0,
+      "flops": null,
+      "cuda_time_ms": 1.5164287567138672,
+      "implementation_details": {
+        "segment_lengths": [
+          512,
+          1024,
+          2048
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": 1.1274210561852496
+  },
+  {
+    "timestamp": "2025-06-27T09:17:26.215997",
+    "implementation": "DilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9031881578266621,
+      "memory_allocated_mb": 16.0,
+      "memory_reserved_mb": 22.0,
+      "flops": null,
+      "cuda_time_ms": 1.5297183990478516,
+      "implementation_details": {
+        "segment_lengths": [
+          512,
+          1024,
+          2048
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": -3.8472372279864073
+  },
+  {
+    "timestamp": "2025-06-27T09:17:26.257221",
+    "implementation": "DilatedAttention",
+    "config": "b1_s4096_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9282676503062248,
+      "memory_allocated_mb": 32.0,
+      "memory_reserved_mb": 62.0,
+      "flops": null,
+      "cuda_time_ms": 2.8864959716796874,
+      "implementation_details": {
+        "segment_lengths": [
+          1024,
+          2048,
+          4096
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": -3.896589500706081
+  },
+  {
+    "timestamp": "2025-06-27T09:17:26.341392",
+    "implementation": "DilatedAttention",
+    "config": "b1_s8192_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.945577397942543,
+      "memory_allocated_mb": 64.0,
+      "memory_reserved_mb": 98.0,
+      "flops": null,
+      "cuda_time_ms": 6.021481704711914,
+      "implementation_details": {
+        "segment_lengths": [
+          2048,
+          4096,
+          8192
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": -11.72975362635729
+  },
+  {
+    "timestamp": "2025-06-27T09:17:26.381780",
+    "implementation": "DilatedAttention",
+    "config": "b2_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9268694557249546,
+      "memory_allocated_mb": 32.0,
+      "memory_reserved_mb": 98.0,
+      "flops": null,
+      "cuda_time_ms": 2.9306880950927736,
+      "implementation_details": {
+        "segment_lengths": [
+          512,
+          1024,
+          2048
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": -1.374957375092546
+  },
+  {
+    "timestamp": "2025-06-27T09:17:26.420967",
+    "implementation": "ImprovedDilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.6618225947022438,
+      "memory_allocated_mb": 16.0078125,
+      "memory_reserved_mb": 100.0,
+      "flops": null,
+      "cuda_time_ms": 1.7149951934814454,
+      "implementation_details": {
+        "segment_lengths": [
+          512,
+          1024,
+          2048
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": -18.26782582612424
+  },
+  {
+    "timestamp": "2025-06-27T09:17:26.461300",
+    "implementation": "ImprovedDilatedAttention",
+    "config": "b1_s4096_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.7339048199355602,
+      "memory_allocated_mb": 32.015625,
+      "memory_reserved_mb": 100.0,
+      "flops": null,
+      "cuda_time_ms": 2.9087743759155273,
+      "implementation_details": {
+        "segment_lengths": [
+          1024,
+          2048,
+          4096
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": -17.20195145199973
+  },
+  {
+    "timestamp": "2025-06-27T09:17:26.540816",
+    "implementation": "ImprovedDilatedAttention",
+    "config": "b1_s8192_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.7019577547907829,
+      "memory_allocated_mb": 64.03125,
+      "memory_reserved_mb": 122.0,
+      "flops": null,
+      "cuda_time_ms": 5.9198463439941404,
+      "implementation_details": {
+        "segment_lengths": [
+          2048,
+          4096,
+          8192
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": -5.540280593922591
+  },
+  {
+    "timestamp": "2025-06-27T09:17:26.580623",
+    "implementation": "ImprovedDilatedAttention",
+    "config": "b2_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.6798067130148411,
+      "memory_allocated_mb": 32.0078125,
+      "memory_reserved_mb": 122.0,
+      "flops": null,
+      "cuda_time_ms": 2.883635139465332,
+      "implementation_details": {
+        "segment_lengths": [
+          512,
+          1024,
+          2048
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ]
+      }
+    },
+    "passed": true,
+    "regression_pct": -3.194281337758489
+  },
+  {
+    "timestamp": "2025-06-27T09:17:26.634711",
+    "implementation": "MultiheadDilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 1.2117456644773483,
+      "memory_allocated_mb": 28.140625,
+      "memory_reserved_mb": 122.0,
+      "flops": null,
+      "cuda_time_ms": 2.27675838470459,
+      "implementation_details": {}
+    },
+    "passed": true,
+    "regression_pct": -2.1704870069132447
+  },
+  {
+    "timestamp": "2025-06-27T09:17:26.711594",
+    "implementation": "MultiheadDilatedAttention",
+    "config": "b1_s4096_h8_d64",
+    "metrics": {
+      "execution_time_ms": 1.1694935150444508,
+      "memory_allocated_mb": 44.140625,
+      "memory_reserved_mb": 122.0,
+      "flops": null,
+      "cuda_time_ms": 5.912956619262696,
+      "implementation_details": {}
+    },
+    "passed": true,
+    "regression_pct": -3.2814107945242914
+  },
+  {
+    "timestamp": "2025-06-27T09:17:26.755016",
+    "implementation": "RingDilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.8491750806570053,
+      "memory_allocated_mb": 24.1328125,
+      "memory_reserved_mb": 124.0,
+      "flops": null,
+      "cuda_time_ms": 3.239279937744141,
+      "implementation_details": {
+        "segment_lengths": [
+          512,
+          1024,
+          2048
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ],
+        "ring_size": 1
+      }
+    },
+    "passed": true,
+    "regression_pct": -4.131203263300767
+  },
+  {
+    "timestamp": "2025-06-27T09:17:26.853338",
+    "implementation": "RingDilatedAttention",
+    "config": "b1_s4096_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.8537405170500278,
+      "memory_allocated_mb": 40.140625,
+      "memory_reserved_mb": 124.0,
+      "flops": null,
+      "cuda_time_ms": 7.7182975769042965,
+      "implementation_details": {
+        "segment_lengths": [
+          1024,
+          2048,
+          4096
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ],
+        "ring_size": 1
+      }
+    },
+    "passed": true,
+    "regression_pct": 3.218928120671634
+  },
+  {
+    "timestamp": "2025-06-27T09:17:26.977120",
+    "implementation": "RingDilatedAttention",
+    "config": "b1_s8192_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.8540868759155273,
+      "memory_allocated_mb": 72.15625,
+      "memory_reserved_mb": 164.0,
+      "flops": null,
+      "cuda_time_ms": 7.600527954101563,
+      "implementation_details": {
+        "segment_lengths": [
+          2048,
+          4096,
+          8192
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ],
+        "ring_size": 1
+      }
+    },
+    "passed": true,
+    "regression_pct": -3.26052959673427
+  },
+  {
+    "timestamp": "2025-06-27T09:17:27.122602",
+    "implementation": "RingMultiheadDilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 7.978367246687412,
+      "memory_allocated_mb": 41.0234375,
+      "memory_reserved_mb": 164.0,
+      "flops": null,
+      "cuda_time_ms": 9.649155426025391,
+      "implementation_details": {}
+    },
+    "passed": true,
+    "regression_pct": -53.59800812235457
+  },
+  {
+    "timestamp": "2025-06-27T09:17:28.292373",
+    "implementation": "RingMultiheadDilatedAttention",
+    "config": "b1_s4096_h8_d64",
+    "metrics": {
+      "execution_time_ms": 98.4550716355443,
+      "memory_allocated_mb": 69.03125,
+      "memory_reserved_mb": 236.0,
+      "flops": null,
+      "cuda_time_ms": 102.643603515625,
+      "implementation_details": {}
+    },
+    "passed": false,
+    "regression_pct": 167.0314255190513
+  },
+  {
+    "timestamp": "2025-06-27T09:17:28.743331",
+    "implementation": "BlockSparseRingDilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 30.36992670968175,
+      "memory_allocated_mb": 77.03125,
+      "memory_reserved_mb": 236.0,
+      "flops": null,
+      "cuda_time_ms": 30.36986389160156,
+      "implementation_details": {
+        "segment_lengths": [
+          512,
+          1024,
+          2048
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ],
+        "ring_size": 1
+      }
+    },
+    "passed": true,
+    "regression_pct": 2.5116067236868855
+  },
+  {
+    "timestamp": "2025-06-27T09:17:29.549762",
+    "implementation": "BlockSparseRingDilatedAttention",
+    "config": "b1_s4096_h8_d64",
+    "metrics": {
+      "execution_time_ms": 61.28219207748771,
+      "memory_allocated_mb": 93.03125,
+      "memory_reserved_mb": 236.0,
+      "flops": null,
+      "cuda_time_ms": 61.28212280273438,
+      "implementation_details": {
+        "segment_lengths": [
+          1024,
+          2048,
+          4096
+        ],
+        "dilation_rates": [
+          1,
+          2,
+          4
+        ],
+        "ring_size": 1
+      }
+    },
+    "passed": true,
+    "regression_pct": 0.5963481065400349
+  }
+]

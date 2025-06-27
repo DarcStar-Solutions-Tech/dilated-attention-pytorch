@@ -1,0 +1,10 @@
+[2025-06-27 09:10:59,617] [INFO] [real_accelerator.py:254:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-06-27 09:11:00,788] [INFO] [logging.py:107:log_dist] [Rank -1] [TorchCheckpointEngine] Initialized with serialization = False
+usage: benchmark_long_sequences.py [-h]
+                                   [--sequence-lengths SEQUENCE_LENGTHS [SEQUENCE_LENGTHS ...]]
+                                   [--implementations IMPLEMENTATIONS [IMPLEMENTATIONS ...]]
+                                   [--num-heads NUM_HEADS]
+                                   [--head-dim HEAD_DIM] [--num-runs NUM_RUNS]
+                                   [--dtype {float16,bfloat16,float32}]
+                                   [--output-dir OUTPUT_DIR]
+benchmark_long_sequences.py: error: unrecognized arguments: --batch-size 1 --heads 8

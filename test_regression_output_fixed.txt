@@ -1,0 +1,211 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.7, pytest-7.4.4, pluggy-1.6.0 -- /home/mharris/apps/anaconda3/bin/python
+cachedir: .pytest_cache
+rootdir: /home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch
+configfile: pyproject.toml
+plugins: cov-6.2.1, anyio-4.6.2
+collecting ... collected 18 items
+
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_dilated_attention_performance[1-2048-8-64] SKIPPEDaseline.) [  5%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_dilated_attention_performance[1-4096-8-64] SKIPPEDaseline.) [ 11%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_dilated_attention_performance[1-8192-8-64] SKIPPEDaseline.) [ 16%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_dilated_attention_performance[2-2048-8-64] SKIPPEDaseline.) [ 22%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_improved_dilated_attention_performance[1-2048-8-64] SKIPPEDent
+as baseline.)                                                            [ 27%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_improved_dilated_attention_performance[1-4096-8-64] SKIPPEDent
+as baseline.)                                                            [ 33%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_improved_dilated_attention_performance[1-8192-8-64] SKIPPEDent
+as baseline.)                                                            [ 38%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_improved_dilated_attention_performance[2-2048-8-64] SKIPPEDent
+as baseline.)                                                            [ 44%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_multihead_dilated_attention_performance[1-2048-8-64] SKIPPEDrent
+as baseline.)                                                            [ 50%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_multihead_dilated_attention_performance[1-4096-8-64] SKIPPEDrent
+as baseline.)                                                            [ 55%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_ring_dilated_attention_performance[1-2048-8-64] SKIPPEDas
+baseline.)                                                               [ 61%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_ring_dilated_attention_performance[1-4096-8-64] SKIPPEDas
+baseline.)                                                               [ 66%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_ring_dilated_attention_performance[1-8192-8-64] SKIPPEDas
+baseline.)                                                               [ 72%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_ring_multihead_dilated_attention_performance[1-2048-8-64] SKIPPED [ 77%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_ring_multihead_dilated_attention_performance[1-4096-8-64] SKIPPED [ 83%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_block_sparse_ring_dilated_attention_performance[1-2048-8-64] FAILED [ 88%]
+tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_block_sparse_ring_dilated_attention_performance[1-4096-8-64] FAILED [ 94%]
+tests/test_performance_regression_all.py::test_update_all_baselines ERROR [100%]
+
+==================================== ERRORS ====================================
+_________________ ERROR at setup of test_update_all_baselines __________________
+file /home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/tests/test_performance_regression_all.py, line 573
+  @pytest.mark.benchmark
+  def test_update_all_baselines(baseline_manager):  # noqa: ARG001
+E       fixture 'baseline_manager' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, cov, doctest_namespace, monkeypatch, no_cover, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/tests/test_performance_regression_all.py:573
+=================================== FAILURES ===================================
+_ TestPerformanceRegressionAll.test_block_sparse_ring_dilated_attention_performance[1-2048-8-64] _
+
+self = <tests.test_performance_regression_all.TestPerformanceRegressionAll object at 0x76e6a2da0f20>
+baseline_manager = <tests.test_performance_regression_all.PerformanceBaseline object at 0x76e6a2da0c50>
+device = device(type='cuda'), batch_size = 1, seq_len = 2048, num_heads = 8
+head_dim = 64
+
+    @pytest.mark.skipif(
+        not BLOCK_SPARSE_AVAILABLE, reason="Block sparse implementations not available"
+    )
+    @pytest.mark.parametrize(
+        "batch_size,seq_len,num_heads,head_dim", CONFIGS[:2]
+    )  # Test smaller configs
+    def test_block_sparse_ring_dilated_attention_performance(
+        self, baseline_manager, device, batch_size, seq_len, num_heads, head_dim
+    ):
+        """Test BlockSparseRingDilatedAttention performance regression."""
+        config = create_test_config(seq_len, batch_size, num_heads, head_dim)
+        implementation = "BlockSparseRingDilatedAttention"
+    
+        # Create module
+        segment_lengths = [seq_len // 4, seq_len // 2, seq_len]
+        dilation_rates = [1, 2, 4]
+        sparsity_config = {"sparsity_ratio": 0.9, "local_blocks": 2, "pattern_type": "local_window"}
+    
+>       module = BlockSparseRingDilatedAttention(
+            segment_lengths=segment_lengths,
+            dilation_rates=dilation_rates,
+            sparsity_config=sparsity_config,
+        ).to(device)
+
+tests/test_performance_regression_all.py:539: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = BlockSparseRingDilatedAttention(segment_lengths=[512, 1024, 2048], dilation_rates=[1, 2, 4], dropout=0.0)
+segment_lengths = [512, 1024, 2048], dilation_rates = [1, 2, 4]
+sparse_config = {'local_blocks': 2, 'pattern_type': 'local_window', 'sparsity_ratio': 0.9}
+kwargs = {}
+block_sparse_params = {'enable_hardware_opt', 'enable_memory_pool', 'enable_packed_comm', 'quality_threshold', 'use_adaptive_sparsity'}
+filtered_kwargs = {}
+
+    def __init__(
+        self,
+        segment_lengths: list[int],
+        dilation_rates: list[int],
+        sparse_config: SparsePatternConfig | None = None,
+        **kwargs,
+    ):
+        """Initialize block-sparse ring dilated attention."""
+        # Extract sparse_config from kwargs if passed there (for compatibility)
+        if "sparse_config" in kwargs:
+            sparse_config = kwargs.pop("sparse_config")
+        if "sparsity_config" in kwargs:
+            sparse_config = kwargs.pop("sparsity_config")
+    
+        # Filter out any remaining BlockSparse-specific parameters
+        block_sparse_params = {
+            "use_adaptive_sparsity",
+            "quality_threshold",
+            "enable_memory_pool",
+            "enable_packed_comm",
+            "enable_hardware_opt",
+        }
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k not in block_sparse_params}
+    
+        super().__init__(segment_lengths, dilation_rates, **filtered_kwargs)
+    
+        self.sparse_config = sparse_config or SparsePatternConfig()
+>       self.block_size = self.sparse_config.block_size
+E       AttributeError: 'dict' object has no attribute 'block_size'
+
+dilated_attention_pytorch/block_sparse_ring_dilated_attention.py:70: AttributeError
+_ TestPerformanceRegressionAll.test_block_sparse_ring_dilated_attention_performance[1-4096-8-64] _
+
+self = <tests.test_performance_regression_all.TestPerformanceRegressionAll object at 0x76e6a2da0fb0>
+baseline_manager = <tests.test_performance_regression_all.PerformanceBaseline object at 0x76e6a2da2d20>
+device = device(type='cuda'), batch_size = 1, seq_len = 4096, num_heads = 8
+head_dim = 64
+
+    @pytest.mark.skipif(
+        not BLOCK_SPARSE_AVAILABLE, reason="Block sparse implementations not available"
+    )
+    @pytest.mark.parametrize(
+        "batch_size,seq_len,num_heads,head_dim", CONFIGS[:2]
+    )  # Test smaller configs
+    def test_block_sparse_ring_dilated_attention_performance(
+        self, baseline_manager, device, batch_size, seq_len, num_heads, head_dim
+    ):
+        """Test BlockSparseRingDilatedAttention performance regression."""
+        config = create_test_config(seq_len, batch_size, num_heads, head_dim)
+        implementation = "BlockSparseRingDilatedAttention"
+    
+        # Create module
+        segment_lengths = [seq_len // 4, seq_len // 2, seq_len]
+        dilation_rates = [1, 2, 4]
+        sparsity_config = {"sparsity_ratio": 0.9, "local_blocks": 2, "pattern_type": "local_window"}
+    
+>       module = BlockSparseRingDilatedAttention(
+            segment_lengths=segment_lengths,
+            dilation_rates=dilation_rates,
+            sparsity_config=sparsity_config,
+        ).to(device)
+
+tests/test_performance_regression_all.py:539: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = BlockSparseRingDilatedAttention(segment_lengths=[1024, 2048, 4096], dilation_rates=[1, 2, 4], dropout=0.0)
+segment_lengths = [1024, 2048, 4096], dilation_rates = [1, 2, 4]
+sparse_config = {'local_blocks': 2, 'pattern_type': 'local_window', 'sparsity_ratio': 0.9}
+kwargs = {}
+block_sparse_params = {'enable_hardware_opt', 'enable_memory_pool', 'enable_packed_comm', 'quality_threshold', 'use_adaptive_sparsity'}
+filtered_kwargs = {}
+
+    def __init__(
+        self,
+        segment_lengths: list[int],
+        dilation_rates: list[int],
+        sparse_config: SparsePatternConfig | None = None,
+        **kwargs,
+    ):
+        """Initialize block-sparse ring dilated attention."""
+        # Extract sparse_config from kwargs if passed there (for compatibility)
+        if "sparse_config" in kwargs:
+            sparse_config = kwargs.pop("sparse_config")
+        if "sparsity_config" in kwargs:
+            sparse_config = kwargs.pop("sparsity_config")
+    
+        # Filter out any remaining BlockSparse-specific parameters
+        block_sparse_params = {
+            "use_adaptive_sparsity",
+            "quality_threshold",
+            "enable_memory_pool",
+            "enable_packed_comm",
+            "enable_hardware_opt",
+        }
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k not in block_sparse_params}
+    
+        super().__init__(segment_lengths, dilation_rates, **filtered_kwargs)
+    
+        self.sparse_config = sparse_config or SparsePatternConfig()
+>       self.block_size = self.sparse_config.block_size
+E       AttributeError: 'dict' object has no attribute 'block_size'
+
+dilated_attention_pytorch/block_sparse_ring_dilated_attention.py:70: AttributeError
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_performance_regression_all.py:312: No baseline for DilatedAttention b1_s2048_h8_d64. Setting current as baseline.
+SKIPPED [1] tests/test_performance_regression_all.py:312: No baseline for DilatedAttention b1_s4096_h8_d64. Setting current as baseline.
+SKIPPED [1] tests/test_performance_regression_all.py:312: No baseline for DilatedAttention b1_s8192_h8_d64. Setting current as baseline.
+SKIPPED [1] tests/test_performance_regression_all.py:312: No baseline for DilatedAttention b2_s2048_h8_d64. Setting current as baseline.
+SKIPPED [1] tests/test_performance_regression_all.py:356: No baseline for ImprovedDilatedAttention b1_s2048_h8_d64. Setting current as baseline.
+SKIPPED [1] tests/test_performance_regression_all.py:356: No baseline for ImprovedDilatedAttention b1_s4096_h8_d64. Setting current as baseline.
+SKIPPED [1] tests/test_performance_regression_all.py:356: No baseline for ImprovedDilatedAttention b1_s8192_h8_d64. Setting current as baseline.
+SKIPPED [1] tests/test_performance_regression_all.py:356: No baseline for ImprovedDilatedAttention b2_s2048_h8_d64. Setting current as baseline.
+SKIPPED [1] tests/test_performance_regression_all.py:404: No baseline for MultiheadDilatedAttention b1_s2048_h8_d64. Setting current as baseline.
+SKIPPED [1] tests/test_performance_regression_all.py:404: No baseline for MultiheadDilatedAttention b1_s4096_h8_d64. Setting current as baseline.
+SKIPPED [1] tests/test_performance_regression_all.py:453: No baseline for RingDilatedAttention b1_s2048_h8_d64. Setting current as baseline.
+SKIPPED [1] tests/test_performance_regression_all.py:453: No baseline for RingDilatedAttention b1_s4096_h8_d64. Setting current as baseline.
+SKIPPED [1] tests/test_performance_regression_all.py:453: No baseline for RingDilatedAttention b1_s8192_h8_d64. Setting current as baseline.
+SKIPPED [1] tests/test_performance_regression_all.py:506: No baseline for RingMultiheadDilatedAttention b1_s2048_h8_d64. Setting current as baseline.
+SKIPPED [1] tests/test_performance_regression_all.py:506: No baseline for RingMultiheadDilatedAttention b1_s4096_h8_d64. Setting current as baseline.
+ERROR tests/test_performance_regression_all.py::test_update_all_baselines
+FAILED tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_block_sparse_ring_dilated_attention_performance[1-2048-8-64]
+FAILED tests/test_performance_regression_all.py::TestPerformanceRegressionAll::test_block_sparse_ring_dilated_attention_performance[1-4096-8-64]
+==================== 2 failed, 15 skipped, 1 error in 6.44s ====================
