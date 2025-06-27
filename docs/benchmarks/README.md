@@ -1,61 +1,43 @@
-# Benchmark Results and Performance Analysis
+# Benchmark Results
 
-This directory contains benchmark results, performance measurements, and optimization findings for the dilated-attention-pytorch project.
+## Latest Results
 
-## Contents
+- [billion-token.md](latest/billion-token.md) → billion-token-benchmark-results-2025-06-26-1136-UTC.md
+- [comparison.md](latest/comparison.md) → benchmark-phase1-bugfix-analysis-2025-06-26-1730-UTC.md
+- [comprehensive.json](latest/comprehensive.json) → benchmark-all-implementations-2025-06-27-0618-UTC.json
+- [comprehensive.png](latest/comprehensive.png) → benchmark-all-implementations-2025-06-27-0618-UTC.png
+- [long-sequences.json](latest/long-sequences.json) → benchmark-long-sequences-2025-06-27-0653-UTC.json
+- [long-sequences.png](latest/long-sequences.png) → benchmark-long-sequences-2025-06-27-0653-UTC.png
 
-### Benchmark Results
-- `benchmark-results-2025-06-26-1136-UTC.md` - Standard benchmark results
-- `benchmark-results-comprehensive-2025-06-26-1136-UTC.md` - Comprehensive performance analysis
-- `billion-token-benchmark-results-2025-06-26-1136-UTC.md` - Extreme scale benchmarks (1B tokens)
+## All Results by Type
 
-### Performance Visualizations
-- `benchmark.png` - Main benchmark visualization
-- `benchmark 64M Tokens.png` - 64M token benchmark results
-- `benchmark-128M-tokens-2025-06-26-1136-UTC.png` - 128M token benchmark
-- `benchmark-256M-tokens-2025-06-26-1136-UTC.png` - 256M token benchmark
-- `benchmark-288M-tokens-2025-06-26-1136-UTC.png` - 288M token benchmark
+### Billion Token
 
-### Optimization Studies
-- `block-sparse-optimization-findings.md` - Block-sparse attention optimization results
-- `advanced-ring-attention-optimizations.md` - Ring attention performance optimizations
+- **2025-06-26-1136-UTC**
+  - [billion-token-benchmark-results-2025-06-26-1136-UTC.md](by-type/billion-token/2025-06-26-1136-UTC/billion-token-benchmark-results-2025-06-26-1136-UTC.md)
 
-## Key Performance Metrics
+### Comparison
 
-### Speed Improvements
-- **Block-Sparse Attention**: 5-50x speedup over dense attention
-- **Ring Attention**: O(n) memory complexity vs O(n²) for standard attention
-- **Flash Attention Integration**: 2-4x speedup on compatible hardware
+- **2025-06-26-1730-UTC**
+  - [benchmark-phase1-bugfix-analysis-2025-06-26-1730-UTC.md](by-type/comparison/2025-06-26-1730-UTC/benchmark-phase1-bugfix-analysis-2025-06-26-1730-UTC.md)
+- **2025-06-26-1726-UTC**
+  - [benchmark-bugfix-comparison-2025-06-26-1726-UTC.md](by-type/comparison/2025-06-26-1726-UTC/benchmark-bugfix-comparison-2025-06-26-1726-UTC.md)
 
-### Memory Efficiency
-- **Standard Attention**: O(n²) memory usage
-- **Ring Attention**: O(n) memory usage
-- **Block-Sparse**: 75-95% memory reduction
+### Comprehensive
 
-### Scalability
-- Successfully tested up to 1 billion tokens
-- Linear scaling with sequence length for Ring Attention
-- Sub-linear scaling for Block-Sparse implementations
+- **2025-06-27-0618-UTC**
+  - [benchmark-all-implementations-2025-06-27-0618-UTC.json](by-type/comprehensive/2025-06-27-0618-UTC/benchmark-all-implementations-2025-06-27-0618-UTC.json)
+  - [benchmark-all-implementations-2025-06-27-0618-UTC.png](by-type/comprehensive/2025-06-27-0618-UTC/benchmark-all-implementations-2025-06-27-0618-UTC.png)
+- **2025-06-26-1729-UTC**
+  - [benchmark-comprehensive-2025-06-26-1729-UTC.png](by-type/comprehensive/2025-06-26-1729-UTC/benchmark-comprehensive-2025-06-26-1729-UTC.png)
+  - [benchmark-comprehensive-results-2025-06-26-1729-UTC.md](by-type/comprehensive/2025-06-26-1729-UTC/benchmark-comprehensive-results-2025-06-26-1729-UTC.md)
 
-## Running Benchmarks
+### Long Sequences
 
-To reproduce these benchmarks, use the scripts in the `benchmarks/` directory at the project root:
+- **2025-06-27-0653-UTC**
+  - [benchmark-long-sequences-2025-06-27-0653-UTC.json](by-type/long-sequences/2025-06-27-0653-UTC/benchmark-long-sequences-2025-06-27-0653-UTC.json)
+  - [benchmark-long-sequences-2025-06-27-0653-UTC.png](by-type/long-sequences/2025-06-27-0653-UTC/benchmark-long-sequences-2025-06-27-0653-UTC.png)
+- **2025-06-27-0638-UTC**
+  - [benchmark-long-sequences-2025-06-27-0638-UTC.json](by-type/long-sequences/2025-06-27-0638-UTC/benchmark-long-sequences-2025-06-27-0638-UTC.json)
+  - [benchmark-long-sequences-2025-06-27-0638-UTC.png](by-type/long-sequences/2025-06-27-0638-UTC/benchmark-long-sequences-2025-06-27-0638-UTC.png)
 
-```bash
-# Basic benchmark
-python benchmarks/benchmark.py
-
-# Comprehensive benchmark
-python benchmarks/benchmark_all.py
-
-# Billion-token benchmark
-python benchmarks/benchmark_ring_billion_tokens.py
-```
-
-## Hardware Tested
-
-- NVIDIA A100 (80GB)
-- NVIDIA H100 (80GB)
-- NVIDIA V100 (32GB)
-- NVIDIA RTX 4090 (24GB)
-- NVIDIA GTX 1080 (8GB)

@@ -615,9 +615,14 @@ class DistributedImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention
         # Output projection
         output = self.out_proj(attn_output)
 
+        # For consistency, always return a tuple when requested
+        # This matches the behavior of nn.MultiheadAttention
         if need_weights:
             return output, None
         else:
+            # Check if we should always return tuple (for compatibility)
+            if getattr(self, "_always_return_tuple", False):
+                return output, None
             return output
 
     def _combine_masks(

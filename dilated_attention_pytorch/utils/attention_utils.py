@@ -10,10 +10,40 @@ import warnings
 from typing import Any
 
 import torch
-import torch.nn.functional as F
+import torch.nn.functional as F  # noqa: N812
 from torch import Tensor
 
-from ..core.constants import HAS_FLASH_ATTN, HAS_SDPA, HAS_XFORMERS
+from ..core.constants import HAS_FLASH_ATTN, HAS_FLASH_ATTN_3, HAS_SDPA, HAS_XFORMERS
+
+
+def get_flash_attention_info() -> dict[str, Any]:
+    """
+    Get Flash Attention version and capability information.
+
+    Returns:
+        Dict with Flash Attention info including version and FA3 availability
+    """
+    info = {
+        "has_flash_attn": HAS_FLASH_ATTN,
+        "has_flash_attn_3": HAS_FLASH_ATTN_3,
+        "version": None,
+        "fa3_optimized_hardware": False,
+    }
+
+    if HAS_FLASH_ATTN:
+        try:
+            import flash_attn
+
+            info["version"] = getattr(flash_attn, "__version__", "unknown")
+        except ImportError:
+            pass
+
+    # Check if hardware is optimized for FA3 (H100/H800)
+    if torch.cuda.is_available():
+        gpu_name = torch.cuda.get_device_name(0).lower()
+        info["fa3_optimized_hardware"] = "h100" in gpu_name or "h800" in gpu_name
+
+    return info
 
 
 def compute_attention_scores(
@@ -62,8 +92,8 @@ def apply_dilated_attention_pattern(
     scores: Tensor,
     segment_length: int,
     dilation_rate: int,
-    group_idx: int,
-    total_groups: int,
+    group_idx: int,  # noqa: ARG001
+    total_groups: int,  # noqa: ARG001
 ) -> Tensor:
     """
     Apply dilated attention pattern to attention scores.
@@ -168,7 +198,7 @@ def create_block_diagonal_mask(
     return mask
 
 
-def optimize_attention_computation(
+def optimize_attention_computation(  # noqa: PLR0912
     q: Tensor,
     k: Tensor,
     v: Tensor,
@@ -194,7 +224,46 @@ def optimize_attention_computation(
     Returns:
         Attention output [..., seq_len, num_heads, head_dim]
     """
-    # Try Flash Attention first
+    # Try Flash Attention 3 first (if available)
+    if HAS_FLASH_ATTN_3 and q.is_cuda:
+        try:
+            # Import FA3 specific function
+            from flash_attn_interface import flash_attn_func_v3
+
+            # Flash Attention 3 expects [batch, seq_len, num_heads, head_dim]
+            original_shape = q.shape
+            if q.dim() > 4:
+                # Flatten batch dimensions
+                q = q.reshape(-1, *q.shape[-3:])
+                k = k.reshape(-1, *k.shape[-3:])
+                v = v.reshape(-1, *v.shape[-3:])
+
+            # FA3 specific optimizations
+            output = flash_attn_func_v3(
+                q,
+                k,
+                v,
+                dropout_p=dropout_p,
+                causal=is_causal,
+                # FA3 supports FP8 precision for H100
+                use_fp8=q.device.type == "cuda"
+                and "h100" in torch.cuda.get_device_name(q.device.index).lower(),
+                # Enable async computation for H100
+                enable_async=True,
+            )
+
+            # Reshape back
+            if len(original_shape) > 4:
+                output = output.reshape(*original_shape[:-3], *output.shape[-3:])
+
+            return output  # noqa: TRY300
+
+        except Exception as e:
+            # Fall back to FA2 if FA3 fails
+            if "flash_attn_func_v3" not in str(e):
+                warnings.warn(f"Flash Attention 3 failed, falling back to FA2: {e}", stacklevel=2)
+
+    # Try Flash Attention 2 (or latest stable)
     if HAS_FLASH_ATTN and q.is_cuda:
         try:
             from flash_attn import flash_attn_func
@@ -221,7 +290,7 @@ def optimize_attention_computation(
             if len(original_shape) > 4:
                 output = output.reshape(*original_shape[:-3], *output.shape[-3:])
 
-            return output
+            return output  # noqa: TRY300
 
         except Exception as e:
             warnings.warn(f"Flash Attention failed, falling back: {e}", stacklevel=2)
@@ -247,7 +316,7 @@ def optimize_attention_computation(
 
             # Transpose back
             output = output.transpose(-3, -2)
-            return output
+            return output  # noqa: TRY300
 
         except Exception as e:
             warnings.warn(f"PyTorch SDPA failed, falling back: {e}", stacklevel=2)
@@ -272,7 +341,7 @@ def optimize_attention_computation(
             )
 
             output = output.reshape(batch_size, seq_len, num_heads, head_dim)
-            return output
+            return output  # noqa: TRY300
 
         except Exception as e:
             warnings.warn(f"xFormers failed, falling back: {e}", stacklevel=2)

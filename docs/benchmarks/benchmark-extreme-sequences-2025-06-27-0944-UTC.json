@@ -1,0 +1,87 @@
+{
+  "metadata": {
+    "timestamp": "2025-06-27-0944-UTC",
+    "device": "cuda",
+    "gpu": "NVIDIA GeForce GTX 1080",
+    "total_memory_gb": 7.8841552734375,
+    "batch_size": 1,
+    "num_heads": 8,
+    "head_dim": 64,
+    "dtype": "torch.float16"
+  },
+  "results": {
+    "BlockSparseRingDilatedAttention": [
+      {
+        "success": true,
+        "seq_len": 32768,
+        "batch_size": 1,
+        "mean_time_ms": 370.3250330872834,
+        "throughput_mtoks": 0.08848443143803562,
+        "peak_memory_gb": 0.16530990600585938,
+        "memory_per_token_mb": 0.0051659345626831055,
+        "times": [
+          375.20666513592005,
+          365.4434010386467
+        ]
+      },
+      {
+        "success": true,
+        "seq_len": 65536,
+        "batch_size": 1,
+        "mean_time_ms": 1157.6923923566937,
+        "throughput_mtoks": 0.0566091652952729,
+        "peak_memory_gb": 0.32158660888671875,
+        "memory_per_token_mb": 0.0050247907638549805,
+        "times": [
+          1469.9257016181946,
+          845.4590830951929
+        ]
+      },
+      {
+        "success": true,
+        "seq_len": 131072,
+        "batch_size": 1,
+        "mean_time_ms": 1750.8434290066361,
+        "throughput_mtoks": 0.07486220516837729,
+        "peak_memory_gb": 0.6341400146484375,
+        "memory_per_token_mb": 0.004954218864440918,
+        "times": [
+          1748.970969580114,
+          1752.7158884331584
+        ]
+      },
+      {
+        "success": true,
+        "seq_len": 262144,
+        "batch_size": 1,
+        "mean_time_ms": 5834.084757603705,
+        "throughput_mtoks": 0.044933183334085317,
+        "peak_memory_gb": 1.259246826171875,
+        "memory_per_token_mb": 0.004918932914733887,
+        "times": [
+          6312.060923315585,
+          5356.108591891825
+        ]
+      },
+      {
+        "success": true,
+        "seq_len": 524288,
+        "batch_size": 1,
+        "mean_time_ms": 11344.924254342914,
+        "throughput_mtoks": 0.04621344208616457,
+        "peak_memory_gb": 2.50946044921875,
+        "memory_per_token_mb": 0.004901289939880371,
+        "times": [
+          11212.693450972438,
+          11477.15505771339
+        ]
+      },
+      {
+        "success": false,
+        "seq_len": 1006592,
+        "batch_size": 1,
+        "error": "OOM"
+      }
+    ]
+  }
+}

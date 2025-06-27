@@ -10,9 +10,7 @@ __version__ = "0.2.0"
 
 # Block-Sparse Ring Attention implementations
 from .block_sparse_ring_dilated_attention import (
-    BlockSparseMemoryPool,
     BlockSparseRingDilatedAttention,
-    ContentAdaptiveSparsity,
     SparsePatternConfig,
 )
 from .block_sparse_ring_distributed_dilated_attention import (
@@ -22,8 +20,6 @@ from .block_sparse_ring_distributed_dilated_attention import (
 )
 from .block_sparse_ring_multihead_dilated_attention import (
     BlockSparseRingMultiheadDilatedAttention,
-    create_adaptive_sparse_multihead_attention,
-    create_block_sparse_multihead_attention,
 )
 
 # Factory functions for easy creation
@@ -59,41 +55,36 @@ from .utils.sparse_pattern_utils import (
 # Note: Optimizations have been integrated into the main block-sparse implementations
 
 __all__ = [
-    # Original implementations
-    "DilatedAttention",
-    "MultiheadDilatedAttention",
-    "ImprovedDilatedAttention",
-    "ImprovedMultiheadDilatedAttention",
-    "DistributedImprovedDilatedAttention",
-    "DistributedImprovedMultiheadDilatedAttention",
-    # "DistributedMultiheadDilatedAttention",  # Old implementation
-    "RingDilatedAttention",
-    "UnfoldRingDilatedAttention",
-    "RingMultiheadDilatedAttention",
-    "DilatedTransformerEncoderLayer",
-    "DilatedTransformerDecoderLayer",
-    "LongNet",
     # Block-Sparse implementations
     "BlockSparseRingDilatedAttention",
-    "BlockSparseRingMultiheadDilatedAttention",
     "BlockSparseRingDistributedDilatedAttention",
-    # Configuration and utility classes
-    "BlockSparseMemoryPool",
-    "SparsePatternConfig",
+    "BlockSparseRingMultiheadDilatedAttention",
+    # Original implementations
+    "DilatedAttention",
+    "DilatedTransformerDecoderLayer",
+    "DilatedTransformerEncoderLayer",
+    "DistributedImprovedDilatedAttention",
+    "DistributedImprovedMultiheadDilatedAttention",
     "DistributedSparseConfig",
     "DistributedSparsePattern",
-    "PatternType",
+    "ImprovedDilatedAttention",
+    "ImprovedMultiheadDilatedAttention",
+    "LongNet",
+    "MultiheadDilatedAttention",
     "PatternConfig",
-    "ContentAdaptiveSparsity",
-    "SparsePatternGenerator",
-    "PatternQualityAnalyzer",
     "PatternOptimizer",
-    # Convenience functions
-    "create_block_sparse_multihead_attention",
-    "create_adaptive_sparse_multihead_attention",
+    "PatternQualityAnalyzer",
+    "PatternType",
+    # "DistributedMultiheadDilatedAttention",  # Old implementation
+    "RingDilatedAttention",
+    "RingMultiheadDilatedAttention",
+    # Configuration and utility classes
+    "SparsePatternConfig",
+    "SparsePatternGenerator",
+    "UnfoldRingDilatedAttention",
+    "create_adaptive_sparse_attention",
+    "create_block_sparse_attention",
     # Factory functions (v0.2.0+)
     "create_dilated_attention",
     "create_multihead_dilated_attention",
-    "create_block_sparse_attention",
-    "create_adaptive_sparse_attention",
 ]
