@@ -1,0 +1,165 @@
+name: Multi-GPU Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+      - develop
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      gpu_count:
+        description: 'Number of GPUs to use'
+        required: false
+        default: '2'
+        type: choice
+        options:
+          - '2'
+          - '4'
+          - '8'
+
+jobs:
+  multi-gpu-tests:
+    name: Multi-GPU Tests (${{ matrix.gpu_count }} GPUs)
+    runs-on: [self-hosted, gpu-multi]  # Requires self-hosted runner with multiple GPUs
+    strategy:
+      matrix:
+        gpu_count: [2, 4]
+        python-version: ["3.10", "3.11"]
+      fail-fast: false
+    
+    timeout-minutes: 60
+    
+    env:
+      CUDA_VISIBLE_DEVICES: ${{ matrix.gpu_count == 2 && '0,1' || matrix.gpu_count == 4 && '0,1,2,3' || '0,1,2,3,4,5,6,7' }}
+      PYTORCH_CUDA_ALLOC_CONF: "max_split_size_mb:512"
+      
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Check GPU availability
+        run: |
+          nvidia-smi
+          python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'GPU count: {torch.cuda.device_count()}')"
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install uv
+          uv pip install -e ".[distributed,test]"
+      
+      - name: Run distributed Ring Attention tests
+        run: |
+          export WORLD_SIZE=${{ matrix.gpu_count }}
+          python -m pytest tests/test_distributed_ring_attention.py \
+            -v \
+            --tb=short \
+            --durations=10 \
+            -m "not slow"
+      
+      - name: Run distributed integration tests
+        run: |
+          export WORLD_SIZE=${{ matrix.gpu_count }}
+          python -m pytest tests/test_distributed_ring_integration.py \
+            -v \
+            --tb=short \
+            --durations=10 \
+            -m "not slow"
+      
+      - name: Run multi-GPU stress tests
+        if: matrix.gpu_count >= 2
+        run: |
+          # Test with actual distributed launch
+          torchrun --nproc_per_node=${{ matrix.gpu_count }} \
+            -m pytest tests/test_memory_pool_stress.py::TestMemoryPoolStress::test_memory_pressure_handling \
+            -v
+      
+      - name: Run ring attention scaling tests
+        if: matrix.gpu_count >= 4
+        run: |
+          # Test extreme sequence lengths with 4+ GPUs
+          python tests/test_true_ring_attention.py \
+            --max-seq-len 1048576 \
+            --num-gpus ${{ matrix.gpu_count }}
+      
+      - name: Performance benchmarks (multi-GPU)
+        if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[benchmark]')
+        run: |
+          python benchmarks/benchmark_distributed.py \
+            --num-gpus ${{ matrix.gpu_count }} \
+            --output results/benchmark_${matrix.gpu_count}gpu_$(date +%Y%m%d_%H%M%S).json
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-gpu-test-results-${{ matrix.gpu_count }}gpu-py${{ matrix.python-version }}
+          path: |
+            test-results/
+            results/
+            
+  distributed-training-test:
+    name: Distributed Training Test
+    runs-on: [self-hosted, gpu-cluster]  # Requires cluster setup
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[distributed]')
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up distributed environment
+        run: |
+          # Set up Slurm or similar cluster management
+          echo "Setting up distributed environment..."
+          
+      - name: Launch distributed training
+        run: |
+          # Example using Slurm
+          sbatch scripts/distributed_training_test.sh
+          
+      - name: Monitor training
+        timeout-minutes: 30
+        run: |
+          # Monitor distributed training logs
+          scripts/monitor_distributed_training.sh
+          
+      - name: Collect results
+        if: always()
+        run: |
+          # Collect logs and metrics from all nodes
+          scripts/collect_distributed_results.sh
+          
+      - name: Upload distributed training artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: distributed-training-results
+          path: |
+            distributed-logs/
+            distributed-metrics/
+
+  notification:
+    name: Notify Results
+    needs: [multi-gpu-tests, distributed-training-test]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Send notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            Multi-GPU Tests: ${{ needs.multi-gpu-tests.result }}
+            Distributed Training: ${{ needs.distributed-training-test.result || 'skipped' }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        if: env.SLACK_WEBHOOK != ''

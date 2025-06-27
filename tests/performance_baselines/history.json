@@ -82,5 +82,89 @@
     },
     "passed": true,
     "regression_pct": -1.0263793089114344
+  },
+  {
+    "timestamp": "2025-06-26T21:07:33.531594",
+    "implementation": "DilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9920226410031319,
+      "memory_allocated_mb": 16.0,
+      "memory_reserved_mb": 22.0,
+      "flops": null,
+      "cuda_time_ms": 1.5859711647033692
+    },
+    "passed": true,
+    "regression_pct": -4.234628604205607
+  },
+  {
+    "timestamp": "2025-06-26T21:07:33.576623",
+    "implementation": "DilatedAttention",
+    "config": "b1_s4096_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9667493402957916,
+      "memory_allocated_mb": 32.0,
+      "memory_reserved_mb": 62.0,
+      "flops": null,
+      "cuda_time_ms": 3.078009605407715
+    },
+    "passed": true,
+    "regression_pct": -33.96302323421375
+  },
+  {
+    "timestamp": "2025-06-26T21:07:33.654023",
+    "implementation": "DilatedAttention",
+    "config": "b1_s8192_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9771133773028851,
+      "memory_allocated_mb": 64.0,
+      "memory_reserved_mb": 98.0,
+      "flops": null,
+      "cuda_time_ms": 5.628620910644531
+    },
+    "passed": true,
+    "regression_pct": -3.083959861549504
+  },
+  {
+    "timestamp": "2025-06-26T21:39:10.862658",
+    "implementation": "DilatedAttention",
+    "config": "b1_s2048_h8_d64",
+    "metrics": {
+      "execution_time_ms": 1.0601560585200787,
+      "memory_allocated_mb": 16.0,
+      "memory_reserved_mb": 22.0,
+      "flops": null,
+      "cuda_time_ms": 1.6841728210449218
+    },
+    "passed": true,
+    "regression_pct": 2.342662843877919
+  },
+  {
+    "timestamp": "2025-06-26T21:39:10.909827",
+    "implementation": "DilatedAttention",
+    "config": "b1_s4096_h8_d64",
+    "metrics": {
+      "execution_time_ms": 0.9512773714959621,
+      "memory_allocated_mb": 32.0,
+      "memory_reserved_mb": 62.0,
+      "flops": null,
+      "cuda_time_ms": 3.1718399047851564
+    },
+    "passed": true,
+    "regression_pct": -35.01988668533615
+  },
+  {
+    "timestamp": "2025-06-26T21:39:10.994055",
+    "implementation": "DilatedAttention",
+    "config": "b1_s8192_h8_d64",
+    "metrics": {
+      "execution_time_ms": 1.085787732154131,
+      "memory_allocated_mb": 64.0,
+      "memory_reserved_mb": 98.0,
+      "flops": null,
+      "cuda_time_ms": 6.160383987426758
+    },
+    "passed": true,
+    "regression_pct": 7.695022784103873
   }
 ]

@@ -1,0 +1,145 @@
+name: Simulated Multi-GPU Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+  workflow_dispatch:
+
+jobs:
+  simulated-distributed-tests:
+    name: Simulated Distributed Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+        simulated-gpus: [2, 4]
+      fail-fast: false
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.cache/uv
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install hatch
+          hatch env create
+      
+      - name: Run simulated distributed tests
+        run: |
+          # Set environment for simulated distributed mode
+          export SIMULATED_DISTRIBUTED=1
+          export WORLD_SIZE=${{ matrix.simulated-gpus }}
+          
+          # Run tests that can work in simulated mode
+          hatch run test tests/test_distributed_ring_attention.py \
+            -v \
+            --tb=short \
+            -k "not test_communication" \
+            -m "not requires_gpu"
+      
+      - name: Run mock distributed integration tests
+        run: |
+          export SIMULATED_DISTRIBUTED=1
+          export WORLD_SIZE=${{ matrix.simulated-gpus }}
+          
+          # These tests use mocked distributed environment
+          hatch run test tests/test_distributed_ring_integration.py::TestDistributedIntegration \
+            -v \
+            --tb=short \
+            -k "test_multi_gpu_communication_pattern or test_hierarchical_parallelism"
+      
+      - name: Test distributed configurations
+        run: |
+          # Test various distributed configurations
+          python -c "
+import torch
+from dilated_attention_pytorch import RingDistributedDilatedAttention
+from unittest.mock import patch
+
+# Mock distributed environment
+with patch('torch.distributed.is_initialized', return_value=True), \
+     patch('torch.distributed.get_world_size', return_value=${{ matrix.simulated-gpus }}), \
+     patch('torch.distributed.get_rank', return_value=0):
+    
+    # Test configuration validation
+    model = RingDistributedDilatedAttention(
+        embed_dim=512,
+        num_heads=8,
+        segment_lengths=[1024, 2048],
+        dilation_rates=[1, 2],
+        ring_size=${{ matrix.simulated-gpus }},
+    )
+    
+    print(f'Successfully created model with {model.ring_size} simulated GPUs')
+"
+      
+      - name: Memory scaling simulation
+        run: |
+          # Simulate memory usage across different GPU counts
+          python scripts/simulate_memory_scaling.py \
+            --num-gpus ${{ matrix.simulated-gpus }} \
+            --sequence-lengths 1024 2048 4096 8192 \
+            --output memory_scaling_report.json
+      
+      - name: Upload simulation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulated-tests-${{ matrix.simulated-gpus }}gpu-py${{ matrix.python-version }}
+          path: |
+            memory_scaling_report.json
+            test-results/
+
+  validate-distributed-code:
+    name: Validate Distributed Code
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      
+      - name: Install analysis tools
+        run: |
+          pip install mypy ruff pylint
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+      
+      - name: Static analysis of distributed code
+        run: |
+          # Type check distributed modules
+          mypy dilated_attention_pytorch/ring_distributed_dilated_attention.py \
+               dilated_attention_pytorch/improved_distributed_dilated_attention.py \
+               --ignore-missing-imports
+      
+      - name: Check for common distributed pitfalls
+        run: |
+          # Custom script to check for common issues
+          python scripts/check_distributed_code.py
+      
+      - name: Validate distributed configurations
+        run: |
+          # Test that all distributed configs are valid
+          python -m dilated_attention_pytorch.validate_configs --distributed
