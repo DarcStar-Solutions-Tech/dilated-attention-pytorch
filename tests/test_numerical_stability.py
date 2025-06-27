@@ -91,7 +91,9 @@ class TestNumericalStability:
                 k = q.clone()
                 v = torch.ones_like(q)
             else:
-                q = torch.full((batch_size, seq_len, num_heads, head_dim), value, device=device)
+                q = torch.full(
+                    (batch_size, seq_len, num_heads, head_dim), value, device=device
+                )
                 k = q.clone()
                 v = torch.ones_like(q)
 
@@ -132,12 +134,18 @@ class TestNumericalStability:
 
             # Check gradients are stable
             grad = x.grad
-            assert not torch.isnan(grad).any(), f"NaN gradients at magnitude {magnitude}"
-            assert not torch.isinf(grad).any(), f"Inf gradients at magnitude {magnitude}"
+            assert not torch.isnan(
+                grad
+            ).any(), f"NaN gradients at magnitude {magnitude}"
+            assert not torch.isinf(
+                grad
+            ).any(), f"Inf gradients at magnitude {magnitude}"
 
             # Check gradient magnitude is reasonable
             grad_norm = grad.norm().item()
-            assert grad_norm < 1e10, f"Gradient explosion at magnitude {magnitude}: {grad_norm}"
+            assert (
+                grad_norm < 1e10
+            ), f"Gradient explosion at magnitude {magnitude}: {grad_norm}"
 
             # Clear gradients
             attention.zero_grad()

@@ -14,7 +14,9 @@ import torch
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
-from dilated_attention_pytorch.improved_dilated_attention import ImprovedDilatedAttention
+from dilated_attention_pytorch.improved_dilated_attention import (
+    ImprovedDilatedAttention,
+)
 
 
 def benchmark_attention(attention_module, q, k, v, num_runs=10, warmup=3):
@@ -64,36 +66,56 @@ def main():
     print()
 
     # Create test tensors
-    q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-    k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-    v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    q = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
+    k = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
+    v = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
 
     # Create attention modules
     dilated_attn = DilatedAttention(
-        segment_lengths=segment_lengths, dilation_rates=dilation_rates, device=device, dtype=dtype
+        segment_lengths=segment_lengths,
+        dilation_rates=dilation_rates,
+        device=device,
+        dtype=dtype,
     )
 
     improved_attn = ImprovedDilatedAttention(
-        segment_lengths=segment_lengths, dilation_rates=dilation_rates, device=device, dtype=dtype
+        segment_lengths=segment_lengths,
+        dilation_rates=dilation_rates,
+        device=device,
+        dtype=dtype,
     )
 
     # Benchmark standard dilated attention
     print("Benchmarking DilatedAttention...")
-    dilated_time, dilated_std, dilated_output = benchmark_attention(dilated_attn, q, k, v)
+    dilated_time, dilated_std, dilated_output = benchmark_attention(
+        dilated_attn, q, k, v
+    )
     print(f"DilatedAttention: {dilated_time:.4f} ± {dilated_std:.4f} seconds")
 
     # Benchmark improved dilated attention
     print("\nBenchmarking ImprovedDilatedAttention...")
-    improved_time, improved_std, improved_output = benchmark_attention(improved_attn, q, k, v)
+    improved_time, improved_std, improved_output = benchmark_attention(
+        improved_attn, q, k, v
+    )
     print(f"ImprovedDilatedAttention: {improved_time:.4f} ± {improved_std:.4f} seconds")
 
     # Compare results
     print(f"\nSpeedup: {dilated_time / improved_time:.2f}x")
-    print(f"Output difference (max): {(dilated_output - improved_output).abs().max().item():.6f}")
+    print(
+        f"Output difference (max): {(dilated_output - improved_output).abs().max().item():.6f}"
+    )
 
     # Memory usage
     if torch.cuda.is_available():
-        print(f"\nPeak memory allocated: {torch.cuda.max_memory_allocated() / 1024**2:.1f} MB")
+        print(
+            f"\nPeak memory allocated: {torch.cuda.max_memory_allocated() / 1024**2:.1f} MB"
+        )
 
     # Save results
     timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%d-%H%M-UTC")
@@ -116,20 +138,26 @@ def main():
         f.write("| Implementation | Time (seconds) | Std Dev |\n")
         f.write("|----------------|----------------|----------|\n")
         f.write(f"| DilatedAttention | {dilated_time:.4f} | ±{dilated_std:.4f} |\n")
-        f.write(f"| ImprovedDilatedAttention | {improved_time:.4f} | ±{improved_std:.4f} |\n\n")
+        f.write(
+            f"| ImprovedDilatedAttention | {improved_time:.4f} | ±{improved_std:.4f} |\n\n"
+        )
         f.write(f"**Speedup**: {dilated_time / improved_time:.2f}x\n\n")
         f.write(
             f"**Output difference (max)**: {(dilated_output - improved_output).abs().max().item():.6f}\n\n"
         )
         if torch.cuda.is_available():
-            f.write(f"**Peak memory**: {torch.cuda.max_memory_allocated() / 1024**2:.1f} MB\n\n")
+            f.write(
+                f"**Peak memory**: {torch.cuda.max_memory_allocated() / 1024**2:.1f} MB\n\n"
+            )
         f.write("## Analysis\n\n")
         f.write("The bug fixes implemented in Phase 1.1 include:\n")
         f.write("1. Thread safety fix for cache access\n")
         f.write("2. Memory leak fix in buffer tracking\n")
         f.write("3. Ring size validation for distributed scenarios\n")
         f.write("4. Gradient normalization order correction\n\n")
-        f.write("These fixes ensure correctness without significantly impacting performance.\n")
+        f.write(
+            "These fixes ensure correctness without significantly impacting performance.\n"
+        )
 
     print(f"\nResults saved to: {results_file}")
 

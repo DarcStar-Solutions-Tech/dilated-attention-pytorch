@@ -45,17 +45,23 @@ def debug_forward():
 
     # Create inputs
     print("Creating inputs...")
-    query = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-    key = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-    value = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    query = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
+    key = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
+    value = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
 
     print("Starting forward pass...")
     sys.stdout.flush()
 
     # Add instrumentation to forward method
-    original_forward = module.forward
+    _ = module.forward
 
-    def instrumented_forward(q, k, v, **kwargs):
+    def instrumented_forward(q, k, v, **_kwargs):
         print("  - Enter forward")
         sys.stdout.flush()
 

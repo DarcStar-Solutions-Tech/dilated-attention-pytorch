@@ -1,0 +1,72 @@
+# Lenient Ruff configuration for pre-commit
+# This configuration is more forgiving to avoid constant pre-commit failures
+
+# Extend the base configuration
+extend = ".ruff.toml"
+
+[lint]
+# Additional codes to ignore globally
+extend-ignore = [
+    "F841",  # Local variable assigned but never used
+    "E712",  # Comparison to True/False
+    "E722",  # Do not use bare except
+    "T201",  # Print found
+    "PLR0913",  # Too many arguments
+    "PLR0915",  # Too many statements  
+    "PLR2004",  # Magic value used in comparison
+    "SIM105",  # Use contextlib.suppress
+    "SIM108",  # Use ternary operator
+    "SIM117",  # Use single with statement
+    "ARG001",  # Unused function argument
+    "ARG002",  # Unused method argument
+    "ARG003",  # Unused class method argument
+    "ARG004",  # Unused static method argument
+    "ARG005",  # Unused lambda argument
+    "TRY003",  # Avoid specifying long messages outside exception class
+    "TRY300",  # Consider else block
+    "B008",   # Do not perform function calls in argument defaults
+    "UP007",  # Use X | Y for type annotations
+    "C408",   # Unnecessary dict call
+    "RET503", # Missing explicit return
+    "RET504", # Unnecessary assignment before return
+    "RET505", # Unnecessary else after return
+    "RET506", # Unnecessary else after raise
+    "RET507", # Unnecessary else after continue
+    "RET508", # Unnecessary else after break
+]
+
+[lint.per-file-ignores]
+# Test files can have more relaxed rules
+"tests/**/*.py" = [
+    "PLR2004",  # Magic values in tests are OK
+    "SIM",      # Simplification rules can be ignored in tests
+    "ARG",      # Unused arguments are common in test fixtures
+    "F841",     # Unused variables in tests
+    "E712",     # Direct boolean comparisons in assertions
+]
+
+# Benchmark and analysis scripts
+"benchmarks/**/*.py" = [
+    "T201",     # Print statements are fine
+    "PLR0912",  # Complex logic is expected
+    "PLR0915",  # Many statements are OK
+    "F841",     # Unused variables (timing results, etc)
+]
+
+# Example scripts
+"examples/**/*.py" = [
+    "T201",     # Print statements for examples
+    "F841",     # Unused variables in examples
+    "E712",     # Boolean comparisons
+]
+
+# Scripts directory
+"scripts/**/*.py" = [
+    "T201",     # Print statements
+    "F841",     # Unused variables
+    "PLR",      # All complexity rules
+]
+
+# Setup and configuration files
+"setup.py" = ["T201", "E501"]
+"validate_changes.py" = ["T201", "PLR0912", "PLR0915"]

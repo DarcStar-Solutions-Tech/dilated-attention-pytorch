@@ -25,7 +25,7 @@ def optimized_process_sparse_blocks(
     """
     batch, num_blocks, block_size, num_heads, head_dim = q_blocks.shape
     device = q_blocks.device
-    dtype = q_blocks.dtype
+    _ = q_blocks.dtype
 
     # Initialize output
     output_blocks = torch.zeros_like(q_blocks)
@@ -33,7 +33,9 @@ def optimized_process_sparse_blocks(
     # Handle different pattern shapes
     if sparse_pattern.dim() == 2:
         # Expand pattern for all batches and heads
-        sparse_pattern = sparse_pattern.unsqueeze(0).unsqueeze(0).expand(batch, num_heads, -1, -1)
+        sparse_pattern = (
+            sparse_pattern.unsqueeze(0).unsqueeze(0).expand(batch, num_heads, -1, -1)
+        )
     elif sparse_pattern.dim() == 3:
         # Assume [batch, num_blocks, num_blocks], expand for heads
         sparse_pattern = sparse_pattern.unsqueeze(1).expand(-1, num_heads, -1, -1)
@@ -51,7 +53,7 @@ def optimized_process_sparse_blocks(
             continue  # No active blocks for this head
 
         batch_indices, q_block_indices, k_block_indices = active_indices
-        num_active = len(batch_indices)
+        _ = len(batch_indices)
 
         # Extract all active Q, K, V blocks at once
         # Shape: [num_active, block_size, head_dim]
@@ -76,7 +78,9 @@ def optimized_process_sparse_blocks(
 
         # Softmax and output computation
         attn_weights = F.softmax(scores, dim=-1)
-        block_outputs = torch.bmm(attn_weights, v_active)  # [num_active, block_size, head_dim]
+        block_outputs = torch.bmm(
+            attn_weights, v_active
+        )  # [num_active, block_size, head_dim]
 
         # Scatter results back to output tensor
         # This is the key optimization - we accumulate all results at once
@@ -135,9 +139,15 @@ if __name__ == "__main__":
     block_size = 32
 
     # Create inputs
-    q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-    k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-    v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    q = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
+    k = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
+    v = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
 
     # Create sparse pattern
     sparse_config = SparsePatternConfig(

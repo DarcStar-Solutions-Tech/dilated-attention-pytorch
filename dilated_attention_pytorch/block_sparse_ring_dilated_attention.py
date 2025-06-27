@@ -24,7 +24,9 @@ from .utils.flash_attention_3_utils import create_fa3_block_sparse_mask, get_fa3
 class SparsePatternConfig:
     """Configuration for sparse attention patterns"""
 
-    pattern_type: str = "dilated_sparse"  # 'local_window', 'dilated_sparse', 'global_local'
+    pattern_type: str = (
+        "dilated_sparse"  # 'local_window', 'dilated_sparse', 'global_local'
+    )
     sparsity_ratio: float = 0.1  # Fraction of blocks to compute (0.1 = 90% sparse)
     block_size: int = 128  # Tokens per block
     local_window_size: int = 512  # For local window patterns
@@ -64,7 +66,9 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
             "enable_packed_comm",
             "enable_hardware_opt",
         }
-        filtered_kwargs = {k: v for k, v in kwargs.items() if k not in block_sparse_params}
+        filtered_kwargs = {
+            k: v for k, v in kwargs.items() if k not in block_sparse_params
+        }
 
         super().__init__(segment_lengths, dilation_rates, **filtered_kwargs)
 
@@ -231,7 +235,9 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
         row_indices = []
         col_indices = []
 
-        global_blocks = min(self.sparse_config.global_tokens // self.block_size, num_blocks)
+        global_blocks = min(
+            self.sparse_config.global_tokens // self.block_size, num_blocks
+        )
         local_radius = (self.sparse_config.local_window_size // self.block_size) // 2
 
         for i in range(num_blocks):
@@ -268,7 +274,7 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
             return None
 
         try:
-            from flash_attn_interface import flash_attn_func_v3
+            from flash_attn import flash_attn_func_v3  # noqa: PLC0415
 
             batch, seq_len, num_heads, head_dim = q.shape
 
@@ -313,7 +319,9 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
             # Fall back to standard sparse computation
             import warnings
 
-            warnings.warn(f"Flash Attention 3 sparse computation failed: {e}", stacklevel=2)
+            warnings.warn(
+                f"Flash Attention 3 sparse computation failed: {e}", stacklevel=2
+            )
             return None
         else:
             # FA3 doesn't return attention weights in sparse mode
@@ -356,7 +364,9 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
 
             # Compute attention for this block
             # Reshape for batch matrix multiply
-            q_block = q_block.transpose(1, 2)  # [batch, num_heads, block_size, head_dim]
+            q_block = q_block.transpose(
+                1, 2
+            )  # [batch, num_heads, block_size, head_dim]
             k_block = k_block.transpose(1, 2)
             v_block = v_block.transpose(1, 2)
 
@@ -372,7 +382,9 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
                 elif q_idx == k_idx:
                     # Diagonal block needs causal mask
                     causal_mask = torch.triu(
-                        torch.ones(self.block_size, self.block_size, device=scores.device),
+                        torch.ones(
+                            self.block_size, self.block_size, device=scores.device
+                        ),
                         diagonal=1,
                     ).bool()
                     scores.masked_fill_(causal_mask, float("-inf"))
@@ -385,7 +397,9 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
             attn_output = torch.matmul(attn_weights, v_block)
 
             # Accumulate to output (back to original shape)
-            attn_output = attn_output.transpose(1, 2)  # [batch, block_size, num_heads, head_dim]
+            attn_output = attn_output.transpose(
+                1, 2
+            )  # [batch, block_size, num_heads, head_dim]
             output_blocks[:, q_idx] += attn_output
 
     def _compute_sparse_attention_with_weights(
@@ -433,7 +447,8 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
             # Apply causal mask if needed
             if is_causal and q_idx == k_idx:
                 causal_mask = torch.triu(
-                    torch.ones(self.block_size, self.block_size, device=scores.device), diagonal=1
+                    torch.ones(self.block_size, self.block_size, device=scores.device),
+                    diagonal=1,
                 ).bool()
                 scores.masked_fill_(causal_mask, float("-inf"))
 

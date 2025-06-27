@@ -173,7 +173,9 @@ class DilatedAttention(BaseDilatedAttention):
             # Thread-safe accumulation: avoid in-place operations on shared tensors
             with self._cache_lock:
                 out_seg = rearrange(out, "b (n s) h d -> b n s h d", s=s)
-                out_seg[:, :, offset::r, hmin:hmax, :] = out_seg[:, :, offset::r, hmin:hmax, :] + x
+                out_seg[:, :, offset::r, hmin:hmax, :] = (
+                    out_seg[:, :, offset::r, hmin:hmax, :] + x
+                )
                 out = rearrange(out_seg, "b n s h d -> b (n s) h d", s=s)
 
         # Normalize by number of groups (Eq. 10 from paper)

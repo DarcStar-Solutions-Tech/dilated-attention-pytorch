@@ -17,7 +17,7 @@ import warnings
 from collections.abc import Sequence
 
 import torch
-import torch.distributed as dist
+import torch.distributed as dist  # noqa: PLC0415
 import torch.nn.functional as F
 from torch import Tensor, nn
 
@@ -79,7 +79,9 @@ class UnfoldRingDilatedAttention(BaseDilatedAttention):
 
         # Memory pool for ring communication
         self.device = (
-            torch.cuda.current_device() if torch.cuda.is_available() else torch.device("cpu")
+            torch.cuda.current_device()
+            if torch.cuda.is_available()
+            else torch.device("cpu")
         )
         self._ring_memory_pool = RingAttentionMemoryPool(self.device)
 
@@ -226,18 +228,28 @@ class UnfoldRingDilatedAttention(BaseDilatedAttention):
                 seq_len_dilated = q_dilated.size(2)
 
             # Flatten for attention computation
-            q_flat = q_dilated.contiguous().view(b * num_segments_q, seq_len_dilated, g, d)
-            k_flat = k_dilated.contiguous().view(b * num_segments_kv, seq_len_dilated, g, d)
-            v_flat = v_dilated.contiguous().view(b * num_segments_kv, seq_len_dilated, g, d)
+            q_flat = q_dilated.contiguous().view(
+                b * num_segments_q, seq_len_dilated, g, d
+            )
+            k_flat = k_dilated.contiguous().view(
+                b * num_segments_kv, seq_len_dilated, g, d
+            )
+            v_flat = v_dilated.contiguous().view(
+                b * num_segments_kv, seq_len_dilated, g, d
+            )
 
             # Handle different segment counts
             if num_segments_q != num_segments_kv:
-                repeat_factor = (num_segments_q + num_segments_kv - 1) // num_segments_kv
+                repeat_factor = (
+                    num_segments_q + num_segments_kv - 1
+                ) // num_segments_kv
                 k_flat = k_flat.repeat(repeat_factor, 1, 1, 1)[: b * num_segments_q]
                 v_flat = v_flat.repeat(repeat_factor, 1, 1, 1)[: b * num_segments_q]
 
             # Apply attention
-            attn_out = self._apply_sdpa(q_flat, k_flat, v_flat, is_causal and ring_step == 0)
+            attn_out = self._apply_sdpa(
+                q_flat, k_flat, v_flat, is_causal and ring_step == 0
+            )
 
             # Reshape back
             attn_reshaped = attn_out.reshape(b, num_segments_q, seq_len_dilated, g, d)
@@ -280,7 +292,9 @@ class UnfoldRingDilatedAttention(BaseDilatedAttention):
 
         return out
 
-    def _segment_tensor_unfold(self, x: Tensor, segment_size: int, total_len: int) -> Tensor:
+    def _segment_tensor_unfold(
+        self, x: Tensor, segment_size: int, total_len: int
+    ) -> Tensor:
         """
         Segment tensor using unfold operation for better performance.
 
@@ -299,7 +313,11 @@ class UnfoldRingDilatedAttention(BaseDilatedAttention):
         # Use unfold for segmentation when possible
         if seq_len == total_len:
             # Can use unfold directly
-            return x.unfold(1, segment_size, segment_size).permute(0, 1, 3, 2, 4).contiguous()
+            return (
+                x.unfold(1, segment_size, segment_size)
+                .permute(0, 1, 3, 2, 4)
+                .contiguous()
+            )
         else:
             # Fall back to view
             x_trimmed = x[:, : num_segments * segment_size].contiguous()
@@ -356,7 +374,9 @@ class UnfoldRingDilatedAttention(BaseDilatedAttention):
         """Single device forward pass using unfold operations."""
         return self._dilated_attention_block(q, k, v, is_causal, ring_step=0)
 
-    def _ring_forward(self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool = False) -> Tensor:
+    def _ring_forward(
+        self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool = False
+    ) -> Tensor:
         """Ring attention forward pass (simplified for this example)."""
         # For now, fall back to single device
         # Full ring implementation would require additional refactoring
@@ -384,7 +404,9 @@ class UnfoldRingDilatedAttention(BaseDilatedAttention):
                 SDPBackend.MATH,
             ]
 
-    def _get_head_groups(self, num_heads: int) -> tuple[list[int], list[tuple[int, int]]]:
+    def _get_head_groups(
+        self, num_heads: int
+    ) -> tuple[list[int], list[tuple[int, int]]]:
         """Get cached head group assignments."""
         if num_heads in self._head_groups_cache:
             return self._head_groups_cache[num_heads]
@@ -432,7 +454,9 @@ class RingAttentionMemoryPool:
         with self._lock:
             if pool_key not in self._pools:
                 if self.device.type == "cuda" and pin_memory:
-                    buffer = torch.empty(shape, dtype=dtype, device="cpu", pin_memory=True)
+                    buffer = torch.empty(
+                        shape, dtype=dtype, device="cpu", pin_memory=True
+                    )
                     buffer = buffer.to(self.device, non_blocking=True)
                 else:
                     buffer = torch.empty(shape, dtype=dtype, device=self.device)

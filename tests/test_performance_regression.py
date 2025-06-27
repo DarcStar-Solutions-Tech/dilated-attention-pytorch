@@ -71,7 +71,9 @@ class PerformanceBaseline:
                 for impl, configs in data.items():
                     baselines[impl] = {}
                     for config, metrics_dict in configs.items():
-                        baselines[impl][config] = PerformanceMetrics.from_dict(metrics_dict)
+                        baselines[impl][config] = PerformanceMetrics.from_dict(
+                            metrics_dict
+                        )
                 return baselines
         return {}
 
@@ -98,7 +100,9 @@ class PerformanceBaseline:
         with open(self.history_file, "w") as f:
             json.dump(self.history, f, indent=2)
 
-    def update_baseline(self, implementation: str, config: str, metrics: PerformanceMetrics):
+    def update_baseline(
+        self, implementation: str, config: str, metrics: PerformanceMetrics
+    ):
         """Update baseline for a specific implementation and configuration."""
         if implementation not in self.baselines:
             self.baselines[implementation] = {}
@@ -125,7 +129,9 @@ class PerformanceBaseline:
         self.history.append(entry)
         self.save_history()
 
-    def get_baseline(self, implementation: str, config: str) -> PerformanceMetrics | None:
+    def get_baseline(
+        self, implementation: str, config: str
+    ) -> PerformanceMetrics | None:
         """Get baseline metrics for comparison."""
         return self.baselines.get(implementation, {}).get(config)
 
@@ -262,11 +268,15 @@ class TestPerformanceRegression:
         if baseline is None:
             # No baseline exists, set current as baseline
             baseline_manager.update_baseline(implementation, config, metrics)
-            pytest.skip(f"No baseline for {implementation} {config}. Setting current as baseline.")
+            pytest.skip(
+                f"No baseline for {implementation} {config}. Setting current as baseline."
+            )
 
         # Check for regression
         passed, regression_pct = self.check_regression(baseline, metrics)
-        baseline_manager.add_history_entry(implementation, config, metrics, passed, regression_pct)
+        baseline_manager.add_history_entry(
+            implementation, config, metrics, passed, regression_pct
+        )
 
         # Report results
         print(f"\n{implementation} {config}:")
@@ -277,9 +287,7 @@ class TestPerformanceRegression:
         if device.type == "cuda":
             print(f"  Memory:   {metrics.memory_allocated_mb:.1f}MB allocated")
 
-        assert (
-            passed
-        ), f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
+        assert passed, f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
 
     @pytest.mark.parametrize("batch_size,seq_len,num_heads,head_dim", CONFIGS)
     def test_improved_dilated_attention_performance(
@@ -306,20 +314,22 @@ class TestPerformanceRegression:
         baseline = baseline_manager.get_baseline(implementation, config)
         if baseline is None:
             baseline_manager.update_baseline(implementation, config, metrics)
-            pytest.skip(f"No baseline for {implementation} {config}. Setting current as baseline.")
+            pytest.skip(
+                f"No baseline for {implementation} {config}. Setting current as baseline."
+            )
 
         # Check for regression
         passed, regression_pct = self.check_regression(baseline, metrics)
-        baseline_manager.add_history_entry(implementation, config, metrics, passed, regression_pct)
+        baseline_manager.add_history_entry(
+            implementation, config, metrics, passed, regression_pct
+        )
 
         print(f"\n{implementation} {config}:")
         print(f"  Baseline: {baseline.execution_time_ms:.2f}ms")
         print(f"  Current:  {metrics.execution_time_ms:.2f}ms")
         print(f"  Change:   {regression_pct:+.1f}%")
 
-        assert (
-            passed
-        ), f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
+        assert passed, f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
 
     @pytest.mark.parametrize(
         "batch_size,seq_len,num_heads,head_dim", CONFIGS[:2]
@@ -354,20 +364,22 @@ class TestPerformanceRegression:
         baseline = baseline_manager.get_baseline(implementation, config)
         if baseline is None:
             baseline_manager.update_baseline(implementation, config, metrics)
-            pytest.skip(f"No baseline for {implementation} {config}. Setting current as baseline.")
+            pytest.skip(
+                f"No baseline for {implementation} {config}. Setting current as baseline."
+            )
 
         # Check for regression
         passed, regression_pct = self.check_regression(baseline, metrics)
-        baseline_manager.add_history_entry(implementation, config, metrics, passed, regression_pct)
+        baseline_manager.add_history_entry(
+            implementation, config, metrics, passed, regression_pct
+        )
 
         print(f"\n{implementation} {config}:")
         print(f"  Baseline: {baseline.execution_time_ms:.2f}ms")
         print(f"  Current:  {metrics.execution_time_ms:.2f}ms")
         print(f"  Change:   {regression_pct:+.1f}%")
 
-        assert (
-            passed
-        ), f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
+        assert passed, f"Performance regression detected: {regression_pct:.1f}% > {self.REGRESSION_THRESHOLD}%"
 
 
 @pytest.mark.benchmark

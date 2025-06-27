@@ -99,11 +99,16 @@ class BenchmarkAggregator:
             latest_metrics = latest["results"][impl]
             baseline_metrics = baseline["results"][impl]
 
-            if not isinstance(latest_metrics, dict) or not isinstance(baseline_metrics, dict):
+            if not isinstance(latest_metrics, dict) or not isinstance(
+                baseline_metrics, dict
+            ):
                 continue
 
             # Check execution time regression
-            if "execution_time_ms" in latest_metrics and "execution_time_ms" in baseline_metrics:
+            if (
+                "execution_time_ms" in latest_metrics
+                and "execution_time_ms" in baseline_metrics
+            ):
                 latest_time = latest_metrics["execution_time_ms"]
                 baseline_time = baseline_metrics["execution_time_ms"]
 
@@ -166,7 +171,9 @@ class BenchmarkAggregator:
             stats = self.compare_implementations(benchmark_type)
             if stats:
                 lines.extend(["### Performance Summary", ""])
-                lines.append("| Implementation | Latest (ms) | Mean (ms) | Std Dev | Trend |")
+                lines.append(
+                    "| Implementation | Latest (ms) | Mean (ms) | Std Dev | Trend |"
+                )
                 lines.append("|---|---|---|---|---|")
 
                 for impl, data in sorted(stats.items()):
@@ -225,7 +232,7 @@ class BenchmarkAggregator:
             memory = data.get("memory_mb", "N/A")
 
             lines.append(
-                f"| {rank} | {impl} | {data['mean']:.2f} | " f"{relative_speed:.2f}x | {memory} |"
+                f"| {rank} | {impl} | {data['mean']:.2f} | {relative_speed:.2f}x | {memory} |"
             )
 
         return "\n".join(lines)

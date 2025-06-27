@@ -103,12 +103,16 @@ class OptimizedRingDilatedAttention(RingDilatedAttention):
 
             # Handle different segment counts between q and kv
             if num_segments_q != num_segments_kv:
-                repeat_factor = (num_segments_q + num_segments_kv - 1) // num_segments_kv
+                repeat_factor = (
+                    num_segments_q + num_segments_kv - 1
+                ) // num_segments_kv
                 k_flat = k_flat.repeat(repeat_factor, 1, 1, 1)[: b * num_segments_q]
                 v_flat = v_flat.repeat(repeat_factor, 1, 1, 1)[: b * num_segments_q]
 
             # Apply attention (using parent's optimized SDPA logic)
-            attn_out = self._apply_attention(q_flat, k_flat, v_flat, is_causal, ring_step)
+            attn_out = self._apply_attention(
+                q_flat, k_flat, v_flat, is_causal, ring_step
+            )
 
             # Reshape back and handle dilation reconstruction
             attn_reshaped = attn_out.reshape(b, num_segments_q, seq_len, g, d)
@@ -130,7 +134,11 @@ class OptimizedRingDilatedAttention(RingDilatedAttention):
                     group_out[:, :, ::r, :, :] = attn_reshaped
                 else:
                     # Use the cached indices for reconstruction
-                    idx_device = idx.to(group_out.device) if idx.device != group_out.device else idx
+                    idx_device = (
+                        idx.to(group_out.device)
+                        if idx.device != group_out.device
+                        else idx
+                    )
                     group_out.index_copy_(2, idx_device, attn_reshaped)
 
                 attn_reshaped = group_out
@@ -155,7 +163,7 @@ class OptimizedRingDilatedAttention(RingDilatedAttention):
 
         # Use parent's SDPA logic if available
         if hasattr(self, "_get_optimal_sdpa_backends"):
-            backends = self._get_optimal_sdpa_backends()
+            _ = self._get_optimal_sdpa_backends()
             # Note: We'd need to import sdpa_kernel context manager
             # For now, use standard SDPA
 
@@ -197,19 +205,25 @@ if __name__ == "__main__":
         dilation_rates = [1, 2, 4]
 
         # Create inputs
-        q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-        k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-        v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+        q = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+        )
+        k = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+        )
+        v = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+        )
 
         # Original implementation
-        orig_module = RingDilatedAttention(segments, dilation_rates, 0.0, ring_size=1).to(
-            device, dtype
-        )
+        orig_module = RingDilatedAttention(
+            segments, dilation_rates, 0.0, ring_size=1
+        ).to(device, dtype)
 
         # Optimized implementation
-        opt_module = OptimizedRingDilatedAttention(segments, dilation_rates, 0.0, ring_size=1).to(
-            device, dtype
-        )
+        opt_module = OptimizedRingDilatedAttention(
+            segments, dilation_rates, 0.0, ring_size=1
+        ).to(device, dtype)
 
         # Warmup
         for _ in range(3):

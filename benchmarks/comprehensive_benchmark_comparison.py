@@ -18,11 +18,15 @@ matplotlib.use("Agg")  # Use non-interactive backend
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
-from dilated_attention_pytorch.improved_dilated_attention import ImprovedDilatedAttention
+from dilated_attention_pytorch.improved_dilated_attention import (
+    ImprovedDilatedAttention,
+)
 from dilated_attention_pytorch.improved_multihead_dilated_attention import (
     ImprovedMultiheadDilatedAttention,
 )
-from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
+from dilated_attention_pytorch.multihead_dilated_attention import (
+    MultiheadDilatedAttention,
+)
 
 
 def benchmark_attention(attention_module, inputs, num_runs=5, warmup=2):
@@ -108,12 +112,20 @@ def main():
         print(f"Segment lengths: {segment_lengths}, Dilation rates: {dilation_rates}")
 
         # Create test tensors
-        q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-        k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-        v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+        q = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+        )
+        k = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+        )
+        v = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+        )
 
         # For multihead attention (different input shape)
-        mha_input = torch.randn(batch_size, seq_len, embed_dim, device=device, dtype=dtype)
+        mha_input = torch.randn(
+            batch_size, seq_len, embed_dim, device=device, dtype=dtype
+        )
 
         # Test DilatedAttention
         try:
@@ -200,7 +212,9 @@ def main():
 
     # Save plot
     timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%d-%H%M-UTC")
-    plot_file = os.path.join("..", "docs", "benchmarks", f"benchmark-comprehensive-{timestamp}.png")
+    plot_file = os.path.join(
+        "..", "docs", "benchmarks", f"benchmark-comprehensive-{timestamp}.png"
+    )
     plt.savefig(plot_file, dpi=150, bbox_inches="tight")
     print(f"\nPlot saved to: {plot_file}")
 
@@ -263,16 +277,26 @@ def main():
         f.write("\n### Bug Fixes Impact\n\n")
         f.write("The following critical bug fixes were implemented:\n\n")
         f.write("1. **Thread Safety**: Added proper synchronization for cache access\n")
-        f.write("2. **Memory Leak**: Fixed circular references in WeakValueDictionary\n")
-        f.write("3. **Ring Size Validation**: Added validation for distributed scenarios\n")
-        f.write("4. **Gradient Normalization**: Fixed mathematical order of operations\n\n")
-        f.write("These fixes ensure correctness while maintaining or improving performance.\n")
+        f.write(
+            "2. **Memory Leak**: Fixed circular references in WeakValueDictionary\n"
+        )
+        f.write(
+            "3. **Ring Size Validation**: Added validation for distributed scenarios\n"
+        )
+        f.write(
+            "4. **Gradient Normalization**: Fixed mathematical order of operations\n\n"
+        )
+        f.write(
+            "These fixes ensure correctness while maintaining or improving performance.\n"
+        )
 
     print(f"\nResults saved to: {results_file}")
 
     # Memory usage summary
     if torch.cuda.is_available():
-        print(f"\nPeak memory allocated: {torch.cuda.max_memory_allocated() / 1024**2:.1f} MB")
+        print(
+            f"\nPeak memory allocated: {torch.cuda.max_memory_allocated() / 1024**2:.1f} MB"
+        )
 
 
 if __name__ == "__main__":

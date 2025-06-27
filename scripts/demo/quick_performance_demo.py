@@ -18,7 +18,7 @@ from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
 from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
 
 
-def benchmark_implementation(name, module, inputs, warmup=3, iterations=10):
+def benchmark_implementation(_name, module, inputs, warmup=3, iterations=10):
     """Quick benchmark of an implementation"""
     q, k, v = inputs
 
@@ -79,9 +79,15 @@ def main():
         dilation_rates = [1, 2, 4]
 
         # Create inputs
-        q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-        k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-        v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+        q = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+        )
+        k = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+        )
+        v = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+        )
         inputs = (q, k, v)
 
         # Multihead inputs
@@ -96,24 +102,38 @@ def main():
         # Core implementations
         try:
             module = DilatedAttention(segments, dilation_rates, 0.0).to(device, dtype)
-            time_ms, shape = benchmark_implementation("DilatedAttention", module, inputs)
-            implementations.append(("DilatedAttention", time_ms, seq_len / time_ms * 1000))
+            time_ms, shape = benchmark_implementation(
+                "DilatedAttention", module, inputs
+            )
+            implementations.append(
+                ("DilatedAttention", time_ms, seq_len / time_ms * 1000)
+            )
         except Exception as e:
             print(f"DilatedAttention failed: {e}")
 
         try:
-            module = ImprovedDilatedAttention(segments, dilation_rates, 0.0).to(device, dtype)
-            time_ms, shape = benchmark_implementation("ImprovedDilatedAttention", module, inputs)
-            implementations.append(("ImprovedDilatedAttention", time_ms, seq_len / time_ms * 1000))
+            module = ImprovedDilatedAttention(segments, dilation_rates, 0.0).to(
+                device, dtype
+            )
+            time_ms, shape = benchmark_implementation(
+                "ImprovedDilatedAttention", module, inputs
+            )
+            implementations.append(
+                ("ImprovedDilatedAttention", time_ms, seq_len / time_ms * 1000)
+            )
         except Exception as e:
             print(f"ImprovedDilatedAttention failed: {e}")
 
         try:
-            module = RingDilatedAttention(segments, dilation_rates, 0.0, ring_size=1).to(
-                device, dtype
+            module = RingDilatedAttention(
+                segments, dilation_rates, 0.0, ring_size=1
+            ).to(device, dtype)
+            time_ms, shape = benchmark_implementation(
+                "RingDilatedAttention", module, inputs
             )
-            time_ms, shape = benchmark_implementation("RingDilatedAttention", module, inputs)
-            implementations.append(("RingDilatedAttention", time_ms, seq_len / time_ms * 1000))
+            implementations.append(
+                ("RingDilatedAttention", time_ms, seq_len / time_ms * 1000)
+            )
         except Exception as e:
             print(f"RingDilatedAttention failed: {e}")
 
@@ -128,8 +148,12 @@ def main():
                 module = BlockSparseRingDilatedAttention(
                     segments, dilation_rates, sparse_config=sparse_config, ring_size=1
                 ).to(device, dtype)
-                time_ms, shape = benchmark_implementation("BlockSparse(10%)", module, inputs)
-                implementations.append(("BlockSparse(10%)", time_ms, seq_len / time_ms * 1000))
+                time_ms, shape = benchmark_implementation(
+                    "BlockSparse(10%)", module, inputs
+                )
+                implementations.append(
+                    ("BlockSparse(10%)", time_ms, seq_len / time_ms * 1000)
+                )
             except Exception as e:
                 print(f"BlockSparse failed: {e}")
 
@@ -138,8 +162,12 @@ def main():
             module = MultiheadDilatedAttention(
                 embed_dim, num_heads, dilation_rates, segments, 0.0
             ).to(device, dtype)
-            time_ms, shape = benchmark_implementation("MultiheadDilated", module, inputs_mh)
-            implementations.append(("MultiheadDilated", time_ms, seq_len / time_ms * 1000))
+            time_ms, shape = benchmark_implementation(
+                "MultiheadDilated", module, inputs_mh
+            )
+            implementations.append(
+                ("MultiheadDilated", time_ms, seq_len / time_ms * 1000)
+            )
         except Exception as e:
             print(f"MultiheadDilated failed: {e}")
 

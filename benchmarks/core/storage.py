@@ -16,7 +16,9 @@ class BenchmarkStorage:
         if base_dir is None:
             # Find project root
             current = Path(__file__).resolve()
-            while not (current / "pyproject.toml").exists() and current.parent != current:
+            while (
+                not (current / "pyproject.toml").exists() and current.parent != current
+            ):
                 current = current.parent
             base_dir = current / "docs" / "benchmarks"
 
@@ -29,10 +31,17 @@ class BenchmarkStorage:
         self.latest_dir = self.base_dir / "latest"
         self.archive_dir = self.base_dir / "archive"
 
-        for dir_path in [self.by_date_dir, self.by_type_dir, self.latest_dir, self.archive_dir]:
+        for dir_path in [
+            self.by_date_dir,
+            self.by_type_dir,
+            self.latest_dir,
+            self.archive_dir,
+        ]:
             dir_path.mkdir(exist_ok=True)
 
-    def get_output_path(self, benchmark_type: str, timestamp: str, extension: str) -> Path:
+    def get_output_path(
+        self, benchmark_type: str, timestamp: str, extension: str
+    ) -> Path:
         """Get standardized output path for a benchmark file."""
         filename = f"{benchmark_type}-{timestamp}.{extension}"
 
@@ -61,7 +70,9 @@ class BenchmarkStorage:
 
         return type_dir / filename
 
-    def save_json(self, data: dict[str, Any], benchmark_type: str, timestamp: str) -> Path:
+    def save_json(
+        self, data: dict[str, Any], benchmark_type: str, timestamp: str
+    ) -> Path:
         """Save benchmark results as JSON."""
         path = self.get_output_path(benchmark_type, timestamp, "json")
         with open(path, "w") as f:
@@ -154,7 +165,9 @@ class BenchmarkStorage:
                     dt = datetime.strptime(timestamp_str, "%Y-%m-%d-%H%M-UTC")
                     if dt.timestamp() < cutoff:
                         # Move to archive
-                        archive_path = self.archive_dir / type_dir.name / timestamp_dir.name
+                        archive_path = (
+                            self.archive_dir / type_dir.name / timestamp_dir.name
+                        )
                         archive_path.parent.mkdir(parents=True, exist_ok=True)
                         shutil.move(str(timestamp_dir), str(archive_path))
                 except ValueError:

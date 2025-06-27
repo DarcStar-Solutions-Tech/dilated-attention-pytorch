@@ -76,7 +76,9 @@ class BenchmarkRunner:
             query = torch.randn(
                 batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype
             )
-            key = torch.randn(batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype)
+            key = torch.randn(
+                batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype
+            )
             value = torch.randn(
                 batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype
             )
@@ -166,7 +168,9 @@ class BenchmarkRunner:
         throughput = batch_size / mean_time
 
         # Memory in MB
-        peak_memory_mb = peak_memory / (1024 * 1024) if self.device.type == "cuda" else 0
+        peak_memory_mb = (
+            peak_memory / (1024 * 1024) if self.device.type == "cuda" else 0
+        )
 
         return {
             "name": name,
@@ -405,7 +409,9 @@ class BenchmarkRunner:
 
             # Calculate speedups relative to baseline
             if len(results) > 1:
-                baseline = next((r for r in results if r["name"] == "DilatedAttention"), results[0])
+                baseline = next(
+                    (r for r in results if r["name"] == "DilatedAttention"), results[0]
+                )
                 print("\nSpeedups relative to DilatedAttention:")
                 for r in results:
                     if r["name"] != baseline["name"]:
@@ -414,9 +420,13 @@ class BenchmarkRunner:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Benchmark all dilated attention implementations")
+    parser = argparse.ArgumentParser(
+        description="Benchmark all dilated attention implementations"
+    )
     parser.add_argument("--device", default="cuda", choices=["cpu", "cuda"])
-    parser.add_argument("--dtype", default="float16", choices=["float16", "float32", "bfloat16"])
+    parser.add_argument(
+        "--dtype", default="float16", choices=["float16", "float32", "bfloat16"]
+    )
     parser.add_argument("--batch-sizes", nargs="+", type=int, default=[1, 2, 4])
     parser.add_argument("--seq-lens", nargs="+", type=int, default=[2048, 4096, 8192])
     parser.add_argument("--num-heads", type=int, default=8)

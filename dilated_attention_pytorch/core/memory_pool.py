@@ -4,6 +4,7 @@ Unified memory pool implementation for efficient buffer management.
 This module provides a consolidated memory pool that can be used across all
 dilated attention implementations, replacing multiple separate pools.
 """
+# ruff: noqa: PLR0912
 
 import gc
 import logging
@@ -39,7 +40,9 @@ class BufferStats:
     def __post_init__(self):
         """Calculate size in bytes and fragmentation score."""
         self.size_bytes = (
-            torch.prod(torch.tensor(self.shape)).item() * torch.finfo(self.dtype).bits // 8
+            torch.prod(torch.tensor(self.shape)).item()
+            * torch.finfo(self.dtype).bits
+            // 8
         )
         self.size_bucket = self._calculate_size_bucket()
         self.fragmentation_score = self._calculate_fragmentation_score()
@@ -56,25 +59,25 @@ class BufferStats:
         # More irregular shapes have higher fragmentation scores
         if not self.shape:
             return 0.0
-        
+
         # Calculate shape variance as fragmentation indicator
         shape_array = torch.tensor(self.shape, dtype=torch.float32)
         if len(shape_array) <= 1:
             return 0.0
-        
+
         mean_dim = torch.mean(shape_array)
         variance = torch.var(shape_array)
-        
+
         # Normalize by mean to get relative fragmentation
         if mean_dim > 0:
-            return (variance / (mean_dim ** 2)).item()
+            return (variance / (mean_dim**2)).item()
         return 0.0
 
 
-@dataclass 
+@dataclass
 class MemoryFragment:
     """Represents a memory fragment for tracking."""
-    
+
     size_bytes: int
     device: torch.device
     dtype: torch.dtype
@@ -115,7 +118,9 @@ class UnifiedMemoryPool:
         }
 
         # Size-bucketed pools for efficient allocation
-        self._size_buckets: dict[int, OrderedDict[tuple, Tensor]] = defaultdict(OrderedDict)
+        self._size_buckets: dict[int, OrderedDict[tuple, Tensor]] = defaultdict(
+            OrderedDict
+        )
 
         # Fragment tracking for defragmentation
         self._fragments: dict[torch.device, list[MemoryFragment]] = defaultdict(list)
@@ -139,7 +144,7 @@ class UnifiedMemoryPool:
 
         # Fragmentation tracking
         self._fragmentation_scores: dict[torch.device, float] = defaultdict(float)
-        
+
         # NUMA awareness (if available)
         self._numa_nodes: dict[int, list[torch.device]] = {}
         self._detect_numa_topology()
@@ -157,15 +162,17 @@ class UnifiedMemoryPool:
         """Detect NUMA topology for multi-socket systems."""
         try:
             # Try to detect NUMA nodes (requires psutil)
-            import psutil
-            
-            if hasattr(psutil, 'cpu_count'):
+            import psutil  # noqa: PLC0415
+
+            if hasattr(psutil, "cpu_count"):
                 # Basic NUMA detection - assume one device per NUMA node
                 numa_nodes = 1
                 if torch.cuda.is_available():
                     device_count = torch.cuda.device_count()
-                    numa_nodes = min(device_count, 2)  # Most systems have 1-2 NUMA nodes
-                    
+                    numa_nodes = min(
+                        device_count, 2
+                    )  # Most systems have 1-2 NUMA nodes
+
                 for node in range(numa_nodes):
                     devices = []
                     if torch.cuda.is_available():
@@ -173,43 +180,49 @@ class UnifiedMemoryPool:
                         for device_id in range(torch.cuda.device_count()):
                             if device_id % numa_nodes == node:
                                 devices.append(torch.device(f"cuda:{device_id}"))
-                    
+
                     if not devices and node == 0:  # At least one node with CPU
                         devices.append(torch.device("cpu"))
-                        
+
                     if devices:
                         self._numa_nodes[node] = devices
-                        
+
         except ImportError:
             # Fallback: single NUMA node
             devices = [torch.device("cpu")]
             if torch.cuda.is_available():
-                devices.extend(torch.device(f"cuda:{i}") for i in range(torch.cuda.device_count()))
+                devices.extend(
+                    torch.device(f"cuda:{i}") for i in range(torch.cuda.device_count())
+                )
             self._numa_nodes[0] = devices
-            
+
         logger.debug(f"Detected NUMA topology: {self._numa_nodes}")
 
-    def _get_optimal_device(self, preferred_device: torch.device | None) -> torch.device:
+    def _get_optimal_device(
+        self, preferred_device: torch.device | None
+    ) -> torch.device:
         """Get optimal device considering NUMA topology."""
         if preferred_device is not None:
             return preferred_device
-            
+
         # Find least loaded NUMA node
         if self._numa_nodes:
-            min_load = float('inf')
+            min_load = float("inf")
             best_device = None
-            
+
             for node, devices in self._numa_nodes.items():
                 for device in devices:
                     # Simple load metric: number of allocated buffers
-                    load = sum(1 for stats in self._stats.values() if stats.device == device)
+                    load = sum(
+                        1 for stats in self._stats.values() if stats.device == device
+                    )
                     if load < min_load:
                         min_load = load
                         best_device = device
-                        
+
             if best_device:
                 return best_device
-                
+
         # Fallback
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -237,7 +250,7 @@ class UnifiedMemoryPool:
         with self._lock:
             # Optimize device selection using NUMA awareness
             device = self._get_optimal_device(device)
-            
+
             # Validate pool type
             if pool_type not in self._pools:
                 pool_type = "default"
@@ -246,8 +259,12 @@ class UnifiedMemoryPool:
             key = (shape, dtype, device, pinned, pool_type)
 
             # Calculate size bucket for efficient lookup
-            size_bytes = torch.prod(torch.tensor(shape)).item() * torch.finfo(dtype).bits // 8
-            size_bucket = max(0, int(math.log2(size_bytes / 1024)) + 10) if size_bytes > 0 else 0
+            size_bytes = (
+                torch.prod(torch.tensor(shape)).item() * torch.finfo(dtype).bits // 8
+            )
+            size_bucket = (
+                max(0, int(math.log2(size_bytes / 1024)) + 10) if size_bytes > 0 else 0
+            )
 
             # Check hot cache first
             if key in self._hot_cache:
@@ -337,13 +354,13 @@ class UnifiedMemoryPool:
         """
         target_numel = torch.prod(torch.tensor(shape)).item()
         best_buffer = None
-        best_score = float('inf')
+        best_score = float("inf")
 
         # Search in nearby size buckets first
         for bucket_offset in range(-2, 3):  # Check buckets ±2 from target
             search_bucket = max(0, size_bucket + bucket_offset)
             bucket_pool = self._size_buckets[search_bucket]
-            
+
             for (buf_shape, buf_dtype, buf_device, _, _), buffer in bucket_pool.items():
                 # Check dtype and device match
                 if buf_dtype != dtype or buf_device != device:
@@ -373,7 +390,7 @@ class UnifiedMemoryPool:
                     # Add penalty for slicing to encourage exact matches
                     slice_penalty = 0.1
                     total_score = frag_score + slice_penalty
-                    
+
                     if total_score < best_score:
                         try:
                             flat_buffer = buffer.flatten()
@@ -386,7 +403,7 @@ class UnifiedMemoryPool:
         # Fall back to original method if no fragmentation-aware match found
         if best_buffer is None:
             return self._find_compatible_buffer(shape, dtype, device, pool)
-            
+
         return best_buffer
 
     def _should_defragment(self, device: torch.device) -> bool:
@@ -397,29 +414,29 @@ class UnifiedMemoryPool:
     def _defragment_device(self, device: torch.device) -> None:
         """Perform memory defragmentation for a specific device."""
         logger.info(f"Defragmenting memory for device {device}")
-        
+
         # Strategy: Remove all fragments and compact active buffers
         with self._lock:
             # Clear fragments for this device
             if device in self._fragments:
                 self._fragments[device].clear()
-            
+
             # Force CUDA cache cleanup to defragment GPU memory
             if device.type == "cuda" and torch.cuda.is_available():
                 torch.cuda.empty_cache()
                 # Also synchronize to ensure all operations complete
                 torch.cuda.synchronize(device)
-            
+
             # Reset fragmentation score
             self._fragmentation_scores[device] = 0.0
-            
+
             # Trigger garbage collection
             gc.collect()
 
     def _track_allocation(self, device: torch.device, size_bytes: int) -> None:
         """Track memory allocation for fragmentation analysis."""
         import time
-        
+
         # Add fragment record
         fragment = MemoryFragment(
             size_bytes=size_bytes,
@@ -427,11 +444,11 @@ class UnifiedMemoryPool:
             dtype=torch.float32,  # Default for tracking
             is_free=False,
             allocation_time=time.time(),
-            last_access_time=time.time()
+            last_access_time=time.time(),
         )
-        
+
         self._fragments[device].append(fragment)
-        
+
         # Update fragmentation score
         self._update_fragmentation_score(device)
 
@@ -441,22 +458,22 @@ class UnifiedMemoryPool:
         if not fragments:
             self._fragmentation_scores[device] = 0.0
             return
-        
+
         # Calculate fragmentation as ratio of free/allocated fragments
         free_fragments = sum(1 for f in fragments if f.is_free)
         total_fragments = len(fragments)
-        
+
         if total_fragments == 0:
             score = 0.0
         else:
             # Higher score = more fragmented
             score = free_fragments / total_fragments
-            
+
             # Add penalty for having many small fragments
             avg_size = sum(f.size_bytes for f in fragments) / total_fragments
             if avg_size < 1024 * 1024:  # Less than 1MB average
                 score += 0.1
-        
+
         self._fragmentation_scores[device] = score
 
     def _find_compatible_buffer(
@@ -619,7 +636,7 @@ class UnifiedMemoryPool:
 
             # Clear all pools, keeping only active buffers
             keys_to_remove_from_buckets = []
-            
+
             for pool_name, pool in self._pools.items():
                 # Get list of keys to remove
                 keys_to_remove = []
@@ -632,7 +649,7 @@ class UnifiedMemoryPool:
                         # Handle tensor comparison issues in WeakSet
                         # Assume inactive if we can't check safely
                         is_active = False
-                    
+
                     if not is_active:
                         keys_to_remove.append(key)
 
@@ -641,14 +658,14 @@ class UnifiedMemoryPool:
                     buffer = pool.pop(key)
                     size_bytes = buffer.numel() * buffer.element_size()
                     self._total_allocated_bytes -= size_bytes
-                    
+
                     # Mark corresponding fragments as free
                     device = key[2] if key[2] else buffer.device
                     for fragment in self._fragments.get(device, []):
                         if fragment.size_bytes == size_bytes and not fragment.is_free:
                             fragment.is_free = True
                             break
-                    
+
                     # Also remove from size buckets
                     keys_to_remove_from_buckets.append(key)
                     del buffer
@@ -660,13 +677,15 @@ class UnifiedMemoryPool:
 
             # Defragment all devices with high fragmentation
             devices_defragmented = self.defragment_all_devices()
-            
+
             # Force garbage collection
             gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
 
-            logger.info(f"Aggressive cleanup complete, freed memory and defragmented {sum(devices_defragmented.values())} devices")
+            logger.info(
+                f"Aggressive cleanup complete, freed memory and defragmented {sum(devices_defragmented.values())} devices"
+            )
 
     def _conservative_cleanup(self) -> None:
         """Conservative cleanup - remove old unused buffers and update fragmentation."""
@@ -676,7 +695,7 @@ class UnifiedMemoryPool:
 
         with self._lock:
             keys_to_remove_from_buckets = []
-            
+
             for pool_name, pool in self._pools.items():
                 # Remove buffers not accessed recently
                 keys_to_remove = []
@@ -692,7 +711,7 @@ class UnifiedMemoryPool:
                         except RuntimeError:
                             # Handle tensor comparison issues in WeakSet
                             is_active = False
-                        
+
                         # Remove if not accessed in last minute and not in hot cache
                         if (
                             time_since_access > 60
@@ -706,17 +725,17 @@ class UnifiedMemoryPool:
                     buffer = pool.pop(key)
                     size_bytes = buffer.numel() * buffer.element_size()
                     self._total_allocated_bytes -= size_bytes
-                    
+
                     # Mark corresponding fragments as free
                     device = key[2] if key[2] else buffer.device
                     for fragment in self._fragments.get(device, []):
                         if fragment.size_bytes == size_bytes and not fragment.is_free:
                             fragment.is_free = True
                             break
-                    
+
                     # Update fragmentation score for this device
                     self._update_fragmentation_score(device)
-                    
+
                     keys_to_remove_from_buckets.append(key)
                     del buffer
 
@@ -752,7 +771,7 @@ class UnifiedMemoryPool:
                     for key in list(bucket_pool.keys()):
                         if key[4] == pool_type:  # pool_type is 5th element in key
                             keys_to_remove.append((bucket, key))
-                
+
                 for bucket, key in keys_to_remove:
                     self._size_buckets[bucket].pop(key, None)
 
@@ -787,7 +806,7 @@ class UnifiedMemoryPool:
                 fragmentation_stats[str(device)] = {
                     "fragmentation_score": score,
                     "fragments_count": len(self._fragments.get(device, [])),
-                    "needs_defrag": score > self._fragmentation_threshold
+                    "needs_defrag": score > self._fragmentation_threshold,
                 }
 
             # NUMA statistics
@@ -795,10 +814,12 @@ class UnifiedMemoryPool:
             for node, devices in self._numa_nodes.items():
                 node_buffers = 0
                 for device in devices:
-                    node_buffers += sum(1 for stats in self._stats.values() if stats.device == device)
+                    node_buffers += sum(
+                        1 for stats in self._stats.values() if stats.device == device
+                    )
                 numa_stats[f"numa_node_{node}"] = {
                     "devices": [str(d) for d in devices],
-                    "buffers": node_buffers
+                    "buffers": node_buffers,
                 }
 
             return {
@@ -815,18 +836,18 @@ class UnifiedMemoryPool:
                     "fragmentation_threshold": self._fragmentation_threshold,
                     "aggressive_threshold": self._aggressive_threshold,
                     "conservative_threshold": self._conservative_threshold,
-                }
+                },
             }
 
     def defragment_all_devices(self) -> dict[str, bool]:
         """
         Perform defragmentation on all devices that need it.
-        
+
         Returns:
             Dictionary mapping device names to whether defragmentation was performed
         """
         results = {}
-        
+
         with self._lock:
             for device, score in self._fragmentation_scores.items():
                 device_str = str(device)
@@ -836,29 +857,35 @@ class UnifiedMemoryPool:
                     logger.info(f"Defragmented {device_str} (score: {score:.3f})")
                 else:
                     results[device_str] = False
-                    
+
         return results
 
     def get_fragmentation_report(self) -> str:
         """Generate a human-readable fragmentation report."""
         lines = ["Memory Pool Fragmentation Report", "=" * 35, ""]
-        
+
         with self._lock:
             for device, score in self._fragmentation_scores.items():
                 fragments = self._fragments.get(device, [])
                 free_fragments = sum(1 for f in fragments if f.is_free)
                 total_fragments = len(fragments)
-                
-                status = "🔴 NEEDS DEFRAG" if score > self._fragmentation_threshold else "🟢 OK"
-                
-                lines.extend([
-                    f"Device: {device} {status}",
-                    f"  Fragmentation Score: {score:.3f} (threshold: {self._fragmentation_threshold})",
-                    f"  Total Fragments: {total_fragments}",
-                    f"  Free Fragments: {free_fragments}",
-                    ""
-                ])
-                
+
+                status = (
+                    "🔴 NEEDS DEFRAG"
+                    if score > self._fragmentation_threshold
+                    else "🟢 OK"
+                )
+
+                lines.extend(
+                    [
+                        f"Device: {device} {status}",
+                        f"  Fragmentation Score: {score:.3f} (threshold: {self._fragmentation_threshold})",
+                        f"  Total Fragments: {total_fragments}",
+                        f"  Free Fragments: {free_fragments}",
+                        "",
+                    ]
+                )
+
         return "\n".join(lines)
 
     def _register_gc_callback(self) -> None:

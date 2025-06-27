@@ -87,7 +87,8 @@ def archive_files():
 
     # Generate archive summary
     summary_path = (
-        archive_dir / f"archive-summary-{datetime.utcnow().strftime('%Y-%m-%d-%H%M-UTC')}.md"
+        archive_dir
+        / f"archive-summary-{datetime.utcnow().strftime('%Y-%m-%d-%H%M-UTC')}.md"
     )
     with open(summary_path, "w") as f:
         f.write("# Documentation Archive Summary\n\n")
@@ -95,7 +96,9 @@ def archive_files():
         f.write("## Purpose\n\n")
         f.write("Archived obsolete documentation files that describe completed work, ")
         f.write("historical analyses, and fixed defects. These files are preserved ")
-        f.write("for historical reference but are no longer part of active documentation.\n\n")
+        f.write(
+            "for historical reference but are no longer part of active documentation.\n\n"
+        )
         f.write("## Archived Files\n\n")
 
         for category, target_dir in category_mapping.items():

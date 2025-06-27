@@ -32,7 +32,9 @@ results = {
 # Create figure with multiple subplots
 fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 12))
 fig.suptitle(
-    "Extreme Long Sequence Benchmark Results\nNVIDIA GTX 1080 (8GB)", fontsize=16, fontweight="bold"
+    "Extreme Long Sequence Benchmark Results\nNVIDIA GTX 1080 (8GB)",
+    fontsize=16,
+    fontweight="bold",
 )
 
 # Colors for each implementation
@@ -56,11 +58,17 @@ for impl in implementations:
     max_lengths.append(max(successful_lengths) if successful_lengths else 0)
 
 bars = ax1.bar(
-    range(len(implementations)), max_lengths, color=[colors[impl] for impl in implementations]
+    range(len(implementations)),
+    max_lengths,
+    color=[colors[impl] for impl in implementations],
 )
 ax1.set_xticks(range(len(implementations)))
 ax1.set_xticklabels(
-    [impl.replace("DilatedAttention", "\nDilatedAttention") for impl in implementations], rotation=0
+    [
+        impl.replace("DilatedAttention", "\nDilatedAttention")
+        for impl in implementations
+    ],
+    rotation=0,
 )
 ax1.set_ylabel("Tokens")
 ax1.set_yscale("log")

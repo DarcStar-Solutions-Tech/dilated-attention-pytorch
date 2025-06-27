@@ -15,7 +15,6 @@ import time
 from dataclasses import asdict, dataclass
 
 import torch
-from benchmarks.core import BenchmarkOutputManager
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
@@ -76,7 +75,9 @@ class DistributedBenchmarkResult:
 
     def __str__(self):
         if not self.success:
-            return f"{self.implementation} @ {self.world_size} GPUs: FAILED - {self.error}"
+            return (
+                f"{self.implementation} @ {self.world_size} GPUs: FAILED - {self.error}"
+            )
 
         return (
             f"{self.implementation} @ {self.world_size} GPUs: "
@@ -93,7 +94,9 @@ def setup_distributed(rank: int, world_size: int):
     os.environ["MASTER_PORT"] = "12355"
 
     # Initialize process group
-    dist.init_process_group(backend="nccl", init_method="env://", world_size=world_size, rank=rank)
+    dist.init_process_group(
+        backend="nccl", init_method="env://", world_size=world_size, rank=rank
+    )
 
     # Set device
     torch.cuda.set_device(rank)
@@ -140,7 +143,10 @@ def create_distributed_module(
                 .to(dtype)
             )
 
-        elif impl_name == "DistributedImprovedMultiheadDilatedAttention" and DISTRIBUTED_AVAILABLE:
+        elif (
+            impl_name == "DistributedImprovedMultiheadDilatedAttention"
+            and DISTRIBUTED_AVAILABLE
+        ):
             return (
                 DistributedImprovedMultiheadDilatedAttention(
                     embed_dim=embed_dim,
@@ -154,7 +160,10 @@ def create_distributed_module(
                 .to(dtype)
             )
 
-        elif impl_name == "RingDistributedDilatedAttention" and RING_DISTRIBUTED_AVAILABLE:
+        elif (
+            impl_name == "RingDistributedDilatedAttention"
+            and RING_DISTRIBUTED_AVAILABLE
+        ):
             # Ring size should match world size for distributed
             return (
                 RingDistributedDilatedAttention(
@@ -223,7 +232,9 @@ def benchmark_distributed_worker(
         )
 
         if module is None:
-            results_queue.put({"rank": rank, "success": False, "error": "Failed to create module"})
+            results_queue.put(
+                {"rank": rank, "success": False, "error": "Failed to create module"}
+            )
             return
 
         embed_dim = num_heads * head_dim
@@ -236,9 +247,15 @@ def benchmark_distributed_worker(
             k = torch.randn(batch_size, seq_len, embed_dim, device=device, dtype=dtype)
             v = torch.randn(batch_size, seq_len, embed_dim, device=device, dtype=dtype)
         else:
-            q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-            k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-            v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+            q = torch.randn(
+                batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+            )
+            k = torch.randn(
+                batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+            )
+            v = torch.randn(
+                batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+            )
 
         # Warmup
         for _ in range(2):
@@ -432,9 +449,15 @@ def run_distributed_benchmark(
 
 
 def main():  # noqa: PLR0912
-    parser = argparse.ArgumentParser(description="Multi-GPU distributed attention benchmark")
+    parser = argparse.ArgumentParser(
+        description="Multi-GPU distributed attention benchmark"
+    )
     parser.add_argument(
-        "--world-sizes", type=int, nargs="+", default=[1, 2, 4], help="Number of GPUs to use"
+        "--world-sizes",
+        type=int,
+        nargs="+",
+        default=[1, 2, 4],
+        help="Number of GPUs to use",
     )
     parser.add_argument(
         "--sequence-lengths",
@@ -444,11 +467,18 @@ def main():  # noqa: PLR0912
         help="Sequence lengths to benchmark",
     )
     parser.add_argument("--batch-size", type=int, default=4, help="Batch size per GPU")
-    parser.add_argument("--num-heads", type=int, default=8, help="Number of attention heads")
-    parser.add_argument("--head-dim", type=int, default=64, help="Dimension per head")
-    parser.add_argument("--num-runs", type=int, default=5, help="Number of benchmark runs")
     parser.add_argument(
-        "--output-dir", type=str, default="docs/benchmarks", help="Output directory for results"
+        "--num-heads", type=int, default=8, help="Number of attention heads"
+    )
+    parser.add_argument("--head-dim", type=int, default=64, help="Dimension per head")
+    parser.add_argument(
+        "--num-runs", type=int, default=5, help="Number of benchmark runs"
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="docs/benchmarks",
+        help="Output directory for results",
     )
 
     args = parser.parse_args()
@@ -467,7 +497,10 @@ def main():  # noqa: PLR0912
     implementations = []
     if DISTRIBUTED_AVAILABLE:
         implementations.extend(
-            ["DistributedImprovedDilatedAttention", "DistributedImprovedMultiheadDilatedAttention"]
+            [
+                "DistributedImprovedDilatedAttention",
+                "DistributedImprovedMultiheadDilatedAttention",
+            ]
         )
     if RING_DISTRIBUTED_AVAILABLE:
         implementations.append("RingDistributedDilatedAttention")
@@ -486,9 +519,9 @@ def main():  # noqa: PLR0912
     results = {impl: [] for impl in implementations}
 
     for seq_len in args.sequence_lengths:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Sequence length: {seq_len}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         for impl_name in implementations:
             print(f"\n{impl_name}:")
@@ -541,13 +574,16 @@ def main():  # noqa: PLR0912
         "metadata": {
             "timestamp": timestamp,
             "gpu_count": torch.cuda.device_count(),
-            "gpus": [torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())],
+            "gpus": [
+                torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())
+            ],
             "batch_size_per_gpu": args.batch_size,
             "num_heads": args.num_heads,
             "head_dim": args.head_dim,
         },
         "results": {
-            impl: [asdict(r) for r in impl_results] for impl, impl_results in results.items()
+            impl: [asdict(r) for r in impl_results]
+            for impl, impl_results in results.items()
         },
     }
 

@@ -5,7 +5,9 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 from torch.nn.modules.transformer import _get_activation_fn
 
-from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
+from dilated_attention_pytorch.multihead_dilated_attention import (
+    MultiheadDilatedAttention,
+)
 
 # Import refactored versions
 
@@ -39,7 +41,9 @@ class DilatedTransformerEncoderLayer(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
         # Self-attention block
-        self.norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps, device=device, dtype=dtype)
+        self.norm1 = nn.LayerNorm(
+            d_model, eps=layer_norm_eps, device=device, dtype=dtype
+        )
         self.self_attn = MultiheadDilatedAttention(  # type: ignore
             embed_dim=d_model,
             num_heads=nhead,
@@ -53,9 +57,13 @@ class DilatedTransformerEncoderLayer(nn.Module):
             dtype=dtype,
         )
         # Feedforward block
-        self.norm2 = nn.LayerNorm(d_model, eps=layer_norm_eps, device=device, dtype=dtype)
+        self.norm2 = nn.LayerNorm(
+            d_model, eps=layer_norm_eps, device=device, dtype=dtype
+        )
         self.linear1 = nn.Linear(d_model, dim_feedforward, device=device, dtype=dtype)
-        self.norm3 = nn.LayerNorm(dim_feedforward, eps=layer_norm_eps, device=device, dtype=dtype)
+        self.norm3 = nn.LayerNorm(
+            dim_feedforward, eps=layer_norm_eps, device=device, dtype=dtype
+        )
         self.linear2 = nn.Linear(dim_feedforward, d_model, device=device, dtype=dtype)
 
         self._reset_parameters()
@@ -122,7 +130,9 @@ class DilatedTransformerDecoderLayer(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
         # Self-attention block
-        self.norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps, device=device, dtype=dtype)
+        self.norm1 = nn.LayerNorm(
+            d_model, eps=layer_norm_eps, device=device, dtype=dtype
+        )
         self.self_attn = MultiheadDilatedAttention(  # type: ignore
             embed_dim=d_model,
             num_heads=nhead,
@@ -135,7 +145,9 @@ class DilatedTransformerDecoderLayer(nn.Module):
             dtype=dtype,
         )
         # Multi-head attention block
-        self.norm2 = nn.LayerNorm(d_model, eps=layer_norm_eps, device=device, dtype=dtype)
+        self.norm2 = nn.LayerNorm(
+            d_model, eps=layer_norm_eps, device=device, dtype=dtype
+        )
         self.multihead_attn = MultiheadDilatedAttention(  # type: ignore
             embed_dim=d_model,
             num_heads=nhead,
@@ -148,9 +160,13 @@ class DilatedTransformerDecoderLayer(nn.Module):
             dtype=dtype,
         )
         # Feedforward block
-        self.norm3 = nn.LayerNorm(d_model, eps=layer_norm_eps, device=device, dtype=dtype)
+        self.norm3 = nn.LayerNorm(
+            d_model, eps=layer_norm_eps, device=device, dtype=dtype
+        )
         self.linear1 = nn.Linear(d_model, dim_feedforward, device=device, dtype=dtype)
-        self.norm4 = nn.LayerNorm(dim_feedforward, eps=layer_norm_eps, device=device, dtype=dtype)
+        self.norm4 = nn.LayerNorm(
+            dim_feedforward, eps=layer_norm_eps, device=device, dtype=dtype
+        )
         self.linear2 = nn.Linear(dim_feedforward, d_model, device=device, dtype=dtype)
 
         self._reset_parameters()
@@ -177,7 +193,9 @@ class DilatedTransformerDecoderLayer(nn.Module):
     ) -> Tensor:
         x = self.norm2(x)
         # Always request weights to ensure consistent return type
-        x, _ = self.multihead_attn(x, memory, memory, is_causal=is_causal, need_weights=True)
+        x, _ = self.multihead_attn(
+            x, memory, memory, is_causal=is_causal, need_weights=True
+        )
         x = self.dropout(x)
         return x
 

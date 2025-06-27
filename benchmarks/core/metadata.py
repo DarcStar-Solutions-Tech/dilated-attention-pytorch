@@ -59,7 +59,9 @@ def get_system_info() -> dict[str, Any]:
 
     if torch.cuda.is_available():
         info["gpu_count"] = torch.cuda.device_count()
-        info["gpu_names"] = [torch.cuda.get_device_name(i) for i in range(info["gpu_count"])]
+        info["gpu_names"] = [
+            torch.cuda.get_device_name(i) for i in range(info["gpu_count"])
+        ]
         info["gpu_memory_gb"] = [
             torch.cuda.get_device_properties(i).total_memory / 1024**3
             for i in range(info["gpu_count"])

@@ -80,9 +80,9 @@ def test_basic_forward_pass():
 
         # Verify output shape
         expected_shape = (batch_size, seq_len, num_heads, head_dim)
-        assert output.shape == expected_shape, (
-            f"Expected shape {expected_shape}, got {output.shape}"
-        )
+        assert (
+            output.shape == expected_shape
+        ), f"Expected shape {expected_shape}, got {output.shape}"
 
         print(f"✓ Forward pass successful. Output shape: {output.shape}")
         return True
@@ -138,9 +138,9 @@ def test_multihead_forward_pass():
 
         # Verify output shape
         expected_shape = (batch_size, seq_len, embed_dim)
-        assert output.shape == expected_shape, (
-            f"Expected shape {expected_shape}, got {output.shape}"
-        )
+        assert (
+            output.shape == expected_shape
+        ), f"Expected shape {expected_shape}, got {output.shape}"
 
         print(f"✓ Multihead forward pass successful. Output shape: {output.shape}")
         return True
@@ -422,7 +422,9 @@ def main():
     print(f"\nTotal: {passed}/{total} tests passed")
 
     if passed == total:
-        print("\n✓ All tests passed! Block Sparse implementations are working correctly.")
+        print(
+            "\n✓ All tests passed! Block Sparse implementations are working correctly."
+        )
     else:
         print(f"\n✗ {total - passed} tests failed. Please check the implementation.")
 

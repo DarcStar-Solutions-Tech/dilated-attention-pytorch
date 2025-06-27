@@ -15,7 +15,9 @@ class BenchmarkOrganizer:
 
     # Patterns to identify benchmark types
     TYPE_PATTERNS: ClassVar[dict[str, re.Pattern[str]]] = {
-        "comprehensive": re.compile(r"benchmark-(all-implementations|comprehensive)", re.I),
+        "comprehensive": re.compile(
+            r"benchmark-(all-implementations|comprehensive)", re.I
+        ),
         "long-sequences": re.compile(r"benchmark-long-sequences", re.I),
         "distributed": re.compile(r"benchmark-distributed", re.I),
         "regression": re.compile(r"(regression|performance-regression)", re.I),
@@ -145,7 +147,9 @@ class BenchmarkOrganizer:
                 continue
 
             # Find latest timestamp directory
-            timestamp_dirs = sorted([d for d in type_dir.iterdir() if d.is_dir()], reverse=True)
+            timestamp_dirs = sorted(
+                [d for d in type_dir.iterdir() if d.is_dir()], reverse=True
+            )
             if timestamp_dirs:
                 latest_dir = timestamp_dirs[0]
 
@@ -208,7 +212,8 @@ class BenchmarkOrganizer:
                         "original": str(file),
                         "status": "would organize",
                         "type": self.detect_type(file.name),
-                        "timestamp": self.extract_timestamp(file.name)[0] or "no timestamp",
+                        "timestamp": self.extract_timestamp(file.name)[0]
+                        or "no timestamp",
                     }
                     results.append(result)
                 else:
@@ -228,10 +233,14 @@ def main():
 
     parser = argparse.ArgumentParser(description="Organize benchmark files")
     parser.add_argument(
-        "--benchmarks-dir", default="docs/benchmarks", help="Path to benchmarks directory"
+        "--benchmarks-dir",
+        default="docs/benchmarks",
+        help="Path to benchmarks directory",
     )
     parser.add_argument(
-        "--dry-run", action="store_true", help="Show what would be done without making changes"
+        "--dry-run",
+        action="store_true",
+        help="Show what would be done without making changes",
     )
 
     args = parser.parse_args()
@@ -263,7 +272,9 @@ def main():
                 print(f"- {Path(result['original']).name}: {result['reason']}")
         else:
             errors += 1
-            print(f"✗ {Path(result['original']).name}: {result.get('reason', 'Unknown error')}")
+            print(
+                f"✗ {Path(result['original']).name}: {result.get('reason', 'Unknown error')}"
+            )
 
     print(f"\nSummary: {organized} organized, {skipped} skipped, {errors} errors")
 

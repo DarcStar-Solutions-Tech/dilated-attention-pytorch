@@ -206,7 +206,9 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
     def _enable_compilation(self):
         """Enable torch.compile optimization for additional performance."""
         try:
-            self.attention = torch.compile(self.attention, mode="max-autotune", fullgraph=True)
+            self.attention = torch.compile(
+                self.attention, mode="max-autotune", fullgraph=True
+            )
             if hasattr(self, "qkv_proj"):
                 self.qkv_proj = torch.compile(self.qkv_proj, mode="max-autotune")
             if hasattr(self, "out_proj"):
@@ -244,9 +246,15 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             # Pre-allocate output buffers for efficient memory usage
             if buffer_key not in self._qkv_output_buffers:
                 self._qkv_output_buffers[buffer_key] = {
-                    "q": torch.empty(target_shape, dtype=query.dtype, device=query.device),
-                    "k": torch.empty(target_shape, dtype=query.dtype, device=query.device),
-                    "v": torch.empty(target_shape, dtype=query.dtype, device=query.device),
+                    "q": torch.empty(
+                        target_shape, dtype=query.dtype, device=query.device
+                    ),
+                    "k": torch.empty(
+                        target_shape, dtype=query.dtype, device=query.device
+                    ),
+                    "v": torch.empty(
+                        target_shape, dtype=query.dtype, device=query.device
+                    ),
                 }
 
         # Ensure buffers match current input dimensions - use resize for efficiency
@@ -278,9 +286,15 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
                     torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
                     # Recreate buffers
-                    buffers["q"] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
-                    buffers["k"] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
-                    buffers["v"] = torch.empty(target_shape, dtype=query.dtype, device=query.device)
+                    buffers["q"] = torch.empty(
+                        target_shape, dtype=query.dtype, device=query.device
+                    )
+                    buffers["k"] = torch.empty(
+                        target_shape, dtype=query.dtype, device=query.device
+                    )
+                    buffers["v"] = torch.empty(
+                        target_shape, dtype=query.dtype, device=query.device
+                    )
                     self._qkv_output_buffers[buffer_key] = buffers
                 except RuntimeError as alloc_error:
                     # Ultimate fallback: use smaller batch processing

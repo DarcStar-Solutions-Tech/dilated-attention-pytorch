@@ -11,11 +11,9 @@ from dataclasses import dataclass
 
 import torch
 
-from benchmarks.core import BenchmarkOutputManager
 from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
 
 
-from benchmarks.core import BenchmarkOutputManager
 @dataclass
 class BenchmarkResult:
     seq_len: int
@@ -97,7 +95,9 @@ def benchmark_ring_attention(
         chunk_times = []
         start_total = time.time()
 
-        for chunk_idx in range(min(ring_size, 4)):  # Process max 4 chunks for benchmarking
+        for chunk_idx in range(
+            min(ring_size, 4)
+        ):  # Process max 4 chunks for benchmarking
             start_chunk = time.time()
 
             # Create chunk tensors
@@ -194,7 +194,9 @@ def run_scaling_benchmark():
     else:
         print("WARNING: Running on CPU - this will be very slow!")
 
-    print("\nNote: Using float16 precision and batch_size=1 for maximum sequence length")
+    print(
+        "\nNote: Using float16 precision and batch_size=1 for maximum sequence length"
+    )
 
     # Test configurations: (seq_len, ring_size)
     # Start small and scale up, adjusting ring_size as needed
@@ -228,7 +230,9 @@ def run_scaling_benchmark():
         # Skip if sequence is too large for available memory
         est_memory = estimate_memory_usage(seq_len, 1, 8, 64, ring_size)
         if torch.cuda.is_available() and est_memory > gpu_memory_gb * 0.8:
-            print(f"\nSkipping seq_len={seq_len:,} (estimated {est_memory:.1f}GB > available)")
+            print(
+                f"\nSkipping seq_len={seq_len:,} (estimated {est_memory:.1f}GB > available)"
+            )
             continue
 
         result = benchmark_ring_attention(seq_len, ring_size)
@@ -254,7 +258,9 @@ def run_scaling_benchmark():
                 f"{r.total_time:>10.1f}s {r.peak_memory_gb:>8.1f}GB {'✓':>10}"
             )
         else:
-            print(f"{r.seq_len:>15,} {r.ring_size:>10} {'--':>12} {'--':>12} {'--':>10} {'✗':>10}")
+            print(
+                f"{r.seq_len:>15,} {r.ring_size:>10} {'--':>12} {'--':>12} {'--':>10} {'✗':>10}"
+            )
 
     # Analysis
     successful_results = [r for r in results if r.success]

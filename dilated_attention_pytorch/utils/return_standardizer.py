@@ -57,7 +57,12 @@ class MultiheadAttentionWrapper:
         self.always_return_tuple = always_return_tuple
 
     def __call__(
-        self, query: Tensor, key: Tensor, value: Tensor, need_weights: bool = False, **kwargs
+        self,
+        query: Tensor,
+        key: Tensor,
+        value: Tensor,
+        need_weights: bool = False,
+        **kwargs,
     ) -> Tensor | tuple[Tensor, Tensor | None]:
         """
         Forward pass with standardized return format.
@@ -73,7 +78,9 @@ class MultiheadAttentionWrapper:
             Either tensor or tuple based on configuration
         """
         # Call the wrapped module
-        output = self.attention_module(query, key, value, need_weights=need_weights, **kwargs)
+        output = self.attention_module(
+            query, key, value, need_weights=need_weights, **kwargs
+        )
 
         # Standardize the output
         return standardize_attention_output(

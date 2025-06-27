@@ -53,7 +53,10 @@ ax1.set_ylabel("Time (ms)")
 ax1.set_title("Performance Comparison")
 ax1.set_xticks(x)
 ax1.set_xticklabels(
-    [impl.replace("DilatedAttention", "DA").replace("Multihead", "MH") for impl in implementations],
+    [
+        impl.replace("DilatedAttention", "DA").replace("Multihead", "MH")
+        for impl in implementations
+    ],
     rotation=45,
     ha="right",
 )
@@ -66,14 +69,21 @@ baseline_8k = times_8k[0]
 speedups_4k = [baseline_4k / t for t in times_4k]
 speedups_8k = [baseline_8k / t for t in times_8k]
 
-ax2.plot(implementations, speedups_4k, "o-", label="4K tokens", linewidth=2, markersize=8)
-ax2.plot(implementations, speedups_8k, "s-", label="8K tokens", linewidth=2, markersize=8)
+ax2.plot(
+    implementations, speedups_4k, "o-", label="4K tokens", linewidth=2, markersize=8
+)
+ax2.plot(
+    implementations, speedups_8k, "s-", label="8K tokens", linewidth=2, markersize=8
+)
 ax2.axhline(y=1.0, color="gray", linestyle="--", alpha=0.5)
 ax2.set_xlabel("Implementation")
 ax2.set_ylabel("Speedup vs DilatedAttention")
 ax2.set_title("Relative Performance")
 ax2.set_xticklabels(
-    [impl.replace("DilatedAttention", "DA").replace("Multihead", "MH") for impl in implementations],
+    [
+        impl.replace("DilatedAttention", "DA").replace("Multihead", "MH")
+        for impl in implementations
+    ],
     rotation=45,
     ha="right",
 )
@@ -91,7 +101,10 @@ ax3.set_ylabel("Memory per Token (MB)")
 ax3.set_title("Memory Efficiency Comparison")
 ax3.set_xticks(range(len(mem_impls)))
 ax3.set_xticklabels(
-    [impl.replace("DilatedAttention", "DA").replace("Multihead", "MH") for impl in mem_impls],
+    [
+        impl.replace("DilatedAttention", "DA").replace("Multihead", "MH")
+        for impl in mem_impls
+    ],
     rotation=45,
     ha="right",
 )
@@ -154,5 +167,7 @@ print("=" * 80)
 print(f"{'Implementation':<35} {'4K tokens':>12} {'8K tokens':>12} {'Speedup':>10}")
 print("-" * 80)
 for i, impl in enumerate(implementations):
-    print(f"{impl:<35} {times_4k[i]:>10.1f}ms {times_8k[i]:>10.1f}ms {speedups_4k[i]:>9.2f}x")
+    print(
+        f"{impl:<35} {times_4k[i]:>10.1f}ms {times_8k[i]:>10.1f}ms {speedups_4k[i]:>9.2f}x"
+    )
 print("=" * 80)

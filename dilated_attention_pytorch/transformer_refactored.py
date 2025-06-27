@@ -13,7 +13,11 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 from torch.nn.modules.transformer import _get_activation_fn
 
-from .core import DilatedAttentionConfig, MultiheadConfig, create_multihead_dilated_attention
+from .core import (
+    DilatedAttentionConfig,
+    MultiheadConfig,
+    create_multihead_dilated_attention,
+)
 
 
 @dataclass

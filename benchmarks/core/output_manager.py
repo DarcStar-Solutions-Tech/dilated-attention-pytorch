@@ -41,7 +41,9 @@ class BenchmarkOutputManager:
         }
 
         # Save JSON
-        json_path = self.storage.save_json(data, self.benchmark_type, self.metadata.timestamp)
+        json_path = self.storage.save_json(
+            data, self.benchmark_type, self.metadata.timestamp
+        )
 
         paths = {"json": json_path}
 
@@ -60,7 +62,9 @@ class BenchmarkOutputManager:
 
     def save_plot(self, plot_path: Path) -> Path:
         """Save a plot file to organized location."""
-        return self.storage.save_plot(plot_path, self.benchmark_type, self.metadata.timestamp)
+        return self.storage.save_plot(
+            plot_path, self.benchmark_type, self.metadata.timestamp
+        )
 
     def _generate_markdown_summary(self, data: dict[str, Any]) -> str:
         """Generate markdown summary of benchmark results."""
@@ -85,7 +89,9 @@ class BenchmarkOutputManager:
             md_lines.extend(["## Summary", ""])
             for key, value in self.summary.items():
                 if isinstance(value, (int, float)):
-                    md_lines.append(f"- **{key.replace('_', ' ').title()}**: {value:,.2f}")
+                    md_lines.append(
+                        f"- **{key.replace('_', ' ').title()}**: {value:,.2f}"
+                    )
                 else:
                     md_lines.append(f"- **{key.replace('_', ' ').title()}**: {value}")
             md_lines.append("")
@@ -125,7 +131,9 @@ class BenchmarkOutputManager:
         return "\n".join(md_lines)
 
     @classmethod
-    def from_existing_script(cls, script_name: str, **kwargs) -> "BenchmarkOutputManager":
+    def from_existing_script(
+        cls, script_name: str, **kwargs
+    ) -> "BenchmarkOutputManager":
         """Create manager for existing benchmark script (backward compatibility)."""
         # Extract benchmark type from script name
         script_path = Path(script_name)

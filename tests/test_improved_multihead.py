@@ -18,7 +18,9 @@ def test_interface_compatibility():
         from dilated_attention_pytorch.improved_multihead_dilated_attention import (
             ImprovedMultiheadDilatedAttention,
         )
-        from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
+        from dilated_attention_pytorch.multihead_dilated_attention import (
+            MultiheadDilatedAttention,
+        )
 
         # Test parameters
         embed_dim = 512
@@ -97,7 +99,7 @@ def test_forward_compatibility():
 
         # Determine device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        
+
         # Create model
         model = ImprovedMultiheadDilatedAttention(
             embed_dim=embed_dim,
@@ -126,7 +128,9 @@ def test_forward_compatibility():
         if output.shape == expected_shape:
             print("✓ Output shape is correct")
         else:
-            print(f"✗ Output shape mismatch. Expected {expected_shape}, got {output.shape}")
+            print(
+                f"✗ Output shape mismatch. Expected {expected_shape}, got {output.shape}"
+            )
             return False
 
         if attn_weights is None:

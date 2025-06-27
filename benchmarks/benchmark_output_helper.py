@@ -107,8 +107,12 @@ if __name__ == "__main__":
     helper = BenchmarkOutputHelper(__file__)
 
     # Get paths
-    json_path = helper.get_output_path(f"benchmark-{helper.benchmark_type}-{helper.timestamp}.json")
-    png_path = helper.get_output_path(f"benchmark-{helper.benchmark_type}-{helper.timestamp}.png")
+    json_path = helper.get_output_path(
+        f"benchmark-{helper.benchmark_type}-{helper.timestamp}.json"
+    )
+    png_path = helper.get_output_path(
+        f"benchmark-{helper.benchmark_type}-{helper.timestamp}.png"
+    )
 
     print(f"Benchmark type: {helper.benchmark_type}")
     print(f"Output directory: {helper.output_dir_str}")

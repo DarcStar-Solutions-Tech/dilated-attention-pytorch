@@ -180,7 +180,9 @@ def benchmark_fa3_vs_fa2(
     dtype = torch.float16
 
     # Create test tensors
-    q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    q = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
     k = torch.randn_like(q)
     v = torch.randn_like(q)
 
@@ -192,7 +194,7 @@ def benchmark_fa3_vs_fa2(
     # Benchmark FA2
     if HAS_FLASH_ATTN:
         try:
-            from flash_attn import flash_attn_func
+            from flash_attn import flash_attn_func  # noqa: PLC0415
 
             # Warmup
             for _ in range(10):
@@ -216,7 +218,7 @@ def benchmark_fa3_vs_fa2(
     # Benchmark FA3
     if HAS_FLASH_ATTN_3:
         try:
-            from flash_attn_interface import flash_attn_func_v3
+            from flash_attn import flash_attn_func_v3  # noqa: PLC0415
 
             # Warmup
             for _ in range(10):

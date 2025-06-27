@@ -40,7 +40,9 @@ class MemoryBreakdown:
     total: float  # GB
 
 
-def calculate_model_parameters_memory(config: ModelConfig, dtype_bytes: int = 2) -> float:
+def calculate_model_parameters_memory(
+    config: ModelConfig, dtype_bytes: int = 2
+) -> float:
     """Calculate memory for model parameters (weights and biases)."""
 
     # Embedding layers
@@ -51,7 +53,9 @@ def calculate_model_parameters_memory(config: ModelConfig, dtype_bytes: int = 2)
     # - Output projection: embed_dim^2
     # - Feed forward: 2 * embed_dim * (4 * embed_dim) = 8 * embed_dim^2
     # - Layer norms: 2 * embed_dim (negligible)
-    params_per_layer = 3 * config.embed_dim**2 + config.embed_dim**2 + 8 * config.embed_dim**2
+    params_per_layer = (
+        3 * config.embed_dim**2 + config.embed_dim**2 + 8 * config.embed_dim**2
+    )
     params_per_layer = 12 * config.embed_dim**2
 
     total_transformer_params = config.num_layers * params_per_layer
@@ -74,7 +78,7 @@ def calculate_dilated_attention_memory(
 ) -> float:
     """Calculate memory for dilated attention computation."""
 
-    embed_dim = config.embed_dim
+    _ = config.embed_dim
     num_heads = config.num_heads
     head_dim = config.head_dim
     num_segments = len(config.segment_lengths)
@@ -108,7 +112,9 @@ def calculate_dilated_attention_memory(
             attn_matrix = batch_size * num_segs * effective_seq_len**2 * dtype_bytes
 
             # Intermediate tensors from rearrange operations
-            intermediate = batch_size * seq_len * heads_per_group * head_dim * dtype_bytes * 3
+            intermediate = (
+                batch_size * seq_len * heads_per_group * head_dim * dtype_bytes * 3
+            )
 
             segment_memory = attn_matrix + intermediate
 
@@ -118,7 +124,9 @@ def calculate_dilated_attention_memory(
             attn_matrix = batch_size * num_segs * effective_seq_len**2 * dtype_bytes
 
             # Reduced intermediate tensors due to optimizations
-            intermediate = batch_size * seq_len * heads_per_group * head_dim * dtype_bytes * 2
+            intermediate = (
+                batch_size * seq_len * heads_per_group * head_dim * dtype_bytes * 2
+            )
 
             segment_memory = attn_matrix + intermediate
 
@@ -142,7 +150,9 @@ def calculate_activation_memory(
     # - FFN intermediate: (batch, seq_len, 4 * embed_dim)
     # - FFN output: (batch, seq_len, embed_dim)
 
-    activations_per_layer = batch_size * seq_len * embed_dim * (1 + 1 + 4 + 1) * dtype_bytes
+    activations_per_layer = (
+        batch_size * seq_len * embed_dim * (1 + 1 + 4 + 1) * dtype_bytes
+    )
     total_activations = num_layers * activations_per_layer
 
     return total_activations / (1024**3)  # Convert to GB
@@ -162,7 +172,9 @@ def calculate_optimizer_memory(
 ) -> float:
     """Calculate memory for optimizer states."""
 
-    param_memory = calculate_model_parameters_memory(config, dtype_bytes=4)  # fp32 for optimizer
+    param_memory = calculate_model_parameters_memory(
+        config, dtype_bytes=4
+    )  # fp32 for optimizer
 
     if optimizer_type.lower() == "adamw":
         # AdamW stores: momentum, variance, and original parameters
@@ -240,7 +252,9 @@ def find_max_tokens(
         mid_seq_len = (min_seq_len + max_seq_len) // 2
 
         # Ensure sequence length is multiple of max segment length
-        mid_seq_len = (mid_seq_len // config.max_segment_length) * config.max_segment_length
+        mid_seq_len = (
+            mid_seq_len // config.max_segment_length
+        ) * config.max_segment_length
 
         mid_seq_len = max(mid_seq_len, config.max_segment_length)
 
@@ -309,7 +323,9 @@ def main():
 
     for config_name, config in configs.items():
         print(f"\n{config_name}:")
-        print(f"  Model: {config.embed_dim}d, {config.num_heads}h, {config.num_layers}L")
+        print(
+            f"  Model: {config.embed_dim}d, {config.num_heads}h, {config.num_layers}L"
+        )
         print(f"  Segments: {config.segment_lengths}")
         print(f"  Dilations: {config.dilation_rates}")
 
@@ -333,7 +349,9 @@ def main():
             print(f"      Gradients: {breakdown.gradients:.1f} GB")
             print(f"      Optimizer states: {breakdown.optimizer_states:.1f} GB")
             print(f"      Attention matrices: {breakdown.attention_matrices:.1f} GB")
-            print(f"      Intermediate tensors: {breakdown.intermediate_tensors:.1f} GB")
+            print(
+                f"      Intermediate tensors: {breakdown.intermediate_tensors:.1f} GB"
+            )
             print(f"      Total: {breakdown.total:.1f} GB")
 
     # Summary comparison
@@ -349,7 +367,9 @@ def main():
         imp_tokens = results[config_name]["improved"]["max_tokens"]
         improvement = (imp_tokens - orig_tokens) / orig_tokens * 100
 
-        print(f"{config_name:<20} {orig_tokens:>10,} {imp_tokens:>10,} {improvement:>8.1f}%")
+        print(
+            f"{config_name:<20} {orig_tokens:>10,} {imp_tokens:>10,} {improvement:>8.1f}%"
+        )
 
     # Detailed analysis
     print("\n" + "=" * 60)

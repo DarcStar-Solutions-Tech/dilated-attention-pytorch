@@ -106,7 +106,9 @@ class TestConfigurations:
 
         # Invalid dropout
         with pytest.raises(ValueError, match="between 0.0 and 1.0"):
-            DilatedAttentionConfig(segment_lengths=[2048], dilation_rates=[1], dropout=1.5)
+            DilatedAttentionConfig(
+                segment_lengths=[2048], dilation_rates=[1], dropout=1.5
+            )
 
     def test_multihead_config(self):
         """Test MultiheadConfig validation."""
@@ -122,7 +124,7 @@ class TestConfigurations:
 class ConcreteDilatedAttention(BaseDilatedAttention):
     """Concrete implementation for testing."""
 
-    def forward(self, q, k, v, is_causal=False, attention_mask=None):
+    def forward(self, q, k, v, _is_causal=False, attention_mask=None):
         # Simple implementation for testing
         self._validate_forward_inputs(q, k, v, attention_mask)
         return q  # Just return query for testing
@@ -137,13 +139,15 @@ class ConcreteMultiheadAttention(BaseMultiheadDilatedAttention):
     def _init_qkv_projections(self, factory_kwargs):
         # Test both fused and separate projections
         if hasattr(self, "use_fused_qkv") and self.use_fused_qkv:
-            self.qkv_proj = nn.Linear(self.embed_dim, 3 * self.embed_dim, **factory_kwargs)
+            self.qkv_proj = nn.Linear(
+                self.embed_dim, 3 * self.embed_dim, **factory_kwargs
+            )
         else:
             self.q_proj = nn.Linear(self.embed_dim, self.embed_dim, **factory_kwargs)
             self.k_proj = nn.Linear(self.embed_dim, self.embed_dim, **factory_kwargs)
             self.v_proj = nn.Linear(self.embed_dim, self.embed_dim, **factory_kwargs)
 
-    def forward(self, query, key=None, value=None, **kwargs):
+    def forward(self, query, _key=None, _value=None, **_kwargs):
         # Simple implementation for testing
         return query
 
@@ -231,7 +235,9 @@ class TestBaseMultiheadDilatedAttention:
     def test_parameter_initialization_fused(self):
         """Test parameter initialization with fused QKV."""
         multihead_config = MultiheadConfig(embed_dim=768, num_heads=12)
-        attention_config = DilatedAttentionConfig(segment_lengths=[2048], dilation_rates=[1])
+        attention_config = DilatedAttentionConfig(
+            segment_lengths=[2048], dilation_rates=[1]
+        )
 
         # Test fused QKV projection
         attention = ConcreteMultiheadAttention(multihead_config, attention_config)
@@ -247,7 +253,9 @@ class TestBaseMultiheadDilatedAttention:
     def test_parameter_initialization_separate(self):
         """Test parameter initialization with separate projections."""
         multihead_config = MultiheadConfig(embed_dim=768, num_heads=12)
-        attention_config = DilatedAttentionConfig(segment_lengths=[2048], dilation_rates=[1])
+        attention_config = DilatedAttentionConfig(
+            segment_lengths=[2048], dilation_rates=[1]
+        )
 
         # Test separate projections
         attention = ConcreteMultiheadAttention(multihead_config, attention_config)

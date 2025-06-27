@@ -127,7 +127,7 @@ class TestDistributedRingAttention:
         ):
             yield
 
-    def test_ring_size_validation(self, mock_distributed_env):
+    def test_ring_size_validation(self, _mock_distributed_env):
         """Test ring size validation in distributed mode."""
         # Should work with ring_size=4 (matches world_size)
         attention = RingDilatedAttention(
@@ -137,7 +137,9 @@ class TestDistributedRingAttention:
 
         # Should raise error if ring_size > world_size
         with pytest.raises(ValueError, match="ring_size.*cannot exceed world_size"):
-            RingDilatedAttention(segment_lengths=[1024, 2048], dilation_rates=[1, 2], ring_size=8)
+            RingDilatedAttention(
+                segment_lengths=[1024, 2048], dilation_rates=[1, 2], ring_size=8
+            )
 
     def test_single_gpu_fallback(self):
         """Test behavior when distributed is not initialized."""
@@ -161,7 +163,7 @@ class TestDistributedRingAttention:
             torch.cuda.OutOfMemoryError,
         ],
     )
-    def test_communication_error_handling(self, mock_distributed_env, error_type):
+    def test_communication_error_handling(self, _mock_distributed_env, error_type):
         """Test error handling during ring communication."""
         attention = RingDilatedAttention(
             segment_lengths=[512],
@@ -169,7 +171,9 @@ class TestDistributedRingAttention:
         )
 
         # Mock communication failure
-        with patch.object(attention, "_ring_communicate_kv", side_effect=error_type("Test error")):
+        with patch.object(
+            attention, "_ring_communicate_kv", side_effect=error_type("Test error")
+        ):
             # Create test tensors
             batch_size, seq_len, num_heads, head_dim = 2, 512, 8, 64
             q = torch.randn(batch_size, seq_len, num_heads, head_dim)
@@ -220,7 +224,9 @@ class TestErrorRecovery:
         )
 
         # Track allocated buffers
-        initial_pool_size = len(attention.memory_pool.pool) if attention.memory_pool else 0
+        initial_pool_size = (
+            len(attention.memory_pool.pool) if attention.memory_pool else 0
+        )
 
         # Force an error during forward pass
         with patch.object(
@@ -284,7 +290,12 @@ class TestEdgeCases:
         v = torch.randn(2, 0, 8, 64)
 
         output = attention(q, k, v)
-        assert output.shape == (2, 0, 8, 64)  # Should return empty tensor with same shape
+        assert output.shape == (
+            2,
+            0,
+            8,
+            64,
+        )  # Should return empty tensor with same shape
 
     def test_single_head(self):
         """Test with single attention head."""
@@ -301,7 +312,9 @@ class TestEdgeCases:
 
     def test_extreme_sequence_lengths(self):
         """Test with very long sequences."""
-        attention = RingDilatedAttention(segment_lengths=[4096], dilation_rates=[1], block_size=512)
+        attention = RingDilatedAttention(
+            segment_lengths=[4096], dilation_rates=[1], block_size=512
+        )
 
         # Long sequence (but still valid)
         batch_size = 1

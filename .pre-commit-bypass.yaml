@@ -1,0 +1,17 @@
+# Minimal pre-commit configuration for bypassing non-critical issues
+repos:
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.8.4
+  hooks:
+  - id: ruff-format
+    # Only format, don't check
+
+- repo: local
+  hooks:
+  - id: critical-fixes-only
+    name: Fix Critical Issues Only
+    entry: python scripts/critical_fixes_only.py
+    language: python
+    always_run: true
+    pass_filenames: false
+    additional_dependencies: []

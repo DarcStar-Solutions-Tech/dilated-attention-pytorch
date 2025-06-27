@@ -39,9 +39,15 @@ def test_max_sequence_length():
         # Test DilatedAttention
         try:
             module = DilatedAttention(segments, dilation_rates, 0.0).to(device, dtype)
-            q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-            k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-            v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+            q = torch.randn(
+                batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+            )
+            k = torch.randn(
+                batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+            )
+            v = torch.randn(
+                batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+            )
 
             torch.cuda.synchronize()
             start = time.time()
@@ -59,10 +65,18 @@ def test_max_sequence_length():
 
         # Test ImprovedDilatedAttention
         try:
-            module = ImprovedDilatedAttention(segments, dilation_rates, 0.0).to(device, dtype)
-            q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-            k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-            v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+            module = ImprovedDilatedAttention(segments, dilation_rates, 0.0).to(
+                device, dtype
+            )
+            q = torch.randn(
+                batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+            )
+            k = torch.randn(
+                batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+            )
+            v = torch.randn(
+                batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+            )
 
             torch.cuda.synchronize()
             start = time.time()
@@ -74,7 +88,9 @@ def test_max_sequence_length():
             # Get memory usage
             memory_gb = torch.cuda.max_memory_allocated() / 1024**3
 
-            print(f"  ImprovedDilatedAttention: ✓ Success ({elapsed:.1f}ms, {memory_gb:.2f}GB)")
+            print(
+                f"  ImprovedDilatedAttention: ✓ Success ({elapsed:.1f}ms, {memory_gb:.2f}GB)"
+            )
             del module, q, k, v, output
             torch.cuda.empty_cache()
 

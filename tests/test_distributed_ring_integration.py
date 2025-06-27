@@ -26,7 +26,11 @@ class SimpleTransformerBlock(nn.Module):
     """Simple transformer block for integration testing."""
 
     def __init__(
-        self, embed_dim: int, num_heads: int, segment_lengths: list[int], dilation_rates: list[int]
+        self,
+        embed_dim: int,
+        num_heads: int,
+        segment_lengths: list[int],
+        dilation_rates: list[int],
     ):
         super().__init__()
         self.attention = RingMultiheadDilatedAttention(
@@ -73,7 +77,7 @@ class TestDistributedIntegration:
         ):
             yield
 
-    def test_transformer_block_integration(self, mock_dist_env):
+    def test_transformer_block_integration(self, _mock_dist_env):
         """Test Ring Attention in a transformer block."""
         # Create model
         model = SimpleTransformerBlock(
@@ -100,7 +104,7 @@ class TestDistributedIntegration:
             assert param.grad is not None
             assert not torch.isnan(param.grad).any()
 
-    def test_ddp_wrapper_compatibility(self, mock_dist_env):
+    def test_ddp_wrapper_compatibility(self, _mock_dist_env):
         """Test compatibility with PyTorch DDP."""
         # Create model
         model = SimpleTransformerBlock(
@@ -114,7 +118,8 @@ class TestDistributedIntegration:
         mock_pg = MagicMock()
 
         with patch(
-            "torch.nn.parallel.DistributedDataParallel._get_default_group", return_value=mock_pg
+            "torch.nn.parallel.DistributedDataParallel._get_default_group",
+            return_value=mock_pg,
         ):
             # Wrap in DDP
             ddp_model = DDP(model)
@@ -124,7 +129,7 @@ class TestDistributedIntegration:
             output = ddp_model(x)
             assert output.shape == (1, 512, 256)
 
-    def test_gradient_accumulation(self, mock_dist_env):
+    def test_gradient_accumulation(self, _mock_dist_env):
         """Test gradient accumulation across multiple steps."""
         model = RingMultiheadDilatedAttention(
             embed_dim=256,
@@ -154,9 +159,11 @@ class TestDistributedIntegration:
                 for name, param in model.named_parameters():
                     if param.grad is not None:
                         # Gradients should be accumulating
-                        assert not torch.allclose(param.grad, accumulated_grad[name], atol=1e-6)
+                        assert not torch.allclose(
+                            param.grad, accumulated_grad[name], atol=1e-6
+                        )
 
-    def test_mixed_precision_training(self, mock_dist_env):
+    def test_mixed_precision_training(self, _mock_dist_env):
         """Test mixed precision training compatibility."""
         model = RingDistributedDilatedAttention(
             embed_dim=512,
@@ -173,7 +180,7 @@ class TestDistributedIntegration:
             output = model(x)
             assert output.dtype == torch.float16
 
-    def test_checkpoint_save_load(self, mock_dist_env):
+    def test_checkpoint_save_load(self, _mock_dist_env):
         """Test model checkpointing and loading."""
         # Create model
         model = RingMultiheadDilatedAttention(
@@ -203,7 +210,7 @@ class TestDistributedIntegration:
         for key in initial_state:
             assert torch.allclose(model.state_dict()[key], initial_state[key])
 
-    def test_multi_gpu_communication_pattern(self, mock_dist_env):
+    def test_multi_gpu_communication_pattern(self, _mock_dist_env):
         """Test ring communication pattern across GPUs."""
         # Mock different ranks
         world_size = 4
@@ -223,7 +230,7 @@ class TestDistributedIntegration:
                 assert model.next_rank == (rank + 1) % world_size
                 assert model.prev_rank == (rank - 1) % world_size
 
-    def test_dynamic_sequence_lengths(self, mock_dist_env):
+    def test_dynamic_sequence_lengths(self, _mock_dist_env):
         """Test handling of variable sequence lengths in a batch."""
         model = RingMultiheadDilatedAttention(
             embed_dim=256,
@@ -257,7 +264,7 @@ class TestDistributedIntegration:
                 output[i, seq_len:], torch.zeros_like(output[i, seq_len:]), atol=1e-6
             )
 
-    def test_distributed_optimizer_compatibility(self, mock_dist_env):
+    def test_distributed_optimizer_compatibility(self, _mock_dist_env):
         """Test compatibility with distributed optimizers."""
         model = RingDistributedDilatedAttention(
             embed_dim=512,
@@ -283,7 +290,7 @@ class TestDistributedIntegration:
         optimizer.zero_grad()
 
     @pytest.mark.parametrize("backend", ["nccl", "gloo"])
-    def test_backend_compatibility(self, mock_dist_env, backend):
+    def test_backend_compatibility(self, _mock_dist_env, backend):
         """Test compatibility with different communication backends."""
         with patch("torch.distributed.get_backend", return_value=backend):
             model = RingDistributedDilatedAttention(
@@ -301,7 +308,7 @@ class TestDistributedIntegration:
             output = model(x)
             assert output.shape == (1, 512, 256)
 
-    def test_fault_tolerance_node_failure(self, mock_dist_env):
+    def test_fault_tolerance_node_failure(self, _mock_dist_env):
         """Test handling of node failures during training."""
         model = RingDistributedDilatedAttention(
             embed_dim=256,
@@ -312,7 +319,9 @@ class TestDistributedIntegration:
         )
 
         # Simulate node failure during forward pass
-        with patch.object(model, "_ring_communicate", side_effect=RuntimeError("Node failure")):
+        with patch.object(
+            model, "_ring_communicate", side_effect=RuntimeError("Node failure")
+        ):
             x = torch.randn(1, 512, 256)
 
             # Should handle failure gracefully
@@ -324,7 +333,7 @@ class TestDistributedIntegration:
                 # If no fault tolerance, should raise
                 assert not model.enable_fault_tolerance
 
-    def test_performance_monitoring_integration(self, mock_dist_env):
+    def test_performance_monitoring_integration(self, _mock_dist_env):
         """Test integration with performance monitoring."""
         model = RingDistributedDilatedAttention(
             embed_dim=512,
@@ -345,7 +354,7 @@ class TestDistributedIntegration:
             assert "communication_time" in model.metrics
             assert len(model.metrics["forward_time"]) == 5
 
-    def test_hierarchical_parallelism(self, mock_dist_env):
+    def test_hierarchical_parallelism(self, _mock_dist_env):
         """Test hierarchical parallelism patterns."""
         # Mock node-level and GPU-level groups
         node_group = MagicMock()
@@ -367,7 +376,7 @@ class TestDistributedIntegration:
             assert hasattr(model, "node_group")
             assert hasattr(model, "local_group")
 
-    def test_cpu_offloading(self, mock_dist_env):
+    def test_cpu_offloading(self, _mock_dist_env):
         """Test CPU memory offloading for large models."""
         model = RingDistributedDilatedAttention(
             embed_dim=1024,
@@ -402,12 +411,14 @@ class TestRealWorldScenarios:
         ):
             yield
 
-    def test_language_model_training(self, mock_dist_env):
+    def test_language_model_training(self, _mock_dist_env):
         """Test integration in language model training."""
 
         # Simple language model with Ring Attention
         class SimpleLM(nn.Module):
-            def __init__(self, vocab_size: int, embed_dim: int, num_heads: int, num_layers: int):
+            def __init__(
+                self, vocab_size: int, embed_dim: int, num_heads: int, num_layers: int
+            ):
                 super().__init__()
                 self.embedding = nn.Embedding(vocab_size, embed_dim)
                 self.layers = nn.ModuleList(
@@ -439,7 +450,7 @@ class TestRealWorldScenarios:
         # Check output
         assert logits.shape == (2, 8192, 50000)
 
-    def test_multimodal_training(self, mock_dist_env):
+    def test_multimodal_training(self, _mock_dist_env):
         """Test integration in multimodal models."""
 
         class MultimodalModel(nn.Module):
@@ -481,7 +492,7 @@ class TestRealWorldScenarios:
         output = model(vision_features, text_features)
         assert output.shape == (2, 1024, 512)
 
-    def test_extreme_scale_training(self, mock_dist_env):
+    def test_extreme_scale_training(self, _mock_dist_env):
         """Test training at extreme scales."""
         # Simulate 100M token context
         segment_lengths = [4096, 8192, 16384, 32768, 65536]
@@ -504,7 +515,7 @@ class TestRealWorldScenarios:
         assert len(model.segment_lengths) == 5
 
         # Small forward pass to verify setup
-        x = torch.randn(1, sum(segment_lengths), 1024)  # ~130K tokens
+        _ = torch.randn(1, sum(segment_lengths), 1024)  # ~130K tokens
         # Note: In real training, this would be split across GPUs
         # Here we just verify the configuration is valid
 
@@ -520,7 +531,7 @@ class TestCommunicationPatterns:
             patch("torch.distributed.get_rank", return_value=0),
         ):
             # Mock all_gather
-            gathered_tensors = []
+            _ = []
 
             def mock_all_gather(tensor_list, tensor):
                 # Simulate gathering from all ranks

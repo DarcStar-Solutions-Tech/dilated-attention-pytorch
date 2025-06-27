@@ -10,7 +10,7 @@ import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-import torch.distributed as dist
+import torch.distributed as dist  # noqa: PLC0415
 from torch import Tensor
 
 from .core import (
@@ -124,7 +124,9 @@ class RingDistributedDilatedAttention(BaseMultiheadDilatedAttention):
                 enable_deepspeed=kwargs.get("enable_deepspeed", True),
                 enable_fairscale=kwargs.get("enable_fairscale", True),
                 enable_monitoring=kwargs.get("enable_monitoring", False),
-                gradient_accumulation_steps=kwargs.get("gradient_accumulation_steps", 1),
+                gradient_accumulation_steps=kwargs.get(
+                    "gradient_accumulation_steps", 1
+                ),
             )
 
         self.config = config
@@ -175,7 +177,9 @@ class RingDistributedDilatedAttention(BaseMultiheadDilatedAttention):
         ring_size = self.ring_size
 
         if ring_size > world_size:
-            raise ValueError(f"ring_size ({ring_size}) cannot exceed world_size ({world_size})")
+            raise ValueError(
+                f"ring_size ({ring_size}) cannot exceed world_size ({world_size})"
+            )
 
         # Create ring groups
         self.ring_groups = []
@@ -317,7 +321,11 @@ def create_ring_distributed_attention(
         segment_lengths=list(segment_lengths),
         dilation_rates=list(dilation_rates),
         ring_size=ring_size,
-        **{k: v for k, v in kwargs.items() if k in ["dropout", "block_size", "use_checkpointing"]},
+        **{
+            k: v
+            for k, v in kwargs.items()
+            if k in ["dropout", "block_size", "use_checkpointing"]
+        },
     )
 
     distributed_config = DistributedConfig(

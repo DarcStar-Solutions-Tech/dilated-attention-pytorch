@@ -37,9 +37,15 @@ def profile_block_sparse():
     ).to(device, dtype)
 
     # Create inputs
-    query = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-    key = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-    value = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    query = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
+    key = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
+    value = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
 
     # Profile different parts
     print("Profiling Block Sparse Ring Dilated Attention")
@@ -53,7 +59,9 @@ def profile_block_sparse():
     torch.cuda.synchronize()
     print(f"   Pattern generation took: {(time.time() - start) * 1000:.2f}ms")
     print(f"   Pattern shape: {pattern.shape}")
-    print(f"   Pattern sparsity: {(pattern.sum().item() / pattern.numel() * 100):.1f}% non-zero")
+    print(
+        f"   Pattern sparsity: {(pattern.sum().item() / pattern.numel() * 100):.1f}% non-zero"
+    )
 
     # Test forward pass with torch profiler
     print("\n2. Profiling forward pass...")
@@ -67,7 +75,7 @@ def profile_block_sparse():
     ) as prof:
         with torch.no_grad():
             start = time.time()
-            output = module(query, key, value)
+            _ = module(query, key, value)
             torch.cuda.synchronize()
             total_time = (time.time() - start) * 1000
 
@@ -82,14 +90,14 @@ def profile_block_sparse():
 
     # Test memory pool
     start = time.time()
-    buffer = module.memory_pool.get_buffer(query.shape, query.dtype, query.device)
+    _ = module.memory_pool.get_buffer(query.shape, query.dtype, query.device)
     torch.cuda.synchronize()
     print(f"   Memory pool buffer allocation: {(time.time() - start) * 1000:.2f}ms")
 
     # Test pattern generator create_pattern
     start = time.time()
     with torch.no_grad():
-        test_pattern = module.pattern_generator.create_pattern(seq_len, num_heads, device)
+        _ = module.pattern_generator.create_pattern(seq_len, num_heads, device)
     torch.cuda.synchronize()
     print(f"   Pattern generator create_pattern: {(time.time() - start) * 1000:.2f}ms")
 

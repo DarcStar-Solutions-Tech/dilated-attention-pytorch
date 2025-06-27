@@ -48,7 +48,9 @@ def find_max_sequence_length_single_gpu() -> int | None:
     print("\nFinding upper bound...")
     test_len = min_len
     while test_len <= max_len:
-        success = test_sequence_length(test_len, ring_size=1, device=device, dtype=dtype)
+        success = test_sequence_length(
+            test_len, ring_size=1, device=device, dtype=dtype
+        )
         if success:
             best_len = test_len
             test_len *= 2
@@ -67,7 +69,9 @@ def find_max_sequence_length_single_gpu() -> int | None:
     print("\nBinary search for maximum...")
     while min_len < max_len - 1024:  # 1K precision
         test_len = (min_len + max_len) // 2
-        success = test_sequence_length(test_len, ring_size=1, device=device, dtype=dtype)
+        success = test_sequence_length(
+            test_len, ring_size=1, device=device, dtype=dtype
+        )
 
         if success:
             best_len = test_len
@@ -123,9 +127,15 @@ def test_sequence_length(
         chunk_size = seq_len // ring_size
 
         # Create one chunk to test
-        q = torch.randn(batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
-        k = torch.randn(batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
-        v = torch.randn(batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
+        q = torch.randn(
+            batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype
+        )
+        k = torch.randn(
+            batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype
+        )
+        v = torch.randn(
+            batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype
+        )
 
         # Test forward pass
         with torch.no_grad():
@@ -173,11 +183,13 @@ def test_ring_scaling_limits():
         print(f"\nTesting ring_size={ring_size}:")
 
         # Start with a conservative estimate
-        max_single = 2_000_000  # 2M tokens
+        _ = 2_000_000  # 2M tokens
 
         # Test increasing sequence lengths
         for seq_len in [1_000_000, 2_000_000, 4_000_000, 8_000_000, 16_000_000]:
-            success = test_sequence_length(seq_len, ring_size, device, dtype, verbose=True)
+            success = test_sequence_length(
+                seq_len, ring_size, device, dtype, verbose=True
+            )
             if success:
                 results[ring_size] = seq_len
             else:
@@ -231,7 +243,7 @@ def test_extreme_ring_attention():
         success = test_sequence_length(seq_len, ring_size, device, dtype, verbose=False)
 
         if success:
-            chunk_size = seq_len // ring_size
+            _ = seq_len // ring_size
             # Estimate memory usage
             allocated, total = get_gpu_memory_info()
             print("  ✓ Success! Chunk processed successfully")

@@ -25,7 +25,7 @@ except ImportError:
         EFFICIENT_ATTENTION = "efficient_attention"
         MATH = "math"
 
-    def sdpa_kernel(backends):
+    def sdpa_kernel(_backends):
         """Dummy context manager for older PyTorch."""
         import contextlib
 
@@ -156,7 +156,9 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
                 # Get or create cached indices
                 cache_key = (s, r, offset, device)
                 if cache_key not in self._cached_indices:
-                    self._cached_indices[cache_key] = torch.arange(offset, s, r, device=device)
+                    self._cached_indices[cache_key] = torch.arange(
+                        offset, s, r, device=device
+                    )
                 idx = self._cached_indices[cache_key]
 
                 # Use advanced indexing for dilated sampling
@@ -200,7 +202,9 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
             # Scatter back to original positions
             if r > 1 or offset:
                 # Create temporary tensor for scattering
-                temp_output = torch.zeros(b, n // s, s, g, d, device=device, dtype=dtype)
+                temp_output = torch.zeros(
+                    b, n // s, s, g, d, device=device, dtype=dtype
+                )
                 temp_output[:, :, idx, :, :] = x_reshaped
                 out[:, :, hmin:hmax, :].add_(temp_output.reshape(b, n, g, d))
             else:

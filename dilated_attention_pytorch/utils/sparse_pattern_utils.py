@@ -137,7 +137,9 @@ class SparsePatternGenerator:
         if self.config.pattern_type == PatternType.LOCAL_WINDOW:
             pattern = self._generate_local_window_pattern(num_blocks, num_heads, device)
         elif self.config.pattern_type == PatternType.DILATED_SPARSE:
-            pattern = self._generate_dilated_sparse_pattern(num_blocks, num_heads, device)
+            pattern = self._generate_dilated_sparse_pattern(
+                num_blocks, num_heads, device
+            )
         elif self.config.pattern_type == PatternType.GLOBAL_LOCAL:
             pattern = self._generate_global_local_pattern(num_blocks, num_heads, device)
         elif self.config.pattern_type == PatternType.STRIDED:
@@ -163,7 +165,9 @@ class SparsePatternGenerator:
         self, num_blocks: int, num_heads: int, device: torch.device
     ) -> torch.Tensor:
         """Generate local window attention pattern"""
-        pattern = torch.zeros(num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device)
+        pattern = torch.zeros(
+            num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device
+        )
         window_blocks = self.config.local_window_size // self.config.block_size
 
         for h in range(num_heads):
@@ -178,7 +182,9 @@ class SparsePatternGenerator:
         self, num_blocks: int, num_heads: int, device: torch.device
     ) -> torch.Tensor:
         """Generate dilated sparse attention pattern"""
-        pattern = torch.zeros(num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device)
+        pattern = torch.zeros(
+            num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device
+        )
 
         # Calculate how many connections to keep based on sparsity ratio
         total_connections = num_blocks * num_blocks
@@ -209,7 +215,9 @@ class SparsePatternGenerator:
         self, num_blocks: int, num_heads: int, device: torch.device
     ) -> torch.Tensor:
         """Generate global + local attention pattern"""
-        pattern = torch.zeros(num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device)
+        pattern = torch.zeros(
+            num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device
+        )
 
         global_blocks = self.config.global_tokens // self.config.block_size
         local_window = self.config.local_window_size // self.config.block_size
@@ -231,7 +239,9 @@ class SparsePatternGenerator:
         self, num_blocks: int, num_heads: int, device: torch.device
     ) -> torch.Tensor:
         """Generate strided attention pattern"""
-        pattern = torch.zeros(num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device)
+        pattern = torch.zeros(
+            num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device
+        )
 
         for h in range(num_heads):
             for i in range(num_blocks):
@@ -251,7 +261,9 @@ class SparsePatternGenerator:
         self, num_blocks: int, num_heads: int, device: torch.device
     ) -> torch.Tensor:
         """Generate random sparse attention pattern"""
-        pattern = torch.zeros(num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device)
+        pattern = torch.zeros(
+            num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device
+        )
 
         total_elements = num_blocks * num_blocks
         num_active = int(total_elements * self.config.sparsity_ratio)
@@ -269,19 +281,29 @@ class SparsePatternGenerator:
         self, num_blocks: int, num_heads: int, device: torch.device
     ) -> torch.Tensor:
         """Generate hierarchical attention pattern"""
-        pattern = torch.zeros(num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device)
+        pattern = torch.zeros(
+            num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device
+        )
 
         # Combine multiple pattern types with different densities
-        local_pattern = self._generate_local_window_pattern(num_blocks, num_heads, device)
-        dilated_pattern = self._generate_dilated_sparse_pattern(num_blocks, num_heads, device)
-        global_pattern = self._generate_global_local_pattern(num_blocks, num_heads, device)
+        local_pattern = self._generate_local_window_pattern(
+            num_blocks, num_heads, device
+        )
+        dilated_pattern = self._generate_dilated_sparse_pattern(
+            num_blocks, num_heads, device
+        )
+        global_pattern = self._generate_global_local_pattern(
+            num_blocks, num_heads, device
+        )
 
         # Logical OR combination of patterns
         pattern = local_pattern | dilated_pattern | global_pattern
 
         return pattern
 
-    def _enforce_sparsity_ratio(self, pattern: torch.Tensor, target_ratio: float) -> torch.Tensor:
+    def _enforce_sparsity_ratio(
+        self, pattern: torch.Tensor, target_ratio: float
+    ) -> torch.Tensor:
         """Enforce target sparsity ratio"""
         current_ratio = pattern.float().mean()
 
@@ -350,10 +372,14 @@ class PatternQualityAnalyzer:
             reference_attention = self._compute_reference_attention(q, k)
 
         # Calculate quality metrics
-        coverage_ratio = self._calculate_coverage_ratio(sparse_pattern, reference_attention)
+        coverage_ratio = self._calculate_coverage_ratio(
+            sparse_pattern, reference_attention
+        )
         locality_score = self._calculate_locality_score(sparse_pattern)
         global_connectivity = self._calculate_global_connectivity(sparse_pattern)
-        efficiency_score = self._calculate_efficiency_score(sparse_pattern, coverage_ratio)
+        efficiency_score = self._calculate_efficiency_score(
+            sparse_pattern, coverage_ratio
+        )
         compression_ratio = 1.0 - sparse_pattern.float().mean().item()
         approximation_error = self._calculate_approximation_error(
             sparse_pattern, reference_attention
@@ -368,7 +394,9 @@ class PatternQualityAnalyzer:
             approximation_error=approximation_error,
         )
 
-    def _compute_reference_attention(self, q: torch.Tensor, k: torch.Tensor) -> torch.Tensor:
+    def _compute_reference_attention(
+        self, q: torch.Tensor, k: torch.Tensor
+    ) -> torch.Tensor:
         """Compute reference dense attention weights"""
         scale = 1.0 / math.sqrt(q.size(-1))
         scores = torch.matmul(q, k.transpose(-2, -1)) * scale
@@ -431,7 +459,9 @@ class PatternQualityAnalyzer:
                 for j in range(num_blocks):
                     connectivity_matrix[:, i, j] = torch.max(
                         connectivity_matrix[:, i, j],
-                        torch.min(connectivity_matrix[:, i, k], connectivity_matrix[:, k, j]),
+                        torch.min(
+                            connectivity_matrix[:, i, k], connectivity_matrix[:, k, j]
+                        ),
                     )
 
         # Calculate average reachability
@@ -530,13 +560,17 @@ class PatternOptimizer:
 
         for iteration in range(max_iterations):
             # Analyze current quality
-            metrics = self.analyzer.analyze_pattern_quality(current_pattern, reference_attention)
+            metrics = self.analyzer.analyze_pattern_quality(
+                current_pattern, reference_attention
+            )
 
             if metrics.efficiency_score >= self.quality_threshold:
                 break  # Good enough
 
             # Apply optimization step
-            current_pattern = self._optimization_step(current_pattern, reference_attention, metrics)
+            current_pattern = self._optimization_step(
+                current_pattern, reference_attention, metrics
+            )
 
         return current_pattern
 
@@ -551,7 +585,9 @@ class PatternOptimizer:
 
         # Strategy 1: Improve coverage by adding important connections
         if metrics.coverage_ratio < 0.9 and reference_attention is not None:
-            optimized_pattern = self._improve_coverage(optimized_pattern, reference_attention)
+            optimized_pattern = self._improve_coverage(
+                optimized_pattern, reference_attention
+            )
 
         # Strategy 2: Improve locality by adding local connections
         if metrics.locality_score < 0.8:
@@ -903,7 +939,4 @@ __all__ = [
     "PatternType",
     "PatternVisualizer",
     "SparsePatternGenerator",
-    "load_pattern",
-    "pattern_statistics",
-    "save_pattern",
 ]

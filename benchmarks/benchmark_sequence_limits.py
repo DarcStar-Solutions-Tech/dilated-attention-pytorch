@@ -7,10 +7,9 @@ import time
 from dataclasses import dataclass
 
 import GPUtil
-import psutil
+import psutil  # noqa: PLC0415
 import torch
 
-from benchmarks.core import BenchmarkOutputManager
 # Import all implementations
 from dilated_attention_pytorch import (
     DilatedAttention,
@@ -25,11 +24,11 @@ from dilated_attention_pytorch.improved_multihead_dilated_attention import (
     ImprovedMultiheadDilatedAttention,
 )
 from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
-from benchmarks.core import BenchmarkOutputManager
-from dilated_attention_pytorch.ring_multihead_dilated_attention import RingMultiheadDilatedAttention
+from dilated_attention_pytorch.ring_multihead_dilated_attention import (
+    RingMultiheadDilatedAttention,
+)
 
 
-from benchmarks.core import BenchmarkOutputManager
 @dataclass
 class BenchmarkResult:
     implementation: str
@@ -447,7 +446,9 @@ class SequenceLengthBenchmark:
         print("SUMMARY: Maximum Sequence Lengths")
         print("=" * 80)
 
-        for name, max_len in sorted(max_lengths.items(), key=lambda x: x[1], reverse=True):
+        for name, max_len in sorted(
+            max_lengths.items(), key=lambda x: x[1], reverse=True
+        ):
             if max_len > 0:
                 print(f"{name:30} {max_len:>10,} tokens")
             else:

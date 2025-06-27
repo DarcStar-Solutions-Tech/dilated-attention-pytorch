@@ -77,7 +77,9 @@ class BenchmarkResult:
 
     def __str__(self):
         if self.error:
-            return f"{self.implementation} @ seq_len={self.seq_len}: ERROR - {self.error}"
+            return (
+                f"{self.implementation} @ seq_len={self.seq_len}: ERROR - {self.error}"
+            )
         return (
             f"{self.implementation} @ seq_len={self.seq_len}: "
             f"{self.mean_time_ms:.2f}±{self.std_time_ms:.2f}ms, "
@@ -160,7 +162,9 @@ def create_attention_module(  # noqa: PLR0911, PLR0912
     try:
         if impl_name == "DilatedAttention":
             return (
-                DilatedAttention(segment_lengths=segment_lengths, dilation_rates=dilation_rates)
+                DilatedAttention(
+                    segment_lengths=segment_lengths, dilation_rates=dilation_rates
+                )
                 .to(device)
                 .to(dtype)
             )
@@ -249,7 +253,10 @@ def create_attention_module(  # noqa: PLR0911, PLR0912
                 .to(dtype)
             )
 
-        elif impl_name == "BlockSparseRingMultiheadDilatedAttention" and BLOCK_SPARSE_AVAILABLE:
+        elif (
+            impl_name == "BlockSparseRingMultiheadDilatedAttention"
+            and BLOCK_SPARSE_AVAILABLE
+        ):
             # BlockSparseRingMultiheadDilatedAttention uses sparse_config parameter
             sparse_config = SparsePatternConfig(
                 sparsity_ratio=0.1,  # Keep 10% of blocks (90% sparse)
@@ -291,9 +298,9 @@ def run_benchmark(
     results = {impl: [] for impl in implementations}
 
     for seq_len in sequence_lengths:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Benchmarking sequence length: {seq_len}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         for impl_name in implementations:
             print(f"\n{impl_name}:")
@@ -304,7 +311,9 @@ def run_benchmark(
                 torch.cuda.reset_peak_memory_stats()
 
             # Create module
-            module = create_attention_module(impl_name, seq_len, num_heads, head_dim, device, dtype)
+            module = create_attention_module(
+                impl_name, seq_len, num_heads, head_dim, device, dtype
+            )
 
             if module is None:
                 result = BenchmarkResult(
@@ -331,9 +340,15 @@ def run_benchmark(
                 "BlockSparseRingMultiheadDilatedAttention",
             ]:
                 # Multihead format: (batch, seq, embed_dim)
-                q = torch.randn(batch_size, seq_len, embed_dim, device=device, dtype=dtype)
-                k = torch.randn(batch_size, seq_len, embed_dim, device=device, dtype=dtype)
-                v = torch.randn(batch_size, seq_len, embed_dim, device=device, dtype=dtype)
+                q = torch.randn(
+                    batch_size, seq_len, embed_dim, device=device, dtype=dtype
+                )
+                k = torch.randn(
+                    batch_size, seq_len, embed_dim, device=device, dtype=dtype
+                )
+                v = torch.randn(
+                    batch_size, seq_len, embed_dim, device=device, dtype=dtype
+                )
             else:
                 # Standard format: (batch, seq, heads, head_dim)
                 q = torch.randn(
@@ -409,7 +424,12 @@ def plot_results(results: dict[str, list[BenchmarkResult]], output_dir: str):
 
         if seq_lens:
             ax1.errorbar(
-                seq_lens, mean_times, yerr=std_times, label=impl_name, marker="o", capsize=5
+                seq_lens,
+                mean_times,
+                yerr=std_times,
+                label=impl_name,
+                marker="o",
+                capsize=5,
             )
 
     ax1.set_xlabel("Sequence Length")
@@ -445,7 +465,9 @@ def plot_results(results: dict[str, list[BenchmarkResult]], output_dir: str):
 
     # Save plot
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H%M-UTC")
-    plot_path = os.path.join(output_dir, f"benchmark-all-implementations-{timestamp}.png")
+    plot_path = os.path.join(
+        output_dir, f"benchmark-all-implementations-{timestamp}.png"
+    )
     plt.savefig(plot_path, dpi=150)
     print(f"\nPlot saved to: {plot_path}")
     plt.close()
@@ -461,7 +483,9 @@ def save_results(results: dict[str, list[BenchmarkResult]], output_dir: str):
         results_dict[impl_name] = [asdict(r) for r in impl_results]
 
     # Save to file
-    json_path = os.path.join(output_dir, f"benchmark-all-implementations-{timestamp}.json")
+    json_path = os.path.join(
+        output_dir, f"benchmark-all-implementations-{timestamp}.json"
+    )
     with open(json_path, "w") as f:
         json.dump(results_dict, f, indent=2)
 
@@ -469,7 +493,9 @@ def save_results(results: dict[str, list[BenchmarkResult]], output_dir: str):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Benchmark all dilated attention implementations")
+    parser = argparse.ArgumentParser(
+        description="Benchmark all dilated attention implementations"
+    )
     parser.add_argument(
         "--sequence-lengths",
         type=int,
@@ -478,13 +504,21 @@ def main():
         help="Sequence lengths to benchmark",
     )
     parser.add_argument("--batch-size", type=int, default=1, help="Batch size")
-    parser.add_argument("--num-heads", type=int, default=8, help="Number of attention heads")
+    parser.add_argument(
+        "--num-heads", type=int, default=8, help="Number of attention heads"
+    )
     parser.add_argument("--head-dim", type=int, default=64, help="Dimension per head")
     parser.add_argument(
-        "--num-runs", type=int, default=10, help="Number of benchmark runs per configuration"
+        "--num-runs",
+        type=int,
+        default=10,
+        help="Number of benchmark runs per configuration",
     )
     parser.add_argument(
-        "--output-dir", type=str, default="docs/benchmarks", help="Output directory for results"
+        "--output-dir",
+        type=str,
+        default="docs/benchmarks",
+        help="Output directory for results",
     )
     parser.add_argument(
         "--implementations",
@@ -502,7 +536,9 @@ def main():
     print(f"Device: {device}")
     if device.type == "cuda":
         print(f"GPU: {torch.cuda.get_device_name()}")
-        print(f"Total Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")
+        print(
+            f"Total Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB"
+        )
     print(f"PyTorch version: {torch.__version__}")
 
     # Determine implementations to test
@@ -514,11 +550,16 @@ def main():
     ]
 
     if RING_AVAILABLE:
-        all_implementations.extend(["RingDilatedAttention", "RingMultiheadDilatedAttention"])
+        all_implementations.extend(
+            ["RingDilatedAttention", "RingMultiheadDilatedAttention"]
+        )
 
     if BLOCK_SPARSE_AVAILABLE:
         all_implementations.extend(
-            ["BlockSparseRingDilatedAttention", "BlockSparseRingMultiheadDilatedAttention"]
+            [
+                "BlockSparseRingDilatedAttention",
+                "BlockSparseRingMultiheadDilatedAttention",
+            ]
         )
 
     implementations = args.implementations or all_implementations
