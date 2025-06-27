@@ -112,16 +112,20 @@ print("\n4. Testing block sparse implementations...")
 try:
     from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
         BlockSparseRingDilatedAttention,
+        SparsePatternConfig,
     )
     from dilated_attention_pytorch.block_sparse_ring_multihead_dilated_attention import (
         BlockSparseRingMultiheadDilatedAttention,
     )
 
-    sparsity_config = {"sparsity_ratio": 0.9, "local_blocks": 2, "pattern_type": "local_window"}
+    # Create proper SparsePatternConfig object
+    sparsity_config = SparsePatternConfig(
+        sparsity_ratio=0.9, block_size=64, local_window_size=256, pattern_type="local_window"
+    )
 
     # Test BlockSparseRingDilatedAttention
     bsrda = BlockSparseRingDilatedAttention(
-        segment_lengths, dilation_rates, sparsity_config=sparsity_config
+        segment_lengths, dilation_rates, sparse_config=sparsity_config
     ).to(device)
     q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
     out = bsrda(q, q, q)
@@ -129,7 +133,7 @@ try:
 
     # Test BlockSparseRingMultiheadDilatedAttention
     bsrmha = BlockSparseRingMultiheadDilatedAttention(
-        embed_dim, num_heads, segment_lengths, dilation_rates, sparsity_config=sparsity_config
+        embed_dim, num_heads, segment_lengths, dilation_rates, sparse_config=sparsity_config
     ).to(device)
     q = torch.randn(batch_size, seq_len, embed_dim, device=device)
     out = bsrmha(q, q, q)

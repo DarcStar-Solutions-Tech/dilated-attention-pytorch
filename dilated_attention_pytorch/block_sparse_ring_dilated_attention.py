@@ -532,7 +532,26 @@ class BlockSparseRingDilatedAttention(RingDilatedAttention):
             enable_hardware_opt: Whether to enable hardware-specific optimizations
             **kwargs: Additional arguments passed to RingDilatedAttention
         """
-        super().__init__(segment_lengths, dilation_rates, **kwargs)
+        # Extract sparse_config from kwargs if passed there (for compatibility)
+        if "sparse_config" in kwargs:
+            sparse_config = kwargs.pop("sparse_config")
+        if "sparsity_config" in kwargs:
+            # Handle alternate name
+            sparse_config = kwargs.pop("sparsity_config")
+
+        # Filter out BlockSparse-specific parameters before passing to parent
+        block_sparse_params = {
+            "use_adaptive_sparsity",
+            "quality_threshold",
+            "enable_memory_pool",
+            "enable_packed_comm",
+            "enable_hardware_opt",
+            "sparse_config",
+            "sparsity_config",  # Make sure these don't get passed to parent
+        }
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k not in block_sparse_params}
+
+        super().__init__(segment_lengths, dilation_rates, **filtered_kwargs)
 
         # Validate quality threshold
         if not 0.0 <= quality_threshold <= 1.0:
