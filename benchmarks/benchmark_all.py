@@ -22,9 +22,9 @@ from dilated_attention_pytorch import (
     DilatedAttention,
     ImprovedDilatedAttention,
     MultiheadDilatedAttention,
-    RingDilatedAttention,
-    RingMultiheadDilatedAttention,
+    create_multihead_dilated_attention,
 )
+from dilated_attention_pytorch.ring_dilated_attention_v2 import RingDilatedAttentionV2
 
 # Import block sparse implementations
 try:
@@ -239,8 +239,8 @@ class BenchmarkRunner:
                         False,
                     ),
                     (
-                        "RingDilatedAttention",
-                        RingDilatedAttention(
+                        "RingDilatedAttentionV2",
+                        RingDilatedAttentionV2(
                             segment_lengths=adjusted_segments,
                             dilation_rates=dilation_rates,
                             dropout=dropout,
@@ -306,14 +306,14 @@ class BenchmarkRunner:
 
                 multihead_implementations.append(
                     (
-                        "RingMultiheadDilatedAttention",
-                        RingMultiheadDilatedAttention(
+                        "RingMultiheadDilatedAttentionV2",
+                        create_multihead_dilated_attention(
+                            attention_type="ring",
                             embed_dim=embed_dim,
                             num_heads=num_heads,
                             segment_lengths=adjusted_segments,
                             dilation_rates=dilation_rates,
                             dropout=dropout,
-                            ring_size=1,
                         ),
                         True,
                     )

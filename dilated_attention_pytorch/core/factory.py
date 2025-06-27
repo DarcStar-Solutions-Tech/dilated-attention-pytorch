@@ -520,9 +520,75 @@ def _register_implementations():
         register_attention("ring", RingDilatedAttentionV2Wrapper)
         logger.debug("Registered corrected ring dilated attention V2 implementation")
 
-        # TODO: Create multihead wrapper for V2 implementation
-        # For now, users should use create_multihead_dilated_attention() which will
-        # properly wrap the ring attention
+        # Create multihead wrapper for V2 implementation
+        class RingMultiheadDilatedAttentionV2Wrapper(BaseMultiheadDilatedAttention):
+            """Wrapper to make RingDilatedAttentionV2 work with multihead factory."""
+
+            def __init__(self, multihead_config, attention_config):
+                super().__init__(multihead_config, attention_config)
+
+            def _create_attention_module(self):
+                return RingDilatedAttentionV2(
+                    segment_lengths=self.attention_config.segment_lengths,
+                    dilation_rates=self.attention_config.dilation_rates,
+                    dropout=self.attention_config.dropout,
+                    ring_size=getattr(self.attention_config, "ring_size", None),
+                    device=self.attention_config.device,
+                    dtype=self.attention_config.dtype,
+                )
+
+            def _init_qkv_projections(self, factory_kwargs):
+                """Initialize Q, K, V projections."""
+                from torch import nn
+
+                self.q_proj = nn.Linear(
+                    self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs
+                )
+                self.k_proj = nn.Linear(
+                    self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs
+                )
+                self.v_proj = nn.Linear(
+                    self.embed_dim, self.embed_dim, bias=self.bias, **factory_kwargs
+                )
+
+            def forward(self, query, key=None, value=None, **kwargs):
+                """Forward pass through Ring Attention."""
+                # Use query for self-attention if key/value not provided
+                if key is None:
+                    key = query
+                if value is None:
+                    value = query
+
+                # Apply projections
+                q = self.q_proj(query)
+                k = self.k_proj(key)
+                v = self.v_proj(value)
+
+                # Apply layer norm if enabled
+                q, k = self._apply_layer_norm(q, k)
+
+                # Split into heads
+                from ..core.base import split_attention_heads
+
+                q = split_attention_heads(q, self.num_heads)
+                k = split_attention_heads(k, self.num_heads)
+                v = split_attention_heads(v, self.num_heads)
+
+                # Apply attention
+                is_causal = kwargs.get("is_causal", False)
+                attn_output = self.attention(q, k, v, is_causal, None)
+
+                # Merge heads and apply output projection
+                batch_size, seq_len = query.shape[:2]
+                attn_output = attn_output.reshape(batch_size, seq_len, self.embed_dim)
+                return self.out_proj(attn_output), None
+
+        register_multihead_attention(
+            "multihead_ring", RingMultiheadDilatedAttentionV2Wrapper
+        )
+        logger.debug(
+            "Registered corrected ring multihead dilated attention V2 implementation"
+        )
 
     except ImportError as e:
         logger.error(f"Failed to register ring V2 implementations: {e}")

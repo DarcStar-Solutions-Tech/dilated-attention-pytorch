@@ -423,8 +423,11 @@ class RingDistributedDilatedAttention(nn.Module):
         """Initialize components without model parallelism."""
         self.logger.info("Initializing without model parallelism")
 
-        # Use Ring Multihead Dilated Attention as core
-        self.attention_core = RingMultiheadDilatedAttention(
+        # Use factory to create Ring Multihead Dilated Attention as core
+        from .core.factory import create_multihead_dilated_attention
+
+        self.attention_core = create_multihead_dilated_attention(
+            attention_type="ring",
             embed_dim=embed_dim,
             num_heads=num_heads,
             segment_lengths=segment_lengths,
@@ -434,12 +437,6 @@ class RingDistributedDilatedAttention(nn.Module):
             layer_norm=layer_norm,
             layer_norm_eps=layer_norm_eps,
             gamma_init=gamma_init,
-            block_size=block_size,
-            ring_size=ring_size,
-            use_checkpointing=use_checkpointing,
-            use_tf32=use_tf32,
-            use_flash_attention=use_flash_attention,
-            compile_model=compile_model,
             device=device,
             dtype=dtype,
         )
