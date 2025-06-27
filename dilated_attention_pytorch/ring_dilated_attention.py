@@ -1,20 +1,20 @@
 """
 Ring Attention implementation for Dilated Attention using the refactored core architecture.
 
+DEPRECATED: This implementation has a fundamental flaw - it divides queries across
+devices which prevents achieving the theoretical O(n) memory savings of Ring Attention.
+Please use RingDilatedAttentionV2 or create_multihead_dilated_attention('ring') instead.
+
+This implementation will be removed in v0.3.0.
+
+ORIGINAL DESCRIPTION (NOW INCORRECT):
 This module implements Ring Attention pattern for dilated attention, enabling
 O(n) memory scaling instead of O(n²) for arbitrarily long sequences through
 distributed computation across multiple devices.
 
-Ring Attention splits the key-value computation across devices in a ring pattern,
-allowing each device to process only a fraction of the sequence while maintaining
-global attention patterns.
-
-Key Features:
-- O(n) memory complexity instead of O(n²)
-- Linear scaling to arbitrarily long sequences
-- Distributed computation with minimal communication overhead
-- Maintains mathematical equivalence to full attention
-- Optimized for dilated attention patterns
+THE FLAW: This implementation incorrectly divides queries across devices. True Ring
+Attention requires keeping the full query tensor on each device and only chunking
+K/V tensors. This flaw prevents the memory savings from being realized.
 
 References:
 - Ring Attention with Blockwise Transformers (Liu et al., 2023)
@@ -222,16 +222,18 @@ class RingAttentionMemoryPool:
 
 class RingDilatedAttention(BaseDilatedAttention):
     """
-    Ring Attention implementation for Dilated Attention with O(n) memory complexity.
+    DEPRECATED: Ring Attention implementation with fundamental flaw.
 
-    This implementation combines dilated attention patterns with ring attention
-    to achieve linear memory scaling for extremely long sequences.
+    This implementation incorrectly divides queries across devices, preventing
+    the O(n) memory savings that Ring Attention should provide. Please use
+    RingDilatedAttentionV2 or create_multihead_dilated_attention('ring') instead.
 
-    Key innovations:
-    - Ring-based key-value computation across devices
-    - Dilated attention patterns within each ring segment
-    - Block-wise computation to minimize memory overhead
-    - Optimized communication patterns for distributed training
+    THE FLAW:
+    - This implementation divides queries: q_local = q[:, start_idx:end_idx]
+    - True Ring Attention keeps full queries on each device
+    - Only K/V should be chunked and rotated
+
+    This class will be removed in v0.3.0.
     """
 
     def __init__(
@@ -260,6 +262,16 @@ class RingDilatedAttention(BaseDilatedAttention):
             device: Device to place tensors on
             dtype: Data type for parameters
         """
+        # Emit deprecation warning
+        warnings.warn(
+            "RingDilatedAttention is deprecated due to incorrect implementation. "
+            "This version divides queries across devices, preventing proper memory savings. "
+            "Please use RingDilatedAttentionV2 or create_multihead_dilated_attention('ring') instead. "
+            "This implementation will be removed in v0.3.0.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        
         # Create configuration
         config = RingAttentionConfig(
             segment_lengths=list(segment_lengths),

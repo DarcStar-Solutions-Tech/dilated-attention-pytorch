@@ -1,23 +1,19 @@
 """
 Ring Multihead Dilated Attention implementation using the refactored core architecture.
 
+DEPRECATED: This implementation uses the broken RingDilatedAttention which divides
+queries across devices, preventing the O(n) memory savings. Please use
+create_multihead_dilated_attention('ring') instead.
+
+This implementation will be removed in v0.3.0.
+
+ORIGINAL DESCRIPTION (NOW INCORRECT):
 This module implements a multihead attention wrapper around Ring Dilated Attention,
 providing a drop-in replacement for standard multihead attention with O(n) memory
 complexity for arbitrarily long sequences.
 
-Key Features:
-- O(n) memory complexity through Ring Attention
-- Fused QKV projections for 3x memory efficiency
-- MAGNETO architecture compatibility
-- Automatic mixed precision support
-- Gradient checkpointing integration
-- Full compatibility with nn.MultiheadAttention interface
-
-This implementation combines:
-- Ring Attention (O(n) memory scaling)
-- Dilated Attention (efficient long-range dependencies)
-- Multihead Attention (parallel attention heads)
-- Advanced memory optimizations
+THE FLAW: Uses RingDilatedAttention which incorrectly divides queries. True Ring
+Attention requires keeping full queries on each device.
 """
 
 import threading
@@ -39,19 +35,16 @@ from .ring_dilated_attention import RingDilatedAttention
 
 class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
     """
-    Ring-based Multihead Dilated Attention with O(n) memory complexity.
+    DEPRECATED: Ring-based Multihead Dilated Attention with broken implementation.
 
-    This class provides a complete multihead attention implementation using
-    Ring Dilated Attention as the core attention mechanism. It maintains
-    compatibility with nn.MultiheadAttention while enabling linear memory
-    scaling for extremely long sequences.
+    This class uses RingDilatedAttention which incorrectly divides queries,
+    preventing the O(n) memory savings. Please use create_multihead_dilated_attention('ring')
+    for the corrected implementation.
 
-    Key advantages over standard multihead attention:
-    - O(n) memory instead of O(n²) through Ring Attention
-    - Efficient long-range dependencies through Dilated Attention
-    - 3x memory efficiency through fused QKV projections
-    - Linear scaling to arbitrarily long sequences
-    - Distributed computation across multiple devices
+    THE FLAW: The underlying RingDilatedAttention divides queries across devices.
+    True Ring Attention requires keeping full queries on each device.
+
+    This class will be removed in v0.3.0.
     """
 
     def __init__(
@@ -103,6 +96,16 @@ class RingMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
             dtype: Data type for parameters
         """
         # Create configurations
+        # Emit deprecation warning
+        warnings.warn(
+            "RingMultiheadDilatedAttention is deprecated due to using the broken RingDilatedAttention. "
+            "The underlying implementation divides queries across devices, preventing proper memory savings. "
+            "Please use create_multihead_dilated_attention('ring') instead. "
+            "This implementation will be removed in v0.3.0.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        
         multihead_config = MultiheadConfig(
             embed_dim=embed_dim,
             num_heads=num_heads,

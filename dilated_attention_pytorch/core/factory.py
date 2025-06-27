@@ -496,24 +496,48 @@ def _register_implementations():
         logger.warning(f"Failed to register improved implementations: {e}")
 
     try:
-        # Register ring attention implementations
-        from ..ring_dilated_attention import RingDilatedAttention
+        # Register corrected ring attention V2 implementations
+        from ..ring_dilated_attention_v2 import RingDilatedAttentionV2
 
-        register_attention("ring", RingDilatedAttention)
-        logger.debug("Registered ring dilated attention implementation")
+        # Create a wrapper to match the expected interface
+        class RingDilatedAttentionV2Wrapper(BaseDilatedAttention):
+            """Wrapper to make RingDilatedAttentionV2 compatible with factory."""
+            def __init__(self, config):
+                super().__init__(config)
+                self.ring_attention = RingDilatedAttentionV2(
+                    segment_lengths=config.segment_lengths,
+                    dilation_rates=config.dilation_rates,
+                    dropout=config.dropout,
+                    ring_size=getattr(config, 'ring_size', None),
+                    device=config.device,
+                    dtype=config.dtype,
+                )
+            
+            def forward(self, query, key, value, is_causal=False, attention_mask=None):
+                return self.ring_attention(query, key, value, is_causal, attention_mask)
 
-        try:
-            from ..ring_multihead_dilated_attention import RingMultiheadDilatedAttention
+        register_attention("ring", RingDilatedAttentionV2Wrapper)
+        logger.debug("Registered corrected ring dilated attention V2 implementation")
 
-            register_multihead_attention(
-                "multihead_ring", RingMultiheadDilatedAttention
-            )
-            logger.debug("Registered ring multihead dilated attention implementation")
-        except ImportError:
-            pass  # Multihead not refactored yet
+        # TODO: Create multihead wrapper for V2 implementation
+        # For now, users should use create_multihead_dilated_attention() which will
+        # properly wrap the ring attention
 
     except ImportError as e:
-        logger.warning(f"Failed to register ring implementations: {e}")
+        logger.warning(f"Failed to register ring V2 implementations: {e}")
+        
+        # Fall back to broken implementation with warning
+        try:
+            from ..ring_dilated_attention import RingDilatedAttention
+            
+            logger.warning(
+                "Using deprecated RingDilatedAttention. This implementation is broken "
+                "and will be removed in v0.3.0. Please update your code."
+            )
+            register_attention("ring", RingDilatedAttention)
+            
+        except ImportError as e2:
+            logger.warning(f"Failed to register any ring implementation: {e2}")
 
     try:
         # Register ring distributed implementation

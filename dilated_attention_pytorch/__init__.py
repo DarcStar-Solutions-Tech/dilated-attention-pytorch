@@ -39,10 +39,11 @@ from .improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttent
 from .long_net import LongNet
 from .multihead_dilated_attention import MultiheadDilatedAttention
 
-# from .distributed_dilated_attention import DistributedMultiheadDilatedAttention  # Old implementation
-from .ring_dilated_attention import RingDilatedAttention
-from .ring_dilated_attention_unfold_v2 import UnfoldRingDilatedAttention
-from .ring_multihead_dilated_attention import RingMultiheadDilatedAttention
+# DEPRECATED: These Ring Attention implementations are broken and will be removed in v0.3.0
+# They incorrectly divide queries across devices. Use create_multihead_dilated_attention('ring') instead.
+from .ring_dilated_attention import RingDilatedAttention  # DEPRECATED - broken implementation
+from .ring_dilated_attention_unfold_v2 import UnfoldRingDilatedAttention  # DEPRECATED
+from .ring_multihead_dilated_attention import RingMultiheadDilatedAttention  # DEPRECATED
 from .transformer import DilatedTransformerDecoderLayer, DilatedTransformerEncoderLayer
 from .utils.sparse_pattern_utils import (
     PatternConfig,
