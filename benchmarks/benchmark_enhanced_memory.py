@@ -77,8 +77,17 @@ def benchmark_memory_pool(
 
         try:
             if hasattr(pool, "allocate"):
-                # Enhanced pool interface
-                tensor = pool.allocate(shape, dtype, device)
+                # Check if it's BucketedMemoryPool (different interface)
+                if hasattr(pool, "buckets"):
+                    # BucketedMemoryPool expects (size, dtype, device, shape)
+                    element_size = torch.finfo(dtype).bits // 8
+                    size_bytes = int(
+                        torch.prod(torch.tensor(shape)).item() * element_size
+                    )
+                    tensor = pool.allocate(size_bytes, dtype, device, shape)
+                else:
+                    # Enhanced pool interface: (shape, dtype, device)
+                    tensor = pool.allocate(shape, dtype, device)
             else:
                 # Standard PyTorch allocation
                 tensor = torch.empty(shape, dtype=dtype, device=device)
