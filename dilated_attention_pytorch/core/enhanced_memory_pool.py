@@ -14,6 +14,7 @@ from torch import Tensor
 
 from .fragment_aware_pool import FragmentAwareMemoryPool
 from .bucketed_memory_pool import BucketedMemoryPool
+from .numa_aware_pool import NUMAAwareMemoryPool
 
 logger = logging.getLogger("dilated_attention_pytorch.enhanced_memory_pool")
 
@@ -34,6 +35,7 @@ class EnhancedMemoryPool:
         self,
         enable_fragment_aware: bool = True,
         enable_bucketed: bool = True,
+        enable_numa: bool = True,
         fragmentation_threshold: float = 0.3,
         bucket_sizes: Optional[list] = None,
         adaptive_buckets: bool = True,
@@ -44,16 +46,19 @@ class EnhancedMemoryPool:
         Args:
             enable_fragment_aware: Enable fragment-aware allocation
             enable_bucketed: Enable bucketed allocation
+            enable_numa: Enable NUMA-aware allocation
             fragmentation_threshold: Threshold for defragmentation
             bucket_sizes: Custom bucket sizes
             adaptive_buckets: Enable adaptive bucket creation
         """
         self.enable_fragment_aware = enable_fragment_aware
         self.enable_bucketed = enable_bucketed
+        self.enable_numa = enable_numa
 
         # Initialize pools
         self.fragment_pool = None
         self.bucketed_pool = None
+        self.numa_pool = None
 
         if enable_fragment_aware:
             self.fragment_pool = FragmentAwareMemoryPool(
@@ -67,11 +72,18 @@ class EnhancedMemoryPool:
                 adaptive_buckets=adaptive_buckets,
             )
 
+        if enable_numa:
+            self.numa_pool = NUMAAwareMemoryPool(
+                enable_numa=True,
+                prefer_local_allocation=True,
+            )
+
         # Statistics
         self.stats = {
             "total_allocations": 0,
             "fragment_aware_allocations": 0,
             "bucketed_allocations": 0,
+            "numa_allocations": 0,
             "fallback_allocations": 0,
         }
 
@@ -81,7 +93,8 @@ class EnhancedMemoryPool:
         logger.info(
             f"Enhanced memory pool initialized: "
             f"fragment_aware={enable_fragment_aware}, "
-            f"bucketed={enable_bucketed}"
+            f"bucketed={enable_bucketed}, "
+            f"numa_aware={enable_numa}"
         )
 
     def allocate(
@@ -116,6 +129,15 @@ class EnhancedMemoryPool:
             # Auto strategy selection
             if strategy == "auto":
                 strategy = self._select_strategy(size_bytes, device)
+
+            # Try NUMA-aware allocation for large tensors or when explicitly requested
+            if strategy == "numa_aware" and self.numa_pool is not None:
+                try:
+                    tensor = self.numa_pool.allocate(shape, dtype, device)
+                    self.stats["numa_allocations"] += 1
+                    return tensor
+                except Exception as e:
+                    logger.debug(f"NUMA-aware allocation failed: {e}")
 
             # Try bucketed allocation first for suitable sizes
             if strategy == "bucketed" and self.bucketed_pool is not None:
@@ -180,9 +202,25 @@ class EnhancedMemoryPool:
         Returns:
             Selected strategy name
         """
-        # For very small allocations, prefer bucketed
+        # For very large allocations (>16MB), prefer NUMA-aware allocation
+        if size_bytes > 16 * 1024 * 1024 and self.numa_pool is not None:
+            return "numa_aware"
+
+        # For small allocations, prefer bucketed
         if size_bytes <= 65536 and self.bucketed_pool is not None:  # <= 64KB
             return "bucketed"
+
+        # For medium-large allocations on multi-socket systems, consider NUMA
+        if size_bytes > 1024 * 1024 and self.numa_pool is not None:  # > 1MB
+            # Check if NUMA is available and beneficial
+            numa_stats = (
+                self.numa_pool.get_stats()
+                if hasattr(self.numa_pool, "get_stats")
+                else {}
+            )
+            topology = numa_stats.get("topology", {})
+            if topology.get("numa_available") and topology.get("num_nodes", 0) > 1:
+                return "numa_aware"
 
         # For large allocations, check fragmentation
         if self.fragment_pool is not None:
@@ -211,6 +249,7 @@ class EnhancedMemoryPool:
                 "enhanced_pool": self.stats.copy(),
                 "fragment_aware": None,
                 "bucketed": None,
+                "numa_aware": None,
             }
 
             if self.fragment_pool is not None:
@@ -218,6 +257,9 @@ class EnhancedMemoryPool:
 
             if self.bucketed_pool is not None:
                 combined_stats["bucketed"] = self.bucketed_pool.get_stats()
+
+            if self.numa_pool is not None:
+                combined_stats["numa_aware"] = self.numa_pool.get_stats()
 
             return combined_stats
 
@@ -233,6 +275,7 @@ class EnhancedMemoryPool:
         if total > 0:
             bucketed_pct = enhanced["bucketed_allocations"] / total * 100
             fragment_pct = enhanced["fragment_aware_allocations"] / total * 100
+            numa_pct = enhanced["numa_allocations"] / total * 100
             fallback_pct = enhanced["fallback_allocations"] / total * 100
 
             lines.extend(
@@ -240,6 +283,7 @@ class EnhancedMemoryPool:
                     f"Total Allocations: {total:,}",
                     f"Bucketed: {enhanced['bucketed_allocations']:,} ({bucketed_pct:.1f}%)",
                     f"Fragment-Aware: {enhanced['fragment_aware_allocations']:,} ({fragment_pct:.1f}%)",
+                    f"NUMA-Aware: {enhanced['numa_allocations']:,} ({numa_pct:.1f}%)",
                     f"Fallback: {enhanced['fallback_allocations']:,} ({fallback_pct:.1f}%)",
                     "",
                 ]
@@ -261,6 +305,18 @@ class EnhancedMemoryPool:
 
             bucket_report = self.bucketed_pool.get_efficiency_report()
             lines.extend(bucket_report.split("\n")[7:])  # Skip header
+            lines.append("")
+
+        # NUMA-aware pool stats
+        if stats["numa_aware"] is not None:
+            lines.append("NUMA-Aware Pool:")
+            lines.append("-" * 17)
+
+            try:
+                numa_report = self.numa_pool.get_numa_report()
+                lines.extend(numa_report.split("\n")[3:])  # Skip header
+            except Exception as e:
+                lines.append(f"NUMA report generation failed: {e}")
 
         return "\n".join(lines)
 
@@ -287,11 +343,21 @@ class EnhancedMemoryPool:
             if self.bucketed_pool is not None:
                 self.bucketed_pool.clear()
 
+            if self.numa_pool is not None:
+                # NUMA pool doesn't have clear method, reset global instance
+                try:
+                    from .numa_aware_pool import reset_numa_pool
+
+                    reset_numa_pool()
+                except Exception as e:
+                    logger.debug(f"Failed to reset NUMA pool: {e}")
+
             # Reset stats
             self.stats = {
                 "total_allocations": 0,
                 "fragment_aware_allocations": 0,
                 "bucketed_allocations": 0,
+                "numa_allocations": 0,
                 "fallback_allocations": 0,
             }
 
