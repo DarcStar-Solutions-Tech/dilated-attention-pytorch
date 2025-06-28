@@ -1,0 +1,329 @@
+{
+  "timestamp": "2025-06-28-0717-UTC",
+  "device": "cuda",
+  "gpu_type": "generic_cuda",
+  "has_flash_attn": false,
+  "has_flash_attn_3": false,
+  "implementations": {
+    "baseline": {
+      "name": "Baseline (Pre-Phase 1)",
+      "phase_version": "v0.1.0",
+      "metrics": {
+        "1024": {
+          "seq_len": 1024,
+          "batch_size": 8,
+          "time_ms": 56.943782325834036,
+          "memory_mb": 0.0,
+          "throughput_tokens_sec": 143861.1849336795,
+          "memory_per_token_kb": 0.0,
+          "success": true,
+          "error": null
+        },
+        "2048": {
+          "seq_len": 2048,
+          "batch_size": 4,
+          "time_ms": 135.891617462039,
+          "memory_mb": 0.0,
+          "throughput_tokens_sec": 60283.3357420918,
+          "memory_per_token_kb": 0.0,
+          "success": true,
+          "error": null
+        },
+        "4096": {
+          "seq_len": 4096,
+          "batch_size": 2,
+          "time_ms": 191.8380823917687,
+          "memory_mb": 0.0,
+          "throughput_tokens_sec": 42702.6787271071,
+          "memory_per_token_kb": 0.0,
+          "success": true,
+          "error": null
+        },
+        "8192": {
+          "seq_len": 8192,
+          "batch_size": 1,
+          "time_ms": 244.27048871293664,
+          "memory_mb": 0.0,
+          "throughput_tokens_sec": 33536.59315606941,
+          "memory_per_token_kb": 0.0,
+          "success": true,
+          "error": null
+        },
+        "16384": {
+          "seq_len": 16384,
+          "batch_size": 1,
+          "time_ms": 513.7238411232829,
+          "memory_mb": 0.0,
+          "throughput_tokens_sec": 31892.621460151746,
+          "memory_per_token_kb": 0.0,
+          "success": true,
+          "error": null
+        }
+      }
+    },
+    "phase1_standard": {
+      "name": "Improved Attention",
+      "phase_version": "Phase 1 Complete",
+      "metrics": {
+        "1024": {
+          "seq_len": 1024,
+          "batch_size": 8,
+          "time_ms": 0,
+          "memory_mb": 0,
+          "throughput_tokens_sec": 0,
+          "memory_per_token_kb": 0,
+          "success": false,
+          "error": "dilated_attention_pytorch.improved_dilated_attention.ImprovedDilatedAttention() got multiple values for keyword argument 'dropout'"
+        },
+        "2048": {
+          "seq_len": 2048,
+          "batch_size": 4,
+          "time_ms": 0,
+          "memory_mb": 0,
+          "throughput_tokens_sec": 0,
+          "memory_per_token_kb": 0,
+          "success": false,
+          "error": "dilated_attention_pytorch.improved_dilated_attention.ImprovedDilatedAttention() got multiple values for keyword argument 'dropout'"
+        },
+        "4096": {
+          "seq_len": 4096,
+          "batch_size": 2,
+          "time_ms": 0,
+          "memory_mb": 0,
+          "throughput_tokens_sec": 0,
+          "memory_per_token_kb": 0,
+          "success": false,
+          "error": "dilated_attention_pytorch.improved_dilated_attention.ImprovedDilatedAttention() got multiple values for keyword argument 'dropout'"
+        },
+        "8192": {
+          "seq_len": 8192,
+          "batch_size": 1,
+          "time_ms": 0,
+          "memory_mb": 0,
+          "throughput_tokens_sec": 0,
+          "memory_per_token_kb": 0,
+          "success": false,
+          "error": "dilated_attention_pytorch.improved_dilated_attention.ImprovedDilatedAttention() got multiple values for keyword argument 'dropout'"
+        },
+        "16384": {
+          "seq_len": 16384,
+          "batch_size": 1,
+          "time_ms": 0,
+          "memory_mb": 0,
+          "throughput_tokens_sec": 0,
+          "memory_per_token_kb": 0,
+          "success": false,
+          "error": "dilated_attention_pytorch.improved_dilated_attention.ImprovedDilatedAttention() got multiple values for keyword argument 'dropout'"
+        }
+      }
+    },
+    "phase1_ring": {
+      "name": "Ring Attention",
+      "phase_version": "Phase 1 + O(n) Memory",
+      "metrics": {
+        "1024": {
+          "seq_len": 1024,
+          "batch_size": 8,
+          "time_ms": 4.504851531237364,
+          "memory_mb": 120.0,
+          "throughput_tokens_sec": 1818483.9041187833,
+          "memory_per_token_kb": 15.0,
+          "success": true,
+          "error": null
+        },
+        "2048": {
+          "seq_len": 2048,
+          "batch_size": 4,
+          "time_ms": 11.921872943639755,
+          "memory_mb": 128.0,
+          "throughput_tokens_sec": 687140.3544331833,
+          "memory_per_token_kb": 16.0,
+          "success": true,
+          "error": null
+        },
+        "4096": {
+          "seq_len": 4096,
+          "batch_size": 2,
+          "time_ms": 66.13961607217789,
+          "memory_mb": 116.0,
+          "throughput_tokens_sec": 123859.20098266227,
+          "memory_per_token_kb": 14.5,
+          "success": true,
+          "error": null
+        },
+        "8192": {
+          "seq_len": 8192,
+          "batch_size": 1,
+          "time_ms": 32.9223969951272,
+          "memory_mb": 108.0,
+          "throughput_tokens_sec": 248827.56869776177,
+          "memory_per_token_kb": 13.5,
+          "success": true,
+          "error": null
+        },
+        "16384": {
+          "seq_len": 16384,
+          "batch_size": 1,
+          "time_ms": 538.5424328967929,
+          "memory_mb": 112.0,
+          "throughput_tokens_sec": 30422.858068715737,
+          "memory_per_token_kb": 7.0,
+          "success": true,
+          "error": null
+        },
+        "32768": {
+          "seq_len": 32768,
+          "batch_size": 1,
+          "time_ms": 0,
+          "memory_mb": 0,
+          "throughput_tokens_sec": 0,
+          "memory_per_token_kb": 0,
+          "success": false,
+          "error": "CUDA out of memory. Tried to allocate 384.00 MiB. GPU 0 has a total capacity of 7.88 GiB of which 375.44 MiB is free. Process 3093175 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 2.09 GiB memory in use. Of the allocated memory 1.60 GiB is allocated by PyTorch, and 376.75 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)"
+        },
+        "65536": {
+          "seq_len": 65536,
+          "batch_size": 1,
+          "time_ms": 0,
+          "memory_mb": 0,
+          "throughput_tokens_sec": 0,
+          "memory_per_token_kb": 0,
+          "success": false,
+          "error": "CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.88 GiB of which 888.88 MiB is free. Process 3093175 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 1.59 GiB memory in use. Of the allocated memory 1.31 GiB is allocated by PyTorch, and 159.88 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)"
+        }
+      }
+    },
+    "phase1_sparse": {
+      "name": "Block Sparse Attention",
+      "phase_version": "Phase 1 + 95% Sparsity",
+      "metrics": {
+        "1024": {
+          "seq_len": 1024,
+          "batch_size": 8,
+          "time_ms": 71.42721898853779,
+          "memory_mb": 112.0,
+          "throughput_tokens_sec": 114690.1715621128,
+          "memory_per_token_kb": 14.0,
+          "success": true,
+          "error": null
+        },
+        "2048": {
+          "seq_len": 2048,
+          "batch_size": 4,
+          "time_ms": 30.94376642256975,
+          "memory_mb": 144.0,
+          "throughput_tokens_sec": 264738.29617667105,
+          "memory_per_token_kb": 18.0,
+          "success": true,
+          "error": null
+        },
+        "4096": {
+          "seq_len": 4096,
+          "batch_size": 2,
+          "time_ms": 159.51662696897984,
+          "memory_mb": 160.0,
+          "throughput_tokens_sec": 51355.14808492688,
+          "memory_per_token_kb": 20.0,
+          "success": true,
+          "error": null
+        },
+        "8192": {
+          "seq_len": 8192,
+          "batch_size": 1,
+          "time_ms": 151.99910374358296,
+          "memory_mb": 96.0,
+          "throughput_tokens_sec": 53895.054630187886,
+          "memory_per_token_kb": 12.0,
+          "success": true,
+          "error": null
+        },
+        "16384": {
+          "seq_len": 16384,
+          "batch_size": 1,
+          "time_ms": 185.43620258569717,
+          "memory_mb": 144.0,
+          "throughput_tokens_sec": 88353.8369074848,
+          "memory_per_token_kb": 9.0,
+          "success": true,
+          "error": null
+        },
+        "32768": {
+          "seq_len": 32768,
+          "batch_size": 1,
+          "time_ms": 377.2115354426205,
+          "memory_mb": 0.0,
+          "throughput_tokens_sec": 86869.02949972085,
+          "memory_per_token_kb": 0.0,
+          "success": true,
+          "error": null
+        },
+        "65536": {
+          "seq_len": 65536,
+          "batch_size": 1,
+          "time_ms": 758.1664894707501,
+          "memory_mb": 0.0,
+          "throughput_tokens_sec": 86440.11692702012,
+          "memory_per_token_kb": 0.0,
+          "success": true,
+          "error": null
+        }
+      }
+    },
+    "phase1_v2": {
+      "name": "Improved V2 (Buffer Manager)",
+      "phase_version": "Phase 1 + Advanced Memory",
+      "metrics": {
+        "1024": {
+          "seq_len": 1024,
+          "batch_size": 8,
+          "time_ms": 83.75068074092269,
+          "memory_mb": 132.0,
+          "throughput_tokens_sec": 97814.13031544689,
+          "memory_per_token_kb": 16.5,
+          "success": true,
+          "error": null
+        },
+        "2048": {
+          "seq_len": 2048,
+          "batch_size": 4,
+          "time_ms": 87.98732748255134,
+          "memory_mb": 133.0,
+          "throughput_tokens_sec": 93104.31665997067,
+          "memory_per_token_kb": 16.625,
+          "success": true,
+          "error": null
+        },
+        "4096": {
+          "seq_len": 4096,
+          "batch_size": 2,
+          "time_ms": 0,
+          "memory_mb": 0,
+          "throughput_tokens_sec": 0,
+          "memory_per_token_kb": 0,
+          "success": false,
+          "error": "CUDA out of memory. Tried to allocate 20.00 MiB. GPU 0 has a total capacity of 7.88 GiB of which 106.81 MiB is free. Process 3093175 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 2.53 GiB memory in use. Of the allocated memory 2.40 GiB is allocated by PyTorch, and 8.35 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)"
+        },
+        "8192": {
+          "seq_len": 8192,
+          "batch_size": 1,
+          "time_ms": 0,
+          "memory_mb": 0,
+          "throughput_tokens_sec": 0,
+          "memory_per_token_kb": 0,
+          "success": false,
+          "error": "CUDA out of memory. Tried to allocate 20.00 MiB. GPU 0 has a total capacity of 7.88 GiB of which 108.75 MiB is free. Process 3093175 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 2.53 GiB memory in use. Of the allocated memory 2.40 GiB is allocated by PyTorch, and 6.38 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)"
+        },
+        "16384": {
+          "seq_len": 16384,
+          "batch_size": 1,
+          "time_ms": 0,
+          "memory_mb": 0,
+          "throughput_tokens_sec": 0,
+          "memory_per_token_kb": 0,
+          "success": false,
+          "error": "CUDA out of memory. Tried to allocate 16.00 MiB. GPU 0 has a total capacity of 7.88 GiB of which 108.69 MiB is free. Process 3093175 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 2.53 GiB memory in use. Of the allocated memory 2.37 GiB is allocated by PyTorch, and 30.38 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)"
+        }
+      }
+    }
+  }
+}
