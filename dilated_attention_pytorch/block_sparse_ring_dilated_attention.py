@@ -58,17 +58,26 @@ class BlockSparseRingDilatedAttention(RingDilatedAttentionV2):
         if "sparsity_config" in kwargs:
             sparse_config = kwargs.pop("sparsity_config")
 
+        # Extract memory pool parameters before filtering
+        enable_memory_pool = kwargs.get("enable_memory_pool", False)
+        enable_profiling = kwargs.get("enable_profiling", False)
+        lightweight_pool = kwargs.get("lightweight_pool", True)
+
         # Filter out any remaining BlockSparse-specific parameters
         block_sparse_params = {
             "use_adaptive_sparsity",
             "quality_threshold",
-            "enable_memory_pool",
             "enable_packed_comm",
             "enable_hardware_opt",
         }
         filtered_kwargs = {
             k: v for k, v in kwargs.items() if k not in block_sparse_params
         }
+
+        # Pass memory pool parameters to parent
+        filtered_kwargs["enable_memory_pool"] = enable_memory_pool
+        filtered_kwargs["enable_profiling"] = enable_profiling
+        filtered_kwargs["lightweight_pool"] = lightweight_pool
 
         super().__init__(segment_lengths, dilation_rates, **filtered_kwargs)
 
@@ -120,8 +129,13 @@ class BlockSparseRingDilatedAttention(RingDilatedAttentionV2):
         # Get active block pairs for sparse pattern
         block_indices = self._get_sparse_block_indices(num_blocks, num_heads, q.device)
 
-        # Initialize output
-        output = torch.zeros_like(q)
+        # Initialize output using memory pool if available
+        if hasattr(self, "_allocate_tensor") and self._memory_pool is not None:
+            output = self._allocate_tensor(
+                q.shape, q.dtype, q.device, strategy="auto", zero_init=True
+            )
+        else:
+            output = torch.zeros_like(q)
 
         # Try Flash Attention 3 first if available
         fa3_weights = None
@@ -353,6 +367,16 @@ class BlockSparseRingDilatedAttention(RingDilatedAttentionV2):
         # Process each active block pair
         scale = 1.0 / math.sqrt(head_dim)
 
+        # Pre-allocate temporary tensors for block computation using memory pool
+        # Only use pool for tensors >= 1MB as per optimization findings
+        block_tensor_size = batch * num_heads * self.block_size * self.block_size
+        block_tensor_bytes = block_tensor_size * 4  # float32
+        _ = (
+            hasattr(self, "_allocate_tensor")
+            and self._memory_pool is not None
+            and block_tensor_bytes >= 1024 * 1024
+        )
+
         for idx in range(num_active_blocks):
             q_idx = row_idx[idx]
             k_idx = col_idx[idx]
@@ -381,12 +405,20 @@ class BlockSparseRingDilatedAttention(RingDilatedAttentionV2):
                     pass
                 elif q_idx == k_idx:
                     # Diagonal block needs causal mask
-                    causal_mask = torch.triu(
-                        torch.ones(
-                            self.block_size, self.block_size, device=scores.device
-                        ),
-                        diagonal=1,
-                    ).bool()
+                    # Cache causal mask to avoid recomputation
+                    if not hasattr(self, "_causal_mask_cache"):
+                        self._causal_mask_cache = {}
+
+                    cache_key = (self.block_size, scores.device)
+                    if cache_key not in self._causal_mask_cache:
+                        self._causal_mask_cache[cache_key] = torch.triu(
+                            torch.ones(
+                                self.block_size, self.block_size, device=scores.device
+                            ),
+                            diagonal=1,
+                        ).bool()
+
+                    causal_mask = self._causal_mask_cache[cache_key]
                     scores.masked_fill_(causal_mask, float("-inf"))
                 else:
                     # Skip future blocks entirely
@@ -446,10 +478,20 @@ class BlockSparseRingDilatedAttention(RingDilatedAttentionV2):
 
             # Apply causal mask if needed
             if is_causal and q_idx == k_idx:
-                causal_mask = torch.triu(
-                    torch.ones(self.block_size, self.block_size, device=scores.device),
-                    diagonal=1,
-                ).bool()
+                # Reuse cached causal mask
+                if not hasattr(self, "_causal_mask_cache"):
+                    self._causal_mask_cache = {}
+
+                cache_key = (self.block_size, scores.device)
+                if cache_key not in self._causal_mask_cache:
+                    self._causal_mask_cache[cache_key] = torch.triu(
+                        torch.ones(
+                            self.block_size, self.block_size, device=scores.device
+                        ),
+                        diagonal=1,
+                    ).bool()
+
+                causal_mask = self._causal_mask_cache[cache_key]
                 scores.masked_fill_(causal_mask, float("-inf"))
 
             # Softmax
@@ -471,3 +513,12 @@ class BlockSparseRingDilatedAttention(RingDilatedAttentionV2):
             "shape": (batch, num_heads, seq_len, seq_len),
             "num_blocks": (seq_len // self.block_size, seq_len // self.block_size),
         }
+
+    def cleanup_buffers(self):
+        """Clean up cached masks and call parent cleanup."""
+        # Clear causal mask cache
+        if hasattr(self, "_causal_mask_cache"):
+            self._causal_mask_cache.clear()
+
+        # Call parent cleanup for memory pools and communication buffers
+        super().cleanup_buffers()
