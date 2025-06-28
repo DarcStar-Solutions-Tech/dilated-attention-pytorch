@@ -21,6 +21,14 @@ import torch.distributed as dist
 import torch.nn.functional as F
 from torch import Tensor
 
+try:
+    from .core.enhanced_memory_pool import get_enhanced_memory_pool
+
+    HAS_ENHANCED_MEMORY_POOL = True
+except ImportError:
+    HAS_ENHANCED_MEMORY_POOL = False
+    warnings.warn("Enhanced memory pool not available")
+
 
 class RingDilatedAttentionV2(nn.Module):
     """
@@ -41,6 +49,9 @@ class RingDilatedAttentionV2(nn.Module):
         ring_size: Optional[int] = None,
         device: Optional[torch.device] = None,
         dtype: Optional[torch.dtype] = None,
+        enable_memory_pool: bool = False,  # Disabled by default - mainly useful for communication buffers
+        enable_profiling: bool = False,
+        lightweight_pool: bool = True,
     ):
         super().__init__()
 
@@ -77,6 +88,89 @@ class RingDilatedAttentionV2(nn.Module):
         # Cache for dilated attention indices
         self._dilated_indices_cache = {}
 
+        # Enhanced memory pool integration
+        self.enable_memory_pool = enable_memory_pool and HAS_ENHANCED_MEMORY_POOL
+        self.lightweight_pool = lightweight_pool
+        self._memory_pool = None
+        if self.enable_memory_pool:
+            if lightweight_pool:
+                # Use lightweight pool for communication buffers and outputs
+                self._memory_pool = get_enhanced_memory_pool(
+                    enable_fragment_aware=False,  # Disable for speed
+                    enable_bucketed=True,  # Keep for different buffer sizes
+                    enable_numa=False,  # Disable for speed in distributed setting
+                    enable_profiling=enable_profiling,
+                )
+            else:
+                # Full memory pool with all features
+                self._memory_pool = get_enhanced_memory_pool(
+                    enable_fragment_aware=True,
+                    enable_bucketed=True,
+                    enable_numa=True,
+                    enable_profiling=enable_profiling,
+                )
+
+    def _allocate_tensor(self, shape, dtype, device, strategy="auto", zero_init=True):
+        """
+        Allocate tensor using enhanced memory pool if enabled.
+
+        Args:
+            shape: Tensor shape tuple
+            dtype: Tensor data type
+            device: Target device
+            strategy: Allocation strategy for memory pool
+            zero_init: Whether to zero-initialize the tensor
+
+        Returns:
+            Allocated tensor (optionally zero-initialized)
+        """
+        if self._memory_pool is not None:
+            # Calculate tensor size in bytes
+            num_elements = 1
+            for dim in shape:
+                num_elements *= dim
+            bytes_per_element = (
+                torch.finfo(dtype).bits // 8
+                if dtype.is_floating_point
+                else torch.iinfo(dtype).bits // 8
+            )
+            tensor_size_mb = (num_elements * bytes_per_element) / (1024 * 1024)
+
+            # Only use memory pool for tensors larger than 1MB
+            # Small tensors have too much overhead
+            if tensor_size_mb >= 1.0:
+                tensor = self._memory_pool.allocate(shape, dtype, device, strategy)
+                if zero_init:
+                    tensor.zero_()
+                return tensor
+
+        # Fallback to direct allocation for small tensors or when pool is disabled
+        if zero_init:
+            return torch.zeros(shape, dtype=dtype, device=device)
+        else:
+            return torch.empty(shape, dtype=dtype, device=device)
+
+    def _deallocate_tensor(self, tensor):
+        """Return tensor to memory pool if enabled."""
+        if self._memory_pool is not None:
+            self._memory_pool.deallocate(tensor)
+
+    def cleanup_buffers(self):
+        """Clean up allocated communication buffers."""
+        if self._kv_send_buffer is not None:
+            self._deallocate_tensor(self._kv_send_buffer)
+            self._kv_send_buffer = None
+        if self._kv_recv_buffer is not None:
+            self._deallocate_tensor(self._kv_recv_buffer)
+            self._kv_recv_buffer = None
+
+    def __del__(self):
+        """Cleanup on destruction."""
+        try:
+            self.cleanup_buffers()
+        except Exception:
+            pass  # Ignore errors during cleanup
+
     def _apply_dilated_attention_pattern(
         self, query: Tensor, key: Tensor, value: Tensor, is_causal: bool
     ) -> Tensor:
@@ -89,8 +183,8 @@ class RingDilatedAttentionV2(nn.Module):
         b, n, h, d = query.shape
         device, dtype = query.device, query.dtype
 
-        # Pre-allocate output
-        output = torch.zeros(b, n, h, d, device=device, dtype=dtype)
+        # Pre-allocate output using memory pool (main output tensor)
+        output = self._allocate_tensor((b, n, h, d), dtype, device, strategy="auto")
 
         # Calculate head groups for different segment lengths
         heads_per_group = self._calculate_head_groups(h)
@@ -236,8 +330,10 @@ class RingDilatedAttentionV2(nn.Module):
                 1, 2
             )
 
-            # Combine outputs
-            full_output = torch.zeros(b, n, h, d, device=q.device, dtype=q.dtype)
+            # Combine outputs using memory pool
+            full_output = self._allocate_tensor(
+                (b, n, h, d), q.dtype, q.device, strategy="auto"
+            )
             full_output[:, : num_segments * segment_len, :, :] = output
             full_output[:, -remaining_len:, :, :] = out_remain
             output = full_output
@@ -418,12 +514,14 @@ class RingDilatedAttentionV2(nn.Module):
             k_local = F.pad(k_local, (0, 0, 0, 0, 0, pad_size))
             v_local = F.pad(v_local, (0, 0, 0, 0, 0, pad_size))
 
-        # Allocate output accumulator and running statistics
-        output = torch.zeros(b, h, n, d, device=q.device, dtype=q.dtype)
+        # Allocate output accumulator and running statistics using memory pool
+        output = self._allocate_tensor((b, h, n, d), q.dtype, q.device, strategy="auto")
         running_max = torch.full(
             (b, h, n, 1), float("-inf"), device=q.device, dtype=q.dtype
         )
-        running_sum = torch.zeros((b, h, n, 1), device=q.device, dtype=q.dtype)
+        running_sum = self._allocate_tensor(
+            (b, h, n, 1), q.dtype, q.device, strategy="bucketed"
+        )
 
         # Allocate communication buffers
         self._allocate_comm_buffers(k_local, v_local)
@@ -503,14 +601,22 @@ class RingDilatedAttentionV2(nn.Module):
         return output
 
     def _allocate_comm_buffers(self, k: Tensor, v: Tensor):
-        """Allocate communication buffers for K/V rotation."""
+        """Allocate communication buffers for K/V rotation using memory pool."""
         total_size = k.numel() + v.numel()
 
         if self._kv_send_buffer is None or self._kv_send_buffer.numel() < total_size:
-            self._kv_send_buffer = torch.empty(
-                total_size, dtype=k.dtype, device=k.device
+            # Deallocate old buffers if they exist
+            if self._kv_send_buffer is not None:
+                self._deallocate_tensor(self._kv_send_buffer)
+                self._deallocate_tensor(self._kv_recv_buffer)
+
+            # Allocate new communication buffers using memory pool
+            self._kv_send_buffer = self._allocate_tensor(
+                (total_size,), k.dtype, k.device, strategy="bucketed", zero_init=False
             )
-            self._kv_recv_buffer = torch.empty_like(self._kv_send_buffer)
+            self._kv_recv_buffer = self._allocate_tensor(
+                (total_size,), k.dtype, k.device, strategy="bucketed", zero_init=False
+            )
 
     def _ring_sendrecv(self, k: Tensor, v: Tensor) -> tuple[Tensor, Tensor]:
         """Rotate K/V chunks through the ring."""
