@@ -22,9 +22,19 @@ except ImportError:
 from .core import (
     BaseDilatedAttention,
     DilatedAttentionConfig,
-    get_global_memory_pool,
     optimize_attention_computation,
 )
+
+# Try to import enhanced memory pool
+try:
+    from .core.enhanced_memory_pool import get_enhanced_memory_pool
+
+    HAS_ENHANCED_MEMORY_POOL = True
+except ImportError:
+    HAS_ENHANCED_MEMORY_POOL = False
+    import warnings
+
+    warnings.warn("Enhanced memory pool not available")
 
 
 class DilatedAttention(BaseDilatedAttention):
@@ -40,12 +50,17 @@ class DilatedAttention(BaseDilatedAttention):
         softmax_scale: Temperature for softmax (default: 1/sqrt(d))
         attention_dropout: Dropout rate for attention (default: 0.0)
         op: Optional xFormers attention operation
+        enable_memory_pool: Enable enhanced memory pool for tensor allocation (default: True)
+        enable_profiling: Enable memory profiling when using memory pool (default: False)
+        lightweight_pool: Use lightweight pool config for better performance (default: True)
 
     Example:
         >>> attention = DilatedAttention(
         ...     segment_lengths=[2048, 4096, 8192],
         ...     dilation_rates=[1, 2, 4],
-        ...     attention_dropout=0.1
+        ...     attention_dropout=0.1,
+        ...     enable_memory_pool=True,
+        ...     lightweight_pool=True
         ... )
     """
 
@@ -56,6 +71,9 @@ class DilatedAttention(BaseDilatedAttention):
         softmax_scale: float | None = None,
         attention_dropout: float = 0.0,
         op: Any | None = None,  # xops.AttentionOp when available
+        enable_memory_pool: bool = True,
+        enable_profiling: bool = False,
+        lightweight_pool: bool = True,
         **kwargs,
     ):
         # Create configuration
@@ -73,8 +91,55 @@ class DilatedAttention(BaseDilatedAttention):
         self.softmax_scale = softmax_scale
         self.op = op
 
-        # Use memory pool for temporary buffers
-        self.memory_pool = get_global_memory_pool()
+        # Enhanced memory pool integration
+        self.enable_memory_pool = enable_memory_pool and HAS_ENHANCED_MEMORY_POOL
+        self.lightweight_pool = lightweight_pool
+        self._memory_pool = None
+        if self.enable_memory_pool:
+            if lightweight_pool:
+                # Use lightweight pool for better performance based on lessons learned
+                self._memory_pool = get_enhanced_memory_pool(
+                    enable_fragment_aware=False,  # Disable for speed
+                    enable_bucketed=True,  # Keep for common sizes
+                    enable_numa=False,  # Disable for speed
+                    enable_profiling=enable_profiling,
+                )
+            else:
+                # Full memory pool with all features
+                self._memory_pool = get_enhanced_memory_pool(
+                    enable_fragment_aware=True,
+                    enable_bucketed=True,
+                    enable_numa=True,
+                    enable_profiling=enable_profiling,
+                )
+
+    def _allocate_tensor(self, shape, dtype, device, strategy="auto", zero_init=True):
+        """
+        Allocate tensor using enhanced memory pool if enabled.
+
+        Args:
+            shape: Tensor shape tuple
+            dtype: Tensor data type
+            device: Target device
+            strategy: Allocation strategy for memory pool
+            zero_init: Whether to zero-initialize the tensor
+
+        Returns:
+            Allocated tensor (optionally zero-initialized)
+        """
+        if self._memory_pool is not None:
+            # Use enhanced memory pool with strategy selection
+            tensor = self._memory_pool.allocate(shape, dtype, device, strategy)
+            # Zero-initialize only if requested (avoid cost for temp tensors)
+            if zero_init:
+                tensor.zero_()
+            return tensor
+        else:
+            # Fallback to direct allocation
+            if zero_init:
+                return torch.zeros(shape, dtype=dtype, device=device)
+            else:
+                return torch.empty(shape, dtype=dtype, device=device)
 
     def forward(
         self,
@@ -110,10 +175,10 @@ class DilatedAttention(BaseDilatedAttention):
         # Get head groups from base class cache
         group_sizes, head_ranges = self._get_head_groups(h)
 
-        # Initialize output tensor
-        # Note: Memory pool manages buffer lifecycle automatically
-        # Buffers are tracked with weak references and cleaned up by GC
-        out = torch.zeros_like(query)
+        # Initialize output tensor using memory pool
+        # Use enhanced memory pool for main output tensor
+        device, dtype = query.device, query.dtype
+        out = self._allocate_tensor(query.shape, dtype, device, strategy="auto")
 
         # Process each attention group
         for i, (g, r, s) in enumerate(
