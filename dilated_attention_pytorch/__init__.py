@@ -48,6 +48,7 @@ from .core import (
 )
 from .dilated_attention import DilatedAttention
 from .improved_dilated_attention import ImprovedDilatedAttention
+from .improved_dilated_attention_v2 import ImprovedDilatedAttentionV2
 from .improved_distributed_dilated_attention import (
     DistributedImprovedDilatedAttention,
     DistributedImprovedMultiheadDilatedAttention,
@@ -106,6 +107,7 @@ __all__ = [
     "DistributedSparseConfig",
     "DistributedSparsePattern",
     "ImprovedDilatedAttention",
+    "ImprovedDilatedAttentionV2",
     "ImprovedMultiheadDilatedAttention",
     "LongNet",
     "MultiheadDilatedAttention",
