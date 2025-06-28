@@ -65,7 +65,7 @@ The project has been reorganized for better maintainability. See [PROJECT_STRUCT
 - **Performance**: 5-50x speedup with 95-99% quality
 - **Context**: 100M+ tokens (100x improvement)
 
-[See full feasibility analysis →](doc/1t-parameter-training-feasibility-block-sparse-update.md)
+[See full feasibility analysis →](docs/feasibility/1t-parameter-training-feasibility-block-sparse-update.md)
 
 <img src="https://github.com/fkodom/dilated-attention-pytorch/assets/45951340/27304255-e51e-4298-9c7b-5b7e4a51e697" width=800 alt="long-net-sequence-length"/>
 
@@ -124,7 +124,7 @@ I follow the benchmarking procedure from the [LongNet paper](https://arxiv.org/a
 
 See: [benchmark.py](./benchmark.py)
 
-![benchmark](./doc/benchmark.png)
+![benchmark](./docs/benchmarks/benchmark.png)
 
 > **NOTE**: Clearly, there are some inefficiencies in my `DilatedAttention` implementation for shorter sequence lengths.  I'm not sure what's causing this.  If you have any insights, please let me know!
 
