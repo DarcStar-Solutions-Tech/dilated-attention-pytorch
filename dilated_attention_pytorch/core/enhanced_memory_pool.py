@@ -7,6 +7,7 @@ to provide comprehensive memory management for Phase 1.4.
 
 import logging
 import threading
+from pathlib import Path
 from typing import Dict, Optional, Tuple, Any
 
 import torch
@@ -15,6 +16,7 @@ from torch import Tensor
 from .fragment_aware_pool import FragmentAwareMemoryPool
 from .bucketed_memory_pool import BucketedMemoryPool
 from .numa_aware_pool import NUMAAwareMemoryPool
+from .memory_profiler import get_memory_profiler
 
 logger = logging.getLogger("dilated_attention_pytorch.enhanced_memory_pool")
 
@@ -36,6 +38,7 @@ class EnhancedMemoryPool:
         enable_fragment_aware: bool = True,
         enable_bucketed: bool = True,
         enable_numa: bool = True,
+        enable_profiling: bool = False,
         fragmentation_threshold: float = 0.3,
         bucket_sizes: Optional[list] = None,
         adaptive_buckets: bool = True,
@@ -47,6 +50,7 @@ class EnhancedMemoryPool:
             enable_fragment_aware: Enable fragment-aware allocation
             enable_bucketed: Enable bucketed allocation
             enable_numa: Enable NUMA-aware allocation
+            enable_profiling: Enable memory profiling and monitoring
             fragmentation_threshold: Threshold for defragmentation
             bucket_sizes: Custom bucket sizes
             adaptive_buckets: Enable adaptive bucket creation
@@ -54,11 +58,19 @@ class EnhancedMemoryPool:
         self.enable_fragment_aware = enable_fragment_aware
         self.enable_bucketed = enable_bucketed
         self.enable_numa = enable_numa
+        self.enable_profiling = enable_profiling
 
         # Initialize pools
         self.fragment_pool = None
         self.bucketed_pool = None
         self.numa_pool = None
+
+        # Initialize profiler
+        self.profiler = None
+        if enable_profiling:
+            self.profiler = get_memory_profiler()
+            if not self.profiler._profiling_active:
+                self.profiler.start_profiling()
 
         if enable_fragment_aware:
             self.fragment_pool = FragmentAwareMemoryPool(
@@ -94,7 +106,8 @@ class EnhancedMemoryPool:
             f"Enhanced memory pool initialized: "
             f"fragment_aware={enable_fragment_aware}, "
             f"bucketed={enable_bucketed}, "
-            f"numa_aware={enable_numa}"
+            f"numa_aware={enable_numa}, "
+            f"profiling={enable_profiling}"
         )
 
     def allocate(
@@ -119,50 +132,87 @@ class EnhancedMemoryPool:
         if device is None:
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        with self._lock:
-            self.stats["total_allocations"] += 1
+        # Record profiling context if enabled
+        operation_name = "enhanced_pool_allocate"
+        profiler_context = None
+        if self.profiler:
+            profiler_context = self.profiler.profile_operation(operation_name)
+            profiler_context.__enter__()
 
-            # Calculate size in bytes
-            element_size = torch.finfo(dtype).bits // 8
-            size_bytes = int(torch.prod(torch.tensor(shape)).item() * element_size)
+        try:
+            with self._lock:
+                self.stats["total_allocations"] += 1
 
-            # Auto strategy selection
-            if strategy == "auto":
-                strategy = self._select_strategy(size_bytes, device)
+                # Calculate size in bytes
+                element_size = torch.finfo(dtype).bits // 8
+                size_bytes = int(torch.prod(torch.tensor(shape)).item() * element_size)
 
-            # Try NUMA-aware allocation for large tensors or when explicitly requested
-            if strategy == "numa_aware" and self.numa_pool is not None:
-                try:
-                    tensor = self.numa_pool.allocate(shape, dtype, device)
-                    self.stats["numa_allocations"] += 1
-                    return tensor
-                except Exception as e:
-                    logger.debug(f"NUMA-aware allocation failed: {e}")
+                # Auto strategy selection
+                if strategy == "auto":
+                    strategy = self._select_strategy(size_bytes, device)
 
-            # Try bucketed allocation first for suitable sizes
-            if strategy == "bucketed" and self.bucketed_pool is not None:
-                try:
-                    tensor = self.bucketed_pool.allocate(
-                        size_bytes, dtype, device, shape
+                tensor = None
+                pool_type = "unknown"
+                numa_node = None
+
+                # Try NUMA-aware allocation for large tensors or when explicitly requested
+                if strategy == "numa_aware" and self.numa_pool is not None:
+                    try:
+                        tensor = self.numa_pool.allocate(shape, dtype, device)
+                        self.stats["numa_allocations"] += 1
+                        pool_type = "numa_aware"
+                        # Try to get NUMA node info
+                        if hasattr(self.numa_pool, "_select_numa_node"):
+                            numa_node = self.numa_pool._select_numa_node(device, None)
+                    except Exception as e:
+                        logger.debug(f"NUMA-aware allocation failed: {e}")
+
+                # Try bucketed allocation first for suitable sizes
+                if (
+                    tensor is None
+                    and strategy == "bucketed"
+                    and self.bucketed_pool is not None
+                ):
+                    try:
+                        tensor = self.bucketed_pool.allocate(
+                            size_bytes, dtype, device, shape
+                        )
+                        self.stats["bucketed_allocations"] += 1
+                        pool_type = "bucketed"
+                    except Exception as e:
+                        logger.debug(f"Bucketed allocation failed: {e}")
+
+                # Try fragment-aware allocation
+                if (
+                    tensor is None
+                    and strategy == "fragment_aware"
+                    and self.fragment_pool is not None
+                ):
+                    try:
+                        tensor = self.fragment_pool.allocate(
+                            size_bytes, dtype, device, shape
+                        )
+                        self.stats["fragment_aware_allocations"] += 1
+                        pool_type = "fragment_aware"
+                    except Exception as e:
+                        logger.debug(f"Fragment-aware allocation failed: {e}")
+
+                # Fallback to direct PyTorch allocation
+                if tensor is None:
+                    tensor = self._fallback_allocate(shape, dtype, device)
+                    pool_type = "fallback"
+
+                # Record allocation in profiler
+                if self.profiler and tensor is not None:
+                    self.profiler.record_allocation(
+                        tensor, pool_type=pool_type, numa_node=numa_node
                     )
-                    self.stats["bucketed_allocations"] += 1
-                    return tensor
-                except Exception as e:
-                    logger.debug(f"Bucketed allocation failed: {e}")
 
-            # Try fragment-aware allocation
-            if strategy == "fragment_aware" and self.fragment_pool is not None:
-                try:
-                    tensor = self.fragment_pool.allocate(
-                        size_bytes, dtype, device, shape
-                    )
-                    self.stats["fragment_aware_allocations"] += 1
-                    return tensor
-                except Exception as e:
-                    logger.debug(f"Fragment-aware allocation failed: {e}")
+                return tensor
 
-            # Fallback to direct PyTorch allocation
-            return self._fallback_allocate(shape, dtype, device)
+        finally:
+            if profiler_context:
+                profiler_context.__exit__(None, None, None)
 
     def deallocate(self, tensor: Tensor) -> None:
         """
@@ -171,6 +221,10 @@ class EnhancedMemoryPool:
         Args:
             tensor: Tensor to deallocate
         """
+        # Record deallocation in profiler
+        if self.profiler:
+            self.profiler.record_deallocation(tensor)
+
         with self._lock:
             # Try bucketed pool first
             if self.bucketed_pool is not None:
@@ -319,6 +373,33 @@ class EnhancedMemoryPool:
                 lines.append(f"NUMA report generation failed: {e}")
 
         return "\n".join(lines)
+
+    def get_profiling_report(self) -> str:
+        """Get memory profiling report if profiling is enabled."""
+        if not self.profiler:
+            return "Memory profiling is not enabled. Enable with enable_profiling=True"
+
+        return self.profiler.generate_report()
+
+    def export_profiling_data(self, filepath: Path) -> None:
+        """Export profiling data to file."""
+        if not self.profiler:
+            logger.warning("Profiling not enabled - no data to export")
+            return
+
+        self.profiler.export_data(filepath)
+
+    def create_memory_dashboard(self, save_path: Optional[Path] = None) -> str:
+        """Create interactive memory profiling dashboard."""
+        if not self.profiler:
+            return "<html><body><h1>Memory profiling not enabled</h1></body></html>"
+
+        try:
+            from .memory_visualizer import create_memory_dashboard
+
+            return create_memory_dashboard(self.profiler, save_path)
+        except ImportError:
+            return "<html><body><h1>Visualization libraries not available</h1><p>Install with: pip install matplotlib plotly</p></body></html>"
 
     def defragment_all(self) -> Dict[str, bool]:
         """Trigger defragmentation on all pools that support it."""
