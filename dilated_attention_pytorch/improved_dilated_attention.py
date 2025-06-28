@@ -73,7 +73,7 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
         dilation_rates: Sequence[int],
         dropout: float = 0.0,
         use_tf32: bool = True,
-        enable_memory_pool: bool = True,
+        enable_memory_pool: bool = False,  # Disabled by default due to overhead
         enable_profiling: bool = False,
         lightweight_pool: bool = True,
         **kwargs,
@@ -148,18 +148,30 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
             Allocated tensor (optionally zero-initialized)
         """
         if self._memory_pool is not None:
-            # Use enhanced memory pool with strategy selection
-            tensor = self._memory_pool.allocate(shape, dtype, device, strategy)
-            # Zero-initialize only if requested (avoid cost for temp tensors)
-            if zero_init:
-                tensor.zero_()
-            return tensor
+            # Calculate tensor size in bytes
+            num_elements = 1
+            for dim in shape:
+                num_elements *= dim
+            bytes_per_element = (
+                torch.finfo(dtype).bits // 8
+                if dtype.is_floating_point
+                else torch.iinfo(dtype).bits // 8
+            )
+            tensor_size_mb = (num_elements * bytes_per_element) / (1024 * 1024)
+
+            # Only use memory pool for tensors larger than 1MB
+            # Small tensors have too much overhead
+            if tensor_size_mb >= 1.0:
+                tensor = self._memory_pool.allocate(shape, dtype, device, strategy)
+                if zero_init:
+                    tensor.zero_()
+                return tensor
+
+        # Fallback to direct allocation for small tensors or when pool is disabled
+        if zero_init:
+            return torch.zeros(shape, dtype=dtype, device=device)
         else:
-            # Fallback to direct allocation
-            if zero_init:
-                return torch.zeros(shape, dtype=dtype, device=device)
-            else:
-                return torch.empty(shape, dtype=dtype, device=device)
+            return torch.empty(shape, dtype=dtype, device=device)
 
     def forward(
         self,
@@ -261,21 +273,31 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
 
             # Scatter back to original positions
             if r > 1 or offset:
-                # Create temporary tensor for scattering using memory pool (optimized zero-init)
-                temp_output = self._allocate_tensor(
-                    (b, n // s, s, g, d),
-                    dtype,
-                    device,
-                    strategy="bucketed",
-                    zero_init=False,
-                )
-                # Initialize to zero with minimal overhead
-                temp_output.fill_(0.0)
-                temp_output[:, :, idx, :, :] = x_reshaped
-                out[:, :, hmin:hmax, :].add_(temp_output.reshape(b, n, g, d))
-                # Return temporary tensor to pool for reuse
-                if self._memory_pool is not None:
+                # Check if we should use memory pool for this temporary tensor
+                temp_shape = (b, n // s, s, g, d)
+                temp_elements = b * (n // s) * s * g * d
+                temp_bytes = temp_elements * (torch.finfo(dtype).bits // 8)
+                temp_size_mb = temp_bytes / (1024 * 1024)
+
+                if self._memory_pool is not None and temp_size_mb >= 1.0:
+                    # Use memory pool for large temporary tensors
+                    temp_output = self._allocate_tensor(
+                        temp_shape,
+                        dtype,
+                        device,
+                        strategy="bucketed",
+                        zero_init=False,
+                    )
+                    temp_output.fill_(0.0)
+                    temp_output[:, :, idx, :, :] = x_reshaped
+                    out[:, :, hmin:hmax, :].add_(temp_output.reshape(b, n, g, d))
+                    # Return to pool
                     self._memory_pool.deallocate(temp_output)
+                else:
+                    # Direct allocation for small tensors
+                    temp_output = torch.zeros(temp_shape, dtype=dtype, device=device)
+                    temp_output[:, :, idx, :, :] = x_reshaped
+                    out[:, :, hmin:hmax, :].add_(temp_output.reshape(b, n, g, d))
             else:
                 out[:, :, hmin:hmax, :].add_(x_reshaped.reshape(b, n, g, d))
 

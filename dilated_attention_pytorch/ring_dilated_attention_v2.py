@@ -49,7 +49,7 @@ class RingDilatedAttentionV2(nn.Module):
         ring_size: Optional[int] = None,
         device: Optional[torch.device] = None,
         dtype: Optional[torch.dtype] = None,
-        enable_memory_pool: bool = True,
+        enable_memory_pool: bool = False,  # Disabled by default - mainly useful for communication buffers
         enable_profiling: bool = False,
         lightweight_pool: bool = True,
     ):
@@ -125,18 +125,30 @@ class RingDilatedAttentionV2(nn.Module):
             Allocated tensor (optionally zero-initialized)
         """
         if self._memory_pool is not None:
-            # Use enhanced memory pool with strategy selection
-            tensor = self._memory_pool.allocate(shape, dtype, device, strategy)
-            # Zero-initialize only if requested
-            if zero_init:
-                tensor.zero_()
-            return tensor
+            # Calculate tensor size in bytes
+            num_elements = 1
+            for dim in shape:
+                num_elements *= dim
+            bytes_per_element = (
+                torch.finfo(dtype).bits // 8
+                if dtype.is_floating_point
+                else torch.iinfo(dtype).bits // 8
+            )
+            tensor_size_mb = (num_elements * bytes_per_element) / (1024 * 1024)
+
+            # Only use memory pool for tensors larger than 1MB
+            # Small tensors have too much overhead
+            if tensor_size_mb >= 1.0:
+                tensor = self._memory_pool.allocate(shape, dtype, device, strategy)
+                if zero_init:
+                    tensor.zero_()
+                return tensor
+
+        # Fallback to direct allocation for small tensors or when pool is disabled
+        if zero_init:
+            return torch.zeros(shape, dtype=dtype, device=device)
         else:
-            # Fallback to direct allocation
-            if zero_init:
-                return torch.zeros(shape, dtype=dtype, device=device)
-            else:
-                return torch.empty(shape, dtype=dtype, device=device)
+            return torch.empty(shape, dtype=dtype, device=device)
 
     def _deallocate_tensor(self, tensor):
         """Return tensor to memory pool if enabled."""

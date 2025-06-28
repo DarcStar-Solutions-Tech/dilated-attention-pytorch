@@ -70,7 +70,7 @@ class DilatedAttention(BaseDilatedAttention):
         softmax_scale: float | None = None,
         attention_dropout: float = 0.0,
         op: Any | None = None,  # xops.AttentionOp when available
-        enable_memory_pool: bool = True,
+        enable_memory_pool: bool = False,  # Disabled by default - only useful for very long sequences
         enable_profiling: bool = False,
         lightweight_pool: bool = True,
         **kwargs,
