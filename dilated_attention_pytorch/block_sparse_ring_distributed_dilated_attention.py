@@ -35,6 +35,7 @@ Thread Safety:
 - Thread-safe gradient accumulation and communication
 - Concurrent-safe memory pool access
 """
+# ruff: noqa: PLR0912 PLR0915 C901
 
 import gc
 import math
@@ -49,7 +50,7 @@ from enum import Enum
 from typing import Any
 
 import torch
-import torch.distributed as dist
+import torch.distributed as dist  # noqa: PLC0415
 import torch.nn.functional as F
 from torch import Tensor
 
@@ -143,7 +144,9 @@ class AdaptiveMemoryPool:
         # Statistics for adaptive management
         self._allocation_stats = {"hits": 0, "misses": 0, "evictions": 0}
 
-    def get_buffer(self, shape: tuple, dtype: torch.dtype, pinned: bool = False) -> torch.Tensor:
+    def get_buffer(
+        self, shape: tuple, dtype: torch.dtype, pinned: bool = False
+    ) -> torch.Tensor:
         """Get or create a buffer with smart reuse."""
         pool_key = (shape, dtype, pinned and self.enable_pinned)
 
@@ -164,12 +167,16 @@ class AdaptiveMemoryPool:
                 buffer = self._pools[pool_key]
 
                 # Try resize if shapes are compatible
-                if buffer.shape != shape and buffer.numel() == torch.prod(torch.tensor(shape)):
+                if buffer.shape != shape and buffer.numel() == torch.prod(
+                    torch.tensor(shape)
+                ):
                     buffer = buffer.view(shape)
                 elif buffer.shape != shape:
                     # Need new buffer
                     self._allocation_stats["misses"] += 1
-                    buffer = self._allocate_buffer(shape, dtype, pinned and self.enable_pinned)
+                    buffer = self._allocate_buffer(
+                        shape, dtype, pinned and self.enable_pinned
+                    )
                     self._pools[pool_key] = buffer
             else:
                 self._allocation_stats["misses"] += 1
@@ -179,7 +186,9 @@ class AdaptiveMemoryPool:
                     self._evict_lru_buffer()
                     self._allocation_stats["evictions"] += 1
 
-                buffer = self._allocate_buffer(shape, dtype, pinned and self.enable_pinned)
+                buffer = self._allocate_buffer(
+                    shape, dtype, pinned and self.enable_pinned
+                )
                 self._pools[pool_key] = buffer
 
                 # Update hot cache
@@ -195,7 +204,9 @@ class AdaptiveMemoryPool:
 
             return buffer
 
-    def _allocate_buffer(self, shape: tuple, dtype: torch.dtype, pinned: bool) -> torch.Tensor:
+    def _allocate_buffer(
+        self, shape: tuple, dtype: torch.dtype, pinned: bool
+    ) -> torch.Tensor:
         """Allocate new buffer with optional pinned memory."""
         if pinned and self.device.type == "cuda":
             # Pinned memory for faster GPU transfers
@@ -223,9 +234,12 @@ class AdaptiveMemoryPool:
             # Adaptive threshold based on GPU memory
             if torch.cuda.is_available():
                 memory_free = (
-                    torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated()
+                    torch.cuda.get_device_properties(0).total_memory
+                    - torch.cuda.memory_allocated()
                 )
-                memory_ratio = memory_free / torch.cuda.get_device_properties(0).total_memory
+                memory_ratio = (
+                    memory_free / torch.cuda.get_device_properties(0).total_memory
+                )
 
                 if memory_ratio < 0.1:  # Low memory - aggressive cleanup
                     threshold = max(1, threshold // 4)
@@ -233,7 +247,9 @@ class AdaptiveMemoryPool:
                     threshold = threshold * 2
 
             # Remove underused buffers
-            keys_to_remove = [key for key, count in self._usage_count.items() if count < threshold]
+            keys_to_remove = [
+                key for key, count in self._usage_count.items() if count < threshold
+            ]
 
             for key in keys_to_remove:
                 if key in self._pools:
@@ -285,7 +301,9 @@ class HierarchicalSparsePatternGenerator:
             # Default assumption: 8 GPUs per node
             return min(8, self.world_size)
 
-    def create_hierarchical_pattern(self, seq_len: int, num_heads: int) -> dict[str, torch.Tensor]:
+    def create_hierarchical_pattern(
+        self, seq_len: int, num_heads: int
+    ) -> dict[str, torch.Tensor]:
         """Create hierarchical sparse pattern for distributed attention"""
         num_blocks = seq_len // self.config.block_size
 
@@ -306,7 +324,9 @@ class HierarchicalSparsePatternGenerator:
 
         return patterns
 
-    def _create_local_node_pattern(self, num_blocks: int, num_heads: int) -> torch.Tensor:
+    def _create_local_node_pattern(
+        self, num_blocks: int, num_heads: int
+    ) -> torch.Tensor:
         """Create pattern for local node attention"""
         cache_key = (num_blocks, num_heads, self.config.local_sparsity, "local")
 
@@ -315,7 +335,9 @@ class HierarchicalSparsePatternGenerator:
                 return self.local_patterns[cache_key]
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        pattern = torch.zeros(num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device)
+        pattern = torch.zeros(
+            num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device
+        )
 
         # Dense local attention window
         local_window = min(512, num_blocks // 4) // self.config.block_size
@@ -347,7 +369,9 @@ class HierarchicalSparsePatternGenerator:
                 return self.global_patterns[cache_key]
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        pattern = torch.zeros(num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device)
+        pattern = torch.zeros(
+            num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device
+        )
 
         # Global landmark tokens (first few blocks attend to everything)
         global_blocks = min(16, num_blocks // 8)
@@ -375,7 +399,9 @@ class HierarchicalSparsePatternGenerator:
 
         return pattern
 
-    def _create_inter_node_pattern(self, num_blocks: int, num_heads: int) -> torch.Tensor:
+    def _create_inter_node_pattern(
+        self, num_blocks: int, num_heads: int
+    ) -> torch.Tensor:
         """Create pattern for inter-node attention (very sparse)"""
         cache_key = (
             num_blocks,
@@ -389,14 +415,20 @@ class HierarchicalSparsePatternGenerator:
                 return self.inter_node_patterns[cache_key]
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        pattern = torch.zeros(num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device)
+        pattern = torch.zeros(
+            num_heads, num_blocks, num_blocks, dtype=torch.bool, device=device
+        )
 
         # Very sparse inter-node connections - only most important blocks
-        num_inter_connections = int(num_blocks * num_blocks * self.config.inter_node_sparsity)
+        num_inter_connections = int(
+            num_blocks * num_blocks * self.config.inter_node_sparsity
+        )
 
         for h in range(num_heads):
             # Random sparse connections for inter-node communication
-            flat_indices = torch.randperm(num_blocks * num_blocks)[:num_inter_connections]
+            flat_indices = torch.randperm(num_blocks * num_blocks)[
+                :num_inter_connections
+            ]
             row_indices = flat_indices // num_blocks
             col_indices = flat_indices % num_blocks
             pattern[h, row_indices, col_indices] = True
@@ -414,7 +446,9 @@ class HierarchicalSparsePatternGenerator:
             return patterns  # No history for balancing yet
 
         # Calculate load imbalance
-        recent_times = self.load_stats["computation_times"][-10:]  # Last 10 measurements
+        recent_times = self.load_stats["computation_times"][
+            -10:
+        ]  # Last 10 measurements
         avg_time = sum(recent_times) / len(recent_times)
 
         # Check if this rank is overloaded
@@ -425,17 +459,23 @@ class HierarchicalSparsePatternGenerator:
             # Reduce computation by increasing sparsity
             for pattern_name, pattern in patterns.items():
                 sparsity_adjustment = 0.9  # Reduce by 10%
-                patterns[pattern_name] = self._adjust_pattern_sparsity(pattern, sparsity_adjustment)
+                patterns[pattern_name] = self._adjust_pattern_sparsity(
+                    pattern, sparsity_adjustment
+                )
 
         elif is_underloaded:
             # Increase computation by decreasing sparsity
             for pattern_name, pattern in patterns.items():
                 sparsity_adjustment = 1.1  # Increase by 10%
-                patterns[pattern_name] = self._adjust_pattern_sparsity(pattern, sparsity_adjustment)
+                patterns[pattern_name] = self._adjust_pattern_sparsity(
+                    pattern, sparsity_adjustment
+                )
 
         return patterns
 
-    def _adjust_pattern_sparsity(self, pattern: torch.Tensor, adjustment: float) -> torch.Tensor:
+    def _adjust_pattern_sparsity(
+        self, pattern: torch.Tensor, adjustment: float
+    ) -> torch.Tensor:
         """Adjust pattern sparsity by given factor"""
         current_density = pattern.float().mean()
         target_density = torch.clamp(current_density * adjustment, 0.01, 0.95)
@@ -578,7 +618,9 @@ class OptimizedGradientCommunicator:
 
         # Start async all-reduce
         handle = dist.all_reduce(flat_tensor, async_op=True)
-        self._gradient_handles.append((handle, flat_tensor, self._current_bucket, metadata))
+        self._gradient_handles.append(
+            (handle, flat_tensor, self._current_bucket, metadata)
+        )
 
         # Update statistics
         self.communication_stats["buckets_flushed"] += 1
@@ -590,7 +632,9 @@ class OptimizedGradientCommunicator:
         self._current_bucket = []
         self._current_bucket_size = 0
 
-    def _compress_bucket(self, bucket: list[tuple[str, torch.Tensor]]) -> dict[str, Any]:
+    def _compress_bucket(
+        self, bucket: list[tuple[str, torch.Tensor]]
+    ) -> dict[str, Any]:
         """Compress gradient bucket using top-k sparsification."""
         shapes_list = []
 
@@ -654,7 +698,9 @@ class OptimizedGradientCommunicator:
 
                 if self.enable_compression:
                     # Reconstruct from compressed format
-                    self._reconstruct_compressed_gradients(flat_tensor, original_bucket, metadata)
+                    self._reconstruct_compressed_gradients(
+                        flat_tensor, original_bucket, metadata
+                    )
                 else:
                     # Simple reconstruction
                     offset = 0
@@ -679,7 +725,9 @@ class OptimizedGradientCommunicator:
         total_elements = metadata["total_elements"]
 
         # Create full sparse tensor
-        full_sparse = torch.zeros(total_elements, dtype=values.dtype, device=values.device)
+        full_sparse = torch.zeros(
+            total_elements, dtype=values.dtype, device=values.device
+        )
         full_sparse[indices] = values
 
         # Copy back to original gradients
@@ -744,7 +792,9 @@ class GradientCompressor:
 
         return compressed
 
-    def decompress_gradients(self, compressed: dict[str, Any]) -> dict[str, torch.Tensor]:
+    def decompress_gradients(
+        self, compressed: dict[str, Any]
+    ) -> dict[str, torch.Tensor]:
         """Decompress gradients from compressed format"""
         gradients = {}
 
@@ -816,7 +866,9 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
 
         # Distributed configuration
         self.distributed_config = distributed_config or DistributedSparseConfig()
-        self.enable_deepspeed_integration = enable_deepspeed_integration and HAS_DEEPSPEED
+        self.enable_deepspeed_integration = (
+            enable_deepspeed_integration and HAS_DEEPSPEED
+        )
         self.enable_apex_optimization = enable_apex_optimization and HAS_APEX
         self.monitoring_interval = monitoring_interval
 
@@ -935,22 +987,32 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
 
         except Exception as e:
             # Error recovery
-            return self._handle_forward_error(e, q, k, v, is_causal, return_attention_weights)
+            return self._handle_forward_error(
+                e, q, k, v, is_causal, return_attention_weights
+            )
 
     def _create_distributed_sparse_patterns(self, q: Tensor) -> dict[str, torch.Tensor]:
         """Create hierarchical sparse patterns for distributed attention"""
         batch, seq_len, num_heads, head_dim = q.shape
 
         # Generate hierarchical patterns
-        patterns = self.pattern_generator.create_hierarchical_pattern(seq_len, num_heads)
+        patterns = self.pattern_generator.create_hierarchical_pattern(
+            seq_len, num_heads
+        )
 
         # Apply distributed-specific optimizations
-        if self.distributed_config.pattern_type == DistributedSparsePattern.BANDWIDTH_AWARE:
+        if (
+            self.distributed_config.pattern_type
+            == DistributedSparsePattern.BANDWIDTH_AWARE
+        ):
             patterns = self._optimize_for_bandwidth(patterns)
-        elif self.distributed_config.pattern_type == DistributedSparsePattern.NODE_LOCAL:
+        elif (
+            self.distributed_config.pattern_type == DistributedSparsePattern.NODE_LOCAL
+        ):
             patterns = self._optimize_for_node_locality(patterns)
         elif (
-            self.distributed_config.pattern_type == DistributedSparsePattern.ADAPTIVE_LOAD_BALANCED
+            self.distributed_config.pattern_type
+            == DistributedSparsePattern.ADAPTIVE_LOAD_BALANCED
         ):
             patterns = self._apply_adaptive_load_balancing(patterns)
 
@@ -1037,7 +1099,10 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
     ) -> tuple[Tensor, Tensor | None]:
         """Process attention for a specific sparsity level"""
         # Use the base sparse attention computation with level-specific optimizations
-        if level_name == "inter_node" and self.distributed_config.enable_async_communication:
+        if (
+            level_name == "inter_node"
+            and self.distributed_config.enable_async_communication
+        ):
             return self._async_inter_node_attention(
                 q, k, v, sparse_pattern, is_causal, return_weights
             )
@@ -1057,7 +1122,9 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
     ) -> tuple[Tensor, Tensor | None]:
         """Asynchronous inter-node attention computation"""
         # Simplified async implementation - would use actual async communication in practice
-        return self._standard_sparse_attention(q, k, v, sparse_pattern, is_causal, return_weights)
+        return self._standard_sparse_attention(
+            q, k, v, sparse_pattern, is_causal, return_weights
+        )
 
     def _standard_sparse_attention(
         self,
@@ -1075,7 +1142,9 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
 
         # Use smart buffers for output
         output_name = f"sparse_output_{batch}_{seq_len}_{num_heads}_{head_dim}"
-        output = self._get_smart_buffer((batch, seq_len, num_heads, head_dim), q.dtype, output_name)
+        output = self._get_smart_buffer(
+            (batch, seq_len, num_heads, head_dim), q.dtype, output_name
+        )
         output.zero_()  # Clear buffer
 
         attention_weights = None
@@ -1118,7 +1187,9 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
                         k_block_idx * block_size,
                         (k_block_idx + 1) * block_size,
                     )
-                    attention_weights[:, h, q_start:q_end, k_start:k_end] = block_weights
+                    attention_weights[:, h, q_start:q_end, k_start:k_end] = (
+                        block_weights
+                    )
 
         return output, attention_weights
 
@@ -1154,7 +1225,9 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
             return output, attention_weights
         return output, None
 
-    def _optimize_for_bandwidth(self, patterns: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+    def _optimize_for_bandwidth(
+        self, patterns: dict[str, torch.Tensor]
+    ) -> dict[str, torch.Tensor]:
         """Optimize patterns for communication bandwidth"""
         # Reduce inter-node communication by increasing sparsity
         if "inter_node" in patterns:
@@ -1173,13 +1246,19 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
         # Increase local pattern density, reduce global pattern density
         if "local" in patterns:
             current_sparsity = patterns["local"].float().mean()
-            target_sparsity = min(0.8, current_sparsity * 1.2)  # Increase by 20%, max 80%
-            patterns["local"] = self._adjust_pattern_sparsity(patterns["local"], target_sparsity)
+            target_sparsity = min(
+                0.8, current_sparsity * 1.2
+            )  # Increase by 20%, max 80%
+            patterns["local"] = self._adjust_pattern_sparsity(
+                patterns["local"], target_sparsity
+            )
 
         if "global" in patterns:
             current_sparsity = patterns["global"].float().mean()
             target_sparsity = current_sparsity * 0.8  # Reduce by 20%
-            patterns["global"] = self._adjust_pattern_sparsity(patterns["global"], target_sparsity)
+            patterns["global"] = self._adjust_pattern_sparsity(
+                patterns["global"], target_sparsity
+            )
 
         return patterns
 
@@ -1188,7 +1267,9 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
     ) -> dict[str, torch.Tensor]:
         """Apply adaptive load balancing to patterns"""
         # Use pattern generator's load balancing
-        return self.pattern_generator._apply_load_balancing(patterns, patterns["local"].size(-1))
+        return self.pattern_generator._apply_load_balancing(
+            patterns, patterns["local"].size(-1)
+        )
 
     def _adjust_pattern_sparsity(
         self, pattern: torch.Tensor, target_sparsity: float
@@ -1216,7 +1297,9 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
 
         return pattern
 
-    def _get_smart_buffer(self, shape: tuple, dtype: torch.dtype, name: str) -> torch.Tensor:
+    def _get_smart_buffer(
+        self, shape: tuple, dtype: torch.dtype, name: str
+    ) -> torch.Tensor:
         """
         Get buffer with smart reuse and resize operations.
 
@@ -1296,16 +1379,28 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
         self._cleanup_resources()
 
         # Handle specific error types with targeted recovery
-        if "out of memory" in error_str or ("cuda" in error_str and "memory" in error_str):
+        if "out of memory" in error_str or (
+            "cuda" in error_str and "memory" in error_str
+        ):
             return self._handle_oom_error(q, k, v, is_causal, return_attention_weights)
-        elif "communication" in error_str or "distributed" in error_str or "nccl" in error_str:
-            return self._handle_communication_error(q, k, v, is_causal, return_attention_weights)
+        elif (
+            "communication" in error_str
+            or "distributed" in error_str
+            or "nccl" in error_str
+        ):
+            return self._handle_communication_error(
+                q, k, v, is_causal, return_attention_weights
+            )
         elif "shape" in error_str or "size" in error_str:
-            return self._handle_shape_error(q, k, v, is_causal, return_attention_weights)
+            return self._handle_shape_error(
+                q, k, v, is_causal, return_attention_weights
+            )
 
         # Generic recovery strategies
         if self.current_recovery_level < len(self.error_recovery_strategies):
-            recovery_strategy = self.error_recovery_strategies[self.current_recovery_level]
+            recovery_strategy = self.error_recovery_strategies[
+                self.current_recovery_level
+            ]
             self.current_recovery_level += 1
 
             try:
@@ -1321,7 +1416,9 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
             # Final cleanup before raising
             self._cleanup_resources()
             # All recovery strategies failed
-            raise RuntimeError(f"All error recovery strategies failed. Original error: {error}")
+            raise RuntimeError(
+                f"All error recovery strategies failed. Original error: {error}"
+            )
 
     def _handle_oom_error(
         self,
@@ -1386,7 +1483,9 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
                 pass
 
         # Try with gradient checkpointing
-        return self._strategy_checkpoint_recovery(q, k, v, is_causal, return_attention_weights)
+        return self._strategy_checkpoint_recovery(
+            q, k, v, is_causal, return_attention_weights
+        )
 
     def _handle_communication_error(
         self,
@@ -1421,7 +1520,9 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
             self.world_size = 1
 
             try:
-                result = self._strategy_fallback_dense(q, k, v, is_causal, return_attention_weights)
+                result = self._strategy_fallback_dense(
+                    q, k, v, is_causal, return_attention_weights
+                )
                 return result
             finally:
                 self.world_size = original_world_size
@@ -1452,12 +1553,16 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
 
         try:
             # Try with padded inputs
-            output = self._strategy_fallback_dense(q, k, v, is_causal, return_attention_weights)
+            output = self._strategy_fallback_dense(
+                q, k, v, is_causal, return_attention_weights
+            )
 
             # Remove padding from output
             if isinstance(output, tuple):
                 return output[0][:, :seq_len], (
-                    output[1][:, :, :seq_len, :seq_len] if output[1] is not None else None
+                    output[1][:, :, :seq_len, :seq_len]
+                    if output[1] is not None
+                    else None
                 )
             return output[:, :seq_len]
         except Exception:
@@ -1500,7 +1605,9 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
     ):
         """Recovery strategy: Fallback to dense attention"""
         # Use dense attention as fallback
-        return self._dense_attention_fallback(q, k, v, is_causal, return_attention_weights)
+        return self._dense_attention_fallback(
+            q, k, v, is_causal, return_attention_weights
+        )
 
     def _strategy_checkpoint_recovery(
         self,
@@ -1540,7 +1647,9 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
         # Apply causal mask if needed
         if is_causal:
             seq_len = q.size(1)
-            causal_mask = torch.triu(torch.ones(seq_len, seq_len, device=q.device), diagonal=1)
+            causal_mask = torch.triu(
+                torch.ones(seq_len, seq_len, device=q.device), diagonal=1
+            )
             scores = scores.masked_fill(causal_mask.bool(), float("-inf"))
 
         # Apply softmax
@@ -1564,9 +1673,15 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
             self.performance_metrics["forward_times"].append(forward_time)
 
             # Calculate sparsity ratio
-            total_elements = sum(pattern.numel() for pattern in sparse_patterns.values())
-            active_elements = sum(pattern.sum().item() for pattern in sparse_patterns.values())
-            sparsity_ratio = active_elements / total_elements if total_elements > 0 else 0
+            total_elements = sum(
+                pattern.numel() for pattern in sparse_patterns.values()
+            )
+            active_elements = sum(
+                pattern.sum().item() for pattern in sparse_patterns.values()
+            )
+            sparsity_ratio = (
+                active_elements / total_elements if total_elements > 0 else 0
+            )
             self.performance_metrics["sparse_ratios"].append(sparsity_ratio)
 
             # Record memory usage
@@ -1575,7 +1690,9 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
                 self.performance_metrics["memory_usage"].append(memory_usage)
 
             # Update pattern generator load stats
-            communication_volume = int(active_elements * 4)  # Approximate bytes (float32)
+            communication_volume = int(
+                active_elements * 4
+            )  # Approximate bytes (float32)
             memory_usage_int = int(memory_usage) if torch.cuda.is_available() else 0
 
             self.pattern_generator.update_load_stats(
@@ -1586,7 +1703,9 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
             max_history = 100
             for key in ["forward_times", "sparse_ratios", "memory_usage"]:
                 if len(self.performance_metrics[key]) > max_history:
-                    self.performance_metrics[key] = self.performance_metrics[key][-max_history:]
+                    self.performance_metrics[key] = self.performance_metrics[key][
+                        -max_history:
+                    ]
 
     def _setup_deepspeed_integration(self):
         """Setup DeepSpeed integration for sparse attention"""

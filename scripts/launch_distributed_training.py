@@ -249,7 +249,7 @@ def build_command(
 ):
     """Build the command to launch distributed training."""
 
-    total_gpus = num_nodes * num_gpus_per_node
+    _ = num_nodes * num_gpus_per_node
 
     # Base script arguments
     script_args = [
@@ -346,7 +346,9 @@ def setup_environment():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Launch distributed dilated attention training")
+    parser = argparse.ArgumentParser(
+        description="Launch distributed dilated attention training"
+    )
 
     # Model configuration
     parser.add_argument(
@@ -356,7 +358,9 @@ def main():
         choices=["tiny", "small", "medium", "large", "xl"],
         help="Model size preset",
     )
-    parser.add_argument("--max_seq_len", type=int, default=16384, help="Maximum sequence length")
+    parser.add_argument(
+        "--max_seq_len", type=int, default=16384, help="Maximum sequence length"
+    )
 
     # Hardware configuration
     parser.add_argument("--num_nodes", type=int, default=1, help="Number of nodes")
@@ -377,14 +381,18 @@ def main():
     )
 
     # Training configuration
-    parser.add_argument("--num_epochs", type=int, default=10, help="Number of training epochs")
+    parser.add_argument(
+        "--num_epochs", type=int, default=10, help="Number of training epochs"
+    )
     parser.add_argument(
         "--output_dir",
         type=str,
         default="./outputs",
         help="Output directory for checkpoints and logs",
     )
-    parser.add_argument("--use_wandb", action="store_true", help="Use Weights & Biases for logging")
+    parser.add_argument(
+        "--use_wandb", action="store_true", help="Use Weights & Biases for logging"
+    )
 
     # Distributed configuration
     parser.add_argument(
@@ -411,7 +419,9 @@ def main():
     )
 
     # Advanced options
-    parser.add_argument("--dry_run", action="store_true", help="Print command without executing")
+    parser.add_argument(
+        "--dry_run", action="store_true", help="Print command without executing"
+    )
     parser.add_argument(
         "--custom_script", type=str, default=None, help="Path to custom training script"
     )
@@ -514,7 +524,7 @@ def main():
 
     # Execute command
     try:
-        result = subprocess.run(cmd, check=True)
+        _ = subprocess.run(cmd, check=True)
         print("\nTraining completed successfully!")
     except subprocess.CalledProcessError as e:
         print(f"\nTraining failed with error code {e.returncode}")

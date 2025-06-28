@@ -1,0 +1,387 @@
+{
+  "metadata": {
+    "benchmark_type": "all-implementations",
+    "timestamp": "2025-06-27-1714-UTC",
+    "git_commit": "61cdef7b06ad253af60344429e5771222b5f3ef4",
+    "git_dirty": true,
+    "hardware": {
+      "platform": "Linux-6.12.10-76061203-generic-x86_64-with-glibc2.35",
+      "processor": "x86_64",
+      "cpu_count": 6,
+      "gpu_count": 2,
+      "gpu_names": [
+        "NVIDIA GeForce GTX 1080",
+        "NVIDIA GeForce GTX 1080"
+      ],
+      "gpu_memory_gb": [
+        7.8841552734375,
+        7.91705322265625
+      ],
+      "cuda_capability": [
+        "6.1",
+        "6.1"
+      ]
+    },
+    "python_version": "3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:27:36) [GCC 11.2.0]",
+    "torch_version": "2.7.1+cu126",
+    "cuda_version": "12.6",
+    "command_line": "benchmark_all.py --seq-lens 1024 2048 --batch-sizes 1 --num-heads 4 --head-dim 32",
+    "parameters": {
+      "device": "cuda",
+      "dtype": "float16",
+      "batch_sizes": [
+        1
+      ],
+      "seq_lens": [
+        1024,
+        2048
+      ],
+      "num_heads": 4,
+      "head_dim": 32
+    }
+  },
+  "results": {
+    "DilatedAttention": [
+      {
+        "name": "DilatedAttention",
+        "batch_size": 1,
+        "seq_len": 1024,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 4.981744010001421,
+        "std_time_ms": 0.16972342181218686,
+        "min_time_ms": 4.63087297976017,
+        "throughput": 200.7329156199888,
+        "peak_memory_mb": 0.0,
+        "success": true
+      },
+      {
+        "name": "DilatedAttention",
+        "batch_size": 1,
+        "seq_len": 2048,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 9.616703167557716,
+        "std_time_ms": 0.2956440049582553,
+        "min_time_ms": 9.158512577414513,
+        "throughput": 103.98574049509345,
+        "peak_memory_mb": 0.0,
+        "success": true
+      }
+    ],
+    "ImprovedDilatedAttention": [
+      {
+        "name": "ImprovedDilatedAttention",
+        "batch_size": 1,
+        "seq_len": 1024,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 4.457788355648518,
+        "std_time_ms": 0.2148218321198541,
+        "min_time_ms": 4.100397229194641,
+        "throughput": 224.32648663835462,
+        "peak_memory_mb": 0.0,
+        "success": true
+      },
+      {
+        "name": "ImprovedDilatedAttention",
+        "batch_size": 1,
+        "seq_len": 2048,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 9.095448069274426,
+        "std_time_ms": 0.4027110979879763,
+        "min_time_ms": 8.568838238716125,
+        "throughput": 109.94510576978901,
+        "peak_memory_mb": 0.0,
+        "success": true
+      }
+    ],
+    "RingDilatedAttention": [
+      {
+        "name": "RingDilatedAttention",
+        "batch_size": 1,
+        "seq_len": 1024,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 4.444543924182653,
+        "std_time_ms": 0.25739059153816884,
+        "min_time_ms": 4.093668423593044,
+        "throughput": 224.99496395097475,
+        "peak_memory_mb": 0.0,
+        "success": true
+      },
+      {
+        "name": "RingDilatedAttention",
+        "batch_size": 1,
+        "seq_len": 2048,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 8.83645610883832,
+        "std_time_ms": 0.5080850736563847,
+        "min_time_ms": 8.300120942294598,
+        "throughput": 113.16753998243584,
+        "peak_memory_mb": 0.0,
+        "success": true
+      }
+    ],
+    "BlockSparseRingDilated_10%": [
+      {
+        "name": "BlockSparseRingDilated_10%",
+        "batch_size": 1,
+        "seq_len": 1024,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 39.639194775372744,
+        "std_time_ms": 1.7951531651583497,
+        "min_time_ms": 37.36888896673918,
+        "throughput": 25.22755584887122,
+        "peak_memory_mb": 0.0,
+        "success": true
+      },
+      {
+        "name": "BlockSparseRingDilated_10%",
+        "batch_size": 1,
+        "seq_len": 2048,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 81.02887077257037,
+        "std_time_ms": 3.131550098771537,
+        "min_time_ms": 75.63987001776695,
+        "throughput": 12.341280218587432,
+        "peak_memory_mb": 0.0,
+        "success": true
+      }
+    ],
+    "BlockSparseRingDilated_25%": [
+      {
+        "name": "BlockSparseRingDilated_25%",
+        "batch_size": 1,
+        "seq_len": 1024,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 39.48499131947756,
+        "std_time_ms": 1.9886718149223692,
+        "min_time_ms": 37.42976952344179,
+        "throughput": 25.326078760126503,
+        "peak_memory_mb": 0.0,
+        "success": true
+      },
+      {
+        "name": "BlockSparseRingDilated_25%",
+        "batch_size": 1,
+        "seq_len": 2048,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 80.98435159772635,
+        "std_time_ms": 2.6518450041167805,
+        "min_time_ms": 76.77937392145395,
+        "throughput": 12.348064536804603,
+        "peak_memory_mb": 0.0,
+        "success": true
+      }
+    ],
+    "BlockSparseRingDilated_50%": [
+      {
+        "name": "BlockSparseRingDilated_50%",
+        "batch_size": 1,
+        "seq_len": 1024,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 39.53291401267052,
+        "std_time_ms": 2.3287753291834665,
+        "min_time_ms": 37.328926846385,
+        "throughput": 25.295377914198138,
+        "peak_memory_mb": 0.0,
+        "success": true
+      },
+      {
+        "name": "BlockSparseRingDilated_50%",
+        "batch_size": 1,
+        "seq_len": 2048,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 81.84845969080925,
+        "std_time_ms": 2.1305062934930645,
+        "min_time_ms": 78.70057970285416,
+        "throughput": 12.217700904544815,
+        "peak_memory_mb": 0.0,
+        "success": true
+      }
+    ],
+    "MultiheadDilatedAttention": [
+      {
+        "name": "MultiheadDilatedAttention",
+        "batch_size": 1,
+        "seq_len": 1024,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 4.6996839344501495,
+        "std_time_ms": 0.2739143668717842,
+        "min_time_ms": 4.297072999179363,
+        "throughput": 212.78026649189917,
+        "peak_memory_mb": 0.0,
+        "success": true
+      },
+      {
+        "name": "MultiheadDilatedAttention",
+        "batch_size": 1,
+        "seq_len": 2048,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 8.939746394753456,
+        "std_time_ms": 0.5094578405883653,
+        "min_time_ms": 8.261716924607754,
+        "throughput": 111.8599964521229,
+        "peak_memory_mb": 0.0,
+        "success": true
+      }
+    ],
+    "ImprovedMultiheadDilatedAttention": [
+      {
+        "name": "ImprovedMultiheadDilatedAttention",
+        "batch_size": 1,
+        "seq_len": 1024,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 4.693576414138079,
+        "std_time_ms": 0.5054687342334022,
+        "min_time_ms": 4.144719801843166,
+        "throughput": 213.05714699515306,
+        "peak_memory_mb": 0.0,
+        "success": true
+      },
+      {
+        "name": "ImprovedMultiheadDilatedAttention",
+        "batch_size": 1,
+        "seq_len": 2048,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 21.76193194463849,
+        "std_time_ms": 2.527224537031858,
+        "min_time_ms": 18.00429541617632,
+        "throughput": 45.95180255796963,
+        "peak_memory_mb": 0.0,
+        "success": true
+      }
+    ],
+    "RingMultiheadDilatedAttention": [
+      {
+        "name": "RingMultiheadDilatedAttention",
+        "batch_size": 1,
+        "seq_len": 1024,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 4.850440565496683,
+        "std_time_ms": 0.20165685937606623,
+        "min_time_ms": 4.493863321840763,
+        "throughput": 206.16683917610283,
+        "peak_memory_mb": 0.0,
+        "success": true
+      },
+      {
+        "name": "RingMultiheadDilatedAttention",
+        "batch_size": 1,
+        "seq_len": 2048,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 10.527306701987982,
+        "std_time_ms": 0.7537050592388631,
+        "min_time_ms": 9.454096667468548,
+        "throughput": 94.99105785634227,
+        "peak_memory_mb": 0.0,
+        "success": true
+      }
+    ],
+    "BlockSparseRingMultihead_25%": [
+      {
+        "name": "BlockSparseRingMultihead_25%",
+        "batch_size": 1,
+        "seq_len": 1024,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 39.648704417049885,
+        "std_time_ms": 1.614853153957634,
+        "min_time_ms": 37.14854642748833,
+        "throughput": 25.22150508327773,
+        "peak_memory_mb": 0.0,
+        "success": true
+      },
+      {
+        "name": "BlockSparseRingMultihead_25%",
+        "batch_size": 1,
+        "seq_len": 2048,
+        "num_heads": 4,
+        "head_dim": 32,
+        "mean_time_ms": 81.8001663312316,
+        "std_time_ms": 2.3475426165853417,
+        "min_time_ms": 78.53875774890184,
+        "throughput": 12.224914017298232,
+        "peak_memory_mb": 0.0,
+        "success": true
+      }
+    ]
+  },
+  "summary": {
+    "DilatedAttention": {
+      "avg_time_ms": 7.299223588779569,
+      "min_time_ms": 4.981744010001421,
+      "max_time_ms": 9.616703167557716,
+      "num_configs_tested": 2
+    },
+    "ImprovedDilatedAttention": {
+      "avg_time_ms": 6.776618212461472,
+      "min_time_ms": 4.457788355648518,
+      "max_time_ms": 9.095448069274426,
+      "num_configs_tested": 2
+    },
+    "RingDilatedAttention": {
+      "avg_time_ms": 6.640500016510487,
+      "min_time_ms": 4.444543924182653,
+      "max_time_ms": 8.83645610883832,
+      "num_configs_tested": 2
+    },
+    "BlockSparseRingDilated_10%": {
+      "avg_time_ms": 60.33403277397156,
+      "min_time_ms": 39.639194775372744,
+      "max_time_ms": 81.02887077257037,
+      "num_configs_tested": 2
+    },
+    "BlockSparseRingDilated_25%": {
+      "avg_time_ms": 60.23467145860195,
+      "min_time_ms": 39.48499131947756,
+      "max_time_ms": 80.98435159772635,
+      "num_configs_tested": 2
+    },
+    "BlockSparseRingDilated_50%": {
+      "avg_time_ms": 60.69068685173988,
+      "min_time_ms": 39.53291401267052,
+      "max_time_ms": 81.84845969080925,
+      "num_configs_tested": 2
+    },
+    "MultiheadDilatedAttention": {
+      "avg_time_ms": 6.819715164601803,
+      "min_time_ms": 4.6996839344501495,
+      "max_time_ms": 8.939746394753456,
+      "num_configs_tested": 2
+    },
+    "ImprovedMultiheadDilatedAttention": {
+      "avg_time_ms": 13.227754179388285,
+      "min_time_ms": 4.693576414138079,
+      "max_time_ms": 21.76193194463849,
+      "num_configs_tested": 2
+    },
+    "RingMultiheadDilatedAttention": {
+      "avg_time_ms": 7.6888736337423325,
+      "min_time_ms": 4.850440565496683,
+      "max_time_ms": 10.527306701987982,
+      "num_configs_tested": 2
+    },
+    "BlockSparseRingMultihead_25%": {
+      "avg_time_ms": 60.72443537414074,
+      "min_time_ms": 39.648704417049885,
+      "max_time_ms": 81.8001663312316,
+      "num_configs_tested": 2
+    }
+  }
+}

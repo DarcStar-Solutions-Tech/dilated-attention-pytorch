@@ -17,7 +17,13 @@ from dataclasses import asdict, dataclass
 
 import matplotlib
 import matplotlib.pyplot as plt
+from pathlib import Path
 import torch
+
+
+# Import unified benchmark output management
+sys.path.insert(0, str(Path(__file__).parent))
+from core import BenchmarkOutputManager
 
 matplotlib.use("Agg")
 
@@ -74,13 +80,13 @@ class LongSequenceBenchmarkResult:
 
     def __str__(self):
         if not self.success:
-            return f"{self.implementation} @ {self.seq_len//1024}K: FAILED - {self.error}"
+            return f"{self.implementation} @ {self.seq_len // 1024}K: FAILED - {self.error}"
 
         return (
-            f"{self.implementation} @ {self.seq_len//1024}K: "
+            f"{self.implementation} @ {self.seq_len // 1024}K: "
             f"{self.mean_time_ms:.1f}ms, "
             f"{self.peak_memory_mb:.0f}MB ({self.memory_per_token:.3f}MB/tok), "
-            f"{self.throughput_tokens_per_sec/1e6:.2f}M tok/s"
+            f"{self.throughput_tokens_per_sec / 1e6:.2f}M tok/s"
         )
 
 
@@ -266,9 +272,15 @@ def benchmark_long_sequence(
             k = torch.randn(batch_size, seq_len, embed_dim, device=device, dtype=dtype)
             v = torch.randn(batch_size, seq_len, embed_dim, device=device, dtype=dtype)
         else:
-            q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-            k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-            v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+            q = torch.randn(
+                batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+            )
+            k = torch.randn(
+                batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+            )
+            v = torch.randn(
+                batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+            )
 
         # Warmup
         for _ in range(warmup_runs):
@@ -299,7 +311,9 @@ def benchmark_long_sequence(
         mean_time = sum(times) / len(times)
         std_time = (sum((t - mean_time) ** 2 for t in times) / len(times)) ** 0.5
         peak_memory = (
-            torch.cuda.max_memory_allocated() / (1024 * 1024) if device.type == "cuda" else 0
+            torch.cuda.max_memory_allocated() / (1024 * 1024)
+            if device.type == "cuda"
+            else 0
         )
 
         total_tokens = batch_size * seq_len
@@ -385,7 +399,9 @@ def plot_long_sequence_results(
         successful = [r for r in impl_results if r.success]
         if successful:
             seq_lens = [r.seq_len / 1024 for r in successful]
-            throughput = [r.throughput_tokens_per_sec / 1e6 for r in successful]  # M tokens/sec
+            throughput = [
+                r.throughput_tokens_per_sec / 1e6 for r in successful
+            ]  # M tokens/sec
             ax3.plot(seq_lens, throughput, marker="o", label=impl_name)
 
     ax3.set_xlabel("Sequence Length (K tokens)")
@@ -431,11 +447,18 @@ def main():
         help="Long sequence lengths to benchmark",
     )
     parser.add_argument(
-        "--implementations", type=str, nargs="+", help="Specific implementations to benchmark"
+        "--implementations",
+        type=str,
+        nargs="+",
+        help="Specific implementations to benchmark",
     )
-    parser.add_argument("--num-heads", type=int, default=8, help="Number of attention heads")
+    parser.add_argument(
+        "--num-heads", type=int, default=8, help="Number of attention heads"
+    )
     parser.add_argument("--head-dim", type=int, default=64, help="Dimension per head")
-    parser.add_argument("--num-runs", type=int, default=3, help="Number of benchmark runs")
+    parser.add_argument(
+        "--num-runs", type=int, default=3, help="Number of benchmark runs"
+    )
     parser.add_argument(
         "--dtype",
         type=str,
@@ -444,7 +467,10 @@ def main():
         help="Data type for benchmarking",
     )
     parser.add_argument(
-        "--output-dir", type=str, default="docs/benchmarks", help="Output directory for results"
+        "--output-dir",
+        type=str,
+        default="docs/benchmarks",
+        help="Output directory for results",
     )
 
     args = parser.parse_args()
@@ -458,19 +484,28 @@ def main():
     # Get available memory
     total_memory_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
 
-    dtype_map = {"float16": torch.float16, "bfloat16": torch.bfloat16, "float32": torch.float32}
+    dtype_map = {
+        "float16": torch.float16,
+        "bfloat16": torch.bfloat16,
+        "float32": torch.float32,
+    }
     dtype = dtype_map[args.dtype]
 
     print(f"Device: {torch.cuda.get_device_name()}")
     print(f"Total Memory: {total_memory_gb:.2f} GB")
     print(f"Data Type: {args.dtype}")
-    print(f"Sequence Lengths: {[f'{s//1024}K' for s in args.sequence_lengths]}")
+    print(f"Sequence Lengths: {[f'{s // 1024}K' for s in args.sequence_lengths]}")
 
     # Determine implementations
-    all_implementations = ["ImprovedDilatedAttention", "ImprovedMultiheadDilatedAttention"]
+    all_implementations = [
+        "ImprovedDilatedAttention",
+        "ImprovedMultiheadDilatedAttention",
+    ]
 
     if RING_AVAILABLE:
-        all_implementations.extend(["RingDilatedAttention", "RingMultiheadDilatedAttention"])
+        all_implementations.extend(
+            ["RingDilatedAttention", "RingMultiheadDilatedAttention"]
+        )
 
     if BLOCK_SPARSE_AVAILABLE:
         all_implementations.append("BlockSparseRingDilatedAttention")
@@ -483,9 +518,9 @@ def main():
     results = {impl: [] for impl in implementations}
 
     for seq_len in args.sequence_lengths:
-        print(f"\n{'='*60}")
-        print(f"Benchmarking sequence length: {seq_len//1024}K tokens")
-        print(f"{'='*60}")
+        print(f"\n{'=' * 60}")
+        print(f"Benchmarking sequence length: {seq_len // 1024}K tokens")
+        print(f"{'=' * 60}")
 
         # Calculate optimal batch size
         batch_size = get_optimal_batch_size(seq_len, total_memory_gb)
@@ -549,11 +584,14 @@ def main():
             "head_dim": args.head_dim,
         },
         "results": {
-            impl: [asdict(r) for r in impl_results] for impl, impl_results in results.items()
+            impl: [asdict(r) for r in impl_results]
+            for impl, impl_results in results.items()
         },
     }
 
-    json_path = os.path.join(args.output_dir, f"benchmark-long-sequences-{timestamp}.json")
+    json_path = os.path.join(
+        args.output_dir, f"benchmark-long-sequences-{timestamp}.json"
+    )
     with open(json_path, "w") as f:
         json.dump(results_dict, f, indent=2)
     print(f"\nResults saved to: {json_path}")
@@ -567,7 +605,7 @@ def main():
     print("=" * 60)
 
     for seq_len in args.sequence_lengths:
-        print(f"\nSequence Length: {seq_len//1024}K tokens")
+        print(f"\nSequence Length: {seq_len // 1024}K tokens")
         print("-" * 40)
 
         for impl in implementations:
@@ -577,7 +615,7 @@ def main():
                     print(
                         f"{impl:35s}: {result.mean_time_ms:8.1f}ms, "
                         f"Mem/tok: {result.memory_per_token:.3f}MB, "
-                        f"Throughput: {result.throughput_tokens_per_sec/1e6:.2f}M tok/s"
+                        f"Throughput: {result.throughput_tokens_per_sec / 1e6:.2f}M tok/s"
                     )
                 else:
                     print(f"{impl:35s}: FAILED - {result.error}")
@@ -585,3 +623,17 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    # Use unified benchmark output management
+    output_manager = BenchmarkOutputManager(
+        benchmark_type="long-sequences", parameters={}
+    )
+
+    # Add results
+    output_manager.add_result("results", results)
+
+    # Save results
+    output_paths = output_manager.save_results()
+    print("\nResults saved to:")
+    for path_type, path in output_paths.items():
+        print(f"  {path_type}: {path}")

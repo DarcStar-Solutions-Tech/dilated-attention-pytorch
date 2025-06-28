@@ -80,7 +80,9 @@ def generate_report(
                 regression_pct = 0
                 passed = True
             else:
-                passed, regression_pct = compare_performance(current_time, baseline_time, threshold)
+                passed, regression_pct = compare_performance(
+                    current_time, baseline_time, threshold
+                )
                 status = "passed" if passed else "failed"
 
                 if not passed:
@@ -128,8 +130,12 @@ def print_report(report: dict[str, Any]):
 
     print("\nSummary:")
     print(f"  Total Tests: {summary['total_tests']}")
-    print(f"  Passed: {summary['passed']} ({summary['passed']/summary['total_tests']*100:.1f}%)")
-    print(f"  Failed: {summary['failed']} ({summary['failed']/summary['total_tests']*100:.1f}%)")
+    print(
+        f"  Passed: {summary['passed']} ({summary['passed'] / summary['total_tests'] * 100:.1f}%)"
+    )
+    print(
+        f"  Failed: {summary['failed']} ({summary['failed'] / summary['total_tests'] * 100:.1f}%)"
+    )
     print(f"  No Baseline: {summary['no_baseline']}")
 
     if report["regressions"]:
@@ -160,7 +166,9 @@ def print_report(report: dict[str, Any]):
             if detail["status"] == "no_baseline":
                 print(f"{detail['current_ms']:.2f}ms (no baseline)")
             else:
-                print(f"{detail['current_ms']:.2f}ms ({detail['regression_pct']:+.1f}%)")
+                print(
+                    f"{detail['current_ms']:.2f}ms ({detail['regression_pct']:+.1f}%)"
+                )
 
 
 def main():

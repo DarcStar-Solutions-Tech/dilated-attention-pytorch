@@ -1,0 +1,26 @@
+=== Import Section ===
+Add this import section:
+
+# Import unified benchmark output management
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+from core import BenchmarkOutputManager
+
+=== At End of main() or where results are collected ===
+
+    # Save results using unified benchmark output management
+    output_manager = BenchmarkOutputManager(
+        benchmark_type="all-implementations",
+        parameters={
+            # Add relevant parameters here
+            "device": str(device),
+            "dtype": str(dtype),
+        }
+    )
+    
+    # Add results (adapt based on your result structure)
+    output_manager.add_result("benchmark_results", results)
+    
+    # Save all outputs
+    output_paths = output_manager.save_results()
+    print(f"\nResults saved to: {output_paths}")

@@ -1,0 +1,138 @@
+{
+  "metadata": {
+    "benchmark_type": "memory-pool-stress-test",
+    "timestamp": "2025-06-27-1621-UTC",
+    "git_commit": "fbade2bf898a470e92f5d76553762e79e8f2b909",
+    "git_dirty": true,
+    "hardware": {
+      "platform": "Linux-6.12.10-76061203-generic-x86_64-with-glibc2.35",
+      "processor": "x86_64",
+      "cpu_count": 6,
+      "gpu_count": 2,
+      "gpu_names": [
+        "NVIDIA GeForce GTX 1080",
+        "NVIDIA GeForce GTX 1080"
+      ],
+      "gpu_memory_gb": [
+        7.8841552734375,
+        7.91705322265625
+      ],
+      "cuda_capability": [
+        "6.1",
+        "6.1"
+      ]
+    },
+    "python_version": "3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:27:36) [GCC 11.2.0]",
+    "torch_version": "2.7.1+cu126",
+    "cuda_version": "12.6",
+    "command_line": "benchmarks/benchmark_memory_pool_stress_test.py",
+    "parameters": {
+      "device": "cuda",
+      "iterations": 1000,
+      "allocation_pattern": "attention_simulation"
+    }
+  },
+  "results": {
+    "baseline": {
+      "avg_allocation_ms": 0.09074658155441284,
+      "min_allocation_ms": 0.002535991370677948,
+      "max_allocation_ms": 63.52195981889963,
+      "reuse_rate": 0,
+      "avg_fragmentation": 0,
+      "bucket_utilization": 0,
+      "total_buffers": 0,
+      "hot_cache_hits": 0
+    },
+    "basic_pool": {
+      "avg_allocation_ms": 0.045781295487116264,
+      "min_allocation_ms": 0.015985220670700073,
+      "max_allocation_ms": 0.7360195741057396,
+      "reuse_rate": 0.0,
+      "avg_fragmentation": 0.0,
+      "bucket_utilization": 2,
+      "total_buffers": 2,
+      "hot_cache_hits": 0
+    },
+    "enhanced_pool": {
+      "avg_allocation_ms": 0.04301211957443059,
+      "min_allocation_ms": 0.014068558812141418,
+      "max_allocation_ms": 0.635586678981781,
+      "reuse_rate": 0.741,
+      "avg_fragmentation": 0.01,
+      "bucket_utilization": 3,
+      "total_buffers": 5,
+      "hot_cache_hits": 5
+    },
+    "final_pool_stats": {
+      "total_buffers": 7,
+      "hot_cache_size": 5,
+      "pool_sizes": {
+        "default": 7,
+        "ring": 0,
+        "sparse": 0,
+        "distributed": 0
+      },
+      "bucket_stats": {
+        "bucket_16": 2,
+        "bucket_14": 0,
+        "bucket_15": 0,
+        "bucket_17": 0,
+        "bucket_18": 0,
+        "bucket_23": 1,
+        "bucket_21": 0,
+        "bucket_22": 0,
+        "bucket_24": 2,
+        "bucket_25": 0,
+        "bucket_19": 0,
+        "bucket_20": 0,
+        "bucket_26": 1,
+        "bucket_13": 0,
+        "bucket_27": 0,
+        "bucket_28": 1,
+        "bucket_29": 0,
+        "bucket_30": 0
+      },
+      "total_allocated_bytes": 386702336,
+      "memory_by_pool": {
+        "default": 386702336,
+        "ring": 0,
+        "sparse": 0,
+        "distributed": 0
+      },
+      "active_buffers": 7,
+      "fragmentation_stats": {
+        "cuda": {
+          "fragmentation_score": 0.0,
+          "fragments_count": 7,
+          "needs_defrag": false
+        }
+      },
+      "numa_stats": {
+        "numa_node_0": {
+          "devices": [
+            "cuda:0"
+          ],
+          "buffers": 0
+        },
+        "numa_node_1": {
+          "devices": [
+            "cuda:1"
+          ],
+          "buffers": 0
+        }
+      },
+      "config": {
+        "fragmentation_threshold": 0.3,
+        "aggressive_threshold": 0.1,
+        "conservative_threshold": 0.5
+      }
+    }
+  },
+  "summary": {
+    "baseline_avg_ms": 0.09074658155441284,
+    "basic_improvement_pct": 49.550391096919505,
+    "enhanced_improvement_pct": 52.60193955775628,
+    "reuse_rate": 0.741,
+    "memory_efficiency_ratio": 142.85714285714286
+  }
+}

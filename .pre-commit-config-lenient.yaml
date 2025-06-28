@@ -1,0 +1,21 @@
+repos:
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.8.4
+  hooks:
+  - id: ruff
+    args: [
+      --fix, 
+      --config, .ruff-lenient.toml,
+      --select, "E9,F63,F7,F82,W191,W291,W292,W293,W605,E999",  # Only critical errors
+    ]
+  - id: ruff-format
+
+- repo: local
+  hooks:
+  - id: smart-import-fixes
+    name: Smart Import Fixes
+    entry: python scripts/fix_import_syntax.py
+    language: python
+    always_run: true
+    pass_filenames: false
+    additional_dependencies: []

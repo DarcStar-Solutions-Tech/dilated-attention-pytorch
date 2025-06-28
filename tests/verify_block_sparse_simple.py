@@ -88,7 +88,9 @@ def main():
         output = attention(q, k, v, is_causal=False)
         info = attention.get_memory_info()
 
-        print(f"✓ Sparsity {sparsity:.0%}: Memory reduction = {info['memory_reduction']}")
+        print(
+            f"✓ Sparsity {sparsity:.0%}: Memory reduction = {info['memory_reduction']}"
+        )
 
     # Test 4: Multihead version
     print("\n4. Testing BlockSparseRingMultiheadDilatedAttention...")

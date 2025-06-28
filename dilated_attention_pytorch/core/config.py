@@ -112,7 +112,9 @@ class MultiheadConfig(ValidationMixin):
 
         # Validate layer norm epsilon
         if self.layer_norm_eps <= 0:
-            raise ValueError(f"layer_norm_eps must be positive, got {self.layer_norm_eps}")
+            raise ValueError(
+                f"layer_norm_eps must be positive, got {self.layer_norm_eps}"
+            )
 
         # Validate gamma init
         if self.gamma_init <= 0:
@@ -218,7 +220,9 @@ class SparseAttentionConfig(DilatedAttentionConfig):
             ("max_sparsity", self.max_sparsity),
         ]:
             if not 0.0 < value < 1.0:
-                raise ValueError(f"{name} must be between 0 and 1 (exclusive), got {value}")
+                raise ValueError(
+                    f"{name} must be between 0 and 1 (exclusive), got {value}"
+                )
 
         # Validate sparsity range
         if self.min_sparsity >= self.max_sparsity:
@@ -269,7 +273,9 @@ class DistributedConfig:
         # Validate backend
         valid_backends = {"nccl", "gloo", "mpi"}
         if self.backend not in valid_backends:
-            raise ValueError(f"Invalid backend '{self.backend}'. Must be one of: {valid_backends}")
+            raise ValueError(
+                f"Invalid backend '{self.backend}'. Must be one of: {valid_backends}"
+            )
 
         # Validate world size and rank
         if self.world_size is not None:
@@ -286,7 +292,9 @@ class DistributedConfig:
 
         # Validate bucket size
         if self.bucket_size_mb <= 0:
-            raise ValueError(f"bucket_size_mb must be positive, got {self.bucket_size_mb}")
+            raise ValueError(
+                f"bucket_size_mb must be positive, got {self.bucket_size_mb}"
+            )
 
         # Validate compression ratio
         if self.gradient_compression_ratio is not None:

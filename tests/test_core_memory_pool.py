@@ -233,7 +233,9 @@ class TestUnifiedMemoryPool:
         pool = UnifiedMemoryPool()
 
         # Request pinned memory
-        buffer = pool.get_buffer((100, 100), torch.float32, torch.device("cuda"), pinned=True)
+        buffer = pool.get_buffer(
+            (100, 100), torch.float32, torch.device("cuda"), pinned=True
+        )
 
         assert buffer.is_cuda
         # Note: Can't directly test if memory is pinned

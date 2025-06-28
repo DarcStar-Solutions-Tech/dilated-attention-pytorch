@@ -2,7 +2,9 @@ import pytest
 import torch
 
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
-from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
+from dilated_attention_pytorch.multihead_dilated_attention import (
+    MultiheadDilatedAttention,
+)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 DTYPE = torch.float16 if torch.cuda.is_available() else torch.float32
@@ -54,7 +56,9 @@ def test_multihead_dilated_attention(
 ):
     if len(segment_lengths) != len(dilation_rates):
         with pytest.raises(ValueError):
-            MultiheadDilatedAttention(embed_dim, num_heads, segment_lengths, dilation_rates)
+            MultiheadDilatedAttention(
+                embed_dim, num_heads, segment_lengths, dilation_rates
+            )
         return
 
     mhda = MultiheadDilatedAttention(

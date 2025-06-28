@@ -85,9 +85,15 @@ def test_corrected_ring_attention():
             ).to(device, dtype)
 
             # Test with a single chunk
-            q = torch.randn(batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
-            k = torch.randn(batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
-            v = torch.randn(batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype)
+            q = torch.randn(
+                batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype
+            )
+            k = torch.randn(
+                batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype
+            )
+            v = torch.randn(
+                batch_size, chunk_size, num_heads, head_dim, device=device, dtype=dtype
+            )
 
             # Time the computation
             torch.cuda.synchronize() if device.type == "cuda" else None
@@ -171,7 +177,9 @@ def test_corrected_ring_attention():
         print(f"With {largest['ring_size']} devices:")
         print(f"  - Processing {largest['seq_len']:,} tokens")
         print(f"  - Each device handles {largest['chunk_size']:,} tokens")
-        print(f"  - Total throughput: {largest['tokens_per_second']:,.0f} tokens/second")
+        print(
+            f"  - Total throughput: {largest['tokens_per_second']:,.0f} tokens/second"
+        )
 
         # Extrapolate to even larger sequences
         max_chunk_size = largest["chunk_size"]

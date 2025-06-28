@@ -45,7 +45,7 @@ except ImportError:
 
 # DeepSpeed detection
 try:
-    import deepspeed
+    import deepspeed  # noqa: PLC0415
 
     HAS_DEEPSPEED = True
     DEEPSPEED_VERSION = deepspeed.__version__

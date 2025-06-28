@@ -22,6 +22,23 @@ from .block_sparse_ring_multihead_dilated_attention import (
     BlockSparseRingMultiheadDilatedAttention,
 )
 
+# Optimized Block-Sparse implementations
+from .block_sparse_optimized import BlockSparseOptimized
+from .block_sparse_torch_sparse import BlockSparseTorchSparse
+from .block_sparse_hierarchical import (
+    BlockSparseHierarchical,
+    HierarchicalConfig,
+    create_hierarchical_attention,
+    get_hierarchical_presets,
+)
+from .block_sparse_adaptive import (
+    BlockSparseAdaptive,
+    AdaptiveConfig,
+    ImportanceScorer,
+    AdaptiveSparsityTrainer,
+    create_adaptive_block_sparse,
+)
+
 # Factory functions for easy creation
 from .core import (
     create_adaptive_sparse_attention,
@@ -39,10 +56,15 @@ from .improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttent
 from .long_net import LongNet
 from .multihead_dilated_attention import MultiheadDilatedAttention
 
-# from .distributed_dilated_attention import DistributedMultiheadDilatedAttention  # Old implementation
-from .ring_dilated_attention import RingDilatedAttention
-from .ring_dilated_attention_unfold_v2 import UnfoldRingDilatedAttention
-from .ring_multihead_dilated_attention import RingMultiheadDilatedAttention
+# Ring Attention implementations
+from .ring_dilated_attention_v2 import RingDilatedAttentionV2
+from .ring_dilated_attention_production import (
+    RingDilatedAttentionProduction,
+    RingAttentionConfig,
+    create_production_ring_attention,
+)
+
+# Note: Use create_multihead_dilated_attention('ring') for Ring Attention functionality
 from .transformer import DilatedTransformerDecoderLayer, DilatedTransformerEncoderLayer
 from .utils.sparse_pattern_utils import (
     PatternConfig,
@@ -59,6 +81,22 @@ __all__ = [
     "BlockSparseRingDilatedAttention",
     "BlockSparseRingDistributedDilatedAttention",
     "BlockSparseRingMultiheadDilatedAttention",
+    "BlockSparseOptimized",
+    "BlockSparseTorchSparse",
+    "BlockSparseHierarchical",
+    "HierarchicalConfig",
+    "create_hierarchical_attention",
+    "get_hierarchical_presets",
+    "BlockSparseAdaptive",
+    "AdaptiveConfig",
+    "ImportanceScorer",
+    "AdaptiveSparsityTrainer",
+    "create_adaptive_block_sparse",
+    # Ring Attention implementations
+    "RingDilatedAttentionV2",
+    "RingDilatedAttentionProduction",
+    "RingAttentionConfig",
+    "create_production_ring_attention",
     # Original implementations
     "DilatedAttention",
     "DilatedTransformerDecoderLayer",
@@ -75,13 +113,9 @@ __all__ = [
     "PatternOptimizer",
     "PatternQualityAnalyzer",
     "PatternType",
-    # "DistributedMultiheadDilatedAttention",  # Old implementation
-    "RingDilatedAttention",
-    "RingMultiheadDilatedAttention",
     # Configuration and utility classes
     "SparsePatternConfig",
     "SparsePatternGenerator",
-    "UnfoldRingDilatedAttention",
     "create_adaptive_sparse_attention",
     "create_block_sparse_attention",
     # Factory functions (v0.2.0+)

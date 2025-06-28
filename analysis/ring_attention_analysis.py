@@ -32,7 +32,9 @@ def analyze_ring_attention():
 
     # Calculate memory for full sequence
     qkv_memory = 3 * batch_size * seq_len * num_heads * head_dim * 2  # float16
-    attention_memory = batch_size * num_heads * seq_len * seq_len * 2  # attention matrix
+    attention_memory = (
+        batch_size * num_heads * seq_len * seq_len * 2
+    )  # attention matrix
     total_memory_gb = (qkv_memory + attention_memory) / (1024**3)
 
     print("\n   Standard attention (ring_size=1):")
@@ -44,14 +46,18 @@ def analyze_ring_attention():
     for ring_size in [4, 8, 16]:
         local_seq = seq_len // ring_size
         local_qkv = 3 * batch_size * local_seq * num_heads * head_dim * 2
-        local_attn = batch_size * num_heads * local_seq * seq_len * 2  # Still attend to full K
+        local_attn = (
+            batch_size * num_heads * local_seq * seq_len * 2
+        )  # Still attend to full K
         local_total_gb = (local_qkv + local_attn) / (1024**3)
 
         print(f"\n   Ring attention (ring_size={ring_size}):")
         print(f"   - Local Q,K,V per device: {local_qkv / (1024**2):.0f}MB")
         print(f"   - Local attention: {local_attn / (1024**3):.1f}GB")
         print(f"   - Total per device: {local_total_gb:.1f}GB")
-        print(f"   - Memory reduction: {(1 - local_total_gb / total_memory_gb) * 100:.0f}%")
+        print(
+            f"   - Memory reduction: {(1 - local_total_gb / total_memory_gb) * 100:.0f}%"
+        )
 
     # Show how Ring Attention should work
     print("\n4. HOW RING ATTENTION SHOULD WORK:")

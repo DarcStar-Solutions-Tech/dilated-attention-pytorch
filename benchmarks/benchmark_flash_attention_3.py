@@ -15,15 +15,25 @@ import os
 import sys
 from datetime import datetime
 
+from pathlib import Path
 import torch
 
 # Add parent directory to path
+
+# Import unified benchmark output management
+sys.path.insert(0, str(Path(__file__).parent))
+from core import BenchmarkOutputManager
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dilated_attention_pytorch import (
     BlockSparseRingDilatedAttention,
 )
-from dilated_attention_pytorch.core.constants import GPU_TYPE, HAS_FLASH_ATTN, HAS_FLASH_ATTN_3
+from dilated_attention_pytorch.core.constants import (
+    GPU_TYPE,
+    HAS_FLASH_ATTN,
+    HAS_FLASH_ATTN_3,
+)
 from dilated_attention_pytorch.utils.attention_utils import get_flash_attention_info
 from dilated_attention_pytorch.utils.flash_attention_3_utils import benchmark_fa3_vs_fa2
 
@@ -42,7 +52,9 @@ def print_system_info():
         print(f"GPU: {torch.cuda.get_device_name(0)}")
         print(f"GPU Type: {GPU_TYPE}")
         print(f"CUDA Capability: {torch.cuda.get_device_capability()}")
-        print(f"Total Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f} GB")
+        print(
+            f"Total Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f} GB"
+        )
 
     # Flash Attention info
     fa_info = get_flash_attention_info()
@@ -80,7 +92,9 @@ def benchmark_attention_backends(
     }
 
     # Create test tensors
-    q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    q = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
     k = torch.randn_like(q)
     v = torch.randn_like(q)
 
@@ -196,7 +210,7 @@ def benchmark_sparse_patterns(
         results["patterns"][pattern] = {}
 
         for sparsity in sparsity_ratios:
-            print(f"  Testing {pattern} with {sparsity*100:.0f}% sparsity...")
+            print(f"  Testing {pattern} with {sparsity * 100:.0f}% sparsity...")
 
             try:
                 # Create sparse attention module
@@ -213,7 +227,12 @@ def benchmark_sparse_patterns(
 
                 # Create inputs
                 q = torch.randn(
-                    batch_size, seq_len, num_heads, head_dim, device=device, dtype=torch.float16
+                    batch_size,
+                    seq_len,
+                    num_heads,
+                    head_dim,
+                    device=device,
+                    dtype=torch.float16,
                 )
                 k = torch.randn_like(q)
                 v = torch.randn_like(q)
@@ -281,10 +300,16 @@ def main():
     parser = argparse.ArgumentParser(description="Benchmark Flash Attention 3")
     parser.add_argument("--batch-size", type=int, default=2, help="Batch size")
     parser.add_argument("--seq-len", type=int, default=8192, help="Sequence length")
-    parser.add_argument("--num-heads", type=int, default=8, help="Number of attention heads")
+    parser.add_argument(
+        "--num-heads", type=int, default=8, help="Number of attention heads"
+    )
     parser.add_argument("--head-dim", type=int, default=64, help="Head dimension")
-    parser.add_argument("--num-runs", type=int, default=100, help="Number of benchmark runs")
-    parser.add_argument("--skip-sparse", action="store_true", help="Skip sparse pattern benchmarks")
+    parser.add_argument(
+        "--num-runs", type=int, default=100, help="Number of benchmark runs"
+    )
+    parser.add_argument(
+        "--skip-sparse", action="store_true", help="Skip sparse pattern benchmarks"
+    )
     parser.add_argument(
         "--skip-scaling", action="store_true", help="Skip sequence scaling benchmarks"
     )
@@ -299,7 +324,9 @@ def main():
     all_results = {
         "timestamp": datetime.now().strftime("%Y-%m-%d-%H%M-UTC"),
         "system": {
-            "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU",
+            "gpu": torch.cuda.get_device_name(0)
+            if torch.cuda.is_available()
+            else "CPU",
             "gpu_type": str(GPU_TYPE),
             "has_fa2": HAS_FLASH_ATTN,
             "has_fa3": HAS_FLASH_ATTN_3,
@@ -325,7 +352,9 @@ def main():
         if "error" in metrics:
             print(f"  {backend}: ERROR - {metrics['error']}")
         else:
-            print(f"  {backend}: {metrics['time_ms']:.2f} ms, {metrics.get('memory_mb', 0):.1f} MB")
+            print(
+                f"  {backend}: {metrics['time_ms']:.2f} ms, {metrics.get('memory_mb', 0):.1f} MB"
+            )
 
     # 2. Sparse patterns (if not skipped)
     if not args.skip_sparse:
@@ -374,3 +403,17 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    # Use unified benchmark output management
+    output_manager = BenchmarkOutputManager(
+        benchmark_type="flash-attention-3", parameters={}
+    )
+
+    # Add results
+    output_manager.add_result("results", results)
+
+    # Save results
+    output_paths = output_manager.save_results()
+    print("\nResults saved to:")
+    for path_type, path in output_paths.items():
+        print(f"  {path_type}: {path}")

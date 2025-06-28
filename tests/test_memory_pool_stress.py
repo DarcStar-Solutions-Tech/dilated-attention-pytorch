@@ -203,7 +203,7 @@ class TestMemoryPoolStress:
         if device.type == "cuda" and torch.cuda.is_available():
             # Only add bfloat16 if device supports it
             try:
-                test_tensor = torch.zeros(1, dtype=torch.bfloat16, device=device)
+                _ = torch.zeros(1, dtype=torch.bfloat16, device=device)
                 dtypes.append(torch.bfloat16)
             except:
                 pass

@@ -63,7 +63,7 @@ def benchmark_operations():
     torch.cuda.synchronize()
     start = time.time()
     for _ in range(1000):
-        x_seg = rearrange(x, "b (n s) h d -> b n s h d", s=2048)
+        _ = rearrange(x, "b (n s) h d -> b n s h d", s=2048)
     torch.cuda.synchronize()
     einops_time = (time.time() - start) * 1000
     print(f"   einops.rearrange: {einops_time:.2f}ms")
@@ -86,7 +86,7 @@ def benchmark_operations():
     torch.cuda.synchronize()
     start = time.time()
     for _ in range(1000):
-        x_dil = x[:, 0::2, :, :]  # Simple stride
+        _ = x[:, 0::2, :, :]  # Simple stride
     torch.cuda.synchronize()
     slice_time = (time.time() - start) * 1000
     print(f"   Direct slicing: {slice_time:.2f}ms")
@@ -128,9 +128,15 @@ def compare_implementations():
         dilation_rates = [1, 2, 4]
 
         # Create inputs
-        q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-        k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-        v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+        q = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+        )
+        k = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+        )
+        v = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+        )
 
         # Test each implementation
         implementations = [
@@ -182,10 +188,14 @@ def main():
     print("=" * 80)
     print("RingDilatedAttention with ring_size=1 is slower because:")
     print("1. It uses less optimized tensor operations (manual reshape vs einops)")
-    print("2. Additional overhead from ring-specific logic not needed for single device")
+    print(
+        "2. Additional overhead from ring-specific logic not needed for single device"
+    )
     print("3. Extra memory copies from .contiguous() calls")
     print("4. index_select is slower than direct slicing for dilation")
-    print("5. The implementation is optimized for distributed ring operation, not single device")
+    print(
+        "5. The implementation is optimized for distributed ring operation, not single device"
+    )
     print("\nRecommendation: Use base DilatedAttention for single device scenarios")
 
 

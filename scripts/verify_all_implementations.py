@@ -36,9 +36,9 @@ try:
     print(f"   ✓ DilatedAttention: output shape {out.shape}")
 
     # Test MultiheadDilatedAttention
-    mha = MultiheadDilatedAttention(embed_dim, num_heads, segment_lengths, dilation_rates).to(
-        device
-    )
+    mha = MultiheadDilatedAttention(
+        embed_dim, num_heads, segment_lengths, dilation_rates
+    ).to(device)
     q = torch.randn(batch_size, seq_len, embed_dim, device=device)
     out = mha(q, q, q)
     if isinstance(out, tuple):
@@ -87,7 +87,9 @@ try:
         ring_size -= 1
 
     # Test RingDilatedAttention
-    rda = RingDilatedAttention(segment_lengths, dilation_rates, ring_size=ring_size).to(device)
+    rda = RingDilatedAttention(segment_lengths, dilation_rates, ring_size=ring_size).to(
+        device
+    )
     q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
     out = rda(q, q, q)
     print(f"   ✓ RingDilatedAttention: output shape {out.shape}, ring_size={ring_size}")
@@ -100,7 +102,9 @@ try:
     out = rmha(q, q, q)
     if isinstance(out, tuple):
         out = out[0]
-    print(f"   ✓ RingMultiheadDilatedAttention: output shape {out.shape}, ring_size={ring_size}")
+    print(
+        f"   ✓ RingMultiheadDilatedAttention: output shape {out.shape}, ring_size={ring_size}"
+    )
 except Exception as e:
     print(f"   ✗ Ring implementations failed: {e}")
     import traceback
@@ -120,7 +124,10 @@ try:
 
     # Create proper SparsePatternConfig object
     sparsity_config = SparsePatternConfig(
-        sparsity_ratio=0.9, block_size=64, local_window_size=256, pattern_type="local_window"
+        sparsity_ratio=0.9,
+        block_size=64,
+        local_window_size=256,
+        pattern_type="local_window",
     )
 
     # Test BlockSparseRingDilatedAttention
@@ -133,7 +140,11 @@ try:
 
     # Test BlockSparseRingMultiheadDilatedAttention
     bsrmha = BlockSparseRingMultiheadDilatedAttention(
-        embed_dim, num_heads, segment_lengths, dilation_rates, sparse_config=sparsity_config
+        embed_dim,
+        num_heads,
+        segment_lengths,
+        dilation_rates,
+        sparse_config=sparsity_config,
     ).to(device)
     q = torch.randn(batch_size, seq_len, embed_dim, device=device)
     out = bsrmha(q, q, q)

@@ -34,7 +34,9 @@ def estimate_memory_usage(
     """Estimate memory usage for Ring Attention."""
 
     # Standard attention memory: O(n²)
-    standard_memory = (batch_size * num_heads * seq_len * seq_len * dtype_bytes) / (1024**2)
+    standard_memory = (batch_size * num_heads * seq_len * seq_len * dtype_bytes) / (
+        1024**2
+    )
 
     # Ring attention memory: O(n/p) where p is number of GPUs
     ring_memory_per_gpu = standard_memory / num_gpus
@@ -90,16 +92,27 @@ def simulate_distributed_speedup(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Simulate Ring Attention memory scaling")
+    parser = argparse.ArgumentParser(
+        description="Simulate Ring Attention memory scaling"
+    )
     parser.add_argument("--num-gpus", type=int, required=True, help="Number of GPUs")
     parser.add_argument(
-        "--sequence-lengths", nargs="+", type=int, required=True, help="Sequence lengths to test"
+        "--sequence-lengths",
+        nargs="+",
+        type=int,
+        required=True,
+        help="Sequence lengths to test",
     )
-    parser.add_argument("--num-heads", type=int, default=32, help="Number of attention heads")
+    parser.add_argument(
+        "--num-heads", type=int, default=32, help="Number of attention heads"
+    )
     parser.add_argument("--head-dim", type=int, default=128, help="Head dimension")
     parser.add_argument("--batch-size", type=int, default=1, help="Batch size")
     parser.add_argument(
-        "--output", type=str, default="memory_scaling_report.json", help="Output file for results"
+        "--output",
+        type=str,
+        default="memory_scaling_report.json",
+        help="Output file for results",
     )
 
     args = parser.parse_args()
@@ -142,8 +155,7 @@ def main():
         print(f"  Memory Reduction: {estimate.memory_reduction_factor:.1f}x")
         print(f"  Max Possible Sequence: {estimate.max_sequence_possible:,}")
         print(
-            f"  Speedup: {speedup['actual_speedup']:.2f}x "
-            f"(Efficiency: {speedup['efficiency']:.1%})"
+            f"  Speedup: {speedup['actual_speedup']:.2f}x (Efficiency: {speedup['efficiency']:.1%})"
         )
 
     # Memory scaling analysis
@@ -162,7 +174,7 @@ def main():
             print(
                 f"  {base_seq}→{seq_len}: "
                 f"Sequence {seq_ratio:.1f}x, Memory {mem_ratio:.1f}x "
-                f"(Linear scaling: {mem_ratio/seq_ratio:.2f})"
+                f"(Linear scaling: {mem_ratio / seq_ratio:.2f})"
             )
 
     # Save results

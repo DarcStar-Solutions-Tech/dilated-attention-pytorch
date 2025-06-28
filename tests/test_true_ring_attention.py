@@ -103,7 +103,9 @@ def test_ring_attention_scaling():
                     # Process chunk (in real ring attention, this would involve communication)
                     with torch.no_grad():
                         # Note: This is simplified - real ring attention would rotate K,V
-                        output_chunk = module._dilated_attention_block(q_chunk, k_chunk, v_chunk)
+                        output_chunk = module._dilated_attention_block(
+                            q_chunk, k_chunk, v_chunk
+                        )
 
                     outputs.append(output_chunk)
 

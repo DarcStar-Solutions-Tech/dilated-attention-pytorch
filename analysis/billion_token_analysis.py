@@ -87,7 +87,9 @@ def extrapolate_billion_token_performance(analyses: list[ScalingAnalysis]):
     # Use the most recent large-scale result for extrapolation
     largest_result = max(analyses, key=lambda x: x.seq_len)
 
-    print(f"Base result: {largest_result.seq_len:,} tokens in {largest_result.total_time_s:.1f}s")
+    print(
+        f"Base result: {largest_result.seq_len:,} tokens in {largest_result.total_time_s:.1f}s"
+    )
     print(f"Throughput: {largest_result.tokens_per_second:,} tokens/second")
     print(f"Time per chunk: {largest_result.time_per_chunk_ms:.1f}ms")
 
@@ -154,7 +156,9 @@ def extrapolate_billion_token_performance(analyses: list[ScalingAnalysis]):
     print(f"Context length advantage: {billion / 2048:,.0f}x longer")
 
 
-def calculate_memory_usage(seq_len: int, batch_size: int, num_heads: int, head_dim: int) -> float:
+def calculate_memory_usage(
+    seq_len: int, batch_size: int, num_heads: int, head_dim: int
+) -> float:
     """Calculate total memory usage in GB."""
     # Each tensor (Q, K, V) size in elements
     tensor_elements = batch_size * seq_len * num_heads * head_dim

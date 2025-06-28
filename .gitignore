@@ -147,6 +147,9 @@ venv*/
 
 # Benchmarking outputs
 benchmark.prof
+benchmark_*_output.txt
+test_*_output.txt
+*_output_fixed.txt
 
 
 # OS specific

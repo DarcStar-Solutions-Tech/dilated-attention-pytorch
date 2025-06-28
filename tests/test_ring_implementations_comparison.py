@@ -9,7 +9,9 @@ import time
 import torch
 
 from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
-from dilated_attention_pytorch.ring_multihead_dilated_attention import RingMultiheadDilatedAttention
+from dilated_attention_pytorch.ring_multihead_dilated_attention import (
+    RingMultiheadDilatedAttention,
+)
 
 
 def test_implementation_comparison():
@@ -43,14 +45,24 @@ def test_implementation_comparison():
 
     # Create test inputs
     # For single-headed: [batch, seq_len, num_heads, head_dim]
-    q_single = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-    k_single = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-    v_single = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+    q_single = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
+    k_single = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
+    v_single = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+    )
 
     # For multihead: [batch, seq_len, embed_dim]
-    query_multi = torch.randn(batch_size, seq_len, embed_dim, device=device, dtype=dtype)
+    query_multi = torch.randn(
+        batch_size, seq_len, embed_dim, device=device, dtype=dtype
+    )
     key_multi = torch.randn(batch_size, seq_len, embed_dim, device=device, dtype=dtype)
-    value_multi = torch.randn(batch_size, seq_len, embed_dim, device=device, dtype=dtype)
+    value_multi = torch.randn(
+        batch_size, seq_len, embed_dim, device=device, dtype=dtype
+    )
 
     print("\n" + "=" * 80)
     print("1. SINGLE-HEADED RING DILATED ATTENTION")
@@ -168,7 +180,9 @@ def test_implementation_comparison():
 
     # Memory comparison
     if peak_memory_single != float("inf") and peak_memory_multi != float("inf"):
-        memory_ratio = peak_memory_single / peak_memory_multi if peak_memory_multi > 0 else 1
+        memory_ratio = (
+            peak_memory_single / peak_memory_multi if peak_memory_multi > 0 else 1
+        )
         print("\nMemory Comparison:")
         print(f"  Single-headed peak: {peak_memory_single:.3f}GB")
         print(f"  Multihead peak: {peak_memory_multi:.3f}GB")
@@ -246,11 +260,15 @@ def test_mathematical_equivalence():
     with torch.no_grad():
         if hasattr(multihead_attention, "qkv_proj"):
             qkv = multihead_attention.qkv_proj(query)
-            q_proj = qkv[:, :, :embed_dim].view(batch_size, seq_len, num_heads, head_dim)
+            q_proj = qkv[:, :, :embed_dim].view(
+                batch_size, seq_len, num_heads, head_dim
+            )
             k_proj = qkv[:, :, embed_dim : 2 * embed_dim].view(
                 batch_size, seq_len, num_heads, head_dim
             )
-            v_proj = qkv[:, :, 2 * embed_dim :].view(batch_size, seq_len, num_heads, head_dim)
+            v_proj = qkv[:, :, 2 * embed_dim :].view(
+                batch_size, seq_len, num_heads, head_dim
+            )
         else:
             q_proj = multihead_attention.q_proj(query).view(
                 batch_size, seq_len, num_heads, head_dim
@@ -391,7 +409,9 @@ def test_memory_scaling():
             else 1.0
         )
 
-        print(f"{seq_len:>8} {single_memory:>11.3f} {multi_memory:>11.3f} {ratio:>7.2f}x")
+        print(
+            f"{seq_len:>8} {single_memory:>11.3f} {multi_memory:>11.3f} {ratio:>7.2f}x"
+        )
 
     print("\nMemory Scaling Observations:")
     print("- Both implementations show O(n) memory scaling")

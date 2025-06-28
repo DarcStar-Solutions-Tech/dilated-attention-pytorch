@@ -1,0 +1,44 @@
+# Ruff configuration for dilated-attention-pytorch
+# This supplements pyproject.toml with more specific rules
+
+[lint.per-file-ignores]
+# Test files can be more lenient
+"tests/**/*.py" = [
+    "PLR2004",  # Magic values are OK in tests
+    "ARG",      # Unused arguments are OK in test fixtures
+    "SIM",      # Simplify rules can make tests less readable
+]
+
+# Benchmark scripts need flexibility
+"benchmarks/**/*.py" = [
+    "T201",     # print() is OK in benchmarks
+    "PLR0912",  # Complex benchmarks are OK
+    "PLR0915",  # Many statements OK in benchmarks
+]
+
+# Example scripts are meant to be simple
+"examples/**/*.py" = [
+    "T201",     # print() is OK in examples
+    "PLR2004",  # Magic values are OK in examples
+]
+
+# Complex implementation files
+"dilated_attention_pytorch/*distributed*.py" = [
+    "PLR0912",  # too-many-branches
+    "PLR0915",  # too-many-statements
+    "C901",     # too-complex
+]
+
+"dilated_attention_pytorch/*ring*.py" = [
+    "PLR0912",  # too-many-branches
+    "PLR0915",  # too-many-statements
+]
+
+# Scripts can be more flexible
+"scripts/**/*.py" = [
+    "T201",     # print() is OK
+    "PLW0603",  # global is OK in scripts
+]
+
+# Additional project-wide ignores can be added in pyproject.toml
+# These per-file ignores handle the complex cases

@@ -16,7 +16,9 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 
-def load_performance_history(baseline_dir: str = "tests/performance_baselines") -> list[dict]:
+def load_performance_history(
+    baseline_dir: str = "tests/performance_baselines",
+) -> list[dict]:
     """Load performance history from JSON file."""
     history_file = Path(baseline_dir) / "history.json"
     if history_file.exists():
@@ -126,7 +128,9 @@ def create_performance_dashboard(
                 mode="lines+markers",
                 name=display_name,
                 line=dict(color=color),
-                marker=dict(symbol=["circle" if p else "x" for p in data["passed"]], size=8),
+                marker=dict(
+                    symbol=["circle" if p else "x" for p in data["passed"]], size=8
+                ),
                 showlegend=False,
             ),
             row=3,
@@ -162,7 +166,9 @@ def create_performance_dashboard(
     print(f"Performance dashboard saved to: {output_file}")
 
 
-def create_comparison_chart(history: list[dict], output_file: str = "performance_comparison.html"):
+def create_comparison_chart(
+    history: list[dict], output_file: str = "performance_comparison.html"
+):
     """Create comparison chart of different implementations."""
     if not history:
         print("No performance history to compare.")
@@ -245,7 +251,9 @@ def main():
     output_dir.mkdir(exist_ok=True)
 
     # Generate visualizations
-    create_performance_dashboard(history, str(output_dir / "performance_dashboard.html"))
+    create_performance_dashboard(
+        history, str(output_dir / "performance_dashboard.html")
+    )
     create_comparison_chart(history, str(output_dir / "performance_comparison.html"))
 
     print(f"\nFound {len(history)} performance entries")

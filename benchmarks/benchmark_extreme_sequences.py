@@ -14,8 +14,14 @@ import os
 import sys
 from datetime import datetime
 
+from pathlib import Path
 import torch
 from torch import cuda
+
+
+# Import unified benchmark output management
+sys.path.insert(0, str(Path(__file__).parent))
+from core import BenchmarkOutputManager
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -35,7 +41,8 @@ def get_gpu_memory_info() -> dict:
     return {
         "allocated": cuda.memory_allocated() / 1024**3,  # GB
         "reserved": cuda.memory_reserved() / 1024**3,
-        "free": (cuda.get_device_properties(0).total_memory - cuda.memory_allocated()) / 1024**3,
+        "free": (cuda.get_device_properties(0).total_memory - cuda.memory_allocated())
+        / 1024**3,
     }
 
 
@@ -183,9 +190,15 @@ def test_sequence_length(  # noqa: PLR0912
             )
 
         # Create inputs
-        q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-        k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
-        v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype)
+        q = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+        )
+        k = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+        )
+        v = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
+        )
 
         # Get memory after allocation
         _ = get_gpu_memory_info()  # Could be used for debugging
@@ -217,7 +230,9 @@ def test_sequence_length(  # noqa: PLR0912
             times.append((end - start) * 1000)  # ms
 
         # Get peak memory
-        peak_memory = cuda.max_memory_allocated() / 1024**3 if cuda.is_available() else 0
+        peak_memory = (
+            cuda.max_memory_allocated() / 1024**3 if cuda.is_available() else 0
+        )
 
         # Calculate metrics
         mean_time = sum(times) / len(times)
@@ -235,7 +250,9 @@ def test_sequence_length(  # noqa: PLR0912
             "times": times,
         }
 
-        print(f"  ✓ Success: {mean_time:.1f}ms, {peak_memory:.2f}GB, {throughput:.2f}M tok/s")
+        print(
+            f"  ✓ Success: {mean_time:.1f}ms, {peak_memory:.2f}GB, {throughput:.2f}M tok/s"
+        )
 
         # Cleanup
         del module, q, k, v, output
@@ -319,10 +336,16 @@ def main():
         help="Implementations to test",
     )
     parser.add_argument("--batch-size", type=int, default=1, help="Batch size")
-    parser.add_argument("--num-heads", type=int, default=8, help="Number of attention heads")
+    parser.add_argument(
+        "--num-heads", type=int, default=8, help="Number of attention heads"
+    )
     parser.add_argument("--head-dim", type=int, default=64, help="Dimension per head")
-    parser.add_argument("--dtype", type=str, default="float16", help="Data type (float16/float32)")
-    parser.add_argument("--num-runs", type=int, default=3, help="Number of benchmark runs")
+    parser.add_argument(
+        "--dtype", type=str, default="float16", help="Data type (float16/float32)"
+    )
+    parser.add_argument(
+        "--num-runs", type=int, default=3, help="Number of benchmark runs"
+    )
     parser.add_argument(
         "--sequence-lengths",
         type=int,
@@ -351,9 +374,9 @@ def main():
     results = {}
 
     for impl in args.implementations:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Testing {impl}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         if args.sequence_lengths:
             # Test specific lengths
@@ -414,7 +437,8 @@ def main():
                     "timestamp": timestamp,
                     "device": str(device),
                     "gpu": cuda.get_device_name() if cuda.is_available() else "N/A",
-                    "total_memory_gb": cuda.get_device_properties(0).total_memory / 1024**3
+                    "total_memory_gb": cuda.get_device_properties(0).total_memory
+                    / 1024**3
                     if cuda.is_available()
                     else 0,
                     "batch_size": args.batch_size,
@@ -450,3 +474,17 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    # Use unified benchmark output management
+    output_manager = BenchmarkOutputManager(
+        benchmark_type="extreme-sequences", parameters={}
+    )
+
+    # Add results
+    output_manager.add_result("results", results)
+
+    # Save results
+    output_paths = output_manager.save_results()
+    print("\nResults saved to:")
+    for path_type, path in output_paths.items():
+        print(f"  {path_type}: {path}")

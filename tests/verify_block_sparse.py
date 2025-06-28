@@ -326,7 +326,9 @@ def main():
     print(f"\nTotal: {passed}/{total} tests passed")
 
     if passed == total:
-        print("\n✓ All tests passed! Block Sparse implementations are working correctly.")
+        print(
+            "\n✓ All tests passed! Block Sparse implementations are working correctly."
+        )
     else:
         print(f"\n✗ {total - passed} tests failed. Please check the implementation.")
 

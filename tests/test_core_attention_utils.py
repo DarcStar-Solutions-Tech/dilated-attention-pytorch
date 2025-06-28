@@ -199,7 +199,9 @@ class TestAttentionComputation:
         k = torch.randn(batch_size, seq_len, num_heads, head_dim).cuda()
         v = torch.randn(batch_size, seq_len, num_heads, head_dim).cuda()
 
-        with patch("dilated_attention_pytorch.utils.attention_utils.HAS_FLASH_ATTN", True):
+        with patch(
+            "dilated_attention_pytorch.utils.attention_utils.HAS_FLASH_ATTN", True
+        ):
             # Mock flash_attn module
             with patch("flash_attn.flash_attn_func") as mock_flash_attn:
                 # Mock flash attention to return something reasonable

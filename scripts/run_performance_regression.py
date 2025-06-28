@@ -99,10 +99,10 @@ def generate_html_dashboard():
 
             html += f"""
             <tr>
-                <td>{entry['timestamp'][:19]}</td>
-                <td>{entry['config']}</td>
-                <td>{entry['metrics']['execution_time_ms']:.2f}</td>
-                <td>{entry['regression_pct']:+.1f}%</td>
+                <td>{entry["timestamp"][:19]}</td>
+                <td>{entry["config"]}</td>
+                <td>{entry["metrics"]["execution_time_ms"]:.2f}</td>
+                <td>{entry["regression_pct"]:+.1f}%</td>
                 <td class="{status_class}">{status_icon}</td>
             </tr>
 """
@@ -167,7 +167,9 @@ def generate_comparison_report():
 """
 
         for config, metrics in configs.items():
-            base_time = baselines.get(base_impl, {}).get(config, {}).get("execution_time_ms", 0)
+            base_time = (
+                baselines.get(base_impl, {}).get(config, {}).get("execution_time_ms", 0)
+            )
             impl_time = metrics.get("execution_time_ms", 0)
 
             if base_time > 0 and impl_time > 0:

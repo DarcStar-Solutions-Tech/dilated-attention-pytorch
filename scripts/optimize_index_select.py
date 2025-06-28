@@ -73,10 +73,14 @@ def benchmark_dilation_methods():
         result3 = x[:, :, idx, :, :]
     torch.cuda.synchronize()
     time3 = (time.time() - start) * 1000
-    print(f"3. Advanced indexing [..., idx, ...]: {time3:.2f}ms (speedup: {time1 / time3:.1f}x)")
+    print(
+        f"3. Advanced indexing [..., idx, ...]: {time3:.2f}ms (speedup: {time1 / time3:.1f}x)"
+    )
 
     # Method 4: Gather (more flexible but potentially slower)
-    idx_expanded = idx.view(1, 1, -1, 1, 1).expand(batch, num_segments, -1, num_heads, head_dim)
+    idx_expanded = idx.view(1, 1, -1, 1, 1).expand(
+        batch, num_segments, -1, num_heads, head_dim
+    )
     torch.cuda.synchronize()
     start = time.time()
     for _ in range(iterations):
@@ -141,7 +145,9 @@ def create_optimized_dilation():
             return tensor
         else:
             # Use advanced indexing instead of index_select
-            idx = torch.arange(offset, tensor.size(2), dilation_rate, device=tensor.device)
+            idx = torch.arange(
+                offset, tensor.size(2), dilation_rate, device=tensor.device
+            )
             return tensor[:, :, idx, :, :]
 
     # Benchmark the optimized function

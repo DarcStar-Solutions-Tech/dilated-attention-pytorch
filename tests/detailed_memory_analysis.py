@@ -91,7 +91,9 @@ def detailed_analysis():
         embedding_params = vocab_size * embed_dim
         transformer_params = num_layers * 12 * embed_dim**2
         total_params = (
-            (embedding_params + transformer_params) * optimization["dtype_bytes"] / (1024**3)
+            (embedding_params + transformer_params)
+            * optimization["dtype_bytes"]
+            / (1024**3)
         )
 
         # Optimizer memory
@@ -122,7 +124,9 @@ def detailed_analysis():
         attention_per_token_improved = attention_per_token_orig * 0.85  # 15% reduction
 
         # Calculate max tokens for each implementation
-        max_tokens_orig = int(available_memory / (activation_per_token + attention_per_token_orig))
+        max_tokens_orig = int(
+            available_memory / (activation_per_token + attention_per_token_orig)
+        )
         max_tokens_improved = int(
             available_memory / (activation_per_token + attention_per_token_improved)
         )
@@ -133,7 +137,9 @@ def detailed_analysis():
 
         return max_tokens_orig, max_tokens_improved, fixed_memory
 
-    print(f"{'Model':<20} {'Optimization':<20} {'Original':<12} {'Improved':<12} {'Gain':<8}")
+    print(
+        f"{'Model':<20} {'Optimization':<20} {'Original':<12} {'Improved':<12} {'Gain':<8}"
+    )
     print("-" * 80)
 
     results = []
@@ -142,11 +148,15 @@ def detailed_analysis():
         for opt_name, opt_params in optimizations.items():
             orig, improved, fixed = estimate_max_tokens_optimized(config, opt_params)
             if isinstance(orig, str):  # Error case
-                print(f"{config['name']:<20} {opt_name:<20} {'N/A':<12} {'N/A':<12} {'N/A':<8}")
+                print(
+                    f"{config['name']:<20} {opt_name:<20} {'N/A':<12} {'N/A':<12} {'N/A':<8}"
+                )
                 continue
 
             gain = ((improved - orig) / orig * 100) if orig > 0 else 0
-            print(f"{config['name']:<20} {opt_name:<20} {orig:>8,} {improved:>8,} {gain:>6.1f}%")
+            print(
+                f"{config['name']:<20} {opt_name:<20} {orig:>8,} {improved:>8,} {gain:>6.1f}%"
+            )
 
             results.append(
                 {
@@ -201,7 +211,9 @@ def detailed_analysis():
     print("   • 1.5B params: Up to ~50K tokens with optimizations")
 
     print("\n3. SEQUENCE LENGTH STRATEGIES:")
-    print("   • Use hierarchical training: start with shorter sequences, gradually increase")
+    print(
+        "   • Use hierarchical training: start with shorter sequences, gradually increase"
+    )
     print("   • Implement sequence parallelism for longer contexts")
     print("   • Consider sparse attention patterns for ultra-long sequences")
 

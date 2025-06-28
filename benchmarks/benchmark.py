@@ -18,17 +18,28 @@ import xformers.ops as xops
 from torch import device
 
 # Import factory functions (v0.2.0+)
-from dilated_attention_pytorch import create_dilated_attention, create_multihead_dilated_attention
+from dilated_attention_pytorch import (
+    create_dilated_attention,
+    create_multihead_dilated_attention,
+)
 
 # For backward compatibility
 from dilated_attention_pytorch.dilated_attention import DilatedAttention
-from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
+from dilated_attention_pytorch.multihead_dilated_attention import (
+    MultiheadDilatedAttention,
+)
+
+# Import unified benchmark output management
+sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+from core import BenchmarkOutputManager
 
 # Create the parser
 parser = argparse.ArgumentParser(description="Benchmarking parameters")
 
 # Add the arguments
-parser.add_argument("--batch_size", type=int, default=1, help="Batch size for benchmarking")
+parser.add_argument(
+    "--batch_size", type=int, default=1, help="Batch size for benchmarking"
+)
 parser.add_argument(
     "--total_tokens",
     type=int,
@@ -125,11 +136,15 @@ TOTAL_TOKENS: int = 2**args.total_tokens  # 64M
 NUM_HEADS: int = args.heads
 EMBED_DIM: int = args.embed_dim
 # Vanilla attention only
-VANILLA_SEQ_LENGTHS: list[int] = [2**i for i in range(13, args.vanilla_seq_lengths)]  # 8k - 128k
+VANILLA_SEQ_LENGTHS: list[int] = [
+    2**i for i in range(13, args.vanilla_seq_lengths)
+]  # 8k - 128k
 
 # Dilated attention only
 SEGMENT_LENGTHS: list[int] = args.segment_lengths  # 8k - 64k
-DILATED_SEQ_LENGTHS: list[int] = [2**i for i in range(13, args.dilated_seq_lengths)]  # 8k - 64M
+DILATED_SEQ_LENGTHS: list[int] = [
+    2**i for i in range(13, args.dilated_seq_lengths)
+]  # 8k - 64M
 
 BENCHMARK_VANILLA: bool = args.vanilla
 BENCHMARK_DILATED: bool = args.dilated
@@ -338,7 +353,9 @@ def benchmark_attention(
 
             logging.info(f"Returned tensor shape {x.shape}")
 
-            if (attention_type == AttentionType.MHA) | (attention_type == AttentionType.DILATED):
+            if (attention_type == AttentionType.MHA) | (
+                attention_type == AttentionType.DILATED
+            ):
                 attn = get_attention_for_seq_length(
                     seq_length=seq_length,
                     device=device,
@@ -444,7 +461,9 @@ if __name__ == "__main__":
             f"GPU {i} memory: {round(torch.cuda.get_device_properties(i).total_memory / 1024**3, 2)} GB"
         )
         gpu_info[f"gpu_{i}_compute_capability"] = torch.cuda.get_device_capability(i)
-        logging.info(f"GPU {i} compute capability: {torch.cuda.get_device_capability(i)}")
+        logging.info(
+            f"GPU {i} compute capability: {torch.cuda.get_device_capability(i)}"
+        )
 
     bench_config.update(gpu_info)
 
@@ -458,7 +477,9 @@ if __name__ == "__main__":
     b_dir = os.path.join(docs_benchmarks_dir, b_name)
 
     with open(
-        os.path.join(b_dir, f"config-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"),
+        os.path.join(
+            b_dir, f"config-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"
+        ),
         "w",
     ) as f:
         f.write(str(bench_config))
@@ -483,14 +504,18 @@ if __name__ == "__main__":
     for embed_dim in embed_dims:  # loop over embed_dims
         for num_head in num_heads:  # loop over num_heads
             if embed_dim % num_head != 0:
-                logging.info(f"embed_dim ({embed_dim}) must be divisible by num_heads ({num_head})")
+                logging.info(
+                    f"embed_dim ({embed_dim}) must be divisible by num_heads ({num_head})"
+                )
                 continue
 
             if num_head < 4:
                 logging.info(f"num_heads ({num_head}) must be greater than 4")
                 continue
 
-            logging.info(f"Running benchmark with embed_dim {embed_dim} and num_heads {num_head}")
+            logging.info(
+                f"Running benchmark with embed_dim {embed_dim} and num_heads {num_head}"
+            )
 
             result_set = {
                 "embed_dim": embed_dim,
@@ -545,12 +570,49 @@ if __name__ == "__main__":
 
             results.append(result_set)
 
-    with open(
-        os.path.join(b_dir, f"results-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.txt"),
-        "w",
-    ) as f:
-        f.write(str(results))
+    # Use unified benchmark output management
+    output_manager = BenchmarkOutputManager(
+        benchmark_type="attention-comparison",
+        parameters={
+            "total_tokens": TOTAL_TOKENS,
+            "token_count": token_count,
+            "embed_dim": EMBED_DIM,
+            "heads": NUM_HEADS,
+            "benchmark_vanilla": BENCHMARK_VANILLA,
+            "benchmark_dilated": BENCHMARK_DILATED,
+            "benchmark_multihead": BENCHMARK_MULTIHEAD,
+            "is_causal": IS_CAUSAL,
+        },
+    )
 
+    # Add results to output manager
+    for i, result_set in enumerate(results):
+        output_manager.add_result(f"sequence_length_{i}", result_set)
+
+    # Set summary metrics
+    if results:
+        # Calculate average performance across all sequence lengths
+        total_runtime = 0
+        for r in results:
+            if r is not None:
+                for impl in ["vanilla", "dilated", "multihead"]:
+                    if impl in r and r[impl] is not None and isinstance(r[impl], dict):
+                        total_runtime += r[impl].get("runtime", 0)
+
+        output_manager.set_summary(
+            {
+                "total_configurations": len(results),
+                "total_runtime_seconds": total_runtime,
+                "average_runtime_per_config": total_runtime / len(results)
+                if results
+                else 0,
+            }
+        )
+
+    # Save all outputs
+    output_paths = output_manager.save_results()
+
+    # Update plot and save it
     fig.update_layout(
         title=f"Attention Benchmark on {current_date} <br>"
         f"(Total Tokens = {token_count}) <br>"
@@ -562,6 +624,28 @@ if __name__ == "__main__":
         yaxis_type="log",
     )
 
-    fig.write_image(
-        os.path.join(b_dir, f"tokens-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.png")
-    )
+    # Save plot to temporary location first
+    temp_plot = f"tokens-{token_count}-embed_dim-{EMBED_DIM}-heads-{NUM_HEADS}.png"
+    plot_path = None
+
+    try:
+        fig.write_image(temp_plot)
+
+        # Move plot to organized location using output manager
+        from pathlib import Path
+
+        plot_path = output_manager.save_plot(Path(temp_plot))
+
+        # Clean up temporary plot
+        if os.path.exists(temp_plot):
+            os.remove(temp_plot)
+
+    except Exception as e:
+        logging.warning(f"Could not save plot: {e}")
+        logging.info("Install kaleido for plot export: pip install -U kaleido")
+
+    logging.info("Benchmark results saved:")
+    for output_type, path in output_paths.items():
+        logging.info(f"  {output_type}: {path}")
+    if plot_path:
+        logging.info(f"  plot: {plot_path}")

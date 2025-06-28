@@ -36,7 +36,9 @@ def get_organized_output_path(
     return str(by_type_path)
 
 
-def update_latest_symlink(benchmark_type: str, file_path: Path, base_dir: str = "docs/benchmarks"):
+def update_latest_symlink(
+    benchmark_type: str, file_path: Path, base_dir: str = "docs/benchmarks"
+):
     """Update the 'latest' symlink for a benchmark type."""
     latest_dir = Path(base_dir) / "latest"
     latest_dir.mkdir(exist_ok=True)

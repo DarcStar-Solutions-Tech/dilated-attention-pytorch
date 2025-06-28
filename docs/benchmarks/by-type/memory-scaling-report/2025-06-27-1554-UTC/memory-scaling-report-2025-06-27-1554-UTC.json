@@ -1,0 +1,72 @@
+{
+  "configuration": {
+    "num_gpus": 4,
+    "num_heads": 32,
+    "head_dim": 128,
+    "batch_size": 1
+  },
+  "estimates": [
+    {
+      "sequence_length": 1024,
+      "num_gpus": 4,
+      "per_gpu_memory_mb": 19.2,
+      "total_memory_mb": 76.8,
+      "memory_reduction_factor": 3.3333333333333335,
+      "max_sequence_possible": 1045
+    },
+    {
+      "sequence_length": 2048,
+      "num_gpus": 4,
+      "per_gpu_memory_mb": 76.8,
+      "total_memory_mb": 307.2,
+      "memory_reduction_factor": 3.3333333333333335,
+      "max_sequence_possible": 739
+    },
+    {
+      "sequence_length": 4096,
+      "num_gpus": 4,
+      "per_gpu_memory_mb": 307.2,
+      "total_memory_mb": 1228.8,
+      "memory_reduction_factor": 3.3333333333333335,
+      "max_sequence_possible": 522
+    },
+    {
+      "sequence_length": 8192,
+      "num_gpus": 4,
+      "per_gpu_memory_mb": 1228.8,
+      "total_memory_mb": 4915.2,
+      "memory_reduction_factor": 3.3333333333333335,
+      "max_sequence_possible": 369
+    }
+  ],
+  "speedup_analysis": [
+    {
+      "theoretical_speedup": 4,
+      "actual_speedup": 3.7,
+      "efficiency": 0.925,
+      "communication_overhead": 0.07500000000000001,
+      "sequence_length": 1024
+    },
+    {
+      "theoretical_speedup": 4,
+      "actual_speedup": 3.7,
+      "efficiency": 0.925,
+      "communication_overhead": 0.07500000000000001,
+      "sequence_length": 2048
+    },
+    {
+      "theoretical_speedup": 4,
+      "actual_speedup": 3.7,
+      "efficiency": 0.925,
+      "communication_overhead": 0.07500000000000001,
+      "sequence_length": 4096
+    },
+    {
+      "theoretical_speedup": 4,
+      "actual_speedup": 3.7,
+      "efficiency": 0.925,
+      "communication_overhead": 0.07500000000000001,
+      "sequence_length": 8192
+    }
+  ]
+}

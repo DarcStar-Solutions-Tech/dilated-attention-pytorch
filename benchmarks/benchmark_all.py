@@ -5,20 +5,26 @@ Comprehensive benchmark script for all dilated attention implementations.
 
 import argparse
 import gc
+import sys
 import time
+from pathlib import Path
 
 import numpy as np
 import torch
 from tabulate import tabulate
+
+# Import unified benchmark output management
+sys.path.insert(0, str(Path(__file__).parent))
+from core import BenchmarkOutputManager
 
 # Import all implementations
 from dilated_attention_pytorch import (
     DilatedAttention,
     ImprovedDilatedAttention,
     MultiheadDilatedAttention,
-    RingDilatedAttention,
-    RingMultiheadDilatedAttention,
+    create_multihead_dilated_attention,
 )
+from dilated_attention_pytorch.ring_dilated_attention_v2 import RingDilatedAttentionV2
 
 # Import block sparse implementations
 try:
@@ -54,6 +60,7 @@ class BenchmarkRunner:
         self.device = torch.device(device)
         self.dtype = dtype
         self.results = []
+        self.all_results_by_impl = {}  # Store results by implementation name
 
     def benchmark_implementation(
         self,
@@ -76,7 +83,9 @@ class BenchmarkRunner:
             query = torch.randn(
                 batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype
             )
-            key = torch.randn(batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype)
+            key = torch.randn(
+                batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype
+            )
             value = torch.randn(
                 batch_size, seq_len, embed_dim, device=self.device, dtype=self.dtype
             )
@@ -166,7 +175,9 @@ class BenchmarkRunner:
         throughput = batch_size / mean_time
 
         # Memory in MB
-        peak_memory_mb = peak_memory / (1024 * 1024) if self.device.type == "cuda" else 0
+        peak_memory_mb = (
+            peak_memory / (1024 * 1024) if self.device.type == "cuda" else 0
+        )
 
         return {
             "name": name,
@@ -228,8 +239,8 @@ class BenchmarkRunner:
                         False,
                     ),
                     (
-                        "RingDilatedAttention",
-                        RingDilatedAttention(
+                        "RingDilatedAttentionV2",
+                        RingDilatedAttentionV2(
                             segment_lengths=adjusted_segments,
                             dilation_rates=dilation_rates,
                             dropout=dropout,
@@ -295,14 +306,14 @@ class BenchmarkRunner:
 
                 multihead_implementations.append(
                     (
-                        "RingMultiheadDilatedAttention",
-                        RingMultiheadDilatedAttention(
+                        "RingMultiheadDilatedAttentionV2",
+                        create_multihead_dilated_attention(
+                            attention_type="ring",
                             embed_dim=embed_dim,
                             num_heads=num_heads,
                             segment_lengths=adjusted_segments,
                             dilation_rates=dilation_rates,
                             dropout=dropout,
-                            ring_size=1,
                         ),
                         True,
                     )
@@ -348,6 +359,12 @@ class BenchmarkRunner:
                     )
 
                     self.results.append(result)
+
+                    # Store results by implementation for aggregation
+                    impl_name = result["name"]
+                    if impl_name not in self.all_results_by_impl:
+                        self.all_results_by_impl[impl_name] = []
+                    self.all_results_by_impl[impl_name].append(result)
 
                     if result["success"]:
                         print(f" ✓ {result['mean_time_ms']:.2f}ms")
@@ -405,7 +422,9 @@ class BenchmarkRunner:
 
             # Calculate speedups relative to baseline
             if len(results) > 1:
-                baseline = next((r for r in results if r["name"] == "DilatedAttention"), results[0])
+                baseline = next(
+                    (r for r in results if r["name"] == "DilatedAttention"), results[0]
+                )
                 print("\nSpeedups relative to DilatedAttention:")
                 for r in results:
                     if r["name"] != baseline["name"]:
@@ -414,9 +433,13 @@ class BenchmarkRunner:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Benchmark all dilated attention implementations")
+    parser = argparse.ArgumentParser(
+        description="Benchmark all dilated attention implementations"
+    )
     parser.add_argument("--device", default="cuda", choices=["cpu", "cuda"])
-    parser.add_argument("--dtype", default="float16", choices=["float16", "float32", "bfloat16"])
+    parser.add_argument(
+        "--dtype", default="float16", choices=["float16", "float32", "bfloat16"]
+    )
     parser.add_argument("--batch-sizes", nargs="+", type=int, default=[1, 2, 4])
     parser.add_argument("--seq-lens", nargs="+", type=int, default=[2048, 4096, 8192])
     parser.add_argument("--num-heads", type=int, default=8)
@@ -446,6 +469,44 @@ def main():
         head_dim=args.head_dim,
     )
     runner.print_summary()
+
+    # Save results using unified benchmark output management
+    output_manager = BenchmarkOutputManager(
+        benchmark_type="all-implementations",
+        parameters={
+            "device": args.device,
+            "dtype": args.dtype,
+            "batch_sizes": args.batch_sizes,
+            "seq_lens": args.seq_lens,
+            "num_heads": args.num_heads,
+            "head_dim": args.head_dim,
+        },
+    )
+
+    # Add results organized by implementation
+    for impl_name, impl_results in runner.all_results_by_impl.items():
+        output_manager.add_result(impl_name, impl_results)
+
+    # Calculate and add summary statistics
+    summary_stats = {}
+    for impl_name, impl_results in runner.all_results_by_impl.items():
+        successful_results = [r for r in impl_results if r.get("success", False)]
+        if successful_results:
+            mean_times = [r["mean_time_ms"] for r in successful_results]
+            summary_stats[impl_name] = {
+                "avg_time_ms": np.mean(mean_times),
+                "min_time_ms": np.min(mean_times),
+                "max_time_ms": np.max(mean_times),
+                "num_configs_tested": len(successful_results),
+            }
+
+    output_manager.set_summary(summary_stats)
+
+    # Save all outputs
+    output_paths = output_manager.save_results()
+    print("\nResults saved to:")
+    for path_type, path in output_paths.items():
+        print(f"  {path_type}: {path}")
 
 
 if __name__ == "__main__":

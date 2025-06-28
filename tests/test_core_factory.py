@@ -35,7 +35,7 @@ _ensure_implementations_registered()
 class MockDilatedAttention(BaseDilatedAttention):
     """Mock dilated attention for testing."""
 
-    def forward(self, q, k, v, is_causal=False, attention_mask=None):
+    def forward(self, q, _k, _v, _is_causal=False, _attention_mask=None):
         return q  # Simple mock implementation
 
 
@@ -48,7 +48,7 @@ class MockMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
     def _init_qkv_projections(self, factory_kwargs):
         pass  # Mock implementation
 
-    def forward(self, query, key=None, value=None, **kwargs):
+    def forward(self, query, _key=None, _value=None, **_kwargs):
         return query  # Simple mock implementation
 
 
@@ -100,8 +100,12 @@ class TestFactoryCreation:
         register_attention("standard", MockDilatedAttention)
         register_attention("improved", MockDilatedAttention)
         register_multihead_attention("multihead_test", MockMultiheadDilatedAttention)
-        register_multihead_attention("multihead_standard", MockMultiheadDilatedAttention)
-        register_multihead_attention("multihead_improved", MockMultiheadDilatedAttention)
+        register_multihead_attention(
+            "multihead_standard", MockMultiheadDilatedAttention
+        )
+        register_multihead_attention(
+            "multihead_improved", MockMultiheadDilatedAttention
+        )
 
     def teardown_method(self):
         """Restore registry state after test."""
@@ -181,7 +185,9 @@ class TestSpecializedFactories:
         _MULTIHEAD_REGISTRY.clear()
         # Register required implementations
         register_attention("block_sparse_ring", MockDilatedAttention)
-        register_multihead_attention("multihead_block_sparse_ring", MockMultiheadDilatedAttention)
+        register_multihead_attention(
+            "multihead_block_sparse_ring", MockMultiheadDilatedAttention
+        )
 
     def teardown_method(self):
         """Restore registry state after test."""
@@ -229,8 +235,12 @@ class TestAutoSelection:
         # Register implementations
         register_attention("standard", MockDilatedAttention)
         register_attention("improved", MockDilatedAttention)
-        register_multihead_attention("multihead_standard", MockMultiheadDilatedAttention)
-        register_multihead_attention("multihead_improved", MockMultiheadDilatedAttention)
+        register_multihead_attention(
+            "multihead_standard", MockMultiheadDilatedAttention
+        )
+        register_multihead_attention(
+            "multihead_improved", MockMultiheadDilatedAttention
+        )
 
     @patch("dilated_attention_pytorch.core.factory.GPU_TYPE", "h100")
     @patch("dilated_attention_pytorch.core.factory.HAS_FLASH_ATTN_3", True)

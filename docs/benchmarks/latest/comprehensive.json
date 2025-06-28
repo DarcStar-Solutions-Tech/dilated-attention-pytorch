@@ -1,1 +1,282 @@
-docs/benchmarks/by-type/comprehensive/2025-06-27-0618-UTC/benchmark-all-implementations-2025-06-27-0618-UTC.json
+{
+  "DilatedAttention": [
+    {
+      "implementation": "DilatedAttention",
+      "seq_len": 2048,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 1.123778522014618,
+      "std_time_ms": 0.14649773691956003,
+      "peak_memory_mb": 24.0,
+      "samples": [
+        1.0566888377070427,
+        1.052170991897583,
+        1.0454459115862846,
+        1.047912985086441,
+        1.4166738837957382
+      ],
+      "error": null
+    },
+    {
+      "implementation": "DilatedAttention",
+      "seq_len": 4096,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 1.9135857000946999,
+      "std_time_ms": 0.22677135513779795,
+      "peak_memory_mb": 56.125,
+      "samples": [
+        1.8638353794813156,
+        1.8773730844259262,
+        1.7200233414769173,
+        1.7560217529535294,
+        2.350674942135811
+      ],
+      "error": null
+    }
+  ],
+  "MultiheadDilatedAttention": [
+    {
+      "implementation": "MultiheadDilatedAttention",
+      "seq_len": 2048,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 2.0304519683122635,
+      "std_time_ms": 0.14423302980176433,
+      "peak_memory_mb": 48.140625,
+      "samples": [
+        1.9012102857232094,
+        1.8957825377583504,
+        2.2741807624697685,
+        1.971372403204441,
+        2.109713852405548
+      ],
+      "error": null
+    },
+    {
+      "implementation": "MultiheadDilatedAttention",
+      "seq_len": 4096,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 3.7141909822821617,
+      "std_time_ms": 0.21810654691279605,
+      "peak_memory_mb": 84.140625,
+      "samples": [
+        4.030355252325535,
+        3.4990105777978897,
+        3.801906481385231,
+        3.8016270846128464,
+        3.4380555152893066
+      ],
+      "error": null
+    }
+  ],
+  "ImprovedDilatedAttention": [
+    {
+      "implementation": "ImprovedDilatedAttention",
+      "seq_len": 2048,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 0.9219737723469734,
+      "std_time_ms": 0.02058580640409051,
+      "peak_memory_mb": 28.125,
+      "samples": [
+        0.9427014738321304,
+        0.9418688714504242,
+        0.9306510910391808,
+        0.8985232561826706,
+        0.8961241692304611
+      ],
+      "error": null
+    },
+    {
+      "implementation": "ImprovedDilatedAttention",
+      "seq_len": 4096,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 1.6424253582954407,
+      "std_time_ms": 0.12520201969990152,
+      "peak_memory_mb": 48.125,
+      "samples": [
+        1.5415232628583908,
+        1.8721604719758034,
+        1.5381630510091782,
+        1.6762148588895798,
+        1.5840651467442513
+      ],
+      "error": null
+    }
+  ],
+  "ImprovedMultiheadDilatedAttention": [
+    {
+      "implementation": "ImprovedMultiheadDilatedAttention",
+      "seq_len": 2048,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 3.5111725330352783,
+      "std_time_ms": 0.2037347057358325,
+      "peak_memory_mb": 81.140625,
+      "samples": [
+        3.658691421151161,
+        3.2379738986492157,
+        3.7423009052872658,
+        3.2969554886221886,
+        3.6199409514665604
+      ],
+      "error": null
+    },
+    {
+      "implementation": "ImprovedMultiheadDilatedAttention",
+      "seq_len": 4096,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 6.985360383987427,
+      "std_time_ms": 0.41031563108067437,
+      "peak_memory_mb": 149.015625,
+      "samples": [
+        7.120473310351372,
+        6.895740516483784,
+        7.317032665014267,
+        7.359971292316914,
+        6.233584135770798
+      ],
+      "error": null
+    }
+  ],
+  "RingDilatedAttention": [
+    {
+      "implementation": "RingDilatedAttention",
+      "seq_len": 2048,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 1.0417426005005836,
+      "std_time_ms": 0.20941297014831614,
+      "peak_memory_mb": 28.125,
+      "samples": [
+        0.9518340229988098,
+        1.459609717130661,
+        0.9332448244094849,
+        0.9130490943789482,
+        0.9509753435850143
+      ],
+      "error": null
+    },
+    {
+      "implementation": "RingDilatedAttention",
+      "seq_len": 4096,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 1.6920873895287514,
+      "std_time_ms": 0.230353384909705,
+      "peak_memory_mb": 48.125,
+      "samples": [
+        2.1525369957089424,
+        1.5737824141979218,
+        1.5916749835014343,
+        1.572566106915474,
+        1.5698764473199844
+      ],
+      "error": null
+    }
+  ],
+  "RingMultiheadDilatedAttention": [
+    {
+      "implementation": "RingMultiheadDilatedAttention",
+      "seq_len": 2048,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 3.8586249575018883,
+      "std_time_ms": 1.1129608618106261,
+      "peak_memory_mb": 74.140625,
+      "samples": [
+        3.2939547672867775,
+        6.054031662642956,
+        3.6364849656820297,
+        3.235960379242897,
+        3.0726930126547813
+      ],
+      "error": null
+    },
+    {
+      "implementation": "RingMultiheadDilatedAttention",
+      "seq_len": 4096,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 7.237820886075497,
+      "std_time_ms": 0.5225167055201876,
+      "peak_memory_mb": 134.015625,
+      "samples": [
+        6.490749306976795,
+        7.106577046215534,
+        7.8814951702952385,
+        7.7722342684865,
+        6.938048638403416
+      ],
+      "error": null
+    }
+  ],
+  "BlockSparseRingDilatedAttention": [
+    {
+      "implementation": "BlockSparseRingDilatedAttention",
+      "seq_len": 2048,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 0,
+      "std_time_ms": 0,
+      "peak_memory_mb": 0,
+      "samples": [],
+      "error": "Failed to create module"
+    },
+    {
+      "implementation": "BlockSparseRingDilatedAttention",
+      "seq_len": 4096,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 0,
+      "std_time_ms": 0,
+      "peak_memory_mb": 0,
+      "samples": [],
+      "error": "Failed to create module"
+    }
+  ],
+  "BlockSparseRingMultiheadDilatedAttention": [
+    {
+      "implementation": "BlockSparseRingMultiheadDilatedAttention",
+      "seq_len": 2048,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 0,
+      "std_time_ms": 0,
+      "peak_memory_mb": 0,
+      "samples": [],
+      "error": "Failed to create module"
+    },
+    {
+      "implementation": "BlockSparseRingMultiheadDilatedAttention",
+      "seq_len": 4096,
+      "batch_size": 1,
+      "num_heads": 8,
+      "head_dim": 64,
+      "mean_time_ms": 0,
+      "std_time_ms": 0,
+      "peak_memory_mb": 0,
+      "samples": [],
+      "error": "Failed to create module"
+    }
+  ]
+}

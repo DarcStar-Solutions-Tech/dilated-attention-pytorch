@@ -14,7 +14,7 @@ def analyze_sparsity():
     batch_size = 1
     seq_len = 2048
     num_heads = 8
-    head_dim = 64
+    _ = 64
     block_size = 32
 
     # Create sparse config
@@ -25,7 +25,9 @@ def analyze_sparsity():
     )
 
     # Create pattern generator
-    from dilated_attention_pytorch.block_sparse_ring_dilated_attention import SparsePatternGenerator
+    from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
+        SparsePatternGenerator,
+    )
 
     generator = SparsePatternGenerator(sparse_config)
 

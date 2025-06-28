@@ -60,7 +60,9 @@ def test_flash_attention_3_integration():
 
     print("Ring Attention Configuration:")
     print(f"  Flash Attention Version: {memory_info['flash_attention_version']}")
-    print(f"  Flash Attention 3 Available: {memory_info['flash_attention_3_available']}")
+    print(
+        f"  Flash Attention 3 Available: {memory_info['flash_attention_3_available']}"
+    )
     print(f"  Hardware Optimized for FA3: {memory_info['hardware_optimized_for_fa3']}")
     print(f"  SDPA Backend Available: {memory_info['sdpa_backend_available']}")
     print(f"  Memory Complexity: {memory_info['memory_complexity']}")
@@ -86,9 +88,15 @@ def test_flash_attention_3_integration():
     print(f"  Device: {device}")
 
     # Create test tensors
-    q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=torch.float16)
-    k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=torch.float16)
-    v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device, dtype=torch.float16)
+    q = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=torch.float16
+    )
+    k = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=torch.float16
+    )
+    v = torch.randn(
+        batch_size, seq_len, num_heads, head_dim, device=device, dtype=torch.float16
+    )
 
     print("\nRunning Forward Pass...")
 

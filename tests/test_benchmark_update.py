@@ -71,7 +71,9 @@ def test_benchmark_includes_block_sparse():
             print("STDOUT:", stdout[:500])
             print("STDERR:", stderr[:500])
 
-    print("\n✅ benchmark_all.py successfully updated with block sparse implementations!")
+    print(
+        "\n✅ benchmark_all.py successfully updated with block sparse implementations!"
+    )
 
 
 if __name__ == "__main__":

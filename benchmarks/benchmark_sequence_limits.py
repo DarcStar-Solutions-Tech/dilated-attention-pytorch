@@ -7,7 +7,9 @@ import time
 from dataclasses import dataclass
 
 import GPUtil
-import psutil
+import psutil  # noqa: PLC0415
+from pathlib import Path
+import sys
 import torch
 
 # Import all implementations
@@ -15,6 +17,10 @@ from dilated_attention_pytorch import (
     DilatedAttention,
     ImprovedDilatedAttention,
     MultiheadDilatedAttention,
+
+# Import unified benchmark output management
+sys.path.insert(0, str(Path(__file__).parent))
+from core import BenchmarkOutputManager
 )
 from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
     BlockSparseRingDilatedAttention,
@@ -24,7 +30,9 @@ from dilated_attention_pytorch.improved_multihead_dilated_attention import (
     ImprovedMultiheadDilatedAttention,
 )
 from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
-from dilated_attention_pytorch.ring_multihead_dilated_attention import RingMultiheadDilatedAttention
+from dilated_attention_pytorch.ring_multihead_dilated_attention import (
+    RingMultiheadDilatedAttention,
+)
 
 
 @dataclass
@@ -444,7 +452,9 @@ class SequenceLengthBenchmark:
         print("SUMMARY: Maximum Sequence Lengths")
         print("=" * 80)
 
-        for name, max_len in sorted(max_lengths.items(), key=lambda x: x[1], reverse=True):
+        for name, max_len in sorted(
+            max_lengths.items(), key=lambda x: x[1], reverse=True
+        ):
             if max_len > 0:
                 print(f"{name:30} {max_len:>10,} tokens")
             else:
@@ -536,3 +546,18 @@ class SequenceLengthBenchmark:
 if __name__ == "__main__":
     benchmark = SequenceLengthBenchmark()
     benchmark.run_comprehensive_benchmark()
+
+    # Use unified benchmark output management
+    output_manager = BenchmarkOutputManager(
+        benchmark_type="sequence-limits",
+        parameters={}
+    )
+    
+    # Add results
+    output_manager.add_result("results", results)
+    
+    # Save results
+    output_paths = output_manager.save_results()
+    print(f"\nResults saved to:")
+    for path_type, path in output_paths.items():
+        print(f"  {path_type}: {path}")

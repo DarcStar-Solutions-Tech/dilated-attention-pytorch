@@ -102,7 +102,10 @@ class DistributedCodeChecker(ast.NodeVisitor):
         """Check if function has distributed initialization check."""
         for stmt in ast.walk(node):
             if isinstance(stmt, ast.Call):
-                if isinstance(stmt.func, ast.Attribute) and stmt.func.attr == "is_initialized":
+                if (
+                    isinstance(stmt.func, ast.Attribute)
+                    and stmt.func.attr == "is_initialized"
+                ):
                     return True
         return False
 

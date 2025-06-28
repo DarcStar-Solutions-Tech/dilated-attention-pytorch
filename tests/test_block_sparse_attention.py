@@ -186,7 +186,9 @@ class TestBlockSparseRingDilatedAttention:
         config = TEST_CONFIGS["small"]
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        sparse_config = SparsePatternConfig(pattern_type="local_window", sparsity_ratio=0.5)
+        sparse_config = SparsePatternConfig(
+            pattern_type="local_window", sparsity_ratio=0.5
+        )
 
         attention = BlockSparseRingDilatedAttention(
             segment_lengths=[512, 1024],
@@ -220,7 +222,9 @@ class TestBlockSparseRingDilatedAttention:
         config = TEST_CONFIGS["small"]
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        sparse_config = SparsePatternConfig(pattern_type="local_window", sparsity_ratio=0.3)
+        sparse_config = SparsePatternConfig(
+            pattern_type="local_window", sparsity_ratio=0.3
+        )
 
         attention = BlockSparseRingDilatedAttention(
             segment_lengths=[512],
@@ -250,7 +254,9 @@ class TestBlockSparseRingDilatedAttention:
         config = TEST_CONFIGS["small"]
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        sparse_config = SparsePatternConfig(pattern_type="dilated_sparse", sparsity_ratio=0.25)
+        sparse_config = SparsePatternConfig(
+            pattern_type="dilated_sparse", sparsity_ratio=0.25
+        )
 
         attention = BlockSparseRingDilatedAttention(
             segment_lengths=[512],
@@ -351,7 +357,9 @@ class TestBlockSparseRingMultiheadDilatedAttention:
 
         # Forward passes
         sparse_output, sparse_weights = sparse_attention(query, need_weights=True)
-        dense_output, dense_weights = dense_attention(query, query, query, need_weights=True)
+        dense_output, dense_weights = dense_attention(
+            query, query, query, need_weights=True
+        )
 
         # Shapes should match
         assert sparse_output.shape == dense_output.shape
@@ -367,7 +375,9 @@ class TestBlockSparseRingMultiheadDilatedAttention:
         num_heads = 8
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        projection = FusedQKVProjection(embed_dim=embed_dim, num_heads=num_heads, device=device)
+        projection = FusedQKVProjection(
+            embed_dim=embed_dim, num_heads=num_heads, device=device
+        )
 
         batch = 2
         seq_len = 1024
@@ -386,7 +396,9 @@ class TestBlockSparseRingMultiheadDilatedAttention:
         assert v.shape == expected_shape
 
         # Test output projection
-        attention_output = torch.randn(batch, seq_len, num_heads, head_dim, device=device)
+        attention_output = torch.randn(
+            batch, seq_len, num_heads, head_dim, device=device
+        )
         output = projection.project_output(attention_output)
 
         assert output.shape == (batch, seq_len, embed_dim)
@@ -466,7 +478,9 @@ class TestBlockSparseAdvancedDistributedAttention:
 
     def test_load_balancing(self):
         """Test load balancing functionality"""
-        config = DistributedSparseConfig(enable_load_balancing=True, load_balance_threshold=0.15)
+        config = DistributedSparseConfig(
+            enable_load_balancing=True, load_balance_threshold=0.15
+        )
 
         world_size = 4
         rank = 0
@@ -494,7 +508,7 @@ class TestBlockSparseAdvancedDistributedAttention:
         config = TEST_CONFIGS["small"]
         device = torch.device("cuda")
 
-        distributed_config = DistributedSparseConfig(
+        _ = DistributedSparseConfig(
             pattern_type=DistributedSparsePattern.HIERARCHICAL, sparsity_ratio=0.25
         )
 
@@ -533,7 +547,9 @@ class TestSparsePatternUtils:
     )
     def test_utils_pattern_generation(self, pattern_type):
         """Test pattern generation using utilities"""
-        config = PatternConfig(pattern_type=pattern_type, sparsity_ratio=0.3, block_size=128)
+        config = PatternConfig(
+            pattern_type=pattern_type, sparsity_ratio=0.3, block_size=128
+        )
 
         generator = UtilsSparsePatternGenerator(config)
 
@@ -579,10 +595,14 @@ class TestSparsePatternUtils:
         # Create suboptimal pattern
         num_heads = 2
         num_blocks = 8
-        initial_pattern = torch.rand(num_heads, num_blocks, num_blocks) > 0.9  # Very sparse
+        initial_pattern = (
+            torch.rand(num_heads, num_blocks, num_blocks) > 0.9
+        )  # Very sparse
 
         # Optimize pattern
-        optimized_pattern = optimizer.optimize_pattern(initial_pattern, max_iterations=3)
+        optimized_pattern = optimizer.optimize_pattern(
+            initial_pattern, max_iterations=3
+        )
 
         assert optimized_pattern.shape == initial_pattern.shape
         assert optimized_pattern.dtype == torch.bool

@@ -54,7 +54,11 @@ from .factory import (
     register_attention,
     register_multihead_attention,
 )
-from .memory_pool import UnifiedMemoryPool, get_global_memory_pool, reset_global_memory_pool
+from .memory_pool import (
+    UnifiedMemoryPool,
+    get_global_memory_pool,
+    reset_global_memory_pool,
+)
 
 __all__ = [
     # Base classes
