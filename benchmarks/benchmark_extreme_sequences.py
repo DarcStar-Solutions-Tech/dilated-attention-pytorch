@@ -1,490 +1,322 @@
 #!/usr/bin/env python3
 """
-Extreme long sequence benchmark - push GPU memory to the limit.
-
-This script tests the maximum sequence lengths possible on available GPUs.
+Benchmark for extreme sequence length processing with memory pools.
+Tests the limits of what's possible with and without memory optimization.
 """
 
-import argparse
 import gc
-import json
-import os
-
-# Add parent directory to path
-import sys
-from datetime import datetime
-
-from pathlib import Path
+import time
 import torch
-from torch import cuda
+import psutil
+import os
+from dataclasses import dataclass
+from typing import Optional, Tuple, List
 
-
-# Import unified benchmark output management
-sys.path.insert(0, str(Path(__file__).parent))
-from core import BenchmarkOutputManager
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+from dilated_attention_pytorch.core import create_dilated_attention
 from dilated_attention_pytorch import (
+    RingDilatedAttentionV2,
     BlockSparseRingDilatedAttention,
-    ImprovedDilatedAttention,
-    RingDilatedAttention,
-    SparsePatternConfig,
 )
 
 
-def get_gpu_memory_info() -> dict:
-    """Get current GPU memory usage."""
-    if not cuda.is_available():
-        return {"allocated": 0, "reserved": 0, "free": 0}
+@dataclass
+class SequenceTestResult:
+    seq_len: int
+    batch_size: int
+    success: bool
+    time_ms: Optional[float]
+    memory_gb: Optional[float]
+    error: Optional[str]
+    implementation: str
+    pool_enabled: bool
 
-    return {
-        "allocated": cuda.memory_allocated() / 1024**3,  # GB
-        "reserved": cuda.memory_reserved() / 1024**3,
-        "free": (cuda.get_device_properties(0).total_memory - cuda.memory_allocated())
-        / 1024**3,
-    }
 
-
-def estimate_max_sequence_length(
-    implementation: str,
-    num_heads: int = 8,
-    head_dim: int = 64,
-    batch_size: int = 1,
-    dtype: torch.dtype = torch.float16,
-) -> int:
-    """Estimate maximum sequence length based on available memory."""
-    if not cuda.is_available():
-        return 1024
-
-    # Get available memory (leave 1GB buffer)
-    total_memory = cuda.get_device_properties(0).total_memory
-    available_memory = total_memory - 1024**3  # 1GB buffer
-
-    # Estimate memory per token (rough approximation)
-    bytes_per_element = 2 if dtype == torch.float16 else 4
-    embed_dim = num_heads * head_dim
-
-    # Memory formula (simplified):
-    # - Inputs: 3 * batch * seq * embed * bytes (Q, K, V)
-    # - Outputs: batch * seq * embed * bytes
-    # - Attention workspace: varies by implementation
-
-    if implementation == "BlockSparseRingDilatedAttention":
-        # Sparse uses much less memory
-        memory_per_token = 4 * embed_dim * bytes_per_element * batch_size
-        workspace_factor = 0.1  # 10% of dense attention
-    elif implementation == "RingDilatedAttention":
-        # Ring attention has O(n) memory
-        memory_per_token = 6 * embed_dim * bytes_per_element * batch_size
-        workspace_factor = 0.5
+def get_memory_info():
+    """Get current memory usage in GB."""
+    if torch.cuda.is_available():
+        # GPU memory
+        allocated = torch.cuda.memory_allocated() / 1024**3
+        reserved = torch.cuda.memory_reserved() / 1024**3
+        return allocated, reserved
     else:
-        # Standard attention
-        memory_per_token = 8 * embed_dim * bytes_per_element * batch_size
-        workspace_factor = 1.0
-
-    # Add workspace memory (rough estimate)
-    memory_per_token *= 1 + workspace_factor
-
-    # Calculate max tokens
-    max_tokens = int(available_memory / memory_per_token)
-
-    # Round down to nearest power of 2 for better performance
-    import math
-
-    max_tokens = 2 ** int(math.log2(max_tokens))
-
-    return max_tokens
+        # CPU memory
+        process = psutil.Process(os.getpid())
+        return process.memory_info().rss / 1024**3, 0
 
 
-def test_sequence_length(  # noqa: PLR0912
-    implementation: str,
+def clear_memory():
+    """Aggressively clear all memory."""
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+
+
+def test_sequence_length(
+    impl_type: str,
     seq_len: int,
     batch_size: int = 1,
     num_heads: int = 8,
     head_dim: int = 64,
-    dtype: torch.dtype = torch.float16,
-    num_runs: int = 3,
-) -> dict:
-    """Test a specific sequence length and return metrics."""
-    device = torch.device("cuda" if cuda.is_available() else "cpu")
+    enable_pool: Optional[bool] = None,
+    use_ring_size: Optional[int] = None,
+) -> SequenceTestResult:
+    """Test a specific sequence length configuration."""
+    clear_memory()
 
-    print(f"\nTesting {implementation} with sequence length {seq_len:,}...")
-
-    # Clear cache
-    gc.collect()
-    if cuda.is_available():
-        cuda.empty_cache()
-        cuda.reset_peak_memory_stats()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     try:
-        # Create module - ensure sequence length is divisible by largest segment
-        if seq_len <= 8192:
-            segment_lengths = [seq_len]
-            dilation_rates = [1]
+        # Create attention module
+        if impl_type == "ring_manual":
+            # Manual ring attention for extreme sequences
+            attention = RingDilatedAttentionV2(
+                segment_lengths=[seq_len // 4, seq_len // 2, seq_len],
+                dilation_rates=[1, 2, 4],
+                ring_size=use_ring_size,
+                enable_memory_pool=enable_pool if enable_pool is not None else True,
+                lightweight_pool=False,  # Full pool for extreme sequences
+            )
+            pool_enabled = enable_pool if enable_pool is not None else True
+        elif impl_type == "block_sparse":
+            # Block sparse for extreme sequences
+            attention = BlockSparseRingDilatedAttention(
+                segment_lengths=[seq_len // 4, seq_len // 2, seq_len],
+                dilation_rates=[1, 2, 4],
+                sparsity_ratio=0.95,  # 95% sparse for extreme sequences
+                enable_memory_pool=enable_pool if enable_pool is not None else True,
+            )
+            pool_enabled = enable_pool if enable_pool is not None else True
         else:
-            # Determine largest segment that divides seq_len
-            if seq_len % 131072 == 0:
-                base_segment = 131072
-            elif seq_len % 65536 == 0:
-                base_segment = 65536
-            elif seq_len % 32768 == 0:
-                base_segment = 32768
-            elif seq_len % 16384 == 0:
-                base_segment = 16384
-            elif seq_len % 8192 == 0:
-                base_segment = 8192
-            else:
-                # Round seq_len up to nearest multiple of 8192
-                seq_len = ((seq_len + 8191) // 8192) * 8192
-                base_segment = 8192
+            # Use factory
+            kwargs = {}
+            if enable_pool is not None:
+                kwargs["enable_memory_pool"] = enable_pool
 
-            # Build segment lengths
-            segment_lengths = []
-            dilation_rates = []
-            current = base_segment
-            rate = 1
-
-            while current <= seq_len and len(segment_lengths) < 4:
-                segment_lengths.append(current)
-                dilation_rates.append(rate)
-                if current == seq_len:
-                    break
-                current = min(current * 2, seq_len)
-                rate = min(rate * 2, 8)
-
-        if implementation == "BlockSparseRingDilatedAttention":
-            sparse_config = SparsePatternConfig(
-                pattern_type="dilated_sparse",
-                sparsity_ratio=0.05,  # 95% sparse
-                block_size=128,
-                local_window_size=512,
+            attention = create_dilated_attention(
+                impl_type,
+                segment_lengths=[seq_len // 4, seq_len // 2, seq_len],
+                dilation_rates=[1, 2, 4],
+                **kwargs,
             )
-            module = (
-                BlockSparseRingDilatedAttention(
-                    segment_lengths=segment_lengths,
-                    dilation_rates=dilation_rates,
-                    sparse_config=sparse_config,
-                )
-                .to(device)
-                .to(dtype)
-            )
-        elif implementation == "RingDilatedAttention":
-            module = (
-                RingDilatedAttention(
-                    segment_lengths=segment_lengths,
-                    dilation_rates=dilation_rates,
-                    ring_size=1,
-                )
-                .to(device)
-                .to(dtype)
-            )
-        else:  # ImprovedDilatedAttention
-            module = (
-                ImprovedDilatedAttention(
-                    segment_lengths=segment_lengths,
-                    dilation_rates=dilation_rates,
-                )
-                .to(device)
-                .to(dtype)
-            )
+            pool_enabled = getattr(attention, "enable_memory_pool", None)
 
-        # Create inputs
-        q = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
-        k = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
-        v = torch.randn(
-            batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
-        )
+        # Create inputs with reduced precision for extreme sequences
+        dtype = torch.float16 if seq_len > 32768 else torch.float32
+        shape = (batch_size, seq_len, num_heads, head_dim)
 
-        # Get memory after allocation
-        _ = get_gpu_memory_info()  # Could be used for debugging
+        q = torch.randn(shape, device=device, dtype=dtype)
+        k = torch.randn(shape, device=device, dtype=dtype)
+        v = torch.randn(shape, device=device, dtype=dtype)
 
         # Warmup
-        with torch.no_grad():
-            _ = module(q, k, v)
+        _ = attention(q, k, v)
 
-        if cuda.is_available():
-            cuda.synchronize()
+        if device.type == "cuda":
+            torch.cuda.synchronize()
 
-        # Benchmark
-        import time
+        # Time the forward pass
+        start = time.perf_counter()
+        output = attention(q, k, v)
 
-        times = []
+        if device.type == "cuda":
+            torch.cuda.synchronize()
 
-        for _ in range(num_runs):
-            if cuda.is_available():
-                cuda.synchronize()
+        end = time.perf_counter()
+        time_ms = (end - start) * 1000
 
-            start = time.perf_counter()
-            with torch.no_grad():
-                output = module(q, k, v)
-
-            if cuda.is_available():
-                cuda.synchronize()
-
-            end = time.perf_counter()
-            times.append((end - start) * 1000)  # ms
-
-        # Get peak memory
-        peak_memory = (
-            cuda.max_memory_allocated() / 1024**3 if cuda.is_available() else 0
-        )
-
-        # Calculate metrics
-        mean_time = sum(times) / len(times)
-        throughput = (seq_len * batch_size) / (mean_time / 1000) / 1e6  # M tokens/s
-        memory_per_token = peak_memory / (seq_len * batch_size) * 1024  # MB/token
-
-        result = {
-            "success": True,
-            "seq_len": seq_len,
-            "batch_size": batch_size,
-            "mean_time_ms": mean_time,
-            "throughput_mtoks": throughput,
-            "peak_memory_gb": peak_memory,
-            "memory_per_token_mb": memory_per_token,
-            "times": times,
-        }
-
-        print(
-            f"  ✓ Success: {mean_time:.1f}ms, {peak_memory:.2f}GB, {throughput:.2f}M tok/s"
-        )
+        # Get memory usage
+        mem_allocated, mem_reserved = get_memory_info()
 
         # Cleanup
-        del module, q, k, v, output
-        gc.collect()
-        if cuda.is_available():
-            cuda.empty_cache()
+        del q, k, v, output, attention
+        clear_memory()
 
-    except RuntimeError as e:
-        if "out of memory" in str(e):
-            print(f"  ✗ OOM at sequence length {seq_len:,}")
-            return {
-                "success": False,
-                "seq_len": seq_len,
-                "batch_size": batch_size,
-                "error": "OOM",
-            }
-        print(f"  ✗ Error: {e}")
-        return {
-            "success": False,
-            "seq_len": seq_len,
-            "batch_size": batch_size,
-            "error": str(e),
-        }
-    else:
-        return result
+        return SequenceTestResult(
+            seq_len=seq_len,
+            batch_size=batch_size,
+            success=True,
+            time_ms=time_ms,
+            memory_gb=mem_allocated,
+            error=None,
+            implementation=impl_type,
+            pool_enabled=pool_enabled,
+        )
+
+    except Exception as e:
+        return SequenceTestResult(
+            seq_len=seq_len,
+            batch_size=batch_size,
+            success=False,
+            time_ms=None,
+            memory_gb=None,
+            error=str(e),
+            implementation=impl_type,
+            pool_enabled=enable_pool,
+        )
 
 
 def find_max_sequence_length(
-    implementation: str,
-    start_seq_len: int,
-    batch_size: int = 1,
-    num_heads: int = 8,
-    head_dim: int = 64,
-    dtype: torch.dtype = torch.float16,
-) -> int:
-    """Binary search to find maximum sequence length."""
-    print(f"\nFinding maximum sequence length for {implementation}...")
+    impl_type: str, enable_pool: bool
+) -> Tuple[int, List[SequenceTestResult]]:
+    """Binary search to find maximum supported sequence length."""
+    results = []
 
-    # Start with estimated max
-    estimated_max = estimate_max_sequence_length(
-        implementation, num_heads, head_dim, batch_size, dtype
-    )
-    print(f"Estimated maximum: {estimated_max:,} tokens")
+    # Start with reasonable bounds
+    min_len = 1024
+    max_len = 1_000_000  # 1M tokens
 
-    # Binary search
-    low = start_seq_len
-    high = estimated_max * 2  # Try higher than estimate
-    last_success = low
+    # First, find upper bound that fails
+    test_len = 8192
+    while test_len <= max_len:
+        result = test_sequence_length(impl_type, test_len, enable_pool=enable_pool)
+        results.append(result)
 
-    while low <= high:
-        mid = (low + high) // 2
-        # Round to nearest 8192 for proper divisibility
-        mid = (mid // 8192) * 8192
-
-        if mid == 0:
+        if not result.success:
+            max_len = test_len
             break
 
-        result = test_sequence_length(
-            implementation, mid, batch_size, num_heads, head_dim, dtype, num_runs=1
+        test_len *= 2
+
+    # Binary search for exact limit
+    while max_len - min_len > 1024:
+        mid_len = (min_len + max_len) // 2
+        mid_len = (mid_len // 1024) * 1024  # Round to nearest 1024
+
+        result = test_sequence_length(impl_type, mid_len, enable_pool=enable_pool)
+        results.append(result)
+
+        if result.success:
+            min_len = mid_len
+        else:
+            max_len = mid_len
+
+    return min_len, results
+
+
+def benchmark_extreme_sequences():
+    """Run comprehensive extreme sequence benchmarks."""
+    print("=" * 80)
+    print("EXTREME SEQUENCE LENGTH BENCHMARK")
+    print("=" * 80)
+    print(f"Device: {'CUDA' if torch.cuda.is_available() else 'CPU'}")
+    if torch.cuda.is_available():
+        print(f"GPU: {torch.cuda.get_device_name()}")
+        print(
+            f"Total Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB"
         )
+    print()
 
-        if result["success"]:
-            last_success = mid
-            low = mid + 8192
-        else:
-            high = mid - 8192
+    # Test configurations for extreme sequences
+    extreme_configs = [
+        # (seq_len, batch_size, description)
+        (16384, 1, "16K tokens"),
+        (32768, 1, "32K tokens"),
+        (65536, 1, "64K tokens"),
+        (131072, 1, "128K tokens"),
+        (262144, 1, "256K tokens"),
+        (524288, 1, "512K tokens"),
+        (1048576, 1, "1M tokens"),
+    ]
 
-    return last_success
+    implementations = [
+        ("improved", "Improved Attention"),
+        ("ring_manual", "Ring Attention"),
+        ("block_sparse", "Block Sparse (95% sparse)"),
+    ]
 
+    results_by_impl = {}
 
-def main():
-    parser = argparse.ArgumentParser(description="Extreme long sequence benchmark")
-    parser.add_argument(
-        "--implementations",
-        nargs="+",
-        default=[
-            "BlockSparseRingDilatedAttention",
-            "RingDilatedAttention",
-            "ImprovedDilatedAttention",
-        ],
-        help="Implementations to test",
-    )
-    parser.add_argument("--batch-size", type=int, default=1, help="Batch size")
-    parser.add_argument(
-        "--num-heads", type=int, default=8, help="Number of attention heads"
-    )
-    parser.add_argument("--head-dim", type=int, default=64, help="Dimension per head")
-    parser.add_argument(
-        "--dtype", type=str, default="float16", help="Data type (float16/float32)"
-    )
-    parser.add_argument(
-        "--num-runs", type=int, default=3, help="Number of benchmark runs"
-    )
-    parser.add_argument(
-        "--sequence-lengths",
-        type=int,
-        nargs="+",
-        help="Specific sequence lengths to test (otherwise auto-detect)",
-    )
+    for impl_type, impl_name in implementations:
+        print(f"\n{impl_name}")
+        print("-" * 60)
 
-    args = parser.parse_args()
+        results = []
 
-    # Setup
-    device = torch.device("cuda" if cuda.is_available() else "cpu")
-    dtype = torch.float16 if args.dtype == "float16" else torch.float32
+        for seq_len, batch_size, description in extreme_configs:
+            print(f"\nTesting {description}...")
 
-    print("=" * 80)
-    print("EXTREME LONG SEQUENCE BENCHMARK")
-    print("=" * 80)
-    print(f"Device: {device}")
-    if cuda.is_available():
-        print(f"GPU: {cuda.get_device_name()}")
-        total_memory = cuda.get_device_properties(0).total_memory / 1024**3
-        print(f"Total Memory: {total_memory:.2f} GB")
-    print(f"Batch Size: {args.batch_size}")
-    print(f"Num Heads: {args.num_heads}, Head Dim: {args.head_dim}")
-    print(f"Data Type: {dtype}")
-
-    results = {}
-
-    for impl in args.implementations:
-        print(f"\n{'=' * 60}")
-        print(f"Testing {impl}")
-        print(f"{'=' * 60}")
-
-        if args.sequence_lengths:
-            # Test specific lengths
-            impl_results = []
-            for seq_len in args.sequence_lengths:
-                result = test_sequence_length(
-                    impl,
-                    seq_len,
-                    args.batch_size,
-                    args.num_heads,
-                    args.head_dim,
-                    dtype,
-                    args.num_runs,
-                )
-                impl_results.append(result)
-        else:
-            # Auto-detect maximum
-            max_len = find_max_sequence_length(
-                impl, 32768, args.batch_size, args.num_heads, args.head_dim, dtype
+            # Test with memory pool
+            result_with_pool = test_sequence_length(
+                impl_type,
+                seq_len,
+                batch_size,
+                enable_pool=True,
+                use_ring_size=8 if "ring" in impl_type else None,
             )
+            results.append(("With Pool", result_with_pool))
 
-            print(f"\nMaximum sequence length: {max_len:,} tokens")
-
-            # Test a range of lengths up to max
-            test_lengths = []
-            current = 32768
-            while current <= max_len:
-                test_lengths.append(current)
-                current *= 2
-
-            if test_lengths[-1] != max_len:
-                test_lengths.append(max_len)
-
-            impl_results = []
-            for seq_len in test_lengths:
-                result = test_sequence_length(
-                    impl,
-                    seq_len,
-                    args.batch_size,
-                    args.num_heads,
-                    args.head_dim,
-                    dtype,
-                    args.num_runs,
+            # Test without memory pool (only if with pool succeeded and seq < 128K)
+            if result_with_pool.success and seq_len <= 131072:
+                result_no_pool = test_sequence_length(
+                    impl_type, seq_len, batch_size, enable_pool=False
                 )
-                impl_results.append(result)
+                results.append(("No Pool", result_no_pool))
 
-        results[impl] = impl_results
+                # Calculate speedup
+                if result_no_pool.success:
+                    speedup = result_no_pool.time_ms / result_with_pool.time_ms
+                    mem_saving = (
+                        (result_no_pool.memory_gb - result_with_pool.memory_gb)
+                        / result_no_pool.memory_gb
+                        * 100
+                    )
+                    print(
+                        f"  Pool Impact: {speedup:.2f}x speedup, {mem_saving:.1f}% memory reduction"
+                    )
 
-    # Save results
-    timestamp = datetime.now().strftime("%Y-%m-%d-%H%M-UTC")
-    output_file = f"docs/benchmarks/benchmark-extreme-sequences-{timestamp}.json"
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+            # Print results
+            for config, result in results[-2:]:
+                if result.success:
+                    print(
+                        f"  {config}: ✓ {result.time_ms:.1f}ms, {result.memory_gb:.2f}GB"
+                    )
+                else:
+                    print(f"  {config}: ✗ {result.error}")
 
-    with open(output_file, "w") as f:
-        json.dump(
-            {
-                "metadata": {
-                    "timestamp": timestamp,
-                    "device": str(device),
-                    "gpu": cuda.get_device_name() if cuda.is_available() else "N/A",
-                    "total_memory_gb": cuda.get_device_properties(0).total_memory
-                    / 1024**3
-                    if cuda.is_available()
-                    else 0,
-                    "batch_size": args.batch_size,
-                    "num_heads": args.num_heads,
-                    "head_dim": args.head_dim,
-                    "dtype": str(dtype),
-                },
-                "results": results,
-            },
-            f,
-            indent=2,
-        )
+        results_by_impl[impl_name] = results
 
-    print(f"\nResults saved to: {output_file}")
-
-    # Print summary
+    # Find maximum sequence lengths
     print("\n" + "=" * 80)
-    print("SUMMARY")
+    print("MAXIMUM SEQUENCE LENGTH ANALYSIS")
     print("=" * 80)
 
-    for impl, impl_results in results.items():
-        print(f"\n{impl}:")
-        successful = [r for r in impl_results if r.get("success", False)]
-        if successful:
-            max_result = max(successful, key=lambda x: x["seq_len"])
-            print(f"  Maximum sequence length: {max_result['seq_len']:,} tokens")
-            print(f"  Peak memory: {max_result['peak_memory_gb']:.2f} GB")
-            print(f"  Throughput: {max_result['throughput_mtoks']:.2f} M tokens/s")
-            print(f"  Memory per token: {max_result['memory_per_token_mb']:.3f} MB")
-        else:
-            print("  No successful runs")
+    for impl_type, impl_name in implementations:
+        print(f"\n{impl_name}:")
+
+        # With memory pool
+        max_with_pool, _ = find_max_sequence_length(impl_type, enable_pool=True)
+        print(f"  Max with pool: {max_with_pool:,} tokens")
+
+        # Without memory pool (only for standard implementations)
+        if impl_type == "improved":
+            max_no_pool, _ = find_max_sequence_length(impl_type, enable_pool=False)
+            print(f"  Max without pool: {max_no_pool:,} tokens")
+            print(f"  Pool enables {max_with_pool / max_no_pool:.1f}x longer sequences")
+
+    # Extreme sequence recommendations
+    print("\n" + "=" * 80)
+    print("RECOMMENDATIONS FOR EXTREME SEQUENCES")
+    print("=" * 80)
+
+    print("\n1. For 16K-64K tokens:")
+    print("   - ImprovedDilatedAttention with memory pools")
+    print("   - Provides best balance of speed and memory")
+
+    print("\n2. For 64K-256K tokens:")
+    print("   - Ring Attention becomes necessary")
+    print("   - O(n) memory complexity enables these lengths")
+
+    print("\n3. For 256K-1M tokens:")
+    print("   - Block Sparse Ring Attention")
+    print("   - 95% sparsity dramatically reduces compute")
+
+    print("\n4. For >1M tokens:")
+    print("   - Distributed Block Sparse Ring Attention")
+    print("   - Requires multi-GPU setup")
+
+    print("\n✓ Benchmark completed!")
 
 
 if __name__ == "__main__":
-    main()
-
-    # Use unified benchmark output management
-    output_manager = BenchmarkOutputManager(
-        benchmark_type="extreme-sequences", parameters={}
-    )
-
-    # Add results
-    output_manager.add_result("results", results)
-
-    # Save results
-    output_paths = output_manager.save_results()
-    print("\nResults saved to:")
-    for path_type, path in output_paths.items():
-        print(f"  {path_type}: {path}")
+    benchmark_extreme_sequences()

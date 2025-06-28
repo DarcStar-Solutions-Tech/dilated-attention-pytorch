@@ -90,6 +90,9 @@ def create_dilated_attention(
             f"Unknown attention type '{attention_type}'. Available types: {available}"
         )
 
+    # Auto-enable memory pool based on sequence length and implementation
+    _auto_configure_memory_pool(attention_type, segment_lengths, kwargs)
+
     # Create configuration
     config_class = _get_config_class(attention_type)
     filtered_kwargs = _filter_kwargs(config_class, kwargs)
@@ -113,6 +116,42 @@ def create_dilated_attention(
             device=config.device,
             dtype=config.dtype,
             **kwargs,  # Pass through remaining kwargs
+        )
+    elif attention_type in ["standard", "improved"]:
+        # These implementations need individual parameters + memory pool settings
+        # Filter kwargs to only include what each implementation accepts
+        if attention_type == "standard":
+            module = cls(
+                segment_lengths=config.segment_lengths,
+                dilation_rates=config.dilation_rates,
+                attention_dropout=config.dropout,
+                **kwargs,  # This includes memory pool settings
+            )
+        else:  # improved
+            module = cls(
+                segment_lengths=config.segment_lengths,
+                dilation_rates=config.dilation_rates,
+                dropout=config.dropout,
+                use_tf32=config.use_tf32,
+                **kwargs,  # This includes memory pool settings
+            )
+    elif attention_type in ["distributed", "improved_distributed"]:
+        # Distributed implementations need individual parameters
+        # Filter out memory pool kwargs since distributed doesn't support them yet
+        distributed_kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k
+            not in ["enable_memory_pool", "lightweight_pool", "enable_buffer_manager"]
+        }
+        module = cls(
+            segment_lengths=config.segment_lengths,
+            dilation_rates=config.dilation_rates,
+            dropout=config.dropout,
+            use_tf32=config.use_tf32,
+            device=config.device,
+            dtype=config.dtype,
+            **distributed_kwargs,
         )
     else:
         module = cls(config)
@@ -172,6 +211,9 @@ def create_multihead_dilated_attention(  # noqa: PLR0912
         raise ValueError(
             f"Unknown attention type '{attention_type}'. Available types: {available}"
         )
+
+    # Auto-enable memory pool based on sequence length and implementation
+    _auto_configure_memory_pool(attention_type, segment_lengths, kwargs)
 
     # Check if configs were passed directly
     multihead_config_passed = kwargs.get("multihead_config")
@@ -246,6 +288,10 @@ def create_multihead_dilated_attention(  # noqa: PLR0912
             "dilation_rates",
             "embed_dim",
             "num_heads",
+            # Memory pool settings are handled internally
+            "enable_memory_pool",
+            "lightweight_pool",
+            "enable_buffer_manager",
         ]
     }
 
@@ -459,6 +505,59 @@ def _get_config_class(attention_type: str) -> type:
     }
 
     return config_mapping.get(attention_type, DilatedAttentionConfig)
+
+
+def _auto_configure_memory_pool(
+    attention_type: str, segment_lengths: list, kwargs: dict
+) -> None:
+    """
+    Automatically configure memory pool settings based on implementation and sequence lengths.
+
+    Args:
+        attention_type: Type of attention implementation
+        segment_lengths: List of segment lengths
+        kwargs: Keyword arguments dict to update
+    """
+    # Don't override if user explicitly set memory pool settings
+    if "enable_memory_pool" in kwargs or "enable_buffer_manager" in kwargs:
+        return
+
+    # Get maximum sequence length
+    max_seq_len = max(segment_lengths)
+
+    # Determine if memory pool would be beneficial
+    # Memory pools are beneficial for:
+    # 1. Long sequences (>= 4096 tokens)
+    # 2. Ring attention (always benefits from memory pools)
+    # 3. Distributed implementations (reduce allocation overhead)
+    # 4. Block-sparse implementations (complex allocation patterns)
+
+    should_enable_pool = (
+        max_seq_len >= 4096
+        or "ring" in attention_type
+        or "distributed" in attention_type
+        or "block_sparse" in attention_type
+    )
+
+    if should_enable_pool:
+        # Choose appropriate memory pool settings based on implementation
+        # Note: ImprovedDilatedAttentionV2 would use buffer manager, but we're using
+        # ImprovedDilatedAttention from factory which uses memory pools
+        kwargs["enable_memory_pool"] = True
+        kwargs["lightweight_pool"] = (
+            max_seq_len < 8192
+        )  # Use lightweight for medium sequences
+        logger.info(
+            f"Auto-enabled memory pool for {attention_type} "
+            f"(max seq length: {max_seq_len}, lightweight: {kwargs.get('lightweight_pool', False)})"
+        )
+    else:
+        # Explicitly disable for short sequences to avoid overhead
+        kwargs["enable_memory_pool"] = False
+        logger.debug(
+            f"Memory pool disabled for {attention_type} with short sequences "
+            f"(max seq length: {max_seq_len})"
+        )
 
 
 # Import and register implementations when available

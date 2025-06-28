@@ -63,12 +63,16 @@ class BlockSparseRingDilatedAttention(RingDilatedAttentionV2):
         enable_profiling = kwargs.get("enable_profiling", False)
         lightweight_pool = kwargs.get("lightweight_pool", True)
 
+        # Extract sparsity_ratio if provided directly (for compatibility)
+        sparsity_ratio = kwargs.pop("sparsity_ratio", None)
+
         # Filter out any remaining BlockSparse-specific parameters
         block_sparse_params = {
             "use_adaptive_sparsity",
             "quality_threshold",
             "enable_packed_comm",
             "enable_hardware_opt",
+            "use_tf32",  # RingDilatedAttentionV2 doesn't accept this
         }
         filtered_kwargs = {
             k: v for k, v in kwargs.items() if k not in block_sparse_params
@@ -84,8 +88,14 @@ class BlockSparseRingDilatedAttention(RingDilatedAttentionV2):
         # Handle both dict and SparsePatternConfig
         if isinstance(sparse_config, dict):
             self.sparse_config = SparsePatternConfig(**sparse_config)
+        elif sparse_config is not None:
+            self.sparse_config = sparse_config
         else:
-            self.sparse_config = sparse_config or SparsePatternConfig()
+            # Create default config, optionally with provided sparsity_ratio
+            config_kwargs = {}
+            if sparsity_ratio is not None:
+                config_kwargs["sparsity_ratio"] = sparsity_ratio
+            self.sparse_config = SparsePatternConfig(**config_kwargs)
 
         self.block_size = self.sparse_config.block_size
 
