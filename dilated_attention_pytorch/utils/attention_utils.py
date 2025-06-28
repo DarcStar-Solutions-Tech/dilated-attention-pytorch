@@ -312,7 +312,7 @@ def optimize_attention_computation(  # noqa: PLR0912
                 k_sdpa,
                 v_sdpa,
                 attn_mask=attention_mask,
-                dropout_p=dropout_p if q.training else 0.0,
+                dropout_p=dropout_p if torch.is_grad_enabled() else 0.0,
                 is_causal=is_causal,
             )
 

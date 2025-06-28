@@ -8,7 +8,6 @@ from collections.abc import Sequence
 from typing import Any
 
 import torch
-from einops import rearrange
 from torch import Tensor
 
 try:
@@ -113,6 +112,9 @@ class DilatedAttention(BaseDilatedAttention):
                     enable_profiling=enable_profiling,
                 )
 
+        # Cache for einops reshape patterns to avoid repeated parsing
+        self._einops_cache = {}
+
     def _allocate_tensor(self, shape, dtype, device, strategy="auto", zero_init=True):
         """
         Allocate tensor using enhanced memory pool if enabled.
@@ -128,18 +130,30 @@ class DilatedAttention(BaseDilatedAttention):
             Allocated tensor (optionally zero-initialized)
         """
         if self._memory_pool is not None:
-            # Use enhanced memory pool with strategy selection
-            tensor = self._memory_pool.allocate(shape, dtype, device, strategy)
-            # Zero-initialize only if requested (avoid cost for temp tensors)
-            if zero_init:
-                tensor.zero_()
-            return tensor
+            # Calculate tensor size in bytes
+            num_elements = 1
+            for dim in shape:
+                num_elements *= dim
+            bytes_per_element = (
+                torch.finfo(dtype).bits // 8
+                if dtype.is_floating_point
+                else torch.iinfo(dtype).bits // 8
+            )
+            tensor_size_mb = (num_elements * bytes_per_element) / (1024 * 1024)
+
+            # Only use memory pool for tensors larger than 1MB
+            # Small tensors have too much overhead
+            if tensor_size_mb >= 1.0:
+                tensor = self._memory_pool.allocate(shape, dtype, device, strategy)
+                if zero_init:
+                    tensor.zero_()
+                return tensor
+
+        # Fallback to direct allocation for small tensors or when pool is disabled
+        if zero_init:
+            return torch.zeros(shape, dtype=dtype, device=device)
         else:
-            # Fallback to direct allocation
-            if zero_init:
-                return torch.zeros(shape, dtype=dtype, device=device)
-            else:
-                return torch.empty(shape, dtype=dtype, device=device)
+            return torch.empty(shape, dtype=dtype, device=device)
 
     def forward(
         self,
@@ -187,23 +201,39 @@ class DilatedAttention(BaseDilatedAttention):
             if g == 0:  # Skip empty groups
                 continue
 
-            # Split sequences into segments
-            q_seg = rearrange(query, "b (n s) h d -> b n s h d", s=s)
-            k_seg = rearrange(key, "b (n s) h d -> b n s h d", s=s)
-            v_seg = rearrange(value, "b (n s) h d -> b n s h d", s=s)
-
-            # Apply dilation with offset
+            # Get head range
             offset = i % r
             hmin, hmax = head_ranges[i]
 
-            q_dil = q_seg[:, :, offset::r, hmin:hmax, :]
-            k_dil = k_seg[:, :, offset::r, hmin:hmax, :]
-            v_dil = v_seg[:, :, offset::r, hmin:hmax, :]
+            # More efficient approach: work with views instead of einops
+            # Reshape to segments: [b, n//s, s, h, d]
+            n_segments = n // s
+            q_heads = query[:, :, hmin:hmax, :].contiguous()
+            k_heads = key[:, :, hmin:hmax, :].contiguous()
+            v_heads = value[:, :, hmin:hmax, :].contiguous()
 
-            # Fold segments into batch dimension
-            q_batch = rearrange(q_dil, "b n s h d -> (b n) s h d")
-            k_batch = rearrange(k_dil, "b n s h d -> (b n) s h d")
-            v_batch = rearrange(v_dil, "b n s h d -> (b n) s h d")
+            # Reshape to segments
+            q_seg = q_heads.view(b, n_segments, s, hmax - hmin, d)
+            k_seg = k_heads.view(b, n_segments, s, hmax - hmin, d)
+            v_seg = v_heads.view(b, n_segments, s, hmax - hmin, d)
+
+            # Apply dilation by selecting indices
+            if r > 1 or offset > 0:
+                # Create dilated indices
+                dil_indices = torch.arange(offset, s, r, device=query.device)
+                q_dil = q_seg[:, :, dil_indices, :, :]
+                k_dil = k_seg[:, :, dil_indices, :, :]
+                v_dil = v_seg[:, :, dil_indices, :, :]
+            else:
+                q_dil = q_seg
+                k_dil = k_seg
+                v_dil = v_seg
+
+            # Flatten batch and segment dimensions
+            dilated_s = q_dil.size(2)
+            q_batch = q_dil.reshape(b * n_segments, dilated_s, hmax - hmin, d)
+            k_batch = k_dil.reshape(b * n_segments, dilated_s, hmax - hmin, d)
+            v_batch = v_dil.reshape(b * n_segments, dilated_s, hmax - hmin, d)
 
             # Apply attention
             if HAS_XFORMERS and self.op is not None:
@@ -231,17 +261,27 @@ class DilatedAttention(BaseDilatedAttention):
                     dropout_p=self.dropout if self.training else 0.0,
                 )
 
-            # Unfold segments from batch dimension
-            x = rearrange(x, "(b n) s h d -> b n s h d", b=b)
+            # Reshape attention output back: [b*n, dilated_s, g, d] -> [b, n, dilated_s, g, d]
+            x = x.view(b, n_segments, dilated_s, hmax - hmin, d)
 
             # Gather outputs with proper indexing
             # Thread-safe accumulation: avoid in-place operations on shared tensors
             with self._cache_lock:
-                out_seg = rearrange(out, "b (n s) h d -> b n s h d", s=s)
-                out_seg[:, :, offset::r, hmin:hmax, :] = (
-                    out_seg[:, :, offset::r, hmin:hmax, :] + x
+                # Create output view for this head group
+                out_heads = out[:, :, hmin:hmax, :].view(
+                    b, n_segments, s, hmax - hmin, d
                 )
-                out = rearrange(out_seg, "b n s h d -> b (n s) h d", s=s)
+
+                # Add dilated attention output to the correct positions
+                if r > 1 or offset > 0:
+                    out_heads[:, :, dil_indices, :, :] = (
+                        out_heads[:, :, dil_indices, :, :] + x
+                    )
+                else:
+                    out_heads = out_heads + x
+
+                # Write back to output tensor
+                out[:, :, hmin:hmax, :] = out_heads.view(b, n, hmax - hmin, d)
 
         # Normalize by number of groups (Eq. 10 from paper)
         # NOTE: Normalization must happen before dropout for mathematical correctness
