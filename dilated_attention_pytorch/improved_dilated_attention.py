@@ -33,6 +33,7 @@ except ImportError:
 
 
 from .core import BaseDilatedAttention, DilatedAttentionConfig
+from .core.enhanced_memory_pool import get_enhanced_memory_pool
 
 
 class ImprovedDilatedAttention(BaseDilatedAttention):
@@ -45,18 +46,24 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
     - Direct tensor views instead of einops for memory efficiency
     - Optimized SDPA kernel selection
     - In-place operations to reduce memory allocation
+    - Enhanced memory pool integration for reduced allocation overhead
 
     Args:
         segment_lengths: List of segment lengths for each attention group
         dilation_rates: List of dilation rates corresponding to each segment
         dropout: Dropout probability (default: 0.0)
         use_tf32: Whether to enable TF32 for matmul ops (default: True)
+        enable_memory_pool: Enable enhanced memory pool for tensor allocation (default: True)
+        enable_profiling: Enable memory profiling when using memory pool (default: False)
+        lightweight_pool: Use lightweight pool config for better performance (default: True)
 
     Example:
         >>> attention = ImprovedDilatedAttention(
         ...     segment_lengths=[2048, 4096, 8192],
         ...     dilation_rates=[1, 2, 4],
-        ...     dropout=0.1
+        ...     dropout=0.1,
+        ...     enable_memory_pool=True,
+        ...     enable_profiling=True
         ... )
     """
 
@@ -66,6 +73,9 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
         dilation_rates: Sequence[int],
         dropout: float = 0.0,
         use_tf32: bool = True,
+        enable_memory_pool: bool = True,
+        enable_profiling: bool = False,
+        lightweight_pool: bool = True,
         **kwargs,
     ):
         # Create configuration
@@ -84,6 +94,28 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
         self._cached_indices = {}  # Cache for dilation indices
         self._sdpa_backend = self._select_sdpa_backend()
 
+        # Enhanced memory pool integration
+        self.enable_memory_pool = enable_memory_pool
+        self.lightweight_pool = lightweight_pool
+        self._memory_pool = None
+        if enable_memory_pool:
+            if lightweight_pool:
+                # Use simpler memory pool configuration for better performance
+                self._memory_pool = get_enhanced_memory_pool(
+                    enable_fragment_aware=False,  # Disable for speed
+                    enable_bucketed=True,  # Keep for common sizes
+                    enable_numa=False,  # Disable for speed
+                    enable_profiling=enable_profiling,
+                )
+            else:
+                # Full memory pool with all features
+                self._memory_pool = get_enhanced_memory_pool(
+                    enable_fragment_aware=True,
+                    enable_bucketed=True,
+                    enable_numa=True,
+                    enable_profiling=enable_profiling,
+                )
+
     def _select_sdpa_backend(self):
         """Select optimal SDPA backend based on hardware."""
         if not HAS_SDPA_KERNEL:
@@ -100,6 +132,34 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
         backends.extend([SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH])
 
         return backends
+
+    def _allocate_tensor(self, shape, dtype, device, strategy="auto", zero_init=True):
+        """
+        Allocate tensor using enhanced memory pool if enabled.
+
+        Args:
+            shape: Tensor shape tuple
+            dtype: Tensor data type
+            device: Target device
+            strategy: Allocation strategy for memory pool
+            zero_init: Whether to zero-initialize the tensor
+
+        Returns:
+            Allocated tensor (optionally zero-initialized)
+        """
+        if self._memory_pool is not None:
+            # Use enhanced memory pool with strategy selection
+            tensor = self._memory_pool.allocate(shape, dtype, device, strategy)
+            # Zero-initialize only if requested (avoid cost for temp tensors)
+            if zero_init:
+                tensor.zero_()
+            return tensor
+        else:
+            # Fallback to direct allocation
+            if zero_init:
+                return torch.zeros(shape, dtype=dtype, device=device)
+            else:
+                return torch.empty(shape, dtype=dtype, device=device)
 
     def forward(
         self,
@@ -129,8 +189,8 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
         b, n, h, d = query.shape
         device, dtype = query.device, query.dtype
 
-        # Pre-allocate output with optimal memory pattern
-        out = torch.zeros(b, n, h, d, device=device, dtype=dtype)
+        # Pre-allocate output using enhanced memory pool (main output tensor)
+        out = self._allocate_tensor((b, n, h, d), dtype, device, strategy="auto")
 
         # Get head groups from base class cache
         group_sizes, head_ranges = self._get_head_groups(h)
@@ -201,12 +261,21 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
 
             # Scatter back to original positions
             if r > 1 or offset:
-                # Create temporary tensor for scattering
-                temp_output = torch.zeros(
-                    b, n // s, s, g, d, device=device, dtype=dtype
+                # Create temporary tensor for scattering using memory pool (optimized zero-init)
+                temp_output = self._allocate_tensor(
+                    (b, n // s, s, g, d),
+                    dtype,
+                    device,
+                    strategy="bucketed",
+                    zero_init=False,
                 )
+                # Initialize to zero with minimal overhead
+                temp_output.fill_(0.0)
                 temp_output[:, :, idx, :, :] = x_reshaped
                 out[:, :, hmin:hmax, :].add_(temp_output.reshape(b, n, g, d))
+                # Return temporary tensor to pool for reuse
+                if self._memory_pool is not None:
+                    self._memory_pool.deallocate(temp_output)
             else:
                 out[:, :, hmin:hmax, :].add_(x_reshaped.reshape(b, n, g, d))
 
