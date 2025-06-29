@@ -32,7 +32,7 @@ except ImportError:
         return contextlib.nullcontext()
 
 
-from .core import BaseDilatedAttention, DilatedAttentionConfig
+from .core import BaseDilatedAttention, DilatedAttentionConfig, get_global_pattern_cache
 from .core.enhanced_memory_pool import get_enhanced_memory_pool
 
 
@@ -90,8 +90,8 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
         # Initialize base class
         super().__init__(config)
 
-        # Additional caches for improved performance
-        self._cached_indices = {}  # Cache for dilation indices
+        # Use global pattern cache instead of local cache
+        self._pattern_cache = get_global_pattern_cache()
         self._sdpa_backend = self._select_sdpa_backend()
 
         # Enhanced memory pool integration
@@ -225,13 +225,15 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
 
             # Apply dilation with cached indices
             if r > 1 or offset:
-                # Get or create cached indices
-                cache_key = (s, r, offset, device)
-                if cache_key not in self._cached_indices:
-                    self._cached_indices[cache_key] = torch.arange(
-                        offset, s, r, device=device
-                    )
-                idx = self._cached_indices[cache_key]
+                # Use pattern cache for dilated indices
+                cache_key = f"dilated_indices_s{s}_r{r}_off{offset}"
+                idx = self._pattern_cache.get(cache_key, target_device=device)
+
+                if idx is None:
+                    # Create dilated indices on CPU and cache
+                    idx = torch.arange(offset, s, r, device=torch.device("cpu"))
+                    self._pattern_cache.put(cache_key, idx, move_to_cpu=False)
+                    idx = idx.to(device)
 
                 # Use advanced indexing for dilated sampling
                 q_slice = q_slice[:, :, idx, :, :]
@@ -313,7 +315,8 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
     def extra_repr(self) -> str:
         """Extra representation for printing."""
         repr_str = super().extra_repr()
-        repr_str += f", cached_indices={len(self._cached_indices)}"
+        cache_stats = self._pattern_cache.get_stats()
+        repr_str += f", pattern_cache_size={cache_stats['size']}"
         if HAS_SDPA_KERNEL:
             repr_str += ", sdpa_optimized=True"
         return repr_str

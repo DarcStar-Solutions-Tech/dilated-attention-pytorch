@@ -59,6 +59,12 @@ from .memory_pool import (
     get_global_memory_pool,
     reset_global_memory_pool,
 )
+from .pattern_cache import (
+    PatternCache,
+    DilatedPatternCache,
+    get_global_pattern_cache,
+    clear_global_cache,
+)
 
 __all__ = [
     # Base classes
@@ -96,6 +102,11 @@ __all__ = [
     "UnifiedMemoryPool",
     "get_global_memory_pool",
     "reset_global_memory_pool",
+    # Pattern cache
+    "PatternCache",
+    "DilatedPatternCache",
+    "get_global_pattern_cache",
+    "clear_global_cache",
     # Attention utilities
     "compute_attention_scores",
     "apply_dilated_attention_pattern",
