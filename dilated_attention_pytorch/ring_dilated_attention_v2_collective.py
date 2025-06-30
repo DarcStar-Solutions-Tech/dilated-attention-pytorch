@@ -17,11 +17,9 @@ from typing import Optional
 
 import torch
 import torch.distributed as dist
+import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
-
-# Import base functionality from original V2
-from .ring_dilated_attention_v2 import RingDilatedAttentionV2
 
 # Import optimized attention utilities
 try:
@@ -34,13 +32,40 @@ except ImportError:
         "Optimized attention utilities not available, falling back to manual computation"
     )
 
+# Import enhanced memory pool if available
+try:
+    from .core.enhanced_memory_pool import get_enhanced_memory_pool
 
-class RingDilatedAttentionV2Collective(RingDilatedAttentionV2):
+    HAS_ENHANCED_MEMORY_POOL = True
+except ImportError:
+    HAS_ENHANCED_MEMORY_POOL = False
+
+# Import pattern cache if available
+try:
+    from .core.pattern_cache import get_global_pattern_cache
+
+    HAS_PATTERN_CACHE = True
+except ImportError:
+    HAS_PATTERN_CACHE = False
+
+# Import ImprovedDilatedAttention for single-GPU fallback
+try:
+    from .improved_dilated_attention import ImprovedDilatedAttention
+
+    HAS_IMPROVED_ATTENTION = True
+except ImportError:
+    HAS_IMPROVED_ATTENTION = False
+
+
+class RingDilatedAttentionV2Collective(nn.Module):
     """
     Corrected Ring Dilated Attention using collective operations.
 
     This version replaces the problematic isend/irecv communication with
     robust all_gather operations that handle synchronization properly.
+
+    This is a standalone implementation that does not inherit from the
+    deprecated RingDilatedAttentionV2 class.
     """
 
     def __init__(
@@ -56,24 +81,452 @@ class RingDilatedAttentionV2Collective(RingDilatedAttentionV2):
         lightweight_pool: bool = True,
         use_pattern_cache: bool = True,
     ):
-        """Initialize with same parameters as V2."""
-        super().__init__(
-            segment_lengths=segment_lengths,
-            dilation_rates=dilation_rates,
-            dropout=dropout,
-            ring_size=ring_size,
-            device=device,
-            dtype=dtype,
-            enable_memory_pool=enable_memory_pool,
-            enable_profiling=enable_profiling,
-            lightweight_pool=lightweight_pool,
-            use_pattern_cache=use_pattern_cache,
+        """Initialize Ring Dilated Attention with collective operations."""
+        super().__init__()
+
+        assert len(segment_lengths) == len(dilation_rates)
+
+        self.segment_lengths = segment_lengths
+        self.dilation_rates = dilation_rates
+        self.dropout = dropout
+        self.device = device or torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
         )
+        self.dtype = dtype or (
+            torch.float16 if self.device.type == "cuda" else torch.float32
+        )
+
+        # Ring configuration
+        self.world_size = dist.get_world_size() if dist.is_initialized() else 1
+        self.rank = dist.get_rank() if dist.is_initialized() else 0
+        self.ring_size = ring_size or self.world_size
+
+        # For single-GPU operation, we can simulate any ring size
+        if self.world_size == 1 and self.ring_size > 1:
+            self.mode = "simulated"
+        elif self.world_size > 1:
+            self.mode = "distributed"
+            self.ring_size = min(self.ring_size, self.world_size)
+        else:
+            self.mode = "single"
+
+        # Pre-allocated communication buffers for distributed mode
+        self._kv_send_buffer = None
+        self._kv_recv_buffer = None
 
         # Pre-allocate lists for all_gather if in distributed mode
         if self.mode == "distributed" and self.ring_size > 1:
             self._k_chunks_list = None
             self._v_chunks_list = None
+
+        # Create ImprovedDilatedAttention for single-GPU fallback
+        self._single_gpu_attention = None
+        if HAS_IMPROVED_ATTENTION and (self.mode == "single" or self.ring_size == 1):
+            self._single_gpu_attention = ImprovedDilatedAttention(
+                segment_lengths=segment_lengths,
+                dilation_rates=dilation_rates,
+                dropout=dropout,
+                device=device,
+                dtype=dtype,
+                enable_memory_pool=enable_memory_pool,
+                enable_profiling=enable_profiling,
+                lightweight_pool=lightweight_pool,
+            )
+            if self.rank == 0:  # Only log from rank 0 to avoid duplicate messages
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.info(
+                    "RingDilatedAttention: Using ImprovedDilatedAttention for single-GPU "
+                    f"optimization (ring_size={self.ring_size})"
+                )
+
+        # Pattern caching setup
+        self.use_pattern_cache = use_pattern_cache and HAS_PATTERN_CACHE
+        if self.use_pattern_cache:
+            # Use global pattern cache
+            self._pattern_cache = get_global_pattern_cache()
+        else:
+            # Fall back to local cache
+            self._dilated_indices_cache = {}
+
+        # Enhanced memory pool integration
+        self.enable_memory_pool = enable_memory_pool and HAS_ENHANCED_MEMORY_POOL
+        self.lightweight_pool = lightweight_pool
+        self._memory_pool = None
+        if self.enable_memory_pool:
+            if lightweight_pool:
+                # Use lightweight pool for communication buffers and outputs
+                self._memory_pool = get_enhanced_memory_pool(
+                    enable_fragment_aware=False,  # Disable for speed
+                    enable_bucketed=True,  # Keep for different buffer sizes
+                    enable_numa=False,  # Disable for speed in distributed setting
+                    enable_profiling=enable_profiling,
+                )
+            else:
+                # Full memory pool with all features
+                self._memory_pool = get_enhanced_memory_pool(
+                    enable_fragment_aware=True,
+                    enable_bucketed=True,
+                    enable_numa=True,
+                    enable_profiling=enable_profiling,
+                )
+
+    def _calculate_head_groups(self, num_heads: int) -> list[int]:
+        """Calculate how to distribute heads across different segment lengths."""
+        num_segments = len(self.segment_lengths)
+        base_heads = num_heads // num_segments
+        extra_heads = num_heads % num_segments
+
+        head_groups = [base_heads] * num_segments
+
+        # Distribute extra heads to larger segments (later in the list)
+        for i in range(extra_heads):
+            head_groups[-(i + 1)] += 1
+
+        return head_groups
+
+    def _allocate_tensor(self, shape, dtype, device, strategy="auto", zero_init=True):
+        """
+        Allocate tensor using enhanced memory pool if enabled.
+
+        Args:
+            shape: Tensor shape tuple
+            dtype: Tensor data type
+            device: Target device
+            strategy: Allocation strategy for memory pool
+            zero_init: Whether to zero-initialize the tensor
+
+        Returns:
+            Allocated tensor (optionally zero-initialized)
+        """
+        if self._memory_pool is not None:
+            # Calculate tensor size in bytes
+            num_elements = 1
+            for dim in shape:
+                num_elements *= dim
+            bytes_per_element = (
+                torch.finfo(dtype).bits // 8
+                if dtype.is_floating_point
+                else torch.iinfo(dtype).bits // 8
+            )
+            tensor_size_mb = (num_elements * bytes_per_element) / (1024 * 1024)
+
+            # Only use memory pool for tensors larger than 1MB
+            # Small tensors have too much overhead
+            if tensor_size_mb >= 1.0:
+                tensor = self._memory_pool.allocate(shape, dtype, device, strategy)
+                if zero_init:
+                    tensor.zero_()
+                return tensor
+
+        # Fallback to direct allocation for small tensors or when pool is disabled
+        if zero_init:
+            return torch.zeros(shape, dtype=dtype, device=device)
+        else:
+            return torch.empty(shape, dtype=dtype, device=device)
+
+    def _deallocate_tensor(self, tensor):
+        """Return tensor to memory pool if enabled."""
+        if self._memory_pool is not None:
+            self._memory_pool.deallocate(tensor)
+
+    def cleanup_buffers(self):
+        """Clean up allocated communication buffers."""
+        if self._kv_send_buffer is not None:
+            self._deallocate_tensor(self._kv_send_buffer)
+            self._kv_send_buffer = None
+        if self._kv_recv_buffer is not None:
+            self._deallocate_tensor(self._kv_recv_buffer)
+            self._kv_recv_buffer = None
+
+    def __del__(self):
+        """Cleanup on destruction."""
+        try:
+            self.cleanup_buffers()
+        except Exception:
+            pass  # Ignore errors during cleanup
+
+    def _simple_attention(
+        self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool
+    ) -> Tensor:
+        """Compute simple attention without dilation for fallback cases."""
+        b, n, h, d = q.shape
+        q = q.transpose(1, 2)  # [b, h, n, d]
+        k = k.transpose(1, 2)  # [b, h, n, d]
+        v = v.transpose(1, 2)  # [b, h, n, d]
+
+        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d)
+
+        if is_causal:
+            causal_mask = torch.triu(
+                torch.ones(n, n, device=q.device, dtype=torch.bool), diagonal=1
+            )
+            scores.masked_fill_(causal_mask.unsqueeze(0).unsqueeze(0), float("-inf"))
+
+        attn_weights = F.softmax(scores, dim=-1)
+        if self.training and self.dropout > 0:
+            attn_weights = F.dropout(attn_weights, p=self.dropout)
+
+        output = torch.matmul(attn_weights, v)
+        return output.transpose(1, 2)  # [b, n, h, d]
+
+    def _apply_dilated_attention_pattern(
+        self, query: Tensor, key: Tensor, value: Tensor, is_causal: bool
+    ) -> Tensor:
+        """
+        Apply dilated attention patterns to Q, K, V tensors.
+
+        This method divides attention heads into groups, where each group
+        processes different segment lengths with different dilation rates.
+        """
+        b, n, h, d = query.shape
+        device, dtype = query.device, query.dtype
+
+        # Pre-allocate output using memory pool (main output tensor)
+        output = self._allocate_tensor((b, n, h, d), dtype, device, strategy="auto")
+
+        # Calculate head groups for different segment lengths
+        heads_per_group = self._calculate_head_groups(h)
+
+        head_start = 0
+        for i, (segment_len, dilation_rate, group_size) in enumerate(
+            zip(self.segment_lengths, self.dilation_rates, heads_per_group)
+        ):
+            if group_size == 0:
+                continue
+
+            # If sequence is shorter than segment, use the full sequence
+            effective_segment_len = min(segment_len, n)
+
+            head_end = head_start + group_size
+
+            # Apply dilated attention for this head group
+            # Use modulo to cycle offset through dilation rate
+            offset = i % dilation_rate if dilation_rate > 1 else 0
+            group_output = self._process_dilated_segment(
+                query[:, :, head_start:head_end, :],
+                key[:, :, head_start:head_end, :],
+                value[:, :, head_start:head_end, :],
+                effective_segment_len,
+                dilation_rate,
+                offset,
+                is_causal,
+            )
+
+            output[:, :, head_start:head_end, :] = group_output
+            head_start = head_end
+
+        return output
+
+    def _process_dilated_segment(
+        self,
+        q: Tensor,
+        k: Tensor,
+        v: Tensor,
+        segment_len: int,
+        dilation_rate: int,
+        offset: int,
+        is_causal: bool,
+    ) -> Tensor:
+        """
+        Process one dilated segment with the specified dilation rate.
+        """
+        b, n, h, d = q.shape
+
+        # Handle small sequences that don't fit the segment length
+        if n < segment_len:
+            # Use simple attention for small sequences
+            return self._simple_attention(q, k, v, is_causal)
+
+        # Reshape into segments
+        num_segments = n // segment_len
+
+        # Skip if no complete segments
+        if num_segments == 0:
+            return self._simple_attention(q, k, v, is_causal)
+
+        q_seg = q[:, : num_segments * segment_len, :, :].view(
+            b, num_segments, segment_len, h, d
+        )
+        k_seg = k[:, : num_segments * segment_len, :, :].view(
+            b, num_segments, segment_len, h, d
+        )
+        v_seg = v[:, : num_segments * segment_len, :, :].view(
+            b, num_segments, segment_len, h, d
+        )
+
+        # Apply dilation to segments
+        if dilation_rate > 1:
+            q_seg, k_seg, v_seg = self._apply_dilation(
+                q_seg, k_seg, v_seg, dilation_rate, offset
+            )
+
+        # Compute attention for dilated segments
+        output_seg = []
+        for seg_idx in range(num_segments):
+            seg_output = self._simple_attention(
+                q_seg[:, seg_idx], k_seg[:, seg_idx], v_seg[:, seg_idx], is_causal
+            )
+            output_seg.append(seg_output)
+
+        # Stack segment outputs
+        output_seg = torch.stack(
+            output_seg, dim=1
+        )  # [b, num_segments, segment_len, h, d]
+        output_seg = output_seg.view(b, num_segments * segment_len, h, d)
+
+        # Handle remaining positions
+        output = self._allocate_tensor((b, n, h, d), q.dtype, q.device)
+        output[:, : num_segments * segment_len] = output_seg
+
+        if n > num_segments * segment_len:
+            remainder_output = self._simple_attention(
+                q[:, num_segments * segment_len :],
+                k[:, num_segments * segment_len :],
+                v[:, num_segments * segment_len :],
+                is_causal,
+            )
+            output[:, num_segments * segment_len :] = remainder_output
+
+        return output
+
+    def _apply_dilation(
+        self,
+        q_seg: Tensor,
+        k_seg: Tensor,
+        v_seg: Tensor,
+        dilation_rate: int,
+        offset: int,
+    ) -> tuple[Tensor, Tensor, Tensor]:
+        """Apply dilation pattern to segments with caching."""
+        b, num_segments, segment_len, h, d = q_seg.shape
+
+        # Skip if segment_len < dilation_rate
+        if segment_len < dilation_rate:
+            return q_seg, k_seg, v_seg
+
+        # Generate cache key for pattern
+        cache_key = (segment_len, dilation_rate, offset, q_seg.device.type)
+
+        # Check pattern cache
+        if self.use_pattern_cache and self._pattern_cache is not None:
+            dilated_indices = self._pattern_cache.get(cache_key)
+
+            if dilated_indices is None:
+                # Generate dilated indices
+                base_indices = torch.arange(
+                    0, segment_len, dilation_rate, device=q_seg.device
+                )
+                dilated_indices = (base_indices + offset) % segment_len
+
+                # Pad if necessary to maintain segment length
+                if len(dilated_indices) < segment_len:
+                    # Repeat pattern to fill segment
+                    repeats = (segment_len + len(dilated_indices) - 1) // len(
+                        dilated_indices
+                    )
+                    extended = dilated_indices.repeat(repeats)
+                    dilated_indices = extended[:segment_len]
+                dilated_indices = dilated_indices % segment_len
+
+                # Store in pattern cache
+                self._pattern_cache[cache_key] = dilated_indices
+        else:
+            # Check local cache
+            if cache_key in self._dilated_indices_cache:
+                dilated_indices = self._dilated_indices_cache[cache_key]
+            else:
+                # Generate dilated indices
+                base_indices = torch.arange(
+                    0, segment_len, dilation_rate, device=q_seg.device
+                )
+                dilated_indices = (base_indices + offset) % segment_len
+
+                # Pad if necessary to maintain segment length
+                if len(dilated_indices) < segment_len:
+                    # Repeat pattern to fill segment
+                    repeats = (segment_len + len(dilated_indices) - 1) // len(
+                        dilated_indices
+                    )
+                    extended = dilated_indices.repeat(repeats)
+                    dilated_indices = extended[:segment_len]
+                dilated_indices = dilated_indices % segment_len
+
+                # Store in local cache if pattern cache not available
+                if not self.use_pattern_cache:
+                    self._dilated_indices_cache[cache_key] = dilated_indices
+
+        # Apply dilation by gathering
+        q_dilated = q_seg.index_select(2, dilated_indices)
+        k_dilated = k_seg.index_select(2, dilated_indices)
+        v_dilated = v_seg.index_select(2, dilated_indices)
+
+        return q_dilated, k_dilated, v_dilated
+
+    def _single_device_forward(
+        self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool
+    ) -> Tensor:
+        """Single device forward - just apply dilated attention patterns."""
+        return self._apply_dilated_attention_pattern(q, k, v, is_causal)
+
+    def _simulated_ring_forward(
+        self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool
+    ) -> Tensor:
+        """
+        Simulate ring attention on a single device by processing chunks sequentially.
+        This allows testing ring attention logic without multiple GPUs.
+        """
+        b, n, h, d = q.shape
+        chunk_size = (n + self.ring_size - 1) // self.ring_size
+
+        # Apply dilated patterns to full Q
+        q_dilated = self._apply_dilated_patterns_to_query(q)
+
+        # Initialize output and online softmax accumulators
+        output = torch.zeros((b, h, n, d), device=q.device, dtype=q.dtype)
+        running_max = torch.full(
+            (b, h, n, 1), float("-inf"), device=q.device, dtype=q.dtype
+        )
+        running_sum = torch.zeros((b, h, n, 1), device=q.device, dtype=q.dtype)
+
+        # Process each chunk sequentially (simulating ring communication)
+        for step in range(self.ring_size):
+            chunk_idx = step
+            chunk_start = chunk_idx * chunk_size
+            chunk_end = min(chunk_start + chunk_size, n)
+            actual_chunk_size = chunk_end - chunk_start
+
+            if actual_chunk_size <= 0:
+                continue
+
+            # Extract K/V chunks
+            k_chunk = k[:, chunk_start:chunk_end]
+            v_chunk = v[:, chunk_start:chunk_end]
+
+            # Apply dilated patterns to chunks
+            k_chunk_dilated, v_chunk_dilated = self._apply_dilated_patterns_to_chunk(
+                k_chunk, v_chunk, chunk_start, actual_chunk_size
+            )
+
+            # Compute attention with online softmax
+            self._compute_chunk_attention_with_online_softmax(
+                q_dilated,
+                k_chunk_dilated,
+                v_chunk_dilated,
+                chunk_start,
+                is_causal,
+                running_max,
+                running_sum,
+                output,
+                step,
+            )
+
+        # Final normalization
+        output = output / (running_sum + 1e-8)
+
+        # Transpose back to [b, n, h, d]
+        return output.transpose(1, 2)
 
     def _ring_attention(
         self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool
@@ -460,12 +913,18 @@ class RingDilatedAttentionV2Collective(RingDilatedAttentionV2):
 
         Routes to appropriate implementation based on mode.
         """
+        # Use ImprovedDilatedAttention for single GPU if available
+        if self._single_gpu_attention is not None and self.ring_size == 1:
+            return self._single_gpu_attention(q, k, v, is_causal)
+
         # For distributed mode with ring_size > 1, use collective ring attention
         if self.mode == "distributed" and self.ring_size > 1:
             return self._ring_attention(q, k, v, is_causal)
+        elif self.mode == "simulated" and self.ring_size > 1:
+            return self._simulated_ring_forward(q, k, v, is_causal)
         else:
-            # Fall back to parent implementation for other modes
-            return super().forward(q, k, v, is_causal)
+            # Fall back to single device implementation
+            return self._single_device_forward(q, k, v, is_causal)
 
 
 # Convenience function for creating the corrected version

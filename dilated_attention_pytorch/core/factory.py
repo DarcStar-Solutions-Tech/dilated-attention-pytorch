@@ -596,15 +596,17 @@ def _register_implementations():
 
     try:
         # Register corrected ring attention V2 implementations
-        from ..ring_dilated_attention_v2 import RingDilatedAttentionV2
+        from ..ring_dilated_attention_v2_collective import (
+            RingDilatedAttentionV2Collective,
+        )
 
         # Create a wrapper to match the expected interface
         class RingDilatedAttentionV2Wrapper(BaseDilatedAttention):
-            """Wrapper to make RingDilatedAttentionV2 compatible with factory."""
+            """Wrapper to make RingDilatedAttentionV2Collective compatible with factory."""
 
             def __init__(self, config):
                 super().__init__(config)
-                self.ring_attention = RingDilatedAttentionV2(
+                self.ring_attention = RingDilatedAttentionV2Collective(
                     segment_lengths=config.segment_lengths,
                     dilation_rates=config.dilation_rates,
                     dropout=config.dropout,
@@ -617,17 +619,19 @@ def _register_implementations():
                 return self.ring_attention(query, key, value, is_causal, attention_mask)
 
         register_attention("ring", RingDilatedAttentionV2Wrapper)
-        logger.debug("Registered corrected ring dilated attention V2 implementation")
+        logger.debug(
+            "Registered corrected ring dilated attention V2 collective implementation"
+        )
 
         # Create multihead wrapper for V2 implementation
         class RingMultiheadDilatedAttentionV2Wrapper(BaseMultiheadDilatedAttention):
-            """Wrapper to make RingDilatedAttentionV2 work with multihead factory."""
+            """Wrapper to make RingDilatedAttentionV2Collective work with multihead factory."""
 
             def __init__(self, multihead_config, attention_config):
                 super().__init__(multihead_config, attention_config)
 
             def _create_attention_module(self):
-                return RingDilatedAttentionV2(
+                return RingDilatedAttentionV2Collective(
                     segment_lengths=self.attention_config.segment_lengths,
                     dilation_rates=self.attention_config.dilation_rates,
                     dropout=self.attention_config.dropout,

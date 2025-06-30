@@ -33,10 +33,15 @@ try:
     from dilated_attention_pytorch.improved_multihead_dilated_attention import (
         ImprovedMultiheadDilatedAttention,
     )
-    from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
-    from dilated_attention_pytorch.ring_multihead_dilated_attention import (
-        RingMultiheadDilatedAttention,
-    )
+    from dilated_attention_pytorch import RingDilatedAttention
+
+    # Note: RingMultiheadDilatedAttention may not be available yet
+    try:
+        from dilated_attention_pytorch.ring_multihead_dilated_attention import (
+            RingMultiheadDilatedAttention,
+        )
+    except ImportError:
+        RingMultiheadDilatedAttention = None
 
     IMPORTS_AVAILABLE = True
 except ImportError as e:
