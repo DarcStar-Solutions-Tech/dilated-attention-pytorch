@@ -48,6 +48,14 @@ try:
 except ImportError:
     HAS_PATTERN_CACHE = False
 
+# Import ImprovedDilatedAttention for single-GPU fallback
+try:
+    from .improved_dilated_attention import ImprovedDilatedAttention
+
+    HAS_IMPROVED_ATTENTION = True
+except ImportError:
+    HAS_IMPROVED_ATTENTION = False
+
 
 class RingDilatedAttentionV2Collective(nn.Module):
     """
@@ -110,6 +118,28 @@ class RingDilatedAttentionV2Collective(nn.Module):
         if self.mode == "distributed" and self.ring_size > 1:
             self._k_chunks_list = None
             self._v_chunks_list = None
+
+        # Create ImprovedDilatedAttention for single-GPU fallback
+        self._single_gpu_attention = None
+        if HAS_IMPROVED_ATTENTION and (self.mode == "single" or self.ring_size == 1):
+            self._single_gpu_attention = ImprovedDilatedAttention(
+                segment_lengths=segment_lengths,
+                dilation_rates=dilation_rates,
+                dropout=dropout,
+                device=device,
+                dtype=dtype,
+                enable_memory_pool=enable_memory_pool,
+                enable_profiling=enable_profiling,
+                lightweight_pool=lightweight_pool,
+            )
+            if self.rank == 0:  # Only log from rank 0 to avoid duplicate messages
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.info(
+                    "RingDilatedAttention: Using ImprovedDilatedAttention for single-GPU "
+                    f"optimization (ring_size={self.ring_size})"
+                )
 
         # Pattern caching setup
         self.use_pattern_cache = use_pattern_cache and HAS_PATTERN_CACHE
@@ -883,6 +913,10 @@ class RingDilatedAttentionV2Collective(nn.Module):
 
         Routes to appropriate implementation based on mode.
         """
+        # Use ImprovedDilatedAttention for single GPU if available
+        if self._single_gpu_attention is not None and self.ring_size == 1:
+            return self._single_gpu_attention(q, k, v, is_causal)
+
         # For distributed mode with ring_size > 1, use collective ring attention
         if self.mode == "distributed" and self.ring_size > 1:
             return self._ring_attention(q, k, v, is_causal)
