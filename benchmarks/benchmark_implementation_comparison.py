@@ -85,7 +85,6 @@ class ImplementationComparisonBenchmark(BaseBenchmark):
                 segment_lengths=segment_lengths,
                 dilation_rates=dilation_rates,
                 dropout=0.0,
-                batch_first=True,
             ).to(self.device)
 
             models["multihead_improved"] = ImprovedMultiheadDilatedAttention(
@@ -94,7 +93,6 @@ class ImplementationComparisonBenchmark(BaseBenchmark):
                 segment_lengths=segment_lengths,
                 dilation_rates=dilation_rates,
                 dropout=0.0,
-                batch_first=True,
             ).to(self.device)
 
         # Ring attention (if available)
@@ -129,7 +127,6 @@ class ImplementationComparisonBenchmark(BaseBenchmark):
                             segment_lengths=segment_lengths,
                             dilation_rates=dilation_rates,
                             dropout=0.0,
-                            batch_first=True,
                             ring_size=1,
                             block_size=256,
                             sparsity_ratio=0.9,

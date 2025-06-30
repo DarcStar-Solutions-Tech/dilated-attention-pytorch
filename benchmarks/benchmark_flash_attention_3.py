@@ -22,7 +22,6 @@ import torch
 
 # Import unified benchmark output management
 sys.path.insert(0, str(Path(__file__).parent))
-from core import BenchmarkOutputManager
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -403,17 +402,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-    # Use unified benchmark output management
-    output_manager = BenchmarkOutputManager(
-        benchmark_type="flash-attention-3", parameters={}
-    )
-
-    # Add results
-    output_manager.add_result("results", results)
-
-    # Save results
-    output_paths = output_manager.save_results()
-    print("\nResults saved to:")
-    for path_type, path in output_paths.items():
-        print(f"  {path_type}: {path}")
