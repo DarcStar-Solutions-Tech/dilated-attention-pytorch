@@ -80,6 +80,7 @@ class RingDilatedAttentionV2Collective(nn.Module):
         enable_profiling: bool = False,
         lightweight_pool: bool = True,
         use_pattern_cache: bool = True,
+        memory_pool_threshold_mb: float = 16.0,
     ):
         """Initialize Ring Dilated Attention with collective operations."""
         super().__init__()
@@ -92,9 +93,23 @@ class RingDilatedAttentionV2Collective(nn.Module):
         self.device = device or torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )
-        self.dtype = dtype or (
-            torch.float16 if self.device.type == "cuda" else torch.float32
-        )
+
+        # Smart dtype selection
+        if dtype is not None:
+            self.dtype = dtype
+        else:
+            # Try to use GPU utilities for optimal dtype selection
+            try:
+                from .utils.gpu_utils import get_optimal_dtype
+
+                self.dtype = get_optimal_dtype(
+                    self.device, prefer_fp16=True, warn_pascal=True
+                )
+            except ImportError:
+                # Fallback to original logic if gpu_utils not available
+                self.dtype = (
+                    torch.float16 if self.device.type == "cuda" else torch.float32
+                )
 
         # Ring configuration
         self.world_size = dist.get_world_size() if dist.is_initialized() else 1
@@ -153,6 +168,7 @@ class RingDilatedAttentionV2Collective(nn.Module):
         # Enhanced memory pool integration
         self.enable_memory_pool = enable_memory_pool and HAS_ENHANCED_MEMORY_POOL
         self.lightweight_pool = lightweight_pool
+        self.memory_pool_threshold_mb = memory_pool_threshold_mb
         self._memory_pool = None
         if self.enable_memory_pool:
             if lightweight_pool:
@@ -212,9 +228,11 @@ class RingDilatedAttentionV2Collective(nn.Module):
             )
             tensor_size_mb = (num_elements * bytes_per_element) / (1024 * 1024)
 
-            # Only use memory pool for tensors larger than 1MB
-            # Small tensors have too much overhead
-            if tensor_size_mb >= 1.0:
+            # Use memory pool only for large tensors
+            # Even in distributed mode, only use for sufficiently large allocations
+            use_pool = tensor_size_mb >= self.memory_pool_threshold_mb
+
+            if use_pool:
                 tensor = self._memory_pool.allocate(shape, dtype, device, strategy)
                 if zero_init:
                     tensor.zero_()
