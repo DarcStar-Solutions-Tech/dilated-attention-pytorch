@@ -116,7 +116,6 @@ class ExtremeSequencesBenchmark(BaseBenchmark):
                     dilation_rates=dilation_rates,
                     dropout=0.0,
                     ring_size=1,
-                    block_size=256,
                     sparsity_ratio=0.9,  # 90% sparse
                 ).to(self.device)
 
@@ -125,7 +124,6 @@ class ExtremeSequencesBenchmark(BaseBenchmark):
                     dilation_rates=dilation_rates,
                     dropout=0.0,
                     ring_size=1,
-                    block_size=256,
                     sparsity_ratio=0.95,  # 95% sparse
                 ).to(self.device)
             except Exception as e:

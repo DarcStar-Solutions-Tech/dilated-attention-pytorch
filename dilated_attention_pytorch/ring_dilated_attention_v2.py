@@ -391,7 +391,7 @@ class RingDilatedAttentionV2(nn.Module):
             # Create a cache key compatible with DilatedPatternCache
             # We'll use segment_len as seq_len and create tuples for compatibility
             cache_key = f"ring_dilated_s{segment_len}_r{dilation_rate}_off{offset}"
-            dilated_indices = self._pattern_cache.get(cache_key, target_device=device)
+            dilated_indices = self._pattern_cache.get(cache_key)
 
             if dilated_indices is None:
                 # Create dilated indices
@@ -415,7 +415,7 @@ class RingDilatedAttentionV2(nn.Module):
                     )
 
                 # Store in cache (on CPU)
-                self._pattern_cache.put(cache_key, dilated_indices, move_to_cpu=True)
+                self._pattern_cache[cache_key] = dilated_indices
                 # Move to target device
                 dilated_indices = dilated_indices.to(device)
         else:

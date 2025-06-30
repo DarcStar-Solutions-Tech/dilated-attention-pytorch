@@ -115,7 +115,6 @@ class ImplementationComparisonBenchmark(BaseBenchmark):
                     dilation_rates=dilation_rates,
                     dropout=0.0,
                     ring_size=1,
-                    block_size=256,
                     sparsity_ratio=0.9,
                 ).to(self.device)
 
@@ -128,7 +127,6 @@ class ImplementationComparisonBenchmark(BaseBenchmark):
                             dilation_rates=dilation_rates,
                             dropout=0.0,
                             ring_size=1,
-                            block_size=256,
                             sparsity_ratio=0.9,
                         ).to(self.device)
                     )

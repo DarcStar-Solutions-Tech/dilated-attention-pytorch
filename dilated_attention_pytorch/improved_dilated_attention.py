@@ -227,12 +227,12 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
             if r > 1 or offset:
                 # Use pattern cache for dilated indices
                 cache_key = f"dilated_indices_s{s}_r{r}_off{offset}"
-                idx = self._pattern_cache.get(cache_key, target_device=device)
+                idx = self._pattern_cache.get(cache_key)
 
                 if idx is None:
                     # Create dilated indices on CPU and cache
                     idx = torch.arange(offset, s, r, device=torch.device("cpu"))
-                    self._pattern_cache.put(cache_key, idx, move_to_cpu=False)
+                    self._pattern_cache[cache_key] = idx
                     idx = idx.to(device)
 
                 # Use advanced indexing for dilated sampling
