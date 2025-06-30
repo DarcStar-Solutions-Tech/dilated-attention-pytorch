@@ -11,16 +11,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pattern Caching**: Global pattern cache for Ring Attention implementations
   - 2x speedup for repeated forward passes
   - 23% memory reduction through CPU storage
-- **Benchmark Scripts**: Comprehensive benchmarking suite
-  - `benchmark_sequence_ranges.py`: Test across different sequence lengths
-  - `benchmark_optimization_impact.py`: Measure caching and pooling benefits
-  - `benchmark_quick_validation.py`: Rapid CI/CD validation (<1 minute)
+  - Enabled by default for all Ring Attention variants
+- **Smart GPU Detection**: Automatic dtype selection based on GPU architecture
+  - Pascal GPUs (GTX 10-series): Automatically use FP32 for 10x better performance
+  - Modern GPUs (RTX 20-series+): Use FP16/BF16 for optimal performance
+  - No user configuration needed - fully automatic
+- **Flash Attention Integration**: Intelligent backend selection with fallback
+  - Flash Attention 3 support (when available)
+  - Automatic fallback: FA3 → FA2 → FA1 → xformers → SDPA → standard
+  - GPU architecture-aware optimization
+- **Enhanced Memory Pool**: Adaptive memory management
+  - 16MB threshold for optimal performance
+  - 15-30% reduction in peak memory usage
+  - LRU cache with 50 buffer entries
+  - Memory-pinned allocations for faster transfers
+- **Benchmark Infrastructure**: Reorganized and comprehensive
+  - `benchmarks/core/`: Core benchmark suite
+  - `benchmarks/specialized/`: Specialized benchmarks
+  - Consolidated Ring Attention benchmarks
+  - Comprehensive README with usage guide
 - **Documentation**: 
-  - Optimization guide for pattern caching and memory pooling
-  - Memory pool integration guide with step-by-step instructions
-  - Benchmarking guide for performance testing
+  - Pascal GPU FP16 performance analysis
+  - OOM analysis and mitigation strategies
+  - Ring Attention optimization reports
+  - Memory pool integration guide
 
 ### Changed
+- **Ring Attention V2 Optimizations**:
+  - Pattern caching enabled by default
+  - Memory pool enabled with 16MB threshold
+  - Smart dtype selection integrated
+  - Flash Attention/xformers backend support
+- **Performance Improvements**:
+  - Pascal GPUs: 10.14x speedup with automatic FP32 selection
+  - All GPUs: 2x speedup from pattern caching
+  - Memory efficiency: 15-30% reduction in peak usage
+  - Backend optimization: Up to 4.74x speedup with xformers
 - **CI/CD Improvements**:
   - Dependabot configuration for automated dependency updates
   - GitHub issue templates (bug report, feature request)
@@ -38,14 +64,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Ruff replaces Black, isort, and flake8
   - Enhanced Ruff rules for better code quality
   - Stricter mypy configuration
-
-### Changed
 - **Python Support**: Minimum Python version raised to 3.13
-- **Linting**: Switched from Black/isort/flake8 to Ruff
 - **Repository URLs**: Updated to DarcStar-Solutions-Tech organization
-- **Dependencies**: Removed legacy linting tools from test dependencies
-- **Documentation**: Updated installation instructions and development workflow
-- **CI/CD**: Enhanced testing infrastructure with GPU support and coverage reporting
+
+### Fixed
+- **Pascal GPU Performance**: FP16 operations now automatically use FP32
+  - Fixes 8x performance regression on GTX 10-series GPUs
+  - Inheritance issue resolved in RingDilatedAttentionV2Flash
+- **Memory Issues**: OOM errors reduced through optimized memory pooling
+- **Import Errors**: Fixed distributed testing module imports
 
 ### Deprecated
 - **RingDilatedAttentionV3**: Deprecated in favor of V2
@@ -57,6 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python 3.9, 3.10, 3.11, and 3.12 support
 - Poetry configuration files (using Hatch)
 - `setup.cfg` (moved all configuration to `pyproject.toml`)
+- Redundant benchmark scripts (consolidated into organized structure)
 
 ## [0.2.0] - 2025-01-25
 
