@@ -31,6 +31,14 @@ from .sparse_pattern_utils import (
 )
 from .validation import ValidationMixin
 
+# GPU utilities
+from .gpu_utils import (
+    get_gpu_compute_capability,
+    is_pascal_or_older,
+    get_optimal_dtype,
+    warn_suboptimal_dtype,
+)
+
 __all__ = [
     # Validation
     "ValidationMixin",
@@ -52,4 +60,9 @@ __all__ = [
     "load_sparse_pattern",
     "analyze_pattern_statistics",
     "optimize_pattern_for_hardware",
+    # GPU utilities
+    "get_gpu_compute_capability",
+    "is_pascal_or_older",
+    "get_optimal_dtype",
+    "warn_suboptimal_dtype",
 ]

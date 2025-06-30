@@ -56,6 +56,15 @@ try:
 except ImportError:
     HAS_IMPROVED_ATTENTION = False
 
+# Import GPU utilities for smart dtype selection
+try:
+    from .utils.gpu_utils import get_optimal_dtype, warn_suboptimal_dtype
+
+    HAS_GPU_UTILS = True
+except ImportError:
+    HAS_GPU_UTILS = False
+    warnings.warn("GPU utilities not available, defaulting to basic dtype selection")
+
 
 class RingDilatedAttentionV2Collective(nn.Module):
     """
@@ -93,9 +102,24 @@ class RingDilatedAttentionV2Collective(nn.Module):
         self.device = device or torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )
-        self.dtype = dtype or (
-            torch.float16 if self.device.type == "cuda" else torch.float32
-        )
+
+        # Smart dtype selection based on GPU architecture
+        if dtype is not None:
+            self.dtype = dtype
+            # Warn if using potentially suboptimal dtype
+            if HAS_GPU_UTILS:
+                warn_suboptimal_dtype(self.device, dtype)
+        else:
+            # Auto-select optimal dtype
+            if HAS_GPU_UTILS:
+                self.dtype = get_optimal_dtype(
+                    self.device, prefer_fp16=True, warn_pascal=True
+                )
+            else:
+                # Fallback to conservative default
+                self.dtype = (
+                    torch.float32 if self.device.type == "cpu" else torch.float32
+                )
 
         # Ring configuration
         self.world_size = dist.get_world_size() if dist.is_initialized() else 1
