@@ -25,12 +25,12 @@ try:
 except ImportError:
     HAS_BLOCK_SPARSE = False
 
-from benchmarks.framework import BaseBenchmark, BenchmarkConfig, BenchmarkResult
-from benchmarks.framework.config import (
+from framework import BaseBenchmark, BenchmarkConfig, BenchmarkResult
+from framework.config import (
     ExtremeSequenceConfig,
     get_segment_dilation_configs,
 )
-from benchmarks.framework.utils import create_attention_inputs
+from framework.utils import create_attention_inputs
 
 
 class ExtremeSequencesBenchmark(BaseBenchmark):
@@ -84,8 +84,6 @@ class ExtremeSequencesBenchmark(BaseBenchmark):
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
             dropout=0.0,
-            use_xpos=False,
-            use_rel_pos_bias=False,
         ).to(self.device)
 
         if self.test_multihead:
@@ -105,8 +103,6 @@ class ExtremeSequencesBenchmark(BaseBenchmark):
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
                     dropout=0.0,
-                    use_xpos=False,
-                    use_rel_pos_bias=False,
                     ring_size=4,  # Simulate 4-GPU ring
                 ).to(self.device)
             except Exception as e:
@@ -119,8 +115,6 @@ class ExtremeSequencesBenchmark(BaseBenchmark):
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
                     dropout=0.0,
-                    use_xpos=False,
-                    use_rel_pos_bias=False,
                     ring_size=1,
                     block_size=256,
                     sparsity_ratio=0.9,  # 90% sparse
@@ -130,8 +124,6 @@ class ExtremeSequencesBenchmark(BaseBenchmark):
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
                     dropout=0.0,
-                    use_xpos=False,
-                    use_rel_pos_bias=False,
                     ring_size=1,
                     block_size=256,
                     sparsity_ratio=0.95,  # 95% sparse

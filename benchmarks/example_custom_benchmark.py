@@ -7,11 +7,10 @@ import torch.nn as nn
 
 from dilated_attention_pytorch import (
     ImprovedDilatedAttention,
-    ImprovedMultiheadDilatedAttention,
 )
 
-from benchmarks.framework import BaseBenchmark, BenchmarkConfig
-from benchmarks.framework.utils import create_attention_inputs
+from framework import BaseBenchmark, BenchmarkConfig
+from framework.utils import create_attention_inputs
 
 
 class CustomMemoryBenchmark(BaseBenchmark):
@@ -24,8 +23,8 @@ class CustomMemoryBenchmark(BaseBenchmark):
         # Common configuration
         segment_lengths = [1024, 2048]
         dilation_rates = [1, 2]
-        embed_dim = 512
-        num_heads = 8
+        _ = 512
+        _ = 8
 
         # Standard improved attention
         models["improved_base"] = ImprovedDilatedAttention(
@@ -33,22 +32,15 @@ class CustomMemoryBenchmark(BaseBenchmark):
             dilation_rates=dilation_rates,
         ).to(self.device)
 
-        # With memory optimizations
-        models["improved_optimized"] = ImprovedDilatedAttention(
+        # With different dropout
+        models["improved_dropout"] = ImprovedDilatedAttention(
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
-            use_memory_efficient_attention=True,
+            dropout=0.1,
         ).to(self.device)
 
-        # Multihead version
-        models["multihead_optimized"] = ImprovedMultiheadDilatedAttention(
-            embed_dim=embed_dim,
-            num_heads=num_heads,
-            segment_lengths=segment_lengths,
-            dilation_rates=dilation_rates,
-            use_memory_efficient_attention=True,
-            batch_first=True,
-        ).to(self.device)
+        # You could add multihead versions here, but they need
+        # different input shapes (batch, seq, embed_dim)
 
         return models
 
@@ -56,54 +48,20 @@ class CustomMemoryBenchmark(BaseBenchmark):
         self, batch_size: int, seq_length: int, num_heads: int, head_dim: int
     ) -> Tuple[torch.Tensor, ...]:
         """Create inputs based on model requirements."""
-        # Create both core and multihead formats
-        q_core, k_core, v_core = create_attention_inputs(
+        # For this simple example, only test core attention format
+        q, k, v = create_attention_inputs(
             batch_size,
             seq_length,
             num_heads,
             head_dim,
             self.device,
             self.dtype,
-            is_multihead=False,
+            is_multihead=False,  # Core format for all models
         )
+        return (q, k, v)
 
-        q_multi, k_multi, v_multi = create_attention_inputs(
-            batch_size,
-            seq_length,
-            num_heads,
-            head_dim,
-            self.device,
-            self.dtype,
-            is_multihead=True,
-        )
-
-        return (q_core, k_core, v_core, q_multi, k_multi, v_multi)
-
-    def benchmark_configuration(
-        self,
-        implementation_name: str,
-        model: nn.Module,
-        batch_size: int,
-        seq_length: int,
-        num_heads: int,
-        head_dim: int,
-    ):
-        """Override to select appropriate inputs."""
-        # Get all inputs
-        q_core, k_core, v_core, q_multi, k_multi, v_multi = self.get_model_inputs(
-            batch_size, seq_length, num_heads, head_dim
-        )
-
-        # Select inputs based on model type
-        if "multihead" in implementation_name:
-            _ = (q_multi, k_multi, v_multi)
-        else:
-            _ = (q_core, k_core, v_core)
-
-        # Call parent implementation
-        return super().benchmark_configuration(
-            implementation_name, model, batch_size, seq_length, num_heads, head_dim
-        )
+    # Remove the override - let the base class handle it
+    # The base class already calls get_model_inputs properly
 
     def analyze(self):
         """Custom analysis focusing on memory efficiency."""

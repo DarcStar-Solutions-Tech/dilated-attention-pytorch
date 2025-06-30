@@ -29,9 +29,9 @@ try:
 except ImportError:
     HAS_RING = False
 
-from benchmarks.framework import BaseBenchmark
-from benchmarks.framework.config import get_segment_dilation_configs
-from benchmarks.framework.utils import create_attention_inputs, compare_implementations
+from framework import BaseBenchmark
+from framework.config import get_segment_dilation_configs
+from framework.utils import create_attention_inputs, compare_implementations
 
 
 class ImplementationComparisonBenchmark(BaseBenchmark):
@@ -68,17 +68,13 @@ class ImplementationComparisonBenchmark(BaseBenchmark):
         models["standard"] = DilatedAttention(
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
-            dropout=0.0,
-            use_xpos=False,
-            use_rel_pos_bias=False,
+            attention_dropout=0.0,
         ).to(self.device)
 
         models["improved"] = ImprovedDilatedAttention(
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
             dropout=0.0,
-            use_xpos=False,
-            use_rel_pos_bias=False,
         ).to(self.device)
 
         # Multihead implementations
@@ -108,8 +104,6 @@ class ImplementationComparisonBenchmark(BaseBenchmark):
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
                     dropout=0.0,
-                    use_xpos=False,
-                    use_rel_pos_bias=False,
                     ring_size=1,  # Single GPU simulation
                 ).to(self.device)
             except Exception as e:
@@ -122,8 +116,6 @@ class ImplementationComparisonBenchmark(BaseBenchmark):
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
                     dropout=0.0,
-                    use_xpos=False,
-                    use_rel_pos_bias=False,
                     ring_size=1,
                     block_size=256,
                     sparsity_ratio=0.9,
@@ -220,7 +212,7 @@ class ImplementationComparisonBenchmark(BaseBenchmark):
             total_tokens = batch_size * seq_length
             throughput = (total_tokens / time_ms) * 1000
 
-            from benchmarks.framework.base import BenchmarkResult
+            from framework.base import BenchmarkResult
 
             return BenchmarkResult(
                 implementation=implementation_name,
@@ -235,7 +227,7 @@ class ImplementationComparisonBenchmark(BaseBenchmark):
             )
 
         except Exception as e:
-            from benchmarks.framework.base import BenchmarkResult
+            from framework.base import BenchmarkResult
 
             return BenchmarkResult(
                 implementation=implementation_name,
