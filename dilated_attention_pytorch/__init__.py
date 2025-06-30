@@ -59,6 +59,7 @@ from .multihead_dilated_attention import MultiheadDilatedAttention
 
 # Ring Attention implementations
 from .ring_dilated_attention_v2 import RingDilatedAttentionV2
+from .ring_dilated_attention_v2_collective import RingDilatedAttentionV2Collective
 from .ring_dilated_attention_production import (
     RingDilatedAttentionProduction,
     RingAttentionConfig,
@@ -95,6 +96,7 @@ __all__ = [
     "create_adaptive_block_sparse",
     # Ring Attention implementations
     "RingDilatedAttentionV2",
+    "RingDilatedAttentionV2Collective",
     "RingDilatedAttentionProduction",
     "RingAttentionConfig",
     "create_production_ring_attention",

@@ -141,8 +141,7 @@ def create_distributed_module(
                 DistributedImprovedDilatedAttention(
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
-                    world_size=world_size,
-                    rank=rank,
+                    # world_size and rank are inferred from dist context
                 )
                 .to(device)
                 .to(dtype)
@@ -158,8 +157,7 @@ def create_distributed_module(
                     num_heads=num_heads,
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
-                    world_size=world_size,
-                    rank=rank,
+                    # world_size and rank are inferred from dist context
                 )
                 .to(device)
                 .to(dtype)
@@ -172,10 +170,12 @@ def create_distributed_module(
             # Ring size should match world size for distributed
             return (
                 RingDistributedDilatedAttention(
+                    embed_dim=embed_dim,
+                    num_heads=num_heads,
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
                     ring_size=world_size,
-                    enable_distributed=True,
+                    # Distributed features are enabled by default
                 )
                 .to(device)
                 .to(dtype)
@@ -198,11 +198,12 @@ def create_distributed_module(
 
             return (
                 BlockSparseRingDistributedDilatedAttention(
+                    embed_dim=embed_dim,
+                    num_heads=num_heads,
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
                     sparse_config=sparse_config,
-                    world_size=world_size,
-                    rank=rank,
+                    # world_size and rank are inferred from dist context
                 )
                 .to(device)
                 .to(dtype)

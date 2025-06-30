@@ -12,7 +12,7 @@ from dilated_attention_pytorch import (
 )
 
 try:
-    from dilated_attention_pytorch import RingDilatedAttentionV2
+    from dilated_attention_pytorch import RingDilatedAttentionV2Collective
 
     HAS_RING = True
 except ImportError:
@@ -99,7 +99,7 @@ class ExtremeSequencesBenchmark(BaseBenchmark):
         # Ring attention (for distributed memory)
         if HAS_RING:
             try:
-                models["ring_v2"] = RingDilatedAttentionV2(
+                models["ring_v2_collective"] = RingDilatedAttentionV2Collective(
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
                     dropout=0.0,

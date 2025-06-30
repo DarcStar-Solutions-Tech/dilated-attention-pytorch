@@ -1,6 +1,11 @@
 """
 Ring Dilated Attention V2 - Correct implementation with proper K/V rotation.
 
+.. deprecated:: 0.2.1
+    RingDilatedAttentionV2 has issues with distributed communication using isend/irecv.
+    Use RingDilatedAttentionV2Collective instead, which uses robust all_gather operations.
+    This class will be removed in v0.3.0.
+
 This implementation fixes the fundamental architectural issues in the original:
 1. Queries are NEVER divided - each device has the full Q tensor
 2. Only K/V are chunked and distributed across devices
@@ -9,6 +14,9 @@ This implementation fixes the fundamental architectural issues in the original:
 
 This version supports both single-GPU (sequential chunk processing) and
 multi-GPU (distributed) operation.
+
+WARNING: This implementation has known issues with distributed communication
+that can cause CUDA memory errors. Use RingDilatedAttentionV2Collective instead.
 """
 
 import math
@@ -63,6 +71,15 @@ class RingDilatedAttentionV2(nn.Module):
         use_pattern_cache: bool = True,  # Enable global pattern cache by default
     ):
         super().__init__()
+
+        # Issue deprecation warning
+        warnings.warn(
+            "RingDilatedAttentionV2 is deprecated due to distributed communication issues. "
+            "Use RingDilatedAttentionV2Collective instead for robust collective operations. "
+            "This class will be removed in v0.3.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         assert len(segment_lengths) == len(dilation_rates)
 
