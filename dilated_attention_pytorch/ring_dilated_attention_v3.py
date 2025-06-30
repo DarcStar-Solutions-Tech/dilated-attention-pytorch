@@ -36,11 +36,18 @@ class RingDilatedAttentionV3(nn.Module):
     """
     Ring Dilated Attention with optimized pattern caching.
 
-    Key improvements over V2:
+    .. deprecated:: 0.2.1
+        RingDilatedAttentionV3 is deprecated and will be removed in v0.3.0.
+        Use RingDilatedAttentionV2 instead, which provides better performance.
+
+    Key improvements over V2 (experimental):
     - GPU-resident pattern cache for frequently accessed patterns
     - Batch pattern transfers for efficiency
     - Adaptive tier management (hot patterns stay on GPU)
     - Async transfers with prefetching
+
+    Note: Despite these optimizations, benchmarks show V2 performs better
+    due to lower overhead. The complex caching in V3 adds more cost than benefit.
     """
 
     def __init__(
@@ -58,6 +65,15 @@ class RingDilatedAttentionV3(nn.Module):
         cache_on_gpu: bool = True,  # New: keep hot patterns on GPU
     ):
         super().__init__()
+
+        # Issue deprecation warning
+        warnings.warn(
+            "RingDilatedAttentionV3 is deprecated and will be removed in v0.3.0. "
+            "Use RingDilatedAttentionV2 instead, which provides better performance. "
+            "V3's complex caching adds overhead without measurable benefits.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         assert len(segment_lengths) == len(dilation_rates)
 

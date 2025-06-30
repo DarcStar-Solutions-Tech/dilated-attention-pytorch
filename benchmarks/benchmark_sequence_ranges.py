@@ -22,21 +22,59 @@ from dilated_attention_pytorch import (
     DilatedAttention,
     MultiheadDilatedAttention,
     ImprovedDilatedAttention,
+    ImprovedDilatedAttentionV2,
     ImprovedMultiheadDilatedAttention,
 )
-from dilated_attention_pytorch.ring_dilated_attention_v2 import RingDilatedAttentionV2
-from dilated_attention_pytorch.ring_dilated_attention_v3 import RingDilatedAttentionV3
+
+# Ring Attention implementations
+try:
+    from dilated_attention_pytorch.ring_dilated_attention_v2 import (
+        RingDilatedAttentionV2,
+    )
+
+    RING_V2_AVAILABLE = True
+except ImportError:
+    RING_V2_AVAILABLE = False
 
 try:
-    from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
+    from dilated_attention_pytorch.ring_dilated_attention_v3 import (
+        RingDilatedAttentionV3,
+    )
+
+    RING_V3_AVAILABLE = True
+except ImportError:
+    RING_V3_AVAILABLE = False
+
+try:
+    from dilated_attention_pytorch import RingDilatedAttentionProduction
+
+    RING_PRODUCTION_AVAILABLE = True
+except ImportError:
+    RING_PRODUCTION_AVAILABLE = False
+
+# Block-Sparse implementations
+try:
+    from dilated_attention_pytorch import (
         BlockSparseRingDilatedAttention,
+        BlockSparseRingMultiheadDilatedAttention,
     )
 
     BLOCK_SPARSE_AVAILABLE = True
 except ImportError:
     BLOCK_SPARSE_AVAILABLE = False
 
-from benchmarks.benchmark_utils import BenchmarkOutputManager
+# Distributed implementations
+try:
+    from dilated_attention_pytorch import (
+        DistributedImprovedDilatedAttention,
+        DistributedImprovedMultiheadDilatedAttention,
+    )
+
+    DISTRIBUTED_AVAILABLE = True
+except ImportError:
+    DISTRIBUTED_AVAILABLE = False
+
+from benchmark_utils import BenchmarkOutputManager
 
 
 @dataclass
@@ -128,33 +166,66 @@ class SequenceRangeBenchmarker:
             "dilation_rates": dilation_rates,
         }
 
+        # Basic implementations
         if implementation == "dilated":
+            kwargs["enable_memory_pool"] = enable_memory_pool
             return DilatedAttention(**kwargs).to(self.device)
         elif implementation == "multihead":
             return MultiheadDilatedAttention(
                 embed_dim=num_heads * head_dim, num_heads=num_heads, **kwargs
             ).to(self.device)
+
+        # Improved implementations
         elif implementation == "improved":
             kwargs["enable_memory_pool"] = enable_memory_pool
             return ImprovedDilatedAttention(**kwargs).to(self.device)
+        elif implementation == "improved_v2":
+            kwargs["enable_memory_pool"] = enable_memory_pool
+            return ImprovedDilatedAttentionV2(**kwargs).to(self.device)
         elif implementation == "improved_multihead":
             return ImprovedMultiheadDilatedAttention(
                 embed_dim=num_heads * head_dim, num_heads=num_heads, **kwargs
             ).to(self.device)
-        elif implementation == "ring_v2":
+
+        # Ring Attention implementations
+        elif implementation == "ring_v2" and RING_V2_AVAILABLE:
             kwargs["enable_memory_pool"] = enable_memory_pool
             kwargs["use_pattern_cache"] = enable_pattern_cache
             return RingDilatedAttentionV2(**kwargs).to(self.device)
-        elif implementation == "ring_v3":
+        elif implementation == "ring_v3" and RING_V3_AVAILABLE:
             kwargs["enable_memory_pool"] = enable_memory_pool
             kwargs["use_pattern_cache"] = enable_pattern_cache
             return RingDilatedAttentionV3(**kwargs).to(self.device)
+        elif implementation == "ring_production" and RING_PRODUCTION_AVAILABLE:
+            kwargs["enable_memory_pool"] = enable_memory_pool
+            kwargs["use_pattern_cache"] = enable_pattern_cache
+            return RingDilatedAttentionProduction(**kwargs).to(self.device)
+
+        # Block-Sparse implementations
         elif implementation == "block_sparse" and BLOCK_SPARSE_AVAILABLE:
             return BlockSparseRingDilatedAttention(
                 sparsity_ratio=0.9, pattern_type="dilated_sparse", **kwargs
             ).to(self.device)
+        elif implementation == "block_sparse_multihead" and BLOCK_SPARSE_AVAILABLE:
+            return BlockSparseRingMultiheadDilatedAttention(
+                embed_dim=num_heads * head_dim,
+                num_heads=num_heads,
+                sparsity_ratio=0.9,
+                pattern_type="dilated_sparse",
+                **kwargs,
+            ).to(self.device)
+
+        # Distributed implementations
+        elif implementation == "distributed_improved" and DISTRIBUTED_AVAILABLE:
+            kwargs["enable_memory_pool"] = enable_memory_pool
+            return DistributedImprovedDilatedAttention(**kwargs).to(self.device)
+        elif implementation == "distributed_multihead" and DISTRIBUTED_AVAILABLE:
+            return DistributedImprovedMultiheadDilatedAttention(
+                embed_dim=num_heads * head_dim, num_heads=num_heads, **kwargs
+            ).to(self.device)
+
         else:
-            raise ValueError(f"Unknown implementation: {implementation}")
+            raise ValueError(f"Unknown or unavailable implementation: {implementation}")
 
     def benchmark_sequence_length(
         self,
@@ -435,7 +506,7 @@ def main():
     parser.add_argument(
         "--implementations",
         nargs="+",
-        default=["dilated", "improved", "ring_v2"],
+        default=["dilated", "improved", "ring_v2"],  # V3 deprecated - use V2
         help="Implementations to benchmark",
     )
     parser.add_argument(

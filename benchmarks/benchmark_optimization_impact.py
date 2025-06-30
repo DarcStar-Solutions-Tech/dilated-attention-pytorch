@@ -24,14 +24,12 @@ from dilated_attention_pytorch.ring_dilated_attention_v2 import RingDilatedAtten
 from dilated_attention_pytorch.ring_dilated_attention_v3 import RingDilatedAttentionV3
 from dilated_attention_pytorch.core import (
     get_global_pattern_cache,
-    reset_global_pattern_cache,
-)
-from dilated_attention_pytorch.core import (
+    clear_global_cache,
     get_global_memory_pool,
     reset_global_memory_pool,
 )
 
-from benchmarks.benchmark_utils import BenchmarkOutputManager
+from benchmark_utils import BenchmarkOutputManager
 
 
 @dataclass
@@ -185,7 +183,7 @@ class OptimizationBenchmarker:
         seq_len = (seq_len // segment_lengths[-1]) * segment_lengths[-1]
 
         # Reset caches and pools
-        reset_global_pattern_cache()
+        clear_global_cache()
         reset_global_memory_pool()
         gc.collect()
         if self.device.type == "cuda":
@@ -264,15 +262,17 @@ class OptimizationBenchmarker:
 
             if enable_memory_pool:
                 final_pool_stats = memory_pool.get_stats()
-                stats["pool_allocations"] = (
-                    final_pool_stats["allocation_count"]
-                    - initial_pool_stats["allocation_count"]
+                # Calculate allocations based on buffer count change
+                initial_buffers = initial_pool_stats.get("total_buffers", 0)
+                final_buffers = final_pool_stats.get("total_buffers", 0)
+                stats["pool_allocations"] = max(0, final_buffers - initial_buffers)
+                stats["pool_deallocations"] = 0  # Not tracked in current implementation
+                # Calculate reuse rate based on cache hits
+                cache_size = final_pool_stats.get("hot_cache_size", 0)
+                total_buffers = final_pool_stats.get("total_buffers", 1)
+                stats["pool_reuse_rate"] = (
+                    cache_size / total_buffers if total_buffers > 0 else 0.0
                 )
-                stats["pool_deallocations"] = (
-                    final_pool_stats["deallocation_count"]
-                    - initial_pool_stats["deallocation_count"]
-                )
-                stats["pool_reuse_rate"] = final_pool_stats.get("reuse_rate", 0.0)
 
             return time_ms, memory_mb, stats
 

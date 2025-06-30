@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Pattern Caching**: Global pattern cache for Ring Attention implementations
+  - 2x speedup for repeated forward passes
+  - 23% memory reduction through CPU storage
+- **Benchmark Scripts**: Comprehensive benchmarking suite
+  - `benchmark_sequence_ranges.py`: Test across different sequence lengths
+  - `benchmark_optimization_impact.py`: Measure caching and pooling benefits
+  - `benchmark_quick_validation.py`: Rapid CI/CD validation (<1 minute)
+- **Documentation**: 
+  - Optimization guide for pattern caching and memory pooling
+  - Memory pool integration guide with step-by-step instructions
+  - Benchmarking guide for performance testing
+
+### Changed
 - **CI/CD Improvements**:
   - Dependabot configuration for automated dependency updates
   - GitHub issue templates (bug report, feature request)
@@ -33,6 +46,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dependencies**: Removed legacy linting tools from test dependencies
 - **Documentation**: Updated installation instructions and development workflow
 - **CI/CD**: Enhanced testing infrastructure with GPU support and coverage reporting
+
+### Deprecated
+- **RingDilatedAttentionV3**: Deprecated in favor of V2
+  - V3's complex caching adds 15-45% overhead without benefits
+  - V2 provides better performance with simpler implementation
+  - Will be removed in v0.3.0
 
 ### Removed
 - Python 3.9, 3.10, 3.11, and 3.12 support

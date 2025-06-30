@@ -26,9 +26,11 @@ from dilated_attention_pytorch import (
     DilatedAttention,
     MultiheadDilatedAttention,
     ImprovedDilatedAttention,
+    ImprovedDilatedAttentionV2,
     ImprovedMultiheadDilatedAttention,
 )
 
+# Ring Attention implementations
 try:
     from dilated_attention_pytorch.ring_dilated_attention_v2 import (
         RingDilatedAttentionV2,
@@ -37,6 +39,33 @@ try:
     RING_V2_AVAILABLE = True
 except ImportError:
     RING_V2_AVAILABLE = False
+
+try:
+    from dilated_attention_pytorch.ring_dilated_attention_v3 import (
+        RingDilatedAttentionV3,
+    )
+
+    RING_V3_AVAILABLE = True
+except ImportError:
+    RING_V3_AVAILABLE = False
+
+try:
+    from dilated_attention_pytorch import RingDilatedAttentionProduction
+
+    RING_PRODUCTION_AVAILABLE = True
+except ImportError:
+    RING_PRODUCTION_AVAILABLE = False
+
+# Block-Sparse implementations
+try:
+    from dilated_attention_pytorch import (
+        BlockSparseRingDilatedAttention,
+        BlockSparseRingMultiheadDilatedAttention,
+    )
+
+    BLOCK_SPARSE_AVAILABLE = True
+except ImportError:
+    BLOCK_SPARSE_AVAILABLE = False
 
 
 @dataclass
@@ -78,47 +107,70 @@ class QuickValidator:
     ) -> QuickValidationResult:
         """Validate a single implementation."""
         try:
-            # Create model
+            # Common kwargs
+            kwargs = {
+                "segment_lengths": [512, 1024],
+                "dilation_rates": [1, 2],
+            }
+
+            # Create model based on implementation
             if implementation == "dilated":
-                model = DilatedAttention(
-                    segment_lengths=[512, 1024], dilation_rates=[1, 2]
-                ).to(self.device)
+                model = DilatedAttention(**kwargs).to(self.device)
                 shape = (batch_size, seq_len, num_heads, head_dim)
             elif implementation == "multihead":
                 model = MultiheadDilatedAttention(
-                    embed_dim=num_heads * head_dim,
-                    num_heads=num_heads,
-                    segment_lengths=[512, 1024],
-                    dilation_rates=[1, 2],
+                    embed_dim=num_heads * head_dim, num_heads=num_heads, **kwargs
                 ).to(self.device)
                 shape = (batch_size, seq_len, num_heads * head_dim)
             elif implementation == "improved":
-                model = ImprovedDilatedAttention(
-                    segment_lengths=[512, 1024], dilation_rates=[1, 2]
-                ).to(self.device)
+                model = ImprovedDilatedAttention(**kwargs).to(self.device)
+                shape = (batch_size, seq_len, num_heads, head_dim)
+            elif implementation == "improved_v2":
+                model = ImprovedDilatedAttentionV2(**kwargs).to(self.device)
                 shape = (batch_size, seq_len, num_heads, head_dim)
             elif implementation == "improved_multihead":
                 model = ImprovedMultiheadDilatedAttention(
-                    embed_dim=num_heads * head_dim,
-                    num_heads=num_heads,
-                    segment_lengths=[512, 1024],
-                    dilation_rates=[1, 2],
+                    embed_dim=num_heads * head_dim, num_heads=num_heads, **kwargs
                 ).to(self.device)
                 shape = (batch_size, seq_len, num_heads * head_dim)
             elif implementation == "ring_v2" and RING_V2_AVAILABLE:
-                model = RingDilatedAttentionV2(
-                    segment_lengths=[512, 1024],
-                    dilation_rates=[1, 2],
-                    use_pattern_cache=True,
+                model = RingDilatedAttentionV2(use_pattern_cache=True, **kwargs).to(
+                    self.device
+                )
+                shape = (batch_size, seq_len, num_heads, head_dim)
+            elif implementation == "ring_v3" and RING_V3_AVAILABLE:
+                model = RingDilatedAttentionV3(use_pattern_cache=True, **kwargs).to(
+                    self.device
+                )
+                shape = (batch_size, seq_len, num_heads, head_dim)
+            elif implementation == "ring_production" and RING_PRODUCTION_AVAILABLE:
+                model = RingDilatedAttentionProduction(**kwargs).to(self.device)
+                shape = (batch_size, seq_len, num_heads, head_dim)
+            elif implementation == "block_sparse" and BLOCK_SPARSE_AVAILABLE:
+                model = BlockSparseRingDilatedAttention(
+                    sparsity_ratio=0.9, pattern_type="dilated_sparse", **kwargs
                 ).to(self.device)
                 shape = (batch_size, seq_len, num_heads, head_dim)
+            elif implementation == "block_sparse_multihead" and BLOCK_SPARSE_AVAILABLE:
+                model = BlockSparseRingMultiheadDilatedAttention(
+                    embed_dim=num_heads * head_dim,
+                    num_heads=num_heads,
+                    sparsity_ratio=0.9,
+                    pattern_type="dilated_sparse",
+                    **kwargs,
+                ).to(self.device)
+                shape = (batch_size, seq_len, num_heads * head_dim)
             else:
                 raise ValueError(
                     f"Unknown or unavailable implementation: {implementation}"
                 )
 
             # Create input tensors
-            dtype = torch.float16 if self.device.type == "cuda" else torch.float32
+            # Use float32 for multihead implementations to avoid dtype issues
+            if "multihead" in implementation:
+                dtype = torch.float32
+            else:
+                dtype = torch.float16 if self.device.type == "cuda" else torch.float32
             q = torch.randn(shape, device=self.device, dtype=dtype)
             k = torch.randn(shape, device=self.device, dtype=dtype)
             v = torch.randn(shape, device=self.device, dtype=dtype)
