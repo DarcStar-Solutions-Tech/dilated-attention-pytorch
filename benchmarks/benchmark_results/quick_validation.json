@@ -1,0 +1,180 @@
+{
+  "timestamp": "2025-06-30 04:44:34 UTC",
+  "device": "cuda",
+  "results": {
+    "dilated": [
+      {
+        "test_name": "tiny",
+        "sequence_length": 1024,
+        "batch_size": 4,
+        "time_ms": 25.319814682006836,
+        "memory_mb": 23.00390625,
+        "passed": true,
+        "error": null
+      },
+      {
+        "test_name": "small",
+        "sequence_length": 4096,
+        "batch_size": 2,
+        "time_ms": 67.75999069213867,
+        "memory_mb": 46.00390625,
+        "passed": true,
+        "error": null
+      },
+      {
+        "test_name": "medium",
+        "sequence_length": 16384,
+        "batch_size": 1,
+        "time_ms": 98.72770309448242,
+        "memory_mb": 92.00390625,
+        "passed": true,
+        "error": null
+      }
+    ],
+    "improved": [
+      {
+        "test_name": "tiny",
+        "sequence_length": 1024,
+        "batch_size": 4,
+        "time_ms": 26.262998580932617,
+        "memory_mb": 15.00390625,
+        "passed": true,
+        "error": null
+      },
+      {
+        "test_name": "small",
+        "sequence_length": 4096,
+        "batch_size": 2,
+        "time_ms": 53.923606872558594,
+        "memory_mb": 30.00390625,
+        "passed": true,
+        "error": null
+      },
+      {
+        "test_name": "medium",
+        "sequence_length": 16384,
+        "batch_size": 1,
+        "time_ms": 106.42719268798828,
+        "memory_mb": 60.00390625,
+        "passed": true,
+        "error": null
+      }
+    ],
+    "multihead": [
+      {
+        "test_name": "tiny",
+        "sequence_length": 1024,
+        "batch_size": 4,
+        "time_ms": 3.7584304809570312,
+        "memory_mb": 92.16015625,
+        "passed": true,
+        "error": null
+      },
+      {
+        "test_name": "small",
+        "sequence_length": 4096,
+        "batch_size": 2,
+        "time_ms": 11.19089126586914,
+        "memory_mb": 184.31640625,
+        "passed": true,
+        "error": null
+      },
+      {
+        "test_name": "medium",
+        "sequence_length": 16384,
+        "batch_size": 1,
+        "time_ms": 19.21391487121582,
+        "memory_mb": 368.62890625,
+        "passed": true,
+        "error": null
+      }
+    ],
+    "improved_multihead": [
+      {
+        "test_name": "tiny",
+        "sequence_length": 1024,
+        "batch_size": 4,
+        "time_ms": 0.0,
+        "memory_mb": 0.0,
+        "passed": false,
+        "error": "'tuple' object has no attribute 'shape'"
+      },
+      {
+        "test_name": "small",
+        "sequence_length": 4096,
+        "batch_size": 2,
+        "time_ms": 0.0,
+        "memory_mb": 0.0,
+        "passed": false,
+        "error": "'tuple' object has no attribute 'shape'"
+      },
+      {
+        "test_name": "medium",
+        "sequence_length": 16384,
+        "batch_size": 1,
+        "time_ms": 0.0,
+        "memory_mb": 0.0,
+        "passed": false,
+        "error": "'tuple' object has no attribute 'shape'"
+      }
+    ],
+    "ring_v2": [
+      {
+        "test_name": "tiny",
+        "sequence_length": 1024,
+        "batch_size": 4,
+        "time_ms": 4.426479339599609,
+        "memory_mb": 78.0,
+        "passed": true,
+        "error": null
+      },
+      {
+        "test_name": "small",
+        "sequence_length": 4096,
+        "batch_size": 2,
+        "time_ms": 168.3790683746338,
+        "memory_mb": 156.0,
+        "passed": true,
+        "error": null
+      },
+      {
+        "test_name": "medium",
+        "sequence_length": 16384,
+        "batch_size": 1,
+        "time_ms": 325.0300884246826,
+        "memory_mb": 312.0,
+        "passed": true,
+        "error": null
+      }
+    ],
+    "ring_v3": [
+      {
+        "test_name": "tiny",
+        "sequence_length": 1024,
+        "batch_size": 4,
+        "time_ms": 4.375934600830078,
+        "memory_mb": 78.0,
+        "passed": true,
+        "error": null
+      },
+      {
+        "test_name": "small",
+        "sequence_length": 4096,
+        "batch_size": 2,
+        "time_ms": 181.33187294006348,
+        "memory_mb": 156.0,
+        "passed": true,
+        "error": null
+      },
+      {
+        "test_name": "medium",
+        "sequence_length": 16384,
+        "batch_size": 1,
+        "time_ms": 269.1617012023926,
+        "memory_mb": 312.0,
+        "passed": true,
+        "error": null
+      }
+    ]
+  }
+}

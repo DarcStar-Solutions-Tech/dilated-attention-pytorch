@@ -1,0 +1,1616 @@
+{
+  "audit_date": "2025-06-29T23:15:38.279502",
+  "summary": {
+    "total_files": 46,
+    "files_with_memory_pool": 8,
+    "files_actively_using": 7,
+    "classes_with_support": 4,
+    "default_enabled": 0,
+    "default_disabled": 4
+  },
+  "patterns": {
+    "allocate_methods": [
+      "allocated_gb",
+      "_allocate_from_free_list",
+      "_best_fit_allocate",
+      "_fallback_allocate",
+      "_preallocate",
+      "_allocate_numa_aware",
+      "_allocate_large",
+      "_allocate_tensor",
+      "allocated_mb",
+      "_get_or_allocate_buffer",
+      "preallocate_buffers",
+      "_allocate_new_buffer",
+      "_allocate_comm_buffers",
+      "_first_fit_allocate",
+      "_allocate_buffer",
+      "_buddy_allocate",
+      "_allocate_standard",
+      "allocate",
+      "_allocate_new_block",
+      "_deallocate_buffer",
+      "_deallocate_tensor",
+      "deallocate"
+    ],
+    "deallocate_methods": [
+      "_deallocate_tensor",
+      "_deallocate_buffer",
+      "deallocate"
+    ]
+  },
+  "recommendations": [
+    {
+      "file": "block_sparse_ring_distributed_dilated_attention.py",
+      "priority": "HIGH",
+      "recommendation": "Add corresponding deallocate calls",
+      "reason": "Found 1 allocate calls but only 0 deallocate calls"
+    },
+    {
+      "file": "__init__.py",
+      "priority": "MEDIUM",
+      "recommendation": "Complete memory pool integration",
+      "reason": "Memory pool is imported but no allocation methods found"
+    },
+    {
+      "file": "attention_buffer_manager.py",
+      "priority": "HIGH",
+      "recommendation": "Add corresponding deallocate calls",
+      "reason": "Found 3 allocate calls but only 1 deallocate calls"
+    },
+    {
+      "file": "bucketed_memory_pool.py",
+      "priority": "HIGH",
+      "recommendation": "Add corresponding deallocate calls",
+      "reason": "Found 6 allocate calls but only 2 deallocate calls"
+    },
+    {
+      "file": "enhanced_memory_pool.py",
+      "priority": "HIGH",
+      "recommendation": "Add corresponding deallocate calls",
+      "reason": "Found 3 allocate calls but only 1 deallocate calls"
+    },
+    {
+      "file": "fragment_aware_pool.py",
+      "priority": "HIGH",
+      "recommendation": "Add corresponding deallocate calls",
+      "reason": "Found 7 allocate calls but only 1 deallocate calls"
+    },
+    {
+      "file": "memory_pool.py",
+      "priority": "HIGH",
+      "recommendation": "Add corresponding deallocate calls",
+      "reason": "Found 1 allocate calls but only 0 deallocate calls"
+    },
+    {
+      "file": "memory_profiler.py",
+      "priority": "HIGH",
+      "recommendation": "Add corresponding deallocate calls",
+      "reason": "Found 2 allocate calls but only 0 deallocate calls"
+    },
+    {
+      "file": "numa_aware_pool.py",
+      "priority": "HIGH",
+      "recommendation": "Add corresponding deallocate calls",
+      "reason": "Found 3 allocate calls but only 0 deallocate calls"
+    },
+    {
+      "file": "dilated_attention.py",
+      "priority": "HIGH",
+      "recommendation": "Add corresponding deallocate calls",
+      "reason": "Found 1 allocate calls but only 0 deallocate calls"
+    },
+    {
+      "file": "distributed_dilated_attention.py",
+      "priority": "HIGH",
+      "recommendation": "Add memory pool support for large tensor allocations",
+      "reason": "This module handles large attention matrices that could benefit from pooled allocation"
+    },
+    {
+      "file": "improved_dilated_attention.py",
+      "priority": "HIGH",
+      "recommendation": "Add corresponding deallocate calls",
+      "reason": "Found 1 allocate calls but only 0 deallocate calls"
+    },
+    {
+      "file": "improved_dilated_attention_v2.py",
+      "priority": "HIGH",
+      "recommendation": "Add corresponding deallocate calls",
+      "reason": "Found 2 allocate calls but only 1 deallocate calls"
+    },
+    {
+      "file": "improved_distributed_dilated_attention.py",
+      "priority": "HIGH",
+      "recommendation": "Add memory pool support for large tensor allocations",
+      "reason": "This module handles large attention matrices that could benefit from pooled allocation"
+    },
+    {
+      "file": "improved_multihead_dilated_attention.py",
+      "priority": "HIGH",
+      "recommendation": "Add memory pool support for large tensor allocations",
+      "reason": "This module handles large attention matrices that could benefit from pooled allocation"
+    },
+    {
+      "file": "long_net.py",
+      "priority": "HIGH",
+      "recommendation": "Add memory pool support for large tensor allocations",
+      "reason": "This module handles large attention matrices that could benefit from pooled allocation"
+    },
+    {
+      "file": "multihead_dilated_attention.py",
+      "priority": "HIGH",
+      "recommendation": "Add memory pool support for large tensor allocations",
+      "reason": "This module handles large attention matrices that could benefit from pooled allocation"
+    },
+    {
+      "file": "ring_dilated_attention_production.py",
+      "priority": "HIGH",
+      "recommendation": "Add corresponding deallocate calls",
+      "reason": "Found 1 allocate calls but only 0 deallocate calls"
+    },
+    {
+      "file": "ring_dilated_attention_v2.py",
+      "priority": "HIGH",
+      "recommendation": "Add corresponding deallocate calls",
+      "reason": "Found 3 allocate calls but only 1 deallocate calls"
+    },
+    {
+      "file": "ring_dilated_attention_v3.py",
+      "priority": "HIGH",
+      "recommendation": "Add corresponding deallocate calls",
+      "reason": "Found 2 allocate calls but only 1 deallocate calls"
+    },
+    {
+      "file": "transformer.py",
+      "priority": "HIGH",
+      "recommendation": "Add memory pool support for large tensor allocations",
+      "reason": "This module handles large attention matrices that could benefit from pooled allocation"
+    }
+  ],
+  "detailed_results": [
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/__init__.py",
+      "filename": "__init__.py",
+      "has_memory_pool_import": false,
+      "classes": [],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/block_sparse_adaptive.py",
+      "filename": "block_sparse_adaptive.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "AdaptiveConfig",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "ImportanceScorer",
+          "bases": [
+            "nn.Module"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "BlockSparseAdaptive",
+          "bases": [
+            "BlockSparseOptimized"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "AdaptiveSparsityTrainer",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/block_sparse_hierarchical.py",
+      "filename": "block_sparse_hierarchical.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "HierarchicalConfig",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "BlockSparseHierarchical",
+          "bases": [
+            "BlockSparseOptimized"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/block_sparse_optimized.py",
+      "filename": "block_sparse_optimized.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "PersistentPatternCache",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "BlockSparseOptimized",
+          "bases": [
+            "BlockSparseRingDilatedAttention"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/block_sparse_ring_dilated_attention.py",
+      "filename": "block_sparse_ring_dilated_attention.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "SparsePatternConfig",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "BlockSparseRingDilatedAttention",
+          "bases": [
+            "RingDilatedAttentionV2"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 2,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/block_sparse_ring_distributed_dilated_attention.py",
+      "filename": "block_sparse_ring_distributed_dilated_attention.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "DistributedSparsePattern",
+          "bases": [
+            "Enum"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "DistributedSparseConfig",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "AdaptiveMemoryPool",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "HierarchicalSparsePatternGenerator",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "OptimizedGradientCommunicator",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "GradientCompressor",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "BlockSparseRingDistributedDilatedAttention",
+          "bases": [
+            "RingDistributedDilatedAttention"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 5,
+      "allocate_calls": [
+        {
+          "function": "_allocate_buffer",
+          "class": "AdaptiveMemoryPool",
+          "line": 207
+        }
+      ],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/block_sparse_ring_multihead_dilated_attention.py",
+      "filename": "block_sparse_ring_multihead_dilated_attention.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "BlockSparseRingMultiheadDilatedAttention",
+          "bases": [
+            "nn.Module"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/block_sparse_torch_sparse.py",
+      "filename": "block_sparse_torch_sparse.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "BlockSparseTorchSparse",
+          "bases": [
+            "BlockSparseOptimized"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/__init__.py",
+      "filename": "__init__.py",
+      "has_memory_pool_import": true,
+      "classes": [],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/attention_buffer_manager.py",
+      "filename": "attention_buffer_manager.py",
+      "has_memory_pool_import": true,
+      "classes": [
+        {
+          "name": "BufferType",
+          "bases": [
+            "enum.Enum"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "BufferConfig",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "AttentionBufferManager",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [
+        {
+          "function": "allocate",
+          "class": "AttentionBufferManager",
+          "line": 201
+        },
+        {
+          "function": "deallocate",
+          "class": "AttentionBufferManager",
+          "line": 277
+        },
+        {
+          "function": "preallocate_buffers",
+          "class": "AttentionBufferManager",
+          "line": 306
+        }
+      ],
+      "deallocate_calls": [
+        {
+          "function": "deallocate",
+          "class": "AttentionBufferManager",
+          "line": 277
+        }
+      ]
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/base.py",
+      "filename": "base.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "BaseDilatedAttention",
+          "bases": [
+            "nn.Module",
+            "ValidationMixin",
+            "ABC"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "BaseMultiheadDilatedAttention",
+          "bases": [
+            "nn.Module",
+            "ValidationMixin",
+            "ABC"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/bucketed_memory_pool.py",
+      "filename": "bucketed_memory_pool.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "BucketConfig",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "MemoryBucket",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "BucketedMemoryPool",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [
+        {
+          "function": "_preallocate",
+          "class": "MemoryBucket",
+          "line": 89
+        },
+        {
+          "function": "allocate",
+          "class": "MemoryBucket",
+          "line": 99
+        },
+        {
+          "function": "deallocate",
+          "class": "MemoryBucket",
+          "line": 190
+        },
+        {
+          "function": "allocate",
+          "class": "BucketedMemoryPool",
+          "line": 351
+        },
+        {
+          "function": "deallocate",
+          "class": "BucketedMemoryPool",
+          "line": 405
+        },
+        {
+          "function": "_allocate_large",
+          "class": "BucketedMemoryPool",
+          "line": 475
+        }
+      ],
+      "deallocate_calls": [
+        {
+          "function": "deallocate",
+          "class": "MemoryBucket",
+          "line": 190
+        },
+        {
+          "function": "deallocate",
+          "class": "BucketedMemoryPool",
+          "line": 405
+        }
+      ]
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/config.py",
+      "filename": "config.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "DilatedAttentionConfig",
+          "bases": [
+            "ValidationMixin"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "MultiheadConfig",
+          "bases": [
+            "ValidationMixin"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "RingAttentionConfig",
+          "bases": [
+            "DilatedAttentionConfig"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "SparseAttentionConfig",
+          "bases": [
+            "DilatedAttentionConfig"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "DistributedConfig",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "MemoryPoolConfig",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/constants.py",
+      "filename": "constants.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "_GPUTypeLazy",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "_OptimalSettingsLazy",
+          "bases": [
+            "dict"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/enhanced_memory_pool.py",
+      "filename": "enhanced_memory_pool.py",
+      "has_memory_pool_import": true,
+      "classes": [
+        {
+          "name": "EnhancedMemoryPool",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [
+        {
+          "function": "allocate",
+          "class": "EnhancedMemoryPool",
+          "line": 113
+        },
+        {
+          "function": "deallocate",
+          "class": "EnhancedMemoryPool",
+          "line": 217
+        },
+        {
+          "function": "_fallback_allocate",
+          "class": "EnhancedMemoryPool",
+          "line": 292
+        }
+      ],
+      "deallocate_calls": [
+        {
+          "function": "deallocate",
+          "class": "EnhancedMemoryPool",
+          "line": 217
+        }
+      ]
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/factory.py",
+      "filename": "factory.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "RingDilatedAttentionV2Wrapper",
+          "bases": [
+            "BaseDilatedAttention"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "RingMultiheadDilatedAttentionV2Wrapper",
+          "bases": [
+            "BaseMultiheadDilatedAttention"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "BlockSparseWrapper",
+          "bases": [
+            "BaseMultiheadDilatedAttention"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/fragment_aware_pool.py",
+      "filename": "fragment_aware_pool.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "MemoryBlock",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "FragmentationStats",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "FragmentAwareMemoryPool",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [
+        {
+          "function": "allocate",
+          "class": "FragmentAwareMemoryPool",
+          "line": 149
+        },
+        {
+          "function": "deallocate",
+          "class": "FragmentAwareMemoryPool",
+          "line": 201
+        },
+        {
+          "function": "_allocate_from_free_list",
+          "class": "FragmentAwareMemoryPool",
+          "line": 363
+        },
+        {
+          "function": "_first_fit_allocate",
+          "class": "FragmentAwareMemoryPool",
+          "line": 372
+        },
+        {
+          "function": "_best_fit_allocate",
+          "class": "FragmentAwareMemoryPool",
+          "line": 395
+        },
+        {
+          "function": "_buddy_allocate",
+          "class": "FragmentAwareMemoryPool",
+          "line": 430
+        },
+        {
+          "function": "_allocate_new_block",
+          "class": "FragmentAwareMemoryPool",
+          "line": 477
+        }
+      ],
+      "deallocate_calls": [
+        {
+          "function": "deallocate",
+          "class": "FragmentAwareMemoryPool",
+          "line": 201
+        }
+      ]
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/memory_pool.py",
+      "filename": "memory_pool.py",
+      "has_memory_pool_import": true,
+      "classes": [
+        {
+          "name": "BufferStats",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "MemoryFragment",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "UnifiedMemoryPool",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [
+        {
+          "function": "_allocate_new_buffer",
+          "class": "UnifiedMemoryPool",
+          "line": 523
+        }
+      ],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/memory_profiler.py",
+      "filename": "memory_profiler.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "AllocationEvent",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "MemorySnapshot",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "AllocationPattern",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "MemoryProfiler",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [
+        {
+          "function": "allocated_mb",
+          "class": "MemorySnapshot",
+          "line": 65
+        },
+        {
+          "function": "allocated_gb",
+          "class": "MemorySnapshot",
+          "line": 70
+        }
+      ],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/memory_visualizer.py",
+      "filename": "memory_visualizer.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "MemoryVisualizer",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/numa_aware_pool.py",
+      "filename": "numa_aware_pool.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "NUMANode",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "NUMATopologyDetector",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "NUMAAwareMemoryPool",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [
+        {
+          "function": "allocate",
+          "class": "NUMAAwareMemoryPool",
+          "line": 321
+        },
+        {
+          "function": "_allocate_numa_aware",
+          "class": "NUMAAwareMemoryPool",
+          "line": 471
+        },
+        {
+          "function": "_allocate_standard",
+          "class": "NUMAAwareMemoryPool",
+          "line": 491
+        }
+      ],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/optimized_pattern_cache.py",
+      "filename": "optimized_pattern_cache.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "OptimizedPatternCache",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/pattern_cache.py",
+      "filename": "pattern_cache.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "PatternCache",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "DilatedPatternCache",
+          "bases": [
+            "PatternCache"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/core/simple_gpu_cache.py",
+      "filename": "simple_gpu_cache.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "SimpleGPUPatternCache",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/dilated_attention.py",
+      "filename": "dilated_attention.py",
+      "has_memory_pool_import": true,
+      "classes": [
+        {
+          "name": "DilatedAttention",
+          "bases": [
+            "BaseDilatedAttention"
+          ],
+          "has_init": true,
+          "memory_pool_param": "enable_memory_pool",
+          "memory_pool_default": false
+        }
+      ],
+      "memory_pool_usage_count": 7,
+      "allocate_calls": [
+        {
+          "function": "_allocate_tensor",
+          "class": "DilatedAttention",
+          "line": 122
+        }
+      ],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/distributed_dilated_attention.py",
+      "filename": "distributed_dilated_attention.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "DistributedMultiheadDilatedAttention",
+          "bases": [
+            "LightningModule"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/improved_dilated_attention.py",
+      "filename": "improved_dilated_attention.py",
+      "has_memory_pool_import": true,
+      "classes": [
+        {
+          "name": "SDPBackend",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "ImprovedDilatedAttention",
+          "bases": [
+            "BaseDilatedAttention"
+          ],
+          "has_init": true,
+          "memory_pool_param": "enable_memory_pool",
+          "memory_pool_default": false
+        }
+      ],
+      "memory_pool_usage_count": 8,
+      "allocate_calls": [
+        {
+          "function": "_allocate_tensor",
+          "class": "ImprovedDilatedAttention",
+          "line": 136
+        }
+      ],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/improved_dilated_attention_v2.py",
+      "filename": "improved_dilated_attention_v2.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "ImprovedDilatedAttentionV2",
+          "bases": [
+            "ImprovedDilatedAttention"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [
+        {
+          "function": "_allocate_buffer",
+          "class": "ImprovedDilatedAttentionV2",
+          "line": 76
+        },
+        {
+          "function": "_deallocate_buffer",
+          "class": "ImprovedDilatedAttentionV2",
+          "line": 108
+        }
+      ],
+      "deallocate_calls": [
+        {
+          "function": "_deallocate_buffer",
+          "class": "ImprovedDilatedAttentionV2",
+          "line": 108
+        }
+      ]
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/improved_distributed_dilated_attention.py",
+      "filename": "improved_distributed_dilated_attention.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "DistributedImprovedDilatedAttention",
+          "bases": [
+            "BaseDilatedAttention"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "DistributedImprovedMultiheadDilatedAttention",
+          "bases": [
+            "BaseMultiheadDilatedAttention"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "DeepSpeedDilatedAttentionEngine",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "DistributedDilatedTransformer",
+          "bases": [
+            "nn.Module"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/improved_multihead_dilated_attention.py",
+      "filename": "improved_multihead_dilated_attention.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "ImprovedMultiheadDilatedAttention",
+          "bases": [
+            "BaseMultiheadDilatedAttention"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/long_net.py",
+      "filename": "long_net.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "LongNet",
+          "bases": [
+            "nn.Module"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "LongNetLM",
+          "bases": [
+            "nn.Module"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/multihead_dilated_attention.py",
+      "filename": "multihead_dilated_attention.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "xops",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "AttentionOp",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "MultiheadDilatedAttention",
+          "bases": [
+            "BaseMultiheadDilatedAttention"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/ring_dilated_attention_production.py",
+      "filename": "ring_dilated_attention_production.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "RingAttentionConfig",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "MemoryPool",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "RingDilatedAttentionProduction",
+          "bases": [
+            "nn.Module"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 15,
+      "allocate_calls": [
+        {
+          "function": "_get_or_allocate_buffer",
+          "class": "RingDilatedAttentionProduction",
+          "line": 202
+        }
+      ],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/ring_dilated_attention_v2.py",
+      "filename": "ring_dilated_attention_v2.py",
+      "has_memory_pool_import": true,
+      "classes": [
+        {
+          "name": "RingDilatedAttentionV2",
+          "bases": [
+            "nn.Module"
+          ],
+          "has_init": true,
+          "memory_pool_param": "enable_memory_pool",
+          "memory_pool_default": false
+        }
+      ],
+      "memory_pool_usage_count": 9,
+      "allocate_calls": [
+        {
+          "function": "_allocate_tensor",
+          "class": "RingDilatedAttentionV2",
+          "line": 128
+        },
+        {
+          "function": "_deallocate_tensor",
+          "class": "RingDilatedAttentionV2",
+          "line": 168
+        },
+        {
+          "function": "_allocate_comm_buffers",
+          "class": "RingDilatedAttentionV2",
+          "line": 657
+        }
+      ],
+      "deallocate_calls": [
+        {
+          "function": "_deallocate_tensor",
+          "class": "RingDilatedAttentionV2",
+          "line": 168
+        }
+      ]
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/ring_dilated_attention_v3.py",
+      "filename": "ring_dilated_attention_v3.py",
+      "has_memory_pool_import": true,
+      "classes": [
+        {
+          "name": "RingDilatedAttentionV3",
+          "bases": [
+            "nn.Module"
+          ],
+          "has_init": true,
+          "memory_pool_param": "enable_memory_pool",
+          "memory_pool_default": false
+        }
+      ],
+      "memory_pool_usage_count": 9,
+      "allocate_calls": [
+        {
+          "function": "_allocate_tensor",
+          "class": "RingDilatedAttentionV3",
+          "line": 322
+        },
+        {
+          "function": "_deallocate_tensor",
+          "class": "RingDilatedAttentionV3",
+          "line": 346
+        }
+      ],
+      "deallocate_calls": [
+        {
+          "function": "_deallocate_tensor",
+          "class": "RingDilatedAttentionV3",
+          "line": 346
+        }
+      ]
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/ring_distributed_dilated_attention.py",
+      "filename": "ring_distributed_dilated_attention.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "RingDistributedDilatedAttention",
+          "bases": [
+            "nn.Module"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/simulated_ring_dilated_attention.py",
+      "filename": "simulated_ring_dilated_attention.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "SimulatedRingDilatedAttention",
+          "bases": [
+            "nn.Module"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/transformer.py",
+      "filename": "transformer.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "DilatedTransformerEncoderLayer",
+          "bases": [
+            "nn.Module"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "DilatedTransformerDecoderLayer",
+          "bases": [
+            "nn.Module"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/transformer_refactored.py",
+      "filename": "transformer_refactored.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "TransformerLayerConfig",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "DilatedTransformerEncoderLayer",
+          "bases": [
+            "nn.Module"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "DilatedTransformerDecoderLayer",
+          "bases": [
+            "nn.Module"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/true_ring_dilated_attention.py",
+      "filename": "true_ring_dilated_attention.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "TrueRingDilatedAttention",
+          "bases": [
+            "nn.Module"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/utils/__init__.py",
+      "filename": "__init__.py",
+      "has_memory_pool_import": false,
+      "classes": [],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/utils/attention_utils.py",
+      "filename": "attention_utils.py",
+      "has_memory_pool_import": false,
+      "classes": [],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/utils/flash_attention_3_utils.py",
+      "filename": "flash_attention_3_utils.py",
+      "has_memory_pool_import": false,
+      "classes": [],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/utils/return_standardizer.py",
+      "filename": "return_standardizer.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "MultiheadAttentionWrapper",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/utils/sparse_pattern_utils.py",
+      "filename": "sparse_pattern_utils.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "PatternType",
+          "bases": [
+            "Enum"
+          ],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "PatternQualityMetrics",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "PatternConfig",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "SparsePatternGenerator",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "PatternQualityAnalyzer",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "PatternOptimizer",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        },
+        {
+          "name": "PatternVisualizer",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    },
+    {
+      "filepath": "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/utils/validation.py",
+      "filename": "validation.py",
+      "has_memory_pool_import": false,
+      "classes": [
+        {
+          "name": "ValidationMixin",
+          "bases": [],
+          "has_init": false,
+          "memory_pool_param": null,
+          "memory_pool_default": null
+        }
+      ],
+      "memory_pool_usage_count": 0,
+      "allocate_calls": [],
+      "deallocate_calls": []
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "Production (1K-16K)": {
+    "dilated": [
+      {
+        "sequence_length": 1024,
+        "time_ms": 30.631208419799805,
+        "memory_mb": 6.0,
+        "throughput_tokens_per_sec": 66859.91528418404,
+        "success": true,
+        "error": null
+      },
+      {
+        "sequence_length": 2048,
+        "time_ms": 47.17066287994385,
+        "memory_mb": 19.0078125,
+        "throughput_tokens_per_sec": 86833.63238767518,
+        "success": true,
+        "error": null
+      },
+      {
+        "sequence_length": 4096,
+        "time_ms": 86.19227409362793,
+        "memory_mb": 32.0078125,
+        "throughput_tokens_per_sec": 95043.3212970027,
+        "success": true,
+        "error": null
+      },
+      {
+        "sequence_length": 8192,
+        "time_ms": 176.7648458480835,
+        "memory_mb": 60.0078125,
+        "throughput_tokens_per_sec": 92688.11296382344,
+        "success": true,
+        "error": null
+      },
+      {
+        "sequence_length": 8192,
+        "time_ms": 394.4429636001587,
+        "memory_mb": 38.03125,
+        "throughput_tokens_per_sec": 20768.528674538902,
+        "success": true,
+        "error": null
+      },
+      {
+        "sequence_length": 16384,
+        "time_ms": 850.909161567688,
+        "memory_mb": 76.03125,
+        "throughput_tokens_per_sec": 19254.699255810854,
+        "success": true,
+        "error": null
+      }
+    ],
+    "improved": [
+      {
+        "sequence_length": 1024,
+        "time_ms": 8.338737487792969,
+        "memory_mb": 26.0,
+        "throughput_tokens_per_sec": 245600.72828747227,
+        "success": true,
+        "error": null
+      },
+      {
+        "sequence_length": 2048,
+        "time_ms": 55.873870849609375,
+        "memory_mb": 47.0078125,
+        "throughput_tokens_per_sec": 73307.96914043832,
+        "success": true,
+        "error": null
+      },
+      {
+        "sequence_length": 4096,
+        "time_ms": 73.95801544189453,
+        "memory_mb": 178.0078125,
+        "throughput_tokens_per_sec": 110765.54652059429,
+        "success": true,
+        "error": null
+      },
+      {
+        "sequence_length": 8192,
+        "time_ms": 141.3151741027832,
+        "memory_mb": 170.0078125,
+        "throughput_tokens_per_sec": 115939.4247930047,
+        "success": true,
+        "error": null
+      },
+      {
+        "sequence_length": 8192,
+        "time_ms": 60.008835792541504,
+        "memory_mb": 166.03125,
+        "throughput_tokens_per_sec": 136513.2299570155,
+        "success": true,
+        "error": null
+      },
+      {
+        "sequence_length": 16384,
+        "time_ms": 133.681058883667,
+        "memory_mb": 140.03125,
+        "throughput_tokens_per_sec": 122560.36970995132,
+        "success": true,
+        "error": null
+      }
+    ]
+  }
+}
