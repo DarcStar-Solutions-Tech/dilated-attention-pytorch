@@ -10,10 +10,8 @@ import time
 
 import torch
 
-from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
-from dilated_attention_pytorch.ring_multihead_dilated_attention import (
-    RingMultiheadDilatedAttention,
-)
+from dilated_attention_pytorch import RingDilatedAttention
+# RingMultiheadDilatedAttention not available in current implementation
 
 
 def get_gpu_memory_info() -> tuple[float, float]:

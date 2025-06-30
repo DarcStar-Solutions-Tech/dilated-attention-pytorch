@@ -13,7 +13,17 @@ from typing import Any
 import torch
 from torch import Tensor
 
-from ..core.constants import GPU_TYPE, HAS_FLASH_ATTN_3
+from ..core.constants import GPU_TYPE, HAS_FLASH_ATTN_3, FLASH_ATTN_VERSION
+
+
+def get_flash_attention_version() -> str:
+    """Get Flash Attention version if available."""
+    return FLASH_ATTN_VERSION or "Not installed"
+
+
+def is_flash_attention_3_available() -> bool:
+    """Check if Flash Attention 3 is available."""
+    return HAS_FLASH_ATTN_3
 
 
 def create_fa3_block_sparse_mask(

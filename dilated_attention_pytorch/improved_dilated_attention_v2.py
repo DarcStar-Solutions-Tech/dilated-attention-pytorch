@@ -64,6 +64,7 @@ class ImprovedDilatedAttentionV2(ImprovedDilatedAttention):
         # Initialize buffer manager
         self.enable_buffer_manager = enable_buffer_manager
         self.buffer_manager = None
+        self._cached_indices = {}  # Initialize cached indices
 
         if enable_buffer_manager:
             self.buffer_manager = create_attention_buffer_manager(

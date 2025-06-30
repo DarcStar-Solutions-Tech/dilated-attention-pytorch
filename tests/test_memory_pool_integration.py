@@ -18,7 +18,8 @@ from dilated_attention_pytorch import (
     ImprovedDilatedAttention,
 )
 from dilated_attention_pytorch.ring_dilated_attention_v2 import RingDilatedAttentionV2
-from dilated_attention_pytorch.ring_dilated_attention_v3 import RingDilatedAttentionV3
+
+# RingDilatedAttentionV3 is deprecated, removed from tests
 from dilated_attention_pytorch.core import reset_global_memory_pool
 
 
@@ -131,25 +132,7 @@ class TestMemoryPoolIntegration:
         # Verify cleanup
         model.cleanup_buffers()
 
-    def test_ring_attention_v3_memory_pool(self):
-        """Test memory pool usage in RingDilatedAttentionV3."""
-        model = RingDilatedAttentionV3(
-            segment_lengths=[256, 512],
-            dilation_rates=[1, 2],
-            enable_memory_pool=True,
-            cache_on_gpu=False,  # Disable GPU cache for testing
-        )
-
-        assert model.enable_memory_pool is True
-        assert model._memory_pool is not None
-
-        # Run forward pass
-        q = torch.randn(1, 512, 8, 32)
-        k = torch.randn(1, 512, 8, 32)
-        v = torch.randn(1, 512, 8, 32)
-
-        output = model(q, k, v)
-        assert output.shape == q.shape
+    # RingDilatedAttentionV3 test removed - deprecated
 
     def test_memory_pool_disabled_by_default(self):
         """Verify memory pool is disabled by default."""
@@ -157,7 +140,6 @@ class TestMemoryPoolIntegration:
             DilatedAttention(segment_lengths=[64], dilation_rates=[1]),
             ImprovedDilatedAttention(segment_lengths=[64], dilation_rates=[1]),
             RingDilatedAttentionV2(segment_lengths=[64], dilation_rates=[1]),
-            RingDilatedAttentionV3(segment_lengths=[64], dilation_rates=[1]),
         ]
 
         for model in models:
@@ -258,9 +240,6 @@ class TestMemoryPoolConsistency:
             RingDilatedAttentionV2(
                 segment_lengths=[64], dilation_rates=[1], enable_memory_pool=True
             ),
-            RingDilatedAttentionV3(
-                segment_lengths=[64], dilation_rates=[1], enable_memory_pool=True
-            ),
         ]
 
         for model in models:
@@ -279,7 +258,6 @@ class TestMemoryPoolConsistency:
             DilatedAttention,
             ImprovedDilatedAttention,
             RingDilatedAttentionV2,
-            RingDilatedAttentionV3,
         ]
 
         for cls in classes:

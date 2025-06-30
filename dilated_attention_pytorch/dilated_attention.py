@@ -225,14 +225,12 @@ class DilatedAttention(BaseDilatedAttention):
             if r > 1 or offset > 0:
                 # Try to get cached dilated indices
                 cache_key = f"dilated_indices_s{s}_r{r}_off{offset}"
-                dil_indices = self._pattern_cache.get(
-                    cache_key, target_device=query.device
-                )
+                dil_indices = self._pattern_cache.get(cache_key)
 
                 if dil_indices is None:
                     # Create dilated indices if not cached
                     dil_indices = torch.arange(offset, s, r, device=torch.device("cpu"))
-                    self._pattern_cache.put(cache_key, dil_indices, move_to_cpu=False)
+                    self._pattern_cache[cache_key] = dil_indices
                     dil_indices = dil_indices.to(query.device)
 
                 q_dil = q_seg[:, :, dil_indices, :, :]

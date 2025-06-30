@@ -16,15 +16,14 @@ import pytest
 import torch
 
 from dilated_attention_pytorch.block_sparse_ring_dilated_attention import (
-    BlockSparseMemoryPool,
     BlockSparseRingDilatedAttention,
     SparsePatternConfig,
-    SparsePatternGenerator,
 )
-from dilated_attention_pytorch.ring_dilated_attention import (
-    RingAttentionMemoryPool,
-    RingDilatedAttention,
-)
+from dilated_attention_pytorch import RingDilatedAttention
+from dilated_attention_pytorch.core.memory_pool import UnifiedMemoryPool
+from dilated_attention_pytorch.utils.sparse_pattern_utils import SparsePatternGenerator
+
+RingAttentionMemoryPool = UnifiedMemoryPool  # Alias for compatibility
 
 
 class ThreadSafetyTester:
@@ -273,7 +272,7 @@ class TestAttentionModuleThreadSafety:
                 segment_lengths=[256], dilation_rates=[1], enable_memory_pool=True
             )
             # Inject shared pool
-            attention.memory_pool = BlockSparseMemoryPool()
+            attention.memory_pool = UnifiedMemoryPool()
             attention._memory_pool = shared_pool
             attentions.append(attention)
 

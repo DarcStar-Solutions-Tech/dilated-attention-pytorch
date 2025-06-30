@@ -65,8 +65,6 @@ from .ring_dilated_attention_production import (
     RingAttentionConfig,
     create_production_ring_attention,
 )
-
-# Note: Use create_multihead_dilated_attention('ring') for Ring Attention functionality
 from .transformer import DilatedTransformerDecoderLayer, DilatedTransformerEncoderLayer
 from .utils.sparse_pattern_utils import (
     PatternConfig,
@@ -75,6 +73,9 @@ from .utils.sparse_pattern_utils import (
     PatternType,
     SparsePatternGenerator,
 )
+
+# Alias for backward compatibility - use the collective operations version
+RingDilatedAttention = RingDilatedAttentionV2Collective
 
 # Note: Optimizations have been integrated into the main block-sparse implementations
 
@@ -95,6 +96,7 @@ __all__ = [
     "AdaptiveSparsityTrainer",
     "create_adaptive_block_sparse",
     # Ring Attention implementations
+    "RingDilatedAttention",  # Alias for RingDilatedAttentionV2Collective
     "RingDilatedAttentionV2",
     "RingDilatedAttentionV2Collective",
     "RingDilatedAttentionProduction",

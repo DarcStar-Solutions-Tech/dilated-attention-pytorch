@@ -21,10 +21,8 @@ from dilated_attention_pytorch.block_sparse_ring_distributed_dilated_attention i
     BlockSparseRingDistributedDilatedAttention,
     DistributedSparseConfig,
 )
-from dilated_attention_pytorch.ring_dilated_attention import (
-    RingAttentionMemoryPool,
-    RingDilatedAttention,
-)
+from dilated_attention_pytorch import RingDilatedAttention
+from dilated_attention_pytorch.core.memory_pool import UnifiedMemoryPool
 from dilated_attention_pytorch.ring_distributed_dilated_attention import (
     RingDistributedDilatedAttention,
 )
@@ -36,7 +34,7 @@ class TestRingAttentionMemoryPool:
     def test_memory_pool_size_limits(self):
         """Test that memory pool enforces size limits."""
         device = torch.device("cpu")
-        pool = RingAttentionMemoryPool(device, max_pool_size=5, max_cache_size=2)
+        pool = UnifiedMemoryPool(device, max_pool_size=5, max_cache_size=2)
 
         # Fill pool to limit
         buffers = []
@@ -51,7 +49,7 @@ class TestRingAttentionMemoryPool:
     def test_memory_pool_thread_safety(self):
         """Test concurrent access to memory pool."""
         device = torch.device("cpu")
-        pool = RingAttentionMemoryPool(device, max_pool_size=10)
+        pool = UnifiedMemoryPool(device, max_pool_size=10)
 
         errors = []
         buffers_acquired = []
@@ -93,7 +91,7 @@ class TestRingAttentionMemoryPool:
     def test_lru_eviction(self):
         """Test LRU eviction policy."""
         device = torch.device("cpu")
-        pool = RingAttentionMemoryPool(device, max_pool_size=3)
+        pool = UnifiedMemoryPool(device, max_pool_size=3)
 
         # Access buffers in order
         buffer1 = pool.get_buffer((10,), torch.float32, "buffer1")
@@ -366,7 +364,7 @@ class TestCUDASpecific:
     def test_memory_pressure_handling(self):
         """Test behavior under memory pressure."""
         device = torch.device("cuda:0")
-        pool = RingAttentionMemoryPool(device, max_pool_size=10)
+        pool = UnifiedMemoryPool(device, max_pool_size=10)
 
         # Allocate large buffers to create memory pressure
         large_buffers = []

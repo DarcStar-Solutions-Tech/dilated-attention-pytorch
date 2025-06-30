@@ -17,9 +17,8 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from dilated_attention_pytorch.ring_distributed_dilated_attention import (
     RingDistributedDilatedAttention,
 )
-from dilated_attention_pytorch.ring_multihead_dilated_attention import (
-    RingMultiheadDilatedAttention,
-)
+from dilated_attention_pytorch import MultiheadDilatedAttention
+# Using MultiheadDilatedAttention instead of RingMultiheadDilatedAttention
 
 
 class SimpleTransformerBlock(nn.Module):
@@ -33,7 +32,7 @@ class SimpleTransformerBlock(nn.Module):
         dilation_rates: list[int],
     ):
         super().__init__()
-        self.attention = RingMultiheadDilatedAttention(
+        self.attention = MultiheadDilatedAttention(
             embed_dim=embed_dim,
             num_heads=num_heads,
             segment_lengths=segment_lengths,
@@ -131,7 +130,7 @@ class TestDistributedIntegration:
 
     def test_gradient_accumulation(self, _mock_dist_env):
         """Test gradient accumulation across multiple steps."""
-        model = RingMultiheadDilatedAttention(
+        model = MultiheadDilatedAttention(
             embed_dim=256,
             num_heads=4,
             segment_lengths=[512, 1024],
@@ -183,7 +182,7 @@ class TestDistributedIntegration:
     def test_checkpoint_save_load(self, _mock_dist_env):
         """Test model checkpointing and loading."""
         # Create model
-        model = RingMultiheadDilatedAttention(
+        model = MultiheadDilatedAttention(
             embed_dim=256,
             num_heads=4,
             segment_lengths=[512, 1024],
@@ -232,7 +231,7 @@ class TestDistributedIntegration:
 
     def test_dynamic_sequence_lengths(self, _mock_dist_env):
         """Test handling of variable sequence lengths in a batch."""
-        model = RingMultiheadDilatedAttention(
+        model = MultiheadDilatedAttention(
             embed_dim=256,
             num_heads=4,
             segment_lengths=[512, 1024],
@@ -461,7 +460,7 @@ class TestRealWorldScenarios:
                 # Text encoder (mock)
                 self.text_encoder = nn.Linear(768, embed_dim)
                 # Cross-modal attention with Ring Attention
-                self.cross_attention = RingMultiheadDilatedAttention(
+                self.cross_attention = MultiheadDilatedAttention(
                     embed_dim=embed_dim,
                     num_heads=num_heads,
                     segment_lengths=[512, 1024],
