@@ -93,9 +93,23 @@ class RingDilatedAttentionV2Collective(nn.Module):
         self.device = device or torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )
-        self.dtype = dtype or (
-            torch.float16 if self.device.type == "cuda" else torch.float32
-        )
+
+        # Smart dtype selection
+        if dtype is not None:
+            self.dtype = dtype
+        else:
+            # Try to use GPU utilities for optimal dtype selection
+            try:
+                from .utils.gpu_utils import get_optimal_dtype
+
+                self.dtype = get_optimal_dtype(
+                    self.device, prefer_fp16=True, warn_pascal=True
+                )
+            except ImportError:
+                # Fallback to original logic if gpu_utils not available
+                self.dtype = (
+                    torch.float16 if self.device.type == "cuda" else torch.float32
+                )
 
         # Ring configuration
         self.world_size = dist.get_world_size() if dist.is_initialized() else 1

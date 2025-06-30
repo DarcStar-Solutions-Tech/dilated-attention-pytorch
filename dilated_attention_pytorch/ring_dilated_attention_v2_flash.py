@@ -31,14 +31,7 @@ except ImportError:
     HAS_FLASH_UTILS = False
     warnings.warn("Flash Attention utilities not available")
 
-try:
-    from .utils.gpu_utils import get_optimal_dtype
-
-    _ = get_optimal_dtype  # Mark as used
-
-    HAS_GPU_UTILS = True
-except ImportError:
-    HAS_GPU_UTILS = False
+# GPU utils now handled in parent class
 
 
 class RingDilatedAttentionV2Flash(RingDilatedAttentionV2Collective):
