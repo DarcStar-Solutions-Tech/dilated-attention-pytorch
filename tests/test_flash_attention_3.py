@@ -14,8 +14,8 @@ import torch
 # Add the package to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dilated_attention_pytorch.ring_dilated_attention import (
-    RingDilatedAttention,
+from dilated_attention_pytorch import RingDilatedAttention
+from dilated_attention_pytorch.utils.flash_attention_3_utils import (
     get_flash_attention_version,
     is_flash_attention_3_available,
 )

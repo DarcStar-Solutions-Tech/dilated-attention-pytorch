@@ -1,0 +1,279 @@
+{
+  "config": {
+    "device": "cuda",
+    "dtype": "torch.float32",
+    "benchmark_config": {
+      "batch_sizes": [
+        1,
+        2
+      ],
+      "seq_lengths": [
+        2048,
+        4096,
+        8192
+      ],
+      "num_heads_list": [
+        8
+      ],
+      "head_dim": 64,
+      "segment_lengths": [
+        [
+          512,
+          1024
+        ],
+        [
+          1024,
+          2048
+        ],
+        [
+          2048,
+          4096
+        ]
+      ],
+      "dilation_rates": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "warmup_steps": 2,
+      "benchmark_steps": 5,
+      "device": "cuda",
+      "use_fp16": true,
+      "use_memory_pool": true,
+      "memory_pool_size": null,
+      "use_pattern_cache": true,
+      "pattern_cache_size": 100,
+      "save_plots": true,
+      "save_csv": true,
+      "verbose": true
+    }
+  },
+  "results": [
+    {
+      "implementation": "improved_base",
+      "batch_size": 1,
+      "seq_length": 2048,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "ImprovedDilatedAttention.forward() takes from 4 to 6 positional arguments but 7 were given"
+    },
+    {
+      "implementation": "improved_base",
+      "batch_size": 1,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "ImprovedDilatedAttention.forward() takes from 4 to 6 positional arguments but 7 were given"
+    },
+    {
+      "implementation": "improved_base",
+      "batch_size": 1,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "ImprovedDilatedAttention.forward() takes from 4 to 6 positional arguments but 7 were given"
+    },
+    {
+      "implementation": "improved_base",
+      "batch_size": 2,
+      "seq_length": 2048,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "ImprovedDilatedAttention.forward() takes from 4 to 6 positional arguments but 7 were given"
+    },
+    {
+      "implementation": "improved_base",
+      "batch_size": 2,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "ImprovedDilatedAttention.forward() takes from 4 to 6 positional arguments but 7 were given"
+    },
+    {
+      "implementation": "improved_base",
+      "batch_size": 2,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "ImprovedDilatedAttention.forward() takes from 4 to 6 positional arguments but 7 were given"
+    },
+    {
+      "implementation": "improved_dropout",
+      "batch_size": 1,
+      "seq_length": 2048,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "ImprovedDilatedAttention.forward() takes from 4 to 6 positional arguments but 7 were given"
+    },
+    {
+      "implementation": "improved_dropout",
+      "batch_size": 1,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "ImprovedDilatedAttention.forward() takes from 4 to 6 positional arguments but 7 were given"
+    },
+    {
+      "implementation": "improved_dropout",
+      "batch_size": 1,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "ImprovedDilatedAttention.forward() takes from 4 to 6 positional arguments but 7 were given"
+    },
+    {
+      "implementation": "improved_dropout",
+      "batch_size": 2,
+      "seq_length": 2048,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "ImprovedDilatedAttention.forward() takes from 4 to 6 positional arguments but 7 were given"
+    },
+    {
+      "implementation": "improved_dropout",
+      "batch_size": 2,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "ImprovedDilatedAttention.forward() takes from 4 to 6 positional arguments but 7 were given"
+    },
+    {
+      "implementation": "improved_dropout",
+      "batch_size": 2,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "ImprovedDilatedAttention.forward() takes from 4 to 6 positional arguments but 7 were given"
+    },
+    {
+      "implementation": "multihead_base",
+      "batch_size": 1,
+      "seq_length": 2048,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "Expected 3D tensors (batch, seq_len, embed_dim), got shapes: query=torch.Size([1, 2048, 8, 64]), key=torch.Size([1, 2048, 8, 64]), value=torch.Size([1, 2048, 8, 64])"
+    },
+    {
+      "implementation": "multihead_base",
+      "batch_size": 1,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "Expected 3D tensors (batch, seq_len, embed_dim), got shapes: query=torch.Size([1, 4096, 8, 64]), key=torch.Size([1, 4096, 8, 64]), value=torch.Size([1, 4096, 8, 64])"
+    },
+    {
+      "implementation": "multihead_base",
+      "batch_size": 1,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "Expected 3D tensors (batch, seq_len, embed_dim), got shapes: query=torch.Size([1, 8192, 8, 64]), key=torch.Size([1, 8192, 8, 64]), value=torch.Size([1, 8192, 8, 64])"
+    },
+    {
+      "implementation": "multihead_base",
+      "batch_size": 2,
+      "seq_length": 2048,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "Expected 3D tensors (batch, seq_len, embed_dim), got shapes: query=torch.Size([2, 2048, 8, 64]), key=torch.Size([2, 2048, 8, 64]), value=torch.Size([2, 2048, 8, 64])"
+    },
+    {
+      "implementation": "multihead_base",
+      "batch_size": 2,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "Expected 3D tensors (batch, seq_len, embed_dim), got shapes: query=torch.Size([2, 4096, 8, 64]), key=torch.Size([2, 4096, 8, 64]), value=torch.Size([2, 4096, 8, 64])"
+    },
+    {
+      "implementation": "multihead_base",
+      "batch_size": 2,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "Expected 3D tensors (batch, seq_len, embed_dim), got shapes: query=torch.Size([2, 8192, 8, 64]), key=torch.Size([2, 8192, 8, 64]), value=torch.Size([2, 8192, 8, 64])"
+    }
+  ],
+  "timestamp": "20250630_071508"
+}

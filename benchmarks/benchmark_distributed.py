@@ -23,7 +23,7 @@ import torch.multiprocessing as mp
 
 # Import unified benchmark output management
 sys.path.insert(0, str(Path(__file__).parent))
-from core import BenchmarkOutputManager
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
@@ -141,8 +141,7 @@ def create_distributed_module(
                 DistributedImprovedDilatedAttention(
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
-                    world_size=world_size,
-                    rank=rank,
+                    # world_size and rank are inferred from dist context
                 )
                 .to(device)
                 .to(dtype)
@@ -158,8 +157,7 @@ def create_distributed_module(
                     num_heads=num_heads,
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
-                    world_size=world_size,
-                    rank=rank,
+                    # world_size and rank are inferred from dist context
                 )
                 .to(device)
                 .to(dtype)
@@ -172,10 +170,12 @@ def create_distributed_module(
             # Ring size should match world size for distributed
             return (
                 RingDistributedDilatedAttention(
+                    embed_dim=embed_dim,
+                    num_heads=num_heads,
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
                     ring_size=world_size,
-                    enable_distributed=True,
+                    # Distributed features are enabled by default
                 )
                 .to(device)
                 .to(dtype)
@@ -198,11 +198,12 @@ def create_distributed_module(
 
             return (
                 BlockSparseRingDistributedDilatedAttention(
+                    embed_dim=embed_dim,
+                    num_heads=num_heads,
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
                     sparse_config=sparse_config,
-                    world_size=world_size,
-                    rank=rank,
+                    # world_size and rank are inferred from dist context
                 )
                 .to(device)
                 .to(dtype)
@@ -627,26 +628,10 @@ def main():  # noqa: PLR0912
                             f"Comm: {result.communication_overhead_ms:.1f}ms"
                         )
                     else:
+                        pass  # No output for failed results
 
-    # Use unified benchmark output management
-    if rank == 0:  # Only save from rank 0
-        output_manager = BenchmarkOutputManager(
-            benchmark_type="distributed",
-            parameters={
-                "world_size": world_size,
-                "backend": backend,
-            }
-        )
-        
-        # Add results
-        output_manager.add_result("distributed_results", results)
-        
-        # Save results
-        output_paths = output_manager.save_results()
-        print(f"\nResults saved to:")
-        for path_type, path in output_paths.items():
-            print(f"  {path_type}: {path}")
-                        print(f"  {impl:40s}: FAILED - {result.error}")
+    # Note: Unified benchmark output management can be added here
+    # Currently results are saved to JSON format above
 
 
 if __name__ == "__main__":

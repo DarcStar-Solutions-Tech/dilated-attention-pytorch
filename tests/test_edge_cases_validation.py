@@ -16,7 +16,7 @@ from dilated_attention_pytorch.dilated_attention import DilatedAttention
 from dilated_attention_pytorch.multihead_dilated_attention import (
     MultiheadDilatedAttention,
 )
-from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
+from dilated_attention_pytorch import RingDilatedAttention
 
 
 class TestInputValidation:

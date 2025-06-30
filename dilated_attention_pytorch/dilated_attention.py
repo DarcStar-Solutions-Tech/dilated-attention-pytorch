@@ -22,6 +22,7 @@ from .core import (
     BaseDilatedAttention,
     DilatedAttentionConfig,
     optimize_attention_computation,
+    get_global_pattern_cache,
 )
 
 # Try to import enhanced memory pool
@@ -89,6 +90,9 @@ class DilatedAttention(BaseDilatedAttention):
         # Store additional parameters
         self.softmax_scale = softmax_scale
         self.op = op
+
+        # Pattern cache for dilated indices
+        self._pattern_cache = get_global_pattern_cache()
 
         # Enhanced memory pool integration
         self.enable_memory_pool = enable_memory_pool and HAS_ENHANCED_MEMORY_POOL
@@ -219,8 +223,16 @@ class DilatedAttention(BaseDilatedAttention):
 
             # Apply dilation by selecting indices
             if r > 1 or offset > 0:
-                # Create dilated indices
-                dil_indices = torch.arange(offset, s, r, device=query.device)
+                # Try to get cached dilated indices
+                cache_key = f"dilated_indices_s{s}_r{r}_off{offset}"
+                dil_indices = self._pattern_cache.get(cache_key)
+
+                if dil_indices is None:
+                    # Create dilated indices if not cached
+                    dil_indices = torch.arange(offset, s, r, device=torch.device("cpu"))
+                    self._pattern_cache[cache_key] = dil_indices
+                    dil_indices = dil_indices.to(query.device)
+
                 q_dil = q_seg[:, :, dil_indices, :, :]
                 k_dil = k_seg[:, :, dil_indices, :, :]
                 v_dil = v_seg[:, :, dil_indices, :, :]

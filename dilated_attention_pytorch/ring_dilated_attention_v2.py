@@ -1,6 +1,11 @@
 """
 Ring Dilated Attention V2 - Correct implementation with proper K/V rotation.
 
+.. deprecated:: 0.2.1
+    RingDilatedAttentionV2 has issues with distributed communication using isend/irecv.
+    Use RingDilatedAttentionV2Collective instead, which uses robust all_gather operations.
+    This class will be removed in v0.3.0.
+
 This implementation fixes the fundamental architectural issues in the original:
 1. Queries are NEVER divided - each device has the full Q tensor
 2. Only K/V are chunked and distributed across devices
@@ -9,6 +14,9 @@ This implementation fixes the fundamental architectural issues in the original:
 
 This version supports both single-GPU (sequential chunk processing) and
 multi-GPU (distributed) operation.
+
+WARNING: This implementation has known issues with distributed communication
+that can cause CUDA memory errors. Use RingDilatedAttentionV2Collective instead.
 """
 
 import math
@@ -28,6 +36,14 @@ try:
 except ImportError:
     HAS_ENHANCED_MEMORY_POOL = False
     warnings.warn("Enhanced memory pool not available")
+
+try:
+    from .core.pattern_cache import get_global_pattern_cache
+
+    HAS_PATTERN_CACHE = True
+except ImportError:
+    HAS_PATTERN_CACHE = False
+    warnings.warn("Pattern cache not available")
 
 
 class RingDilatedAttentionV2(nn.Module):
@@ -52,8 +68,18 @@ class RingDilatedAttentionV2(nn.Module):
         enable_memory_pool: bool = False,  # Disabled by default - mainly useful for communication buffers
         enable_profiling: bool = False,
         lightweight_pool: bool = True,
+        use_pattern_cache: bool = True,  # Enable global pattern cache by default
     ):
         super().__init__()
+
+        # Issue deprecation warning
+        warnings.warn(
+            "RingDilatedAttentionV2 is deprecated due to distributed communication issues. "
+            "Use RingDilatedAttentionV2Collective instead for robust collective operations. "
+            "This class will be removed in v0.3.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         assert len(segment_lengths) == len(dilation_rates)
 
@@ -85,8 +111,14 @@ class RingDilatedAttentionV2(nn.Module):
         self._kv_send_buffer = None
         self._kv_recv_buffer = None
 
-        # Cache for dilated attention indices
-        self._dilated_indices_cache = {}
+        # Pattern caching setup
+        self.use_pattern_cache = use_pattern_cache and HAS_PATTERN_CACHE
+        if self.use_pattern_cache:
+            # Use global pattern cache
+            self._pattern_cache = get_global_pattern_cache()
+        else:
+            # Fall back to local cache
+            self._dilated_indices_cache = {}
 
         # Enhanced memory pool integration
         self.enable_memory_pool = enable_memory_pool and HAS_ENHANCED_MEMORY_POOL
@@ -202,13 +234,15 @@ class RingDilatedAttentionV2(nn.Module):
             head_end = head_start + group_size
 
             # Apply dilated attention for this head group
+            # Use modulo to cycle offset through dilation rate
+            offset = i % dilation_rate if dilation_rate > 1 else 0
             group_output = self._process_dilated_segment(
                 query[:, :, head_start:head_end, :],
                 key[:, :, head_start:head_end, :],
                 value[:, :, head_start:head_end, :],
                 effective_segment_len,
                 dilation_rate,
-                i,  # offset
+                offset,
                 is_causal,
             )
 
@@ -351,30 +385,67 @@ class RingDilatedAttentionV2(nn.Module):
     ) -> tuple[Tensor, Tensor, Tensor]:
         """Apply dilation pattern to the segment tensors."""
         device = q.device
-        cache_key = (segment_len, dilation_rate, offset, device)
 
-        if cache_key not in self._dilated_indices_cache:
-            # Create dilated indices
-            indices = torch.arange(0, segment_len, device=device)
-            if dilation_rate > 1:
-                # Apply dilation by stepping through with dilation_rate
-                dilated_indices = torch.arange(
-                    offset, segment_len, dilation_rate, device=device
-                )
-                # Pad if necessary to maintain segment length
-                if len(dilated_indices) < segment_len:
-                    # Repeat pattern to fill segment
-                    repeats = (segment_len + len(dilated_indices) - 1) // len(
-                        dilated_indices
+        if self.use_pattern_cache:
+            # Use global pattern cache
+            # Create a cache key compatible with DilatedPatternCache
+            # We'll use segment_len as seq_len and create tuples for compatibility
+            cache_key = f"ring_dilated_s{segment_len}_r{dilation_rate}_off{offset}"
+            dilated_indices = self._pattern_cache.get(cache_key)
+
+            if dilated_indices is None:
+                # Create dilated indices
+                if dilation_rate > 1:
+                    # Apply dilation by stepping through with dilation_rate
+                    dilated_indices = torch.arange(
+                        offset, segment_len, dilation_rate, device=torch.device("cpu")
                     )
-                    extended = dilated_indices.repeat(repeats)
-                    dilated_indices = extended[:segment_len]
+                    # Pad if necessary to maintain segment length
+                    if len(dilated_indices) < segment_len:
+                        # Repeat pattern to fill segment
+                        repeats = (segment_len + len(dilated_indices) - 1) // len(
+                            dilated_indices
+                        )
+                        extended = dilated_indices.repeat(repeats)
+                        dilated_indices = extended[:segment_len]
+                    dilated_indices = dilated_indices % segment_len
+                else:
+                    dilated_indices = torch.arange(
+                        0, segment_len, device=torch.device("cpu")
+                    )
 
-                self._dilated_indices_cache[cache_key] = dilated_indices % segment_len
-            else:
-                self._dilated_indices_cache[cache_key] = indices
+                # Store in cache (on CPU)
+                self._pattern_cache[cache_key] = dilated_indices
+                # Move to target device
+                dilated_indices = dilated_indices.to(device)
+        else:
+            # Use local cache (original implementation)
+            cache_key = (segment_len, dilation_rate, offset, device)
 
-        dilated_indices = self._dilated_indices_cache[cache_key]
+            if cache_key not in self._dilated_indices_cache:
+                # Create dilated indices
+                indices = torch.arange(0, segment_len, device=device)
+                if dilation_rate > 1:
+                    # Apply dilation by stepping through with dilation_rate
+                    dilated_indices = torch.arange(
+                        offset, segment_len, dilation_rate, device=device
+                    )
+                    # Pad if necessary to maintain segment length
+                    if len(dilated_indices) < segment_len:
+                        # Repeat pattern to fill segment
+                        repeats = (segment_len + len(dilated_indices) - 1) // len(
+                            dilated_indices
+                        )
+                        extended = dilated_indices.repeat(repeats)
+                        dilated_indices = extended[:segment_len]
+
+                    self._dilated_indices_cache[cache_key] = (
+                        dilated_indices % segment_len
+                    )
+                else:
+                    self._dilated_indices_cache[cache_key] = indices
+
+            dilated_indices = self._dilated_indices_cache[cache_key]
 
         # Apply dilated indexing to K and V
         k_dilated = k.index_select(

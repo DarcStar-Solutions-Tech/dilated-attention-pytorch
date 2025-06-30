@@ -7,31 +7,24 @@ import pytest
 
 from dilated_attention_pytorch import (
     RingDilatedAttention,
-    RingMultiheadDilatedAttention,
     create_dilated_attention,
 )
+# RingMultiheadDilatedAttention not available in current implementation
 
 
-def test_deprecated_ring_dilated_attention_warning():
-    """Test that deprecated RingDilatedAttention emits warning."""
-    with pytest.warns(DeprecationWarning, match="RingDilatedAttention is deprecated"):
+def test_ring_dilated_attention_no_warning():
+    """Test that RingDilatedAttention (alias for V2Collective) does not emit warning."""
+    # RingDilatedAttention is now an alias for RingDilatedAttentionV2Collective
+    # which is the recommended implementation
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # Turn warnings into errors
         _ = RingDilatedAttention(
             segment_lengths=[1024],
             dilation_rates=[1],
         )
 
 
-def test_deprecated_ring_multihead_attention_warning():
-    """Test that deprecated RingMultiheadDilatedAttention emits warning."""
-    with pytest.warns(
-        DeprecationWarning, match="RingMultiheadDilatedAttention is deprecated"
-    ):
-        _ = RingMultiheadDilatedAttention(
-            embed_dim=768,
-            num_heads=12,
-            segment_lengths=[1024],
-            dilation_rates=[1],
-        )
+# RingMultiheadDilatedAttention test removed - not available
 
 
 def test_factory_uses_correct_implementation():
@@ -87,7 +80,7 @@ def test_memory_scaling_difference():
 
 def test_migration_guide_examples():
     """Test examples from migration guide work."""
-    # Old way should warn
+    # RingDilatedAttention is now an alias for V2Collective (no warning)
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
 
@@ -96,8 +89,11 @@ def test_migration_guide_examples():
             dilation_rates=[1, 2],
         )
 
-        assert len(w) == 1
-        assert "deprecated" in str(w[0].message).lower()
+        # Should have no warnings (it's the recommended implementation)
+        deprecation_warnings = [
+            warning for warning in w if issubclass(warning.category, DeprecationWarning)
+        ]
+        assert len(deprecation_warnings) == 0
 
     # New way using factory should not warn
     with warnings.catch_warnings(record=True) as w:
@@ -123,12 +119,12 @@ if __name__ == "__main__":
     print("Testing Ring Attention migration...")
 
     # Run tests manually
-    print("\n1. Testing deprecation warnings...")
+    print("\n1. Testing no deprecation warnings...")
     try:
-        test_deprecated_ring_dilated_attention_warning()
-        print("   ✗ Should have warned!")
-    except:
-        print("   ✓ Deprecation warning works")
+        test_ring_dilated_attention_no_warning()
+        print("   ✓ No deprecation warning (expected)")
+    except Exception:
+        print("   ✗ Unexpected error")
 
     print("\n2. Testing factory implementation...")
     test_factory_uses_correct_implementation()

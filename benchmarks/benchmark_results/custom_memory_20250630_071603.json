@@ -1,0 +1,207 @@
+{
+  "config": {
+    "device": "cuda",
+    "dtype": "torch.float32",
+    "benchmark_config": {
+      "batch_sizes": [
+        1,
+        2
+      ],
+      "seq_lengths": [
+        2048,
+        4096,
+        8192
+      ],
+      "num_heads_list": [
+        8
+      ],
+      "head_dim": 64,
+      "segment_lengths": [
+        [
+          512,
+          1024
+        ],
+        [
+          1024,
+          2048
+        ],
+        [
+          2048,
+          4096
+        ]
+      ],
+      "dilation_rates": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "warmup_steps": 2,
+      "benchmark_steps": 5,
+      "device": "cuda",
+      "use_fp16": true,
+      "use_memory_pool": true,
+      "memory_pool_size": null,
+      "use_pattern_cache": true,
+      "pattern_cache_size": 100,
+      "save_plots": true,
+      "save_csv": true,
+      "verbose": true
+    }
+  },
+  "results": [
+    {
+      "implementation": "improved_base",
+      "batch_size": 1,
+      "seq_length": 2048,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 1.635710895061493,
+      "memory_mb": 27.0078125,
+      "throughput": 1252054.997116717,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved_base",
+      "batch_size": 1,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 2.7553677558898926,
+      "memory_mb": 54.0078125,
+      "throughput": 1486552.9261001053,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved_base",
+      "batch_size": 1,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 5.258115939795971,
+      "memory_mb": 108.0078125,
+      "throughput": 1557972.4931508207,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved_base",
+      "batch_size": 2,
+      "seq_length": 2048,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 2.829360030591488,
+      "memory_mb": 54.0078125,
+      "throughput": 1447677.1975688497,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved_base",
+      "batch_size": 2,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 5.784425139427185,
+      "memory_mb": 108.0078125,
+      "throughput": 1416216.789489168,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved_base",
+      "batch_size": 2,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 9.679419174790382,
+      "memory_mb": 216.0078125,
+      "throughput": 1692663.5476921385,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved_dropout",
+      "batch_size": 1,
+      "seq_length": 2048,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 1.9168296828866005,
+      "memory_mb": 27.0078125,
+      "throughput": 1068430.8670115473,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved_dropout",
+      "batch_size": 1,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 3.248090296983719,
+      "memory_mb": 54.0078125,
+      "throughput": 1261048.6856857636,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved_dropout",
+      "batch_size": 1,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 6.419806554913521,
+      "memory_mb": 108.0078125,
+      "throughput": 1276050.910557437,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved_dropout",
+      "batch_size": 2,
+      "seq_length": 2048,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 3.014756180346012,
+      "memory_mb": 54.0078125,
+      "throughput": 1358650.50271823,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved_dropout",
+      "batch_size": 2,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 6.243420764803886,
+      "memory_mb": 108.0078125,
+      "throughput": 1312101.2196039811,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved_dropout",
+      "batch_size": 2,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 12.37811241298914,
+      "memory_mb": 216.0078125,
+      "throughput": 1323626.6930979902,
+      "success": true,
+      "error": null
+    }
+  ],
+  "timestamp": "20250630_071603"
+}

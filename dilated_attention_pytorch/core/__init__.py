@@ -59,6 +59,24 @@ from .memory_pool import (
     get_global_memory_pool,
     reset_global_memory_pool,
 )
+from .pattern_cache import (
+    PatternCache,
+    DilatedPatternCache,
+    get_global_pattern_cache,
+    clear_global_cache,
+)
+
+# Import optimized cache if available
+try:
+    from .optimized_pattern_cache import (
+        get_optimized_pattern_cache,
+        clear_optimized_cache,
+        OptimizedPatternCache,
+    )
+
+    HAS_OPTIMIZED_CACHE = True
+except ImportError:
+    HAS_OPTIMIZED_CACHE = False
 
 __all__ = [
     # Base classes
@@ -96,6 +114,11 @@ __all__ = [
     "UnifiedMemoryPool",
     "get_global_memory_pool",
     "reset_global_memory_pool",
+    # Pattern cache
+    "PatternCache",
+    "DilatedPatternCache",
+    "get_global_pattern_cache",
+    "clear_global_cache",
     # Attention utilities
     "compute_attention_scores",
     "apply_dilated_attention_pattern",
@@ -116,3 +139,13 @@ __all__ = [
     "create_block_sparse_attention",
     "create_adaptive_sparse_attention",
 ]
+
+# Add optimized cache exports if available
+if HAS_OPTIMIZED_CACHE:
+    __all__.extend(
+        [
+            "get_optimized_pattern_cache",
+            "clear_optimized_cache",
+            "OptimizedPatternCache",
+        ]
+    )
