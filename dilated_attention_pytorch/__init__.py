@@ -65,15 +65,6 @@ from .ring_dilated_attention_production import (
     create_production_ring_attention,
 )
 
-# Import Flash-optimized version if available
-try:
-    from .ring_dilated_attention_v2_flash import RingDilatedAttentionV2Flash
-
-    _ = RingDilatedAttentionV2Flash  # Mark as used
-
-    HAS_FLASH_RING = True
-except ImportError:
-    HAS_FLASH_RING = False
 from .transformer import DilatedTransformerDecoderLayer, DilatedTransformerEncoderLayer
 from .utils.sparse_pattern_utils import (
     PatternConfig,
@@ -137,6 +128,5 @@ __all__ = [
     "create_multihead_dilated_attention",
 ]
 
-# Add Flash-optimized Ring Attention if available
-if HAS_FLASH_RING:
-    __all__.append("RingDilatedAttentionV2Flash")
+# Flash optimizations are now integrated into V2Collective
+HAS_FLASH_RING = True  # Flash is integrated into V2Collective

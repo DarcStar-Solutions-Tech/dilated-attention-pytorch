@@ -1,5 +1,5 @@
 """
-Ring Dilated Attention V2 - Corrected with Collective Operations.
+Ring Dilated Attention V2 - Corrected with Collective Operations + Flash Attention.
 
 This implementation fixes the distributed communication issues by using
 collective operations (all_gather) instead of error-prone isend/irecv.
@@ -9,6 +9,9 @@ Key improvements:
 2. No CUDA memory errors
 3. Simpler and more robust
 4. Often faster due to NCCL optimizations
+5. Flash Attention integration for improved performance
+6. Automatic backend selection (Flash Attention 3/2, xformers, SDPA)
+7. Memory-efficient chunked processing for very long sequences
 """
 
 import math
@@ -48,6 +51,19 @@ try:
 except ImportError:
     HAS_PATTERN_CACHE = False
 
+# Import Flash Attention utilities
+try:
+    from .utils.flash_attention_utils import (
+        flash_attention_forward,
+        chunked_flash_attention,
+        get_flash_attention_support,
+    )
+
+    HAS_FLASH_UTILS = True
+except ImportError:
+    HAS_FLASH_UTILS = False
+    warnings.warn("Flash Attention utilities not available")
+
 # Import ImprovedDilatedAttention for single-GPU fallback
 try:
     from .improved_dilated_attention import ImprovedDilatedAttention
@@ -81,6 +97,8 @@ class RingDilatedAttentionV2Collective(nn.Module):
         lightweight_pool: bool = True,
         use_pattern_cache: bool = True,
         memory_pool_threshold_mb: float = 16.0,
+        use_flash_attention: bool = True,
+        flash_chunk_size: int = 2048,
     ):
         """Initialize Ring Dilated Attention with collective operations."""
         super().__init__()
@@ -164,6 +182,36 @@ class RingDilatedAttentionV2Collective(nn.Module):
         else:
             # Fall back to local cache
             self._dilated_indices_cache = {}
+
+        # Flash Attention setup
+        self.use_flash_attention = use_flash_attention and HAS_FLASH_UTILS
+        self.flash_chunk_size = flash_chunk_size
+
+        # Check Flash Attention support for this device
+        if self.use_flash_attention:
+            self.flash_support = get_flash_attention_support(self.device)
+            self.flash_backend = self.flash_support["recommended_backend"]
+
+            # Log attention backend configuration
+            if self.rank == 0:  # Only log from rank 0
+                if self.flash_backend == "xformers":
+                    print(
+                        f"Using xformers for GPU {torch.cuda.get_device_name(self.device)} "
+                        f"(compute {self.flash_support['compute_capability']})"
+                    )
+                elif self.flash_backend == "sdpa":
+                    print(
+                        f"Using PyTorch SDPA for GPU {torch.cuda.get_device_name(self.device)} "
+                        f"(compute {self.flash_support['compute_capability']})"
+                    )
+                elif self.flash_backend != "standard":
+                    print(f"Using {self.flash_backend} for attention computation")
+                else:
+                    warnings.warn(
+                        f"No optimized attention backend available for {torch.cuda.get_device_name(self.device)} "
+                        f"(compute {self.flash_support['compute_capability']}). Using standard attention.",
+                        RuntimeWarning,
+                    )
 
         # Enhanced memory pool integration
         self.enable_memory_pool = enable_memory_pool and HAS_ENHANCED_MEMORY_POOL
@@ -269,6 +317,11 @@ class RingDilatedAttentionV2Collective(nn.Module):
         self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool
     ) -> Tensor:
         """Compute simple attention without dilation for fallback cases."""
+        # Use Flash Attention if available
+        if self.use_flash_attention:
+            return self._compute_attention_chunk(q, k, v, is_causal, chunk_offset=0)
+
+        # Standard implementation
         b, n, h, d = q.shape
         q = q.transpose(1, 2)  # [b, h, n, d]
         k = k.transpose(1, 2)  # [b, h, n, d]
@@ -923,6 +976,112 @@ class RingDilatedAttentionV2Collective(nn.Module):
         # Add to output (already in [b, h, n, d] format)
         output.add_(chunk_output)
 
+    def _compute_attention_chunk(
+        self,
+        q: Tensor,
+        k: Tensor,
+        v: Tensor,
+        is_causal: bool = False,
+        chunk_offset: int = 0,
+    ) -> Tensor:
+        """
+        Compute attention for a chunk using optimized backend.
+
+        Args:
+            q, k, v: Query, key, value tensors [batch, seq_len, num_heads, head_dim]
+            is_causal: Whether to use causal masking
+            chunk_offset: Offset for causal masking in chunked processing
+
+        Returns:
+            Attention output [batch, seq_len, num_heads, head_dim]
+        """
+        if not self.use_flash_attention:
+            return self._compute_attention_standard(q, k, v, is_causal, chunk_offset)
+
+        try:
+            # Adjust causal mask for chunk offset
+            adjusted_causal = is_causal and chunk_offset == 0
+
+            # Use optimized attention backend
+            output = flash_attention_forward(
+                q,
+                k,
+                v,
+                dropout_p=self.dropout if self.training else 0.0,
+                is_causal=adjusted_causal,
+                backend=self.flash_backend,
+            )
+            return output
+
+        except Exception as e:
+            warnings.warn(
+                f"Optimized attention backend failed, falling back to standard: {e}",
+                stacklevel=2,
+            )
+            # Fallback to standard computation
+            return self._compute_attention_standard(q, k, v, is_causal, chunk_offset)
+
+    def _compute_attention_standard(
+        self,
+        q: Tensor,
+        k: Tensor,
+        v: Tensor,
+        is_causal: bool = False,
+        chunk_offset: int = 0,
+    ) -> Tensor:
+        """Standard attention computation (fallback)."""
+        batch_size, seq_len_q, num_heads, head_dim = q.shape
+        seq_len_kv = k.shape[1]
+
+        # Transpose to [batch, num_heads, seq_len, head_dim]
+        q = q.transpose(1, 2)
+        k = k.transpose(1, 2)
+        v = v.transpose(1, 2)
+
+        # Compute attention scores
+        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(head_dim)
+
+        # Apply causal mask if needed
+        if is_causal:
+            if chunk_offset > 0:
+                # For chunks, adjust the causal mask
+                causal_mask = torch.ones(
+                    seq_len_q, seq_len_kv, device=q.device, dtype=torch.bool
+                )
+                for i in range(seq_len_q):
+                    for j in range(seq_len_kv):
+                        if i + chunk_offset < j:
+                            causal_mask[i, j] = False
+                scores.masked_fill_(
+                    ~causal_mask.unsqueeze(0).unsqueeze(0), float("-inf")
+                )
+            else:
+                # Standard causal mask
+                causal_mask = torch.triu(
+                    torch.ones(
+                        seq_len_q, seq_len_kv, device=q.device, dtype=torch.bool
+                    ),
+                    diagonal=1,
+                )
+                scores.masked_fill_(
+                    causal_mask.unsqueeze(0).unsqueeze(0), float("-inf")
+                )
+
+        # Softmax
+        attn_weights = torch.softmax(scores, dim=-1)
+
+        # Dropout
+        if self.training and self.dropout > 0:
+            attn_weights = F.dropout(attn_weights, p=self.dropout)
+
+        # Apply attention
+        output = torch.matmul(attn_weights, v)
+
+        # Transpose back to [batch, seq_len, num_heads, head_dim]
+        output = output.transpose(1, 2)
+
+        return output
+
     def forward(
         self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool = False
     ) -> Tensor:
@@ -934,6 +1093,32 @@ class RingDilatedAttentionV2Collective(nn.Module):
         # Use ImprovedDilatedAttention for single GPU if available
         if self._single_gpu_attention is not None and self.ring_size == 1:
             return self._single_gpu_attention(q, k, v, is_causal)
+
+        # For very long sequences on single GPU, use chunked Flash Attention if available
+        seq_len = q.shape[1]
+        if (
+            self.use_flash_attention
+            and self.ring_size == 1
+            and seq_len > 16384
+            and HAS_FLASH_UTILS
+        ):
+            try:
+                # Use chunked Flash Attention for very long sequences
+                output = chunked_flash_attention(
+                    q,
+                    k,
+                    v,
+                    chunk_size=self.flash_chunk_size,
+                    is_causal=is_causal,
+                    dropout_p=self.dropout if self.training else 0.0,
+                    backend=self.flash_backend,
+                )
+                return output
+            except Exception as e:
+                warnings.warn(
+                    f"Chunked Flash Attention failed for long sequence, falling back: {e}",
+                    stacklevel=2,
+                )
 
         # For distributed mode with ring_size > 1, use collective ring attention
         if self.mode == "distributed" and self.ring_size > 1:

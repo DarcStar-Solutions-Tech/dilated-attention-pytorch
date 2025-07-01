@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from .ring_dilated_attention_v2_flash import RingDilatedAttentionV2Flash
+from .ring_dilated_attention_v2_collective import RingDilatedAttentionV2Collective
 
 
 class RingMultiheadDilatedAttention(nn.Module):
@@ -123,8 +123,8 @@ class RingMultiheadDilatedAttention(nn.Module):
             self.gamma_q = None
             self.gamma_k = None
 
-        # Ring Attention module - using Flash variant for best performance
-        self.ring_attention = RingDilatedAttentionV2Flash(
+        # Ring Attention module - V2Collective now includes Flash optimizations
+        self.ring_attention = RingDilatedAttentionV2Collective(
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
             dropout=dropout,
