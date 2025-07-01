@@ -162,7 +162,14 @@ class TrueRingDilatedAttention(nn.Module):
             if dilation > 1:
                 # Create dilated attention pattern
                 # This is simplified - in practice you'd implement proper dilated attention
-                scores = torch.matmul(q_group, k_group.transpose(-2, -1)) / math.sqrt(d)
+                # Need to transpose to [batch, heads, seq, dim] for matmul
+                q_group_t = q_group.transpose(1, 2)
+                k_group_t = k_group.transpose(1, 2)
+                v_group_t = v_group.transpose(1, 2)
+
+                scores = torch.matmul(
+                    q_group_t, k_group_t.transpose(-2, -1)
+                ) / math.sqrt(d)
 
                 # Apply causal mask if needed (accounting for chunk offset)
                 if is_causal:
@@ -174,24 +181,49 @@ class TrueRingDilatedAttention(nn.Module):
                             if q_idx < (chunk_offset + kv_idx):
                                 causal_mask[q_idx, kv_idx] = False
                     scores.masked_fill_(
-                        ~causal_mask.unsqueeze(0).unsqueeze(2), float("-inf")
+                        ~causal_mask.unsqueeze(0).unsqueeze(1), float("-inf")
                     )
 
                 attn_weights = F.softmax(scores, dim=-1)
                 if self.dropout:
                     attn_weights = self.dropout(attn_weights)
 
-                group_output = torch.matmul(attn_weights, v_group)
+                group_output = torch.matmul(attn_weights, v_group_t)
+                # Transpose back to [batch, seq, heads, dim]
+                group_output = group_output.transpose(1, 2)
             else:
                 # Standard attention for non-dilated segments
-                group_output = F.scaled_dot_product_attention(
-                    q_group,
-                    k_group,
-                    v_group,
-                    dropout_p=self.dropout.p if self.dropout and self.training else 0.0,
-                    is_causal=is_causal
-                    and chunk_offset == 0,  # Only first chunk needs causal
-                )
+                # Note: F.scaled_dot_product_attention expects same sequence length for K/V
+                # So we need to handle chunking manually
+                # Need to transpose to [batch, heads, seq, dim] for matmul
+                q_group_t = q_group.transpose(1, 2)
+                k_group_t = k_group.transpose(1, 2)
+                v_group_t = v_group.transpose(1, 2)
+
+                scores = torch.matmul(
+                    q_group_t, k_group_t.transpose(-2, -1)
+                ) / math.sqrt(d)
+
+                if is_causal:
+                    # Apply causal mask accounting for chunk offset
+                    causal_mask = torch.ones(
+                        n_q, n_kv, device=scores.device, dtype=torch.bool
+                    )
+                    for q_idx in range(n_q):
+                        for kv_idx in range(n_kv):
+                            if q_idx < (chunk_offset + kv_idx):
+                                causal_mask[q_idx, kv_idx] = False
+                    scores.masked_fill_(
+                        ~causal_mask.unsqueeze(0).unsqueeze(1), float("-inf")
+                    )
+
+                attn_weights = F.softmax(scores, dim=-1)
+                if self.dropout and self.training:
+                    attn_weights = self.dropout(attn_weights)
+
+                group_output = torch.matmul(attn_weights, v_group_t)
+                # Transpose back to [batch, seq, heads, dim]
+                group_output = group_output.transpose(1, 2)
 
             # Accumulate to output
             output[:, :, h_start:h_end, :] += group_output

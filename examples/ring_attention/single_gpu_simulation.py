@@ -81,6 +81,11 @@ class SimulatedRingDilatedAttention(nn.Module):
         b, n_q, h, d = q.shape
         _, n_kv, _, _ = k_chunk.shape
 
+        # Transpose for batch matrix multiply: [b, h, n, d]
+        q = q.transpose(1, 2)
+        k_chunk = k_chunk.transpose(1, 2)
+        v_chunk = v_chunk.transpose(1, 2)
+
         # For demonstration, using standard attention
         # In practice, implement proper dilated attention here
         scores = torch.matmul(q, k_chunk.transpose(-2, -1)) / math.sqrt(d)
@@ -94,7 +99,7 @@ class SimulatedRingDilatedAttention(nn.Module):
                     if i < chunk_offset + j:
                         mask[i, j] = False
 
-            scores = scores.masked_fill(~mask.unsqueeze(0).unsqueeze(2), float("-inf"))
+            scores = scores.masked_fill(~mask.unsqueeze(0).unsqueeze(1), float("-inf"))
 
         # Apply softmax and dropout
         attn = F.softmax(scores, dim=-1)
@@ -103,6 +108,9 @@ class SimulatedRingDilatedAttention(nn.Module):
 
         # Compute output
         output = torch.matmul(attn, v_chunk)
+
+        # Transpose back to [b, n, h, d]
+        output = output.transpose(1, 2)
 
         return output
 
