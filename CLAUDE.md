@@ -151,8 +151,11 @@ Tests use pytest with parameterized testing:
 
 The project includes advanced Ring Attention implementations that provide O(n) memory complexity for arbitrarily long sequences:
 
-- **RingDilatedAttention** (`dilated_attention_pytorch/ring_dilated_attention.py`): Core ring attention with dilated patterns and memory pool optimization
-- **RingMultiheadDilatedAttention** (`dilated_attention_pytorch/ring_multihead_dilated_attention.py`): Multi-head wrapper with fused QKV projections and buffer reuse
+- **RingDilatedAttention** (alias for RingDilatedAttentionV2Collective): The recommended Ring Attention implementation
+- **RingDilatedAttentionV2Collective** (`dilated_attention_pytorch/ring_dilated_attention_v2_collective.py`): Core ring attention using robust collective operations
+- **RingDilatedAttentionV2Flash** (`dilated_attention_pytorch/ring_dilated_attention_v2_flash.py`): Flash Attention optimized version
+- **RingMultiheadDilatedAttention** (`dilated_attention_pytorch/ring_multihead_dilated_attention.py`): Multi-head wrapper with fused QKV projections
+- **RingDilatedAttentionProduction** (`dilated_attention_pytorch/ring_dilated_attention_production.py`): Production-ready implementation with error recovery
 - **RingDistributedDilatedAttention** (`dilated_attention_pytorch/ring_distributed_dilated_attention.py`): Enterprise-grade distributed implementation with DeepSpeed integration
 
 ## Block-Sparse Attention Implementation
@@ -434,7 +437,9 @@ dilated_attention_pytorch/
 ├── improved_multihead_dilated_attention.py # Enhanced multihead version
 ├── distributed_dilated_attention.py # Multi-GPU support
 ├── improved_distributed_dilated_attention.py # Enhanced distributed version
-├── ring_dilated_attention.py       # Ring attention core (O(n) memory)
+├── ring_dilated_attention_v2_collective.py # Ring attention core (O(n) memory)
+├── ring_dilated_attention_v2_flash.py # Flash-optimized ring attention
+├── ring_dilated_attention_production.py # Production-ready ring attention
 ├── ring_multihead_dilated_attention.py # Ring multi-head wrapper
 ├── ring_distributed_dilated_attention.py # Enterprise ring attention
 ├── block_sparse_ring_dilated_attention.py # Block-sparse ring attention
@@ -479,7 +484,11 @@ docs/                       # Extensive documentation
 └── archive/                # Historical/obsolete documentation
 
 examples/                   # Example scripts
-└── distributed_training_example.py # Distributed training example
+├── distributed_training_example.py # Distributed training example
+└── ring_attention/         # Ring Attention educational implementations
+    ├── README.md           # Explanation of educational implementations
+    ├── reference_implementation.py # True Ring Attention reference
+    └── single_gpu_simulation.py    # Single-GPU Ring Attention simulation
 
 scripts/                    # Utility scripts
 └── launch_distributed_training.py # Launch distributed training

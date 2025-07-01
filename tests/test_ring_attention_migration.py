@@ -17,7 +17,10 @@ def test_ring_dilated_attention_no_warning():
     # RingDilatedAttention is now an alias for RingDilatedAttentionV2Collective
     # which is the recommended implementation
     with warnings.catch_warnings():
-        warnings.simplefilter("error")  # Turn warnings into errors
+        warnings.filterwarnings(
+            "ignore", message=".*Pascal GPUs.*", category=RuntimeWarning
+        )
+        warnings.filterwarnings("error")  # Turn other warnings into errors
         _ = RingDilatedAttention(
             segment_lengths=[1024],
             dilation_rates=[1],

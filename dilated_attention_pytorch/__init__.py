@@ -57,8 +57,8 @@ from .long_net import LongNet
 from .multihead_dilated_attention import MultiheadDilatedAttention
 
 # Ring Attention implementations
-from .ring_dilated_attention_v2 import RingDilatedAttentionV2
 from .ring_dilated_attention_v2_collective import RingDilatedAttentionV2Collective
+from .ring_multihead_dilated_attention import RingMultiheadDilatedAttention
 from .ring_dilated_attention_production import (
     RingDilatedAttentionProduction,
     RingAttentionConfig,
@@ -106,8 +106,8 @@ __all__ = [
     "create_adaptive_block_sparse",
     # Ring Attention implementations
     "RingDilatedAttention",  # Alias for RingDilatedAttentionV2Collective
-    "RingDilatedAttentionV2",
     "RingDilatedAttentionV2Collective",
+    "RingMultiheadDilatedAttention",
     "RingDilatedAttentionProduction",
     "RingAttentionConfig",
     "create_production_ring_attention",

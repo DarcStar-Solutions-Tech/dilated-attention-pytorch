@@ -17,7 +17,9 @@ from dilated_attention_pytorch import (
     DilatedAttention,
     ImprovedDilatedAttention,
 )
-from dilated_attention_pytorch.ring_dilated_attention_v2 import RingDilatedAttentionV2
+from dilated_attention_pytorch.ring_dilated_attention_v2_collective import (
+    RingDilatedAttentionV2Collective as RingDilatedAttentionV2,
+)
 
 # RingDilatedAttentionV3 is deprecated, removed from tests
 from dilated_attention_pytorch.core import reset_global_memory_pool

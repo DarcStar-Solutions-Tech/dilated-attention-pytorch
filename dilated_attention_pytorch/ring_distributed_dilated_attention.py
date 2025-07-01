@@ -62,8 +62,9 @@ try:
 except ImportError:
     HAS_WANDB = False
 
-from .ring_dilated_attention_v2 import RingDilatedAttentionV2
-# Note: RingMultiheadDilatedAttention has been removed - using V2 implementation directly
+from .ring_dilated_attention_v2_collective import (
+    RingDilatedAttentionV2Collective as RingDilatedAttentionV2,
+)
 
 
 class RingDistributedDilatedAttention(nn.Module):

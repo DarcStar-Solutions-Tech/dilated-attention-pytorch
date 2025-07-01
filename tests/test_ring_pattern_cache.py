@@ -8,7 +8,9 @@ for dilated indices, reducing redundant computation and memory usage.
 import torch
 import pytest
 
-from dilated_attention_pytorch.ring_dilated_attention_v2 import RingDilatedAttentionV2
+from dilated_attention_pytorch.ring_dilated_attention_v2_collective import (
+    RingDilatedAttentionV2Collective as RingDilatedAttentionV2,
+)
 from dilated_attention_pytorch.core import get_global_pattern_cache, clear_global_cache
 
 
