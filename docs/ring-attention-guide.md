@@ -25,7 +25,7 @@ Ring Attention achieves linear memory scaling through:
 3. **Efficient communication** with overlapped computation
 4. **Mathematical equivalence** preserved through careful algorithm design
 
-## 🎉 **BILLION-TOKEN MILESTONE ACHIEVED** (Latest Update - July 2025)
+## 🎉 **BILLION-TOKEN MILESTONE ACHIEVED** (Latest Update - December 2024)
 
 We have successfully **validated Ring Attention at billion-token scale** with comprehensive benchmarking:
 
@@ -51,7 +51,7 @@ We have successfully **validated Ring Attention at billion-token scale** with co
 - **Processing time**: Remains constant with sufficient parallel devices
 - **Hardware limitation**: Only bounded by available compute resources, not algorithm
 
-## 🎯 **MAXIMUM CHUNK CAPABILITIES VALIDATED** (Latest Analysis - July 2025)
+## 🎯 **MAXIMUM CHUNK CAPABILITIES VALIDATED** (Latest Analysis - December 2024)
 
 ### **Single-Device Performance Limits**
 
@@ -96,13 +96,13 @@ Perfect O(n/ring_size) memory scaling confirmed across all chunk sizes:
 
 ## 📚 Implementation Overview
 
-### **Three Ring Attention Implementations**
+### **Ring Attention Implementations**
 
 #### **1. RingDilatedAttention** 
 *Core O(n) attention engine*
 
 ```python
-from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
+from dilated_attention_pytorch import RingDilatedAttention  # Alias for RingDilatedAttentionV2Collective
 
 # O(n) memory complexity attention
 attention = RingDilatedAttention(
@@ -149,14 +149,14 @@ output, _ = attention(query, key, value, is_causal=True)
 - Smart self-attention detection
 - Optional torch.compile integration
 
-#### **3. RingAdvancedDistributedDilatedAttention**
+#### **3. RingDistributedDilatedAttention**
 *Enterprise-grade distributed attention system*
 
 ```python
-from dilated_attention_pytorch.ring_improved_distributed_dilated_attention import RingAdvancedDistributedDilatedAttention
+from dilated_attention_pytorch.ring_distributed_dilated_attention import RingDistributedDilatedAttention
 
-# Most advanced distributed attention available
-attention = RingAdvancedDistributedDilatedAttention(
+# Enterprise distributed attention
+attention = RingDistributedDilatedAttention(
     embed_dim=768,
     num_heads=12,
     segment_lengths=[2048, 4096, 8192],
@@ -449,7 +449,7 @@ for batch in dataloader:
 
 ```python
 # Complete enterprise setup with monitoring and fault tolerance
-attention = RingAdvancedDistributedDilatedAttention(
+attention = RingDistributedDilatedAttention(
     embed_dim=2048,
     num_heads=32,
     segment_lengths=[4096, 8192, 16384],
@@ -504,7 +504,7 @@ results = tester.run_all_tests()
 # Maximum difference: <1e-6 (numerical precision limit)
 ```
 
-## 🚀 Performance Optimizations (MAJOR UPDATE 2025!)
+## 🚀 Performance Optimizations (MAJOR UPDATE 2024!)
 
 ### **Revolutionary Enterprise-Grade Improvements + Latest Algorithm Optimizations**
 
@@ -639,7 +639,7 @@ multihead_attention = RingMultiheadDilatedAttention(
 #### **5. Gradient Communication Optimization (Enterprise)**
 ```python
 # Advanced gradient bucketing and async communication
-enterprise_attention = RingAdvancedDistributedDilatedAttention(
+enterprise_attention = RingDistributedDilatedAttention(
     embed_dim=2048,
     num_heads=32,
     segment_lengths=[4096, 8192, 16384],
@@ -656,12 +656,12 @@ enterprise_attention = RingAdvancedDistributedDilatedAttention(
 )
 ```
 
-### **🎯 2025 Production-Ready Enterprise Features**
+### **🎯 2024 Production-Ready Enterprise Features**
 
 #### **Thread Safety & Reliability**
 ```python
 # All Ring Attention implementations now include comprehensive thread safety
-enterprise_attention = RingAdvancedDistributedDilatedAttention(
+enterprise_attention = RingDistributedDilatedAttention(
     embed_dim=2048,
     num_heads=32,
     segment_lengths=[4096, 8192, 16384],
@@ -681,7 +681,7 @@ enterprise_attention = RingAdvancedDistributedDilatedAttention(
 #### **Bounded Memory Management with LRU Eviction**
 ```python
 # Intelligent buffer cache with automatic eviction
-ring_attention = RingAdvancedDistributedDilatedAttention(
+ring_attention = RingDistributedDilatedAttention(
     # ... configuration ...
     
     # Bounded cache automatically configured:
@@ -698,7 +698,7 @@ print(f"Cached buffers: {ring_attention.get_memory_info()['pending_gradient_redu
 #### **Multi-Strategy Error Recovery**
 ```python
 # Advanced fault tolerance with multiple recovery strategies
-attention = RingAdvancedDistributedDilatedAttention(
+attention = RingDistributedDilatedAttention(
     enable_fault_tolerance=True,
     # Multi-strategy error recovery:
     # 1. OOM Recovery: Cache clearing → Batch splitting → Precision fallback
@@ -715,7 +715,7 @@ attention = RingAdvancedDistributedDilatedAttention(
 #### **Complete DeepSpeed Integration**
 ```python
 # Full enterprise DeepSpeed integration with configuration generation
-attention = RingAdvancedDistributedDilatedAttention(
+attention = RingDistributedDilatedAttention(
     use_deepspeed=True,
     zero_stage=3,                    # ZeRO-3 optimization
     cpu_offload=True,                # CPU parameter offloading
@@ -737,7 +737,7 @@ deepspeed_config = attention.deepspeed_config
 #### **Zero-Copy Buffer Operations**
 ```python
 # Intelligent buffer management avoids unnecessary memory copies
-attention = RingAdvancedDistributedDilatedAttention(
+attention = RingDistributedDilatedAttention(
     # Smart buffer operations automatically enabled:
     # - Memory layout compatibility checking
     # - Zero-copy operations when possible
@@ -749,7 +749,7 @@ attention = RingAdvancedDistributedDilatedAttention(
 # Reduces allocation overhead in forward passes
 ```
 
-### **🎯 Latest Algorithmic Optimizations (NEW 2025!)**
+### **🎯 Latest Algorithmic Optimizations (NEW 2024!)**
 
 #### **Advanced Communication Optimization**
 ```python
@@ -857,7 +857,7 @@ print(f"Cached buffers: {memory_info['qkv_buffers_cached']}")
 print(f"GPU utilization: {memory_info.get('gpu_utilization_percent', 'N/A')}%")
 
 # Performance monitoring for enterprise version
-enterprise_attention = RingAdvancedDistributedDilatedAttention(
+enterprise_attention = RingDistributedDilatedAttention(
     enable_monitoring=True,
     profile_memory=True,
     log_level="DEBUG"
@@ -1126,7 +1126,7 @@ Ring Attention implementations are mathematically equivalent and ready for use.
 
 ```python
 # Enable comprehensive monitoring
-attention = RingAdvancedDistributedDilatedAttention(
+attention = RingDistributedDilatedAttention(
     # ... other parameters ...
     enable_monitoring=True,
     profile_memory=True,
