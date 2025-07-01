@@ -160,6 +160,26 @@ def create_dilated_attention(
     return module
 
 
+def _select_best_multihead_attention_type() -> str:
+    """Automatically select the best multihead attention type based on hardware."""
+    gpu_type = str(GPU_TYPE)
+
+    # H100/H800: Optimized for Flash Attention 3
+    if gpu_type in ["h100", "h800"]:
+        if HAS_FLASH_ATTN_3:
+            logger.info(
+                "H100/H800 detected with FA3 - using block_sparse_ring for maximum performance"
+            )
+            return "block_sparse_ring"  # Best with FA3 block-sparse optimizations
+        elif HAS_FLASH_ATTN:
+            return "improved"  # Still good with FA2
+        else:
+            return "improved"  # Fallback to improved
+
+    # For other GPUs, use the same as base attention
+    return _select_best_attention_type()
+
+
 def create_multihead_dilated_attention(  # noqa: PLR0912
     attention_type: str = "auto",
     embed_dim: int = 768,
@@ -200,7 +220,7 @@ def create_multihead_dilated_attention(  # noqa: PLR0912
 
     # Auto-select implementation
     if attention_type == "auto":
-        attention_type = _select_best_attention_type()
+        attention_type = _select_best_multihead_attention_type()
 
     # Map to multihead version
     multihead_type = f"multihead_{attention_type}"
@@ -432,9 +452,11 @@ def _select_best_attention_type() -> str:  # noqa: PLR0911, PLR0912
     if gpu_type in ["h100", "h800"]:
         if HAS_FLASH_ATTN_3:
             logger.info(
-                "H100/H800 detected with FA3 - using block_sparse_ring for maximum performance"
+                "H100/H800 detected with FA3 - using improved for base attention"
             )
-            return "block_sparse_ring"  # Best with FA3 block-sparse optimizations
+            # Note: block_sparse_ring is only available for multihead attention
+            # For base attention, use improved which has Flash Attention support
+            return "improved"  # Use improved for base attention
         elif HAS_FLASH_ATTN:
             return "improved"  # Still good with FA2
         else:

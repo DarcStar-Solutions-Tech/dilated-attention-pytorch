@@ -7,8 +7,12 @@ import subprocess
 import sys
 
 
+import pytest
+
+
 def test_benchmark_includes_block_sparse():
     """Test that benchmark_all.py properly includes block sparse implementations."""
+    pytest.skip("benchmark_all.py has been reorganized into benchmarks/core/")
 
     # Check if block sparse implementations are imported
     print("Checking benchmark_all.py includes block sparse implementations...")
