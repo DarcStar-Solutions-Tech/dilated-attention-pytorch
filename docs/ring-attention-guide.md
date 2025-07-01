@@ -25,7 +25,7 @@ Ring Attention achieves linear memory scaling through:
 3. **Efficient communication** with overlapped computation
 4. **Mathematical equivalence** preserved through careful algorithm design
 
-## 🎉 **BILLION-TOKEN MILESTONE ACHIEVED** (Latest Update - December 2024)
+## 🎉 **BILLION-TOKEN MILESTONE ACHIEVED** (Latest Update - July 2025)
 
 We have successfully **validated Ring Attention at billion-token scale** with comprehensive benchmarking:
 
@@ -51,7 +51,7 @@ We have successfully **validated Ring Attention at billion-token scale** with co
 - **Processing time**: Remains constant with sufficient parallel devices
 - **Hardware limitation**: Only bounded by available compute resources, not algorithm
 
-## 🎯 **MAXIMUM CHUNK CAPABILITIES VALIDATED** (Latest Analysis - December 2024)
+## 🎯 **MAXIMUM CHUNK CAPABILITIES VALIDATED** (Latest Analysis - July 2025)
 
 ### **Single-Device Performance Limits**
 
