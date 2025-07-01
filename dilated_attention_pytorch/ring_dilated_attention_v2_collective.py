@@ -1044,14 +1044,14 @@ class RingDilatedAttentionV2Collective(nn.Module):
         # Apply causal mask if needed
         if is_causal:
             if chunk_offset > 0:
-                # For chunks, adjust the causal mask
-                causal_mask = torch.ones(
-                    seq_len_q, seq_len_kv, device=q.device, dtype=torch.bool
-                )
-                for i in range(seq_len_q):
-                    for j in range(seq_len_kv):
-                        if i + chunk_offset < j:
-                            causal_mask[i, j] = False
+                # For chunks, adjust the causal mask using vectorized operations
+                # Create indices for efficient mask generation
+                row_indices = torch.arange(seq_len_q, device=q.device).unsqueeze(1)
+                col_indices = torch.arange(seq_len_kv, device=q.device).unsqueeze(0)
+
+                # Vectorized causal mask: True where i + chunk_offset >= j
+                causal_mask = (row_indices + chunk_offset) >= col_indices
+
                 scores.masked_fill_(
                     ~causal_mask.unsqueeze(0).unsqueeze(0), float("-inf")
                 )
