@@ -152,8 +152,7 @@ Tests use pytest with parameterized testing:
 The project includes advanced Ring Attention implementations that provide O(n) memory complexity for arbitrarily long sequences:
 
 - **RingDilatedAttention** (alias for RingDilatedAttentionV2Collective): The recommended Ring Attention implementation
-- **RingDilatedAttentionV2Collective** (`dilated_attention_pytorch/ring_dilated_attention_v2_collective.py`): Core ring attention using robust collective operations
-- **RingDilatedAttentionV2Flash** (`dilated_attention_pytorch/ring_dilated_attention_v2_flash.py`): Flash Attention optimized version
+- **RingDilatedAttentionV2Collective** (`dilated_attention_pytorch/ring_dilated_attention_v2_collective.py`): Core ring attention using robust collective operations with Flash Attention support
 - **RingMultiheadDilatedAttention** (`dilated_attention_pytorch/ring_multihead_dilated_attention.py`): Multi-head wrapper with fused QKV projections
 - **RingDilatedAttentionProduction** (`dilated_attention_pytorch/ring_dilated_attention_production.py`): Production-ready implementation with error recovery
 - **RingDistributedDilatedAttention** (`dilated_attention_pytorch/ring_distributed_dilated_attention.py`): Enterprise-grade distributed implementation with DeepSpeed integration

@@ -87,7 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Pascal GPU Performance**: FP16 operations now automatically use FP32
   - Fixes 8x performance regression on GTX 10-series GPUs
-  - Inheritance issue resolved in RingDilatedAttentionV2Flash
+  - Inheritance issue resolved in RingDilatedAttentionV2Collective
 - **Memory Issues**: OOM errors reduced through optimized memory pooling
 - **Import Errors**: Fixed distributed testing module imports
 

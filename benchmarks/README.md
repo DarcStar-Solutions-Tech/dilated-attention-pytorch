@@ -146,7 +146,7 @@ Each benchmark outputs:
 
 Example output:
 ```
-Implementation: RingDilatedAttentionV2Flash
+Implementation: RingDilatedAttentionV2Collective
 Throughput: 1,429,956 tokens/s
 Latency: 2.86 ± 0.20 ms
 Memory: 1578.0 MB
