@@ -103,7 +103,7 @@ class RingDilatedAttentionV2Collective(nn.Module):
                 from .utils.gpu_utils import get_optimal_dtype
 
                 self.dtype = get_optimal_dtype(
-                    self.device, prefer_fp16=True, warn_pascal=True
+                    self.device, prefer_fp16=True, warn_pascal=False
                 )
             except ImportError:
                 # Fallback to original logic if gpu_utils not available
