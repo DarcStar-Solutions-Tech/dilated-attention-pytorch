@@ -55,16 +55,27 @@ class BlockSparseRingMultiheadDilatedAttention(nn.Module):
         self.batch_first = batch_first
         self.dropout = dropout
 
+        # Extract device and dtype from kwargs
+        device = kwargs.pop("device", None)
+        dtype = kwargs.pop("dtype", None)
+
         if self.head_dim * num_heads != embed_dim:
             raise ValueError(
                 f"embed_dim ({embed_dim}) must be divisible by num_heads ({num_heads})"
             )
 
+        # Factory kwargs for device and dtype
+        factory_kwargs = {}
+        if device is not None:
+            factory_kwargs["device"] = device
+        if dtype is not None:
+            factory_kwargs["dtype"] = dtype
+
         # Projections
-        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
-        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias, **factory_kwargs)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias, **factory_kwargs)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias, **factory_kwargs)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias, **factory_kwargs)
 
         # Dropout
         self.dropout_layer = nn.Dropout(dropout) if dropout > 0.0 else nn.Identity()
