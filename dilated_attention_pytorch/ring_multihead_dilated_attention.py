@@ -11,15 +11,16 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from .ring_dilated_attention_v2_collective import RingDilatedAttentionV2Collective
+from .ring_dilated_attention_v2_flash import RingDilatedAttentionV2Flash
 
 
 class RingMultiheadDilatedAttention(nn.Module):
     """
-    Multihead wrapper for Ring Dilated Attention.
+    Multihead wrapper for Ring Dilated Attention with Flash Attention.
 
     This provides a drop-in replacement for nn.MultiheadAttention with:
     - O(n/ring_size) memory scaling through Ring Attention
+    - Flash Attention optimization for improved performance
     - Support for dilated attention patterns
     - MAGNETO-style LayerNorm for improved training stability
     - Compatible with all Ring Attention optimizations
@@ -37,6 +38,10 @@ class RingMultiheadDilatedAttention(nn.Module):
         ring_size: Size of the ring for distributed operation
         device: Device to place parameters on
         dtype: Data type for parameters
+        batch_first: Whether input is batch-first (default: True)
+        enable_memory_pool: Whether to use memory pooling
+        enable_pattern_cache: Whether to cache attention patterns
+        use_flash_attention: Whether to use Flash Attention optimization
     """
 
     def __init__(
@@ -57,6 +62,7 @@ class RingMultiheadDilatedAttention(nn.Module):
         # Memory optimization options
         enable_memory_pool: bool = True,
         enable_pattern_cache: bool = True,
+        use_flash_attention: bool = True,
     ):
         super().__init__()
 
@@ -117,8 +123,8 @@ class RingMultiheadDilatedAttention(nn.Module):
             self.gamma_q = None
             self.gamma_k = None
 
-        # Ring Attention module
-        self.ring_attention = RingDilatedAttentionV2Collective(
+        # Ring Attention module - using Flash variant for best performance
+        self.ring_attention = RingDilatedAttentionV2Flash(
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
             dropout=dropout,
@@ -127,6 +133,7 @@ class RingMultiheadDilatedAttention(nn.Module):
             dtype=dtype,
             enable_memory_pool=enable_memory_pool,
             use_pattern_cache=enable_pattern_cache,
+            use_flash_attention=use_flash_attention,
         )
 
         # Initialize weights
