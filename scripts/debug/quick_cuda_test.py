@@ -7,8 +7,8 @@ import os
 import torch
 import torch.distributed as dist
 
-from dilated_attention_pytorch.ring_dilated_attention_v2_robust import (
-    RingDilatedAttentionV2Robust,
+from dilated_attention_pytorch.ring_dilated_attention_v2_collective import (
+    RingDilatedAttentionV2Collective,
 )
 
 # Initialize distributed
@@ -29,7 +29,7 @@ head_dim = 64
 
 try:
     # Create model
-    model = RingDilatedAttentionV2Robust(
+    model = RingDilatedAttentionV2Collective(
         segment_lengths=[256, 256, 256, 256],
         dilation_rates=[1, 2, 4, 8],
         ring_size=world_size,

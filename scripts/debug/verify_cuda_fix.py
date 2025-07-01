@@ -15,9 +15,6 @@ import torch.distributed as dist
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from dilated_attention_pytorch.ring_dilated_attention_v2_robust import (
-    RingDilatedAttentionV2Robust,
-)
 from dilated_attention_pytorch.ring_dilated_attention_v2_collective import (
     RingDilatedAttentionV2Collective,
 )
@@ -122,8 +119,7 @@ def main():
 
     # Test implementations
     implementations = [
-        ("Collective (baseline)", RingDilatedAttentionV2Collective),
-        ("PyTorch Robust", RingDilatedAttentionV2Robust),
+        ("Collective", RingDilatedAttentionV2Collective),
     ]
 
     results = {}

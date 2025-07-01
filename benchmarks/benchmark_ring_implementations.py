@@ -28,9 +28,6 @@ def benchmark_single_gpu():
     from dilated_attention_pytorch.ring_dilated_attention_v2_collective import (
         RingDilatedAttentionV2Collective,
     )
-    from dilated_attention_pytorch.ring_dilated_attention_v2_robust import (
-        RingDilatedAttentionV2Robust,
-    )
 
     # Test parameters
     seq_lengths = [2048, 4096, 8192]
@@ -41,8 +38,7 @@ def benchmark_single_gpu():
     results = []
 
     implementations = [
-        ("Collective (baseline)", RingDilatedAttentionV2Collective),
-        ("PyTorch Robust", RingDilatedAttentionV2Robust),
+        ("Collective", RingDilatedAttentionV2Collective),
     ]
 
     for seq_len in seq_lengths:
@@ -157,9 +153,6 @@ def benchmark_multi_gpu():
     from dilated_attention_pytorch.ring_dilated_attention_v2_collective import (
         RingDilatedAttentionV2Collective,
     )
-    from dilated_attention_pytorch.ring_dilated_attention_v2_robust import (
-        RingDilatedAttentionV2Robust,
-    )
 
     # Test parameters
     seq_lengths = [2048, 4096, 8192]
@@ -170,8 +163,7 @@ def benchmark_multi_gpu():
     results = []
 
     implementations = [
-        ("Collective (all-gather)", RingDilatedAttentionV2Collective),
-        ("PyTorch Ring", RingDilatedAttentionV2Robust),
+        ("Collective", RingDilatedAttentionV2Collective),
     ]
 
     for seq_len in seq_lengths:

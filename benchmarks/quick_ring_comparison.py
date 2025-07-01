@@ -10,9 +10,6 @@ import time
 from dilated_attention_pytorch.ring_dilated_attention_v2_collective import (
     RingDilatedAttentionV2Collective,
 )
-from dilated_attention_pytorch.ring_dilated_attention_v2_robust import (
-    RingDilatedAttentionV2Robust,
-)
 
 # Check if we're in distributed mode
 IS_DISTRIBUTED = "WORLD_SIZE" in os.environ and int(os.environ["WORLD_SIZE"]) > 1
@@ -43,8 +40,7 @@ num_heads = 8
 head_dim = 64
 
 implementations = [
-    ("Collective (baseline)", RingDilatedAttentionV2Collective),
-    ("PyTorch Robust", RingDilatedAttentionV2Robust),
+    ("Collective", RingDilatedAttentionV2Collective),
 ]
 
 for impl_name, impl_class in implementations:
@@ -124,6 +120,6 @@ if IS_DISTRIBUTED:
 if rank == 0:
     print("\n" + "=" * 80)
     print("Summary:")
-    print("- Collective: Uses all-gather (baseline)")
-    print("- PyTorch Robust: True ring communication with async P2P operations")
+    print("- Collective: Uses all-gather for ring communication")
+    print("- This is now the only Ring Attention V2 implementation")
     print("=" * 80)
