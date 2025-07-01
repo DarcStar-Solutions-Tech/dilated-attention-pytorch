@@ -36,6 +36,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Ring Attention optimization reports
   - Memory pool integration guide
 
+### Removed
+- **ImprovedDilatedAttentionV2**: Removed experimental V2 implementation
+  - Performance was unpredictable (slower in 75% of cases)
+  - AttentionBufferManager added 3.5x overhead vs direct allocation
+  - Users should use ImprovedDilatedAttention instead
+  - Removed related test files and buffer manager module
+
 ### Changed
 - **Ring Attention V2 Optimizations**:
   - Pattern caching enabled by default
