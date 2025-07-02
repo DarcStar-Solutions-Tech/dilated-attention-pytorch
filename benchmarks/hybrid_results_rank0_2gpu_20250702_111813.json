@@ -1,0 +1,60 @@
+{
+  "rank": 0,
+  "world_size": 2,
+  "timestamp": "20250702_111813",
+  "segment_lengths": [
+    512,
+    1024
+  ],
+  "dilation_rates": [
+    1,
+    2
+  ],
+  "results": [
+    {
+      "seq_len": 1024,
+      "batch_size": 2,
+      "time_ms": 255.5826663970947,
+      "memory_mb": 103.00439453125,
+      "throughput": 8013.06297046786,
+      "memory_per_token_kb": 51.502197265625,
+      "expected_scaling": 512.0
+    },
+    {
+      "seq_len": 2048,
+      "batch_size": 2,
+      "time_ms": 404.3182849884033,
+      "memory_mb": 339.47705078125,
+      "throughput": 10130.63260326572,
+      "memory_per_token_kb": 84.8692626953125,
+      "expected_scaling": 1024.0
+    },
+    {
+      "seq_len": 4096,
+      "batch_size": 1,
+      "time_ms": 695.121431350708,
+      "memory_mb": 525.47314453125,
+      "throughput": 5892.495634958282,
+      "memory_per_token_kb": 131.3682861328125,
+      "expected_scaling": 2048.0
+    },
+    {
+      "seq_len": 8192,
+      "batch_size": 1,
+      "time_ms": 1586.8715286254883,
+      "memory_mb": 791.93798828125,
+      "throughput": 5162.358673796185,
+      "memory_per_token_kb": 98.99224853515625,
+      "expected_scaling": 4096.0
+    },
+    {
+      "seq_len": 16384,
+      "batch_size": 1,
+      "time_ms": 3906.705617904663,
+      "memory_mb": 1015.18798828125,
+      "throughput": 4193.814841054611,
+      "memory_per_token_kb": 63.449249267578125,
+      "expected_scaling": 8192.0
+    }
+  ]
+}

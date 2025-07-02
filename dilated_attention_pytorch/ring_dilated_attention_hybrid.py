@@ -34,6 +34,15 @@ from .ring_attention_lse import (
     compute_attention_with_lse,
 )
 
+# Import optimized LSE with backend fallbacks
+try:
+    from .ring_attention_lse_optimized import compute_attention_with_lse_optimized
+
+    HAS_OPTIMIZED_LSE = True
+except ImportError:
+    HAS_OPTIMIZED_LSE = False
+    compute_attention_with_lse_optimized = compute_attention_with_lse
+
 # Import memory pool from V2
 try:
     from .core.enhanced_memory_pool import get_enhanced_memory_pool
@@ -146,9 +155,9 @@ class RingDilatedAttentionHybrid(nn.Module):
 
         if self.use_flash_attention and HAS_FLASH_UTILS:
             # Get Flash Attention support info
-            support_info = get_flash_attention_support(self.device, self.dtype)
-            self._can_use_flash = support_info["supported"]
-            self.flash_backend = support_info.get("backend")
+            support_info = get_flash_attention_support(self.device)
+            self._can_use_flash = support_info.get("has_flash_attn", False)
+            self.flash_backend = support_info.get("recommended_backend")
 
             # Determine if we should skip Flash attempts
             if hasattr(torch.cuda, "get_device_capability"):
@@ -564,18 +573,34 @@ class RingDilatedAttentionHybrid(nn.Module):
             except Exception:
                 pass  # Fall through to standard
 
-        # Standard attention computation with LSE
-        return compute_attention_with_lse(
-            q_seg,
-            k_seg,
-            v_seg,
-            scale=1.0 / math.sqrt(q_seg.shape[-1]),
-            mask=self._get_segment_causal_mask(
-                q_seg.shape[2], k_seg.shape[2], seg_start, overlap_start, is_causal
-            ),
-            dropout=self.dropout,
-            training=self.training,
-        )
+        # Use optimized attention computation with backend fallbacks
+        if HAS_OPTIMIZED_LSE:
+            return compute_attention_with_lse_optimized(
+                q_seg,
+                k_seg,
+                v_seg,
+                scale=1.0 / math.sqrt(q_seg.shape[-1]),
+                mask=self._get_segment_causal_mask(
+                    q_seg.shape[2], k_seg.shape[2], seg_start, overlap_start, is_causal
+                ),
+                dropout=self.dropout,
+                training=self.training,
+                is_causal=is_causal
+                and seg_start == 0,  # Only first segment needs causal
+            )
+        else:
+            # Fallback to standard computation
+            return compute_attention_with_lse(
+                q_seg,
+                k_seg,
+                v_seg,
+                scale=1.0 / math.sqrt(q_seg.shape[-1]),
+                mask=self._get_segment_causal_mask(
+                    q_seg.shape[2], k_seg.shape[2], seg_start, overlap_start, is_causal
+                ),
+                dropout=self.dropout,
+                training=self.training,
+            )
 
     def _get_segment_causal_mask(
         self,
@@ -709,18 +734,32 @@ class RingDilatedAttentionHybrid(nn.Module):
                 k_seg = k_seg.index_select(2, pattern)
                 v_seg = v_seg.index_select(2, pattern)
 
-            # Compute attention for segment
-            seg_output, _ = compute_attention_with_lse(
-                q_seg,
-                k_seg,
-                v_seg,
-                scale=1.0 / math.sqrt(d),
-                mask=self._get_segment_causal_mask(
-                    q_seg.shape[2], k_seg.shape[2], seg_start, seg_start, is_causal
-                ),
-                dropout=self.dropout,
-                training=self.training,
-            )
+            # Compute attention for segment with optimized backend
+            if HAS_OPTIMIZED_LSE:
+                seg_output, _ = compute_attention_with_lse_optimized(
+                    q_seg,
+                    k_seg,
+                    v_seg,
+                    scale=1.0 / math.sqrt(d),
+                    mask=self._get_segment_causal_mask(
+                        q_seg.shape[2], k_seg.shape[2], seg_start, seg_start, is_causal
+                    ),
+                    dropout=self.dropout,
+                    training=self.training,
+                    is_causal=is_causal and seg_start == 0,
+                )
+            else:
+                seg_output, _ = compute_attention_with_lse(
+                    q_seg,
+                    k_seg,
+                    v_seg,
+                    scale=1.0 / math.sqrt(d),
+                    mask=self._get_segment_causal_mask(
+                        q_seg.shape[2], k_seg.shape[2], seg_start, seg_start, is_causal
+                    ),
+                    dropout=self.dropout,
+                    training=self.training,
+                )
 
             # Place output back
             if dilation_rate > 1:
