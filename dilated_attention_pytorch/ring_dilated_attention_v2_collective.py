@@ -234,6 +234,36 @@ class RingDilatedAttentionV2Collective(nn.Module):
         self._dilation_pattern_cache = {}
         self._head_groups_cache = None
 
+        # Hardware-aware execution path selection
+        self._determine_execution_path()
+
+    def _determine_execution_path(self):
+        """Determine the best execution path for this hardware at initialization."""
+        # Default to standard computation
+        self._use_direct_sdpa = False
+        self._skip_flash_attempt = False
+
+        # Check compute capability and determine optimal path
+        if self.device.type == "cuda":
+            import torch
+
+            compute_capability = torch.cuda.get_device_capability(self.device)
+            cc_major, cc_minor = compute_capability
+
+            # For older GPUs (pre-Ampere), skip Flash attempts and use SDPA directly
+            if cc_major < 8:  # Pre-Ampere
+                self._skip_flash_attempt = True
+                self._use_direct_sdpa = True
+
+                if self.rank == 0:
+                    print(
+                        f"RingDilatedAttentionV2Collective: Using direct SDPA path for CC {cc_major}.{cc_minor} GPU"
+                    )
+            elif self.rank == 0 and self.use_flash_attention:
+                print(
+                    f"RingDilatedAttentionV2Collective: Using Flash Attention path for CC {cc_major}.{cc_minor} GPU"
+                )
+
     def _get_causal_mask(
         self, seq_len_q: int, seq_len_kv: int, chunk_offset: int = 0
     ) -> Tensor:
@@ -377,6 +407,18 @@ class RingDilatedAttentionV2Collective(nn.Module):
         """
         use_flash = use_flash if use_flash is not None else self.use_flash_attention
 
+        # Skip Flash attempt if determined at init
+        if hasattr(self, "_skip_flash_attempt") and self._skip_flash_attempt:
+            use_flash = False
+
+        # Use direct SDPA if determined optimal
+        if (
+            hasattr(self, "_use_direct_sdpa")
+            and self._use_direct_sdpa
+            and not use_flash
+        ):
+            return self._compute_attention_sdpa_direct(q, k, v, is_causal, chunk_offset)
+
         # Try Flash Attention first if enabled
         if use_flash and HAS_FLASH_UTILS:
             try:
@@ -420,6 +462,43 @@ class RingDilatedAttentionV2Collective(nn.Module):
         # Apply attention
         output = torch.matmul(attn_weights, v)
         return output.transpose(1, 2)  # [b, n_q, h, d]
+
+    def _compute_attention_sdpa_direct(
+        self,
+        q: Tensor,
+        k: Tensor,
+        v: Tensor,
+        is_causal: bool = False,
+        chunk_offset: int = 0,
+    ) -> Tensor:
+        """Direct SDPA computation optimized for older GPUs."""
+        # Transpose to SDPA format [b, h, n, d]
+        q_t = q.transpose(1, 2)
+        k_t = k.transpose(1, 2)
+        v_t = v.transpose(1, 2)
+
+        # Handle causal masking
+        attn_mask = None
+        if is_causal and chunk_offset > 0:
+            # Need explicit mask for chunks
+            n_q, n_kv = q.shape[1], k.shape[1]
+            causal_mask = self._get_causal_mask(n_q, n_kv, chunk_offset)
+            # Convert boolean mask to float mask for SDPA
+            attn_mask = torch.zeros_like(causal_mask, dtype=q.dtype)
+            attn_mask.masked_fill_(~causal_mask, float("-inf"))
+            attn_mask = attn_mask.unsqueeze(0).unsqueeze(0)
+
+        # Use PyTorch's optimized SDPA
+        output = F.scaled_dot_product_attention(
+            q_t,
+            k_t,
+            v_t,
+            attn_mask=attn_mask,
+            dropout_p=self.dropout if self.training else 0.0,
+            is_causal=is_causal and chunk_offset == 0,
+        )
+
+        return output.transpose(1, 2)
 
     def _simple_attention(
         self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool
