@@ -6,8 +6,10 @@ with V2 Collective's features and optimizations.
 This shows how to merge the best of both implementations.
 """
 
+import math
 import torch
 import torch.nn as nn
+from torch import Tensor
 from typing import Optional, Tuple
 from functools import partial
 
@@ -89,8 +91,12 @@ class RingDilatedAttentionHybrid(nn.Module):
 
         # CRITICAL: Split K,V across ranks (TRUE RING ATTENTION)
         # Each GPU only stores its portion, unlike V2 which gathers all
-        k_local = split_by_rank(k, self.rank, self.ring_size)
-        v_local = split_by_rank(v, self.rank, self.ring_size)
+        # For now, use simple chunk splitting (would be imported from utils)
+        chunk_size = n // self.ring_size
+        start_idx = self.rank * chunk_size
+        end_idx = start_idx + chunk_size
+        k_local = k[:, start_idx:end_idx]
+        v_local = v[:, start_idx:end_idx]
 
         # IMPROVEMENT: Apply dilation BEFORE ring passing (from V2)
         # This is what V3 is missing - proper dilation support

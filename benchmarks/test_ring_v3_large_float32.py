@@ -126,7 +126,7 @@ def test_large_sequences_float32():
                 if any_nan or any_inf:
                     print(f"  ❌ Failed - NaN: {any_nan}, Inf: {any_inf}")
                 else:
-                    print(f"  ✅ Success!")
+                    print("  ✅ Success!")
                     print(
                         f"     Memory: {mem_before:.2f} GB → {mem_after:.2f} GB (peak: {peak_memory:.2f} GB)"
                     )
@@ -144,7 +144,7 @@ def test_large_sequences_float32():
                 if rank == 0:
                     print(f"  ❌ OOM at {seq_len:,} tokens")
                     print(
-                        f"     Try reducing batch size or enabling gradient checkpointing"
+                        "     Try reducing batch size or enabling gradient checkpointing"
                     )
                 break
             else:

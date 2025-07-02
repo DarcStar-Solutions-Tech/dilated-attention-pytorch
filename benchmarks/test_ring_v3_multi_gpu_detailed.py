@@ -104,7 +104,7 @@ def test_multi_gpu_bucketed():
                     all_nans = [bool(s[4]) for s in all_stats]
                     all_infs = [bool(s[5]) for s in all_stats]
 
-                    print(f"  ✅ Forward pass completed")
+                    print("  ✅ Forward pass completed")
                     print(f"     Output shape: {output.shape}")
                     print(f"     Means by rank: {[f'{m:.6f}' for m in all_means]}")
                     print(f"     Stds by rank: {[f'{s:.6f}' for s in all_stds]}")
@@ -121,20 +121,20 @@ def test_multi_gpu_bucketed():
                     # Check if outputs are consistent
                     mean_diff = max(all_means) - min(all_means)
                     if mean_diff < 1e-5:
-                        print(f"     ✅ Outputs consistent across ranks")
+                        print("     ✅ Outputs consistent across ranks")
                     else:
                         print(
                             f"     ❌ Outputs differ across ranks (diff={mean_diff:.6f})"
                         )
             else:
-                print(f"  ✅ Forward pass completed")
+                print("  ✅ Forward pass completed")
                 print(
                     f"     Output stats: mean={output_mean:.6f}, std={output_std:.6f}"
                 )
                 if has_nan:
-                    print(f"     ⚠️  Contains NaN!")
+                    print("     ⚠️  Contains NaN!")
                 if has_inf:
-                    print(f"     ⚠️  Contains Inf!")
+                    print("     ⚠️  Contains Inf!")
 
         except Exception as e:
             print(f"[Rank {rank}] ❌ Error: {e}")

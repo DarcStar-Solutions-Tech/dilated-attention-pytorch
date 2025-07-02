@@ -204,7 +204,7 @@ def create_ring_flash_attn_func(
     """
     if use_flash_attn:
         try:
-            from flash_attn import flash_attn_func, flash_attn_varlen_func
+            from flash_attn import flash_attn_func
 
             def flash_attn_with_lse(q, k, v, causal=False, window_size=(-1, -1)):
                 """Flash attention wrapper that returns LSE."""

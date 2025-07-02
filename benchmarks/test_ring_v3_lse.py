@@ -127,7 +127,7 @@ def test_multi_gpu_lse():
         output = model(q, k, v, is_causal=False)
 
         if rank == 0:
-            print(f"✅ Multi-GPU forward pass succeeded!")
+            print("✅ Multi-GPU forward pass succeeded!")
             print(f"   Output shape: {output.shape}")
 
     except Exception as e:

@@ -88,7 +88,7 @@ def test_large_sequence():
             peak_memory = torch.cuda.max_memory_allocated() / (1024**2)
             mem_after = torch.cuda.memory_allocated() / (1024**2)
 
-            print(f"  ✅ Success!")
+            print("  ✅ Success!")
             print(f"     Memory before: {mem_before:.1f} MB")
             print(f"     Memory after: {mem_after:.1f} MB")
             print(f"     Peak memory: {peak_memory:.1f} MB")
@@ -154,7 +154,7 @@ def test_multihead_large():
 
         peak_memory = torch.cuda.max_memory_allocated() / (1024**2)
 
-        print(f"✅ Success!")
+        print("✅ Success!")
         print(f"   Output shape: {output.shape}")
         print(f"   Peak memory: {peak_memory:.1f} MB")
         print(f"   Output mean: {output.float().mean().item():.6f}")
@@ -203,7 +203,7 @@ def test_multi_gpu_bucketed():
         output = model(q, k, v, is_causal=False)
 
         if rank == 0:
-            print(f"✅ Multi-GPU forward pass succeeded!")
+            print("✅ Multi-GPU forward pass succeeded!")
             print(f"   Output shape: {output.shape}")
             print(f"   Output mean: {output.float().mean().item():.6f}")
 

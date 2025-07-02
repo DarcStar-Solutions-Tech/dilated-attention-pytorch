@@ -55,7 +55,6 @@ def debug_ring_communication():
     )
 
     # Add hooks to trace execution
-    import functools
 
     # Monkey-patch all_ring_pass to add logging
     from dilated_attention_pytorch import ring_attention_utils

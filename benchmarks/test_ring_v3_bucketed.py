@@ -4,7 +4,6 @@ Test Ring V3 with bucketed processing.
 """
 
 import torch
-import torch.distributed as dist
 from dilated_attention_pytorch.ring_dilated_attention_v3 import RingDilatedAttentionV3
 
 
@@ -147,7 +146,7 @@ def test_memory_efficiency():
         print(f"Memory before: {mem_before:.1f} MB")
         print(f"Memory after: {mem_after:.1f} MB")
         print(f"Peak memory: {peak_memory:.1f} MB")
-        print(f"✅ Forward pass succeeded!")
+        print("✅ Forward pass succeeded!")
 
     except RuntimeError as e:
         if "out of memory" in str(e):

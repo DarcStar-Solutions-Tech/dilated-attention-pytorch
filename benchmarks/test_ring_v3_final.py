@@ -142,7 +142,7 @@ def test_final():
                 if any_nan or any_inf:
                     print(f"  ❌ Failed - NaN: {any_nan}, Inf: {any_inf}")
                 else:
-                    print(f"  ✅ Success!")
+                    print("  ✅ Success!")
                     print(
                         f"     Memory: {mem_before:.1f} MB → {mem_after:.1f} MB (peak: {peak_memory:.1f} MB)"
                     )

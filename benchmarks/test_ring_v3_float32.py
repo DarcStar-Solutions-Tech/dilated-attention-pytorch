@@ -151,7 +151,7 @@ def test_float32_large_sequences():
                 if any_nan or any_inf:
                     print(f"  ❌ Failed - NaN: {any_nan}, Inf: {any_inf}")
                 else:
-                    print(f"  ✅ Success!")
+                    print("  ✅ Success!")
                     print(f"     Memory usage: {peak_memory:.1f} MB (peak)")
                     print(
                         f"     Output stats: mean={output_mean:.6f}, std={output_std:.6f}, max={output_max:.6f}"

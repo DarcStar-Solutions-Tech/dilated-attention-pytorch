@@ -110,17 +110,23 @@ class RingDilatedAttentionHybrid(nn.Module):
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
-        self.dtype = dtype
-        if self.dtype is None:
-            # Smart dtype selection from V2
-            if self.device.type == "cuda":
-                compute_capability = torch.cuda.get_device_capability(self.device)
-                if compute_capability[0] >= 8:  # Ampere or newer
-                    self.dtype = torch.bfloat16
-                else:
-                    self.dtype = torch.float32  # Avoid fp16 on older hardware
-            else:
-                self.dtype = torch.float32
+
+        # Smart dtype selection using gpu_utils (from V2)
+        if dtype is not None:
+            self.dtype = dtype
+        else:
+            # Try to use GPU utilities for optimal dtype selection
+            try:
+                from .utils.gpu_utils import get_optimal_dtype
+
+                self.dtype = get_optimal_dtype(
+                    self.device, prefer_fp16=True, warn_pascal=False
+                )
+            except ImportError:
+                # Fallback to simple logic if gpu_utils not available
+                self.dtype = (
+                    torch.float16 if self.device.type == "cuda" else torch.float32
+                )
 
         # Ring configuration
         if dist.is_initialized():
@@ -144,10 +150,6 @@ class RingDilatedAttentionHybrid(nn.Module):
                         "best_backend", "standard"
                     )
                     self._can_use_flash = True
-                    if self.rank == 0:
-                        print(
-                            f"RingDilatedAttentionHybrid: Using {self.flash_backend} backend"
-                        )
             except Exception as e:
                 if self.rank == 0:
                     warnings.warn(f"Flash Attention initialization failed: {e}")

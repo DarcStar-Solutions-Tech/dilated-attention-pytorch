@@ -49,7 +49,6 @@ def debug_timeout():
     print(f"[Rank {rank}] Inputs created")
 
     # Add detailed logging to trace execution
-    import functools
     from dilated_attention_pytorch import ring_attention_utils
 
     # Patch all_ring_pass to add logging

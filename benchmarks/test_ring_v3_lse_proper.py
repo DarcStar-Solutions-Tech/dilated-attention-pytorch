@@ -100,9 +100,9 @@ def test_ring_v3_consistency():
         print(f"Difference between run 1 and run {i + 1}: {diff:.6e}")
 
         if diff < 1e-6:
-            print(f"  ✅ Consistent")
+            print("  ✅ Consistent")
         else:
-            print(f"  ❌ Inconsistent!")
+            print("  ❌ Inconsistent!")
 
     # Test with causal mask
     print("\nTesting causal mode consistency...")

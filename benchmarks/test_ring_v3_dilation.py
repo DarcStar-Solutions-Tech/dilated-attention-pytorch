@@ -108,7 +108,7 @@ def test_dilation():
             if rank == 0:
                 any_nan = any(all_nan)
                 if any_nan:
-                    print(f"  ❌ Output has NaN")
+                    print("  ❌ Output has NaN")
                 else:
                     print(f"  ✅ Success! Shape: {output.shape}")
 

@@ -135,7 +135,7 @@ def test_large_sequences_multi_gpu():
 
             # Report results
             if rank == 0:
-                print(f"  ✅ Success!")
+                print("  ✅ Success!")
                 print(f"     Memory before: {mem_before:.1f} MB")
                 print(f"     Memory after: {mem_after:.1f} MB")
                 print(f"     Peak memory: {peak_memory:.1f} MB")
@@ -150,9 +150,9 @@ def test_large_sequences_multi_gpu():
                     print(f"     Output means: {[f'{m:.6f}' for m in all_means]}")
 
                     if any_nan:
-                        print(f"     ⚠️  Warning: NaN detected!")
+                        print("     ⚠️  Warning: NaN detected!")
                     if any_inf:
-                        print(f"     ⚠️  Warning: Inf detected!")
+                        print("     ⚠️  Warning: Inf detected!")
                 else:
                     print(f"     Output mean: {output_mean:.6f}, std: {output_std:.6f}")
 
@@ -219,7 +219,7 @@ def test_large_sequences_multi_gpu():
         peak_memory = torch.cuda.max_memory_allocated(device) / (1024**2)
 
         if rank == 0:
-            print(f"8K tokens with gradient checkpointing:")
+            print("8K tokens with gradient checkpointing:")
             print(f"  ✅ Success! Peak memory: {peak_memory:.1f} MB")
 
     except Exception as e:
