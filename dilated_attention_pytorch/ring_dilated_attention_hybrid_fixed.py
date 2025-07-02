@@ -1,182 +1,135 @@
 """
-Ring Dilated Attention Hybrid - True ring attention with production features.
+Ring Dilated Attention Hybrid - Fixed Implementation
 
-This implementation combines:
-- V3's true ring communication (O(n/p) memory scaling)
-- V2's dilation support and optimizations (FIXED to use proper segment-wise dilation)
-- V3's LSE accumulation for numerical stability
-- V2's memory pool, caching, and Flash Attention support
-
-IMPORTANT: This version fixes the dilated attention computation to properly
-segment sequences first, then apply dilation within segments.
+This is the corrected version that properly implements dilated attention
+by segmenting sequences first, then applying dilation within segments.
+Combines V3's true ring attention (O(n/p) memory) with V2's correct
+dilated attention semantics.
 """
 
 import math
-from typing import Optional, Tuple, List
+from typing import Optional, List, Tuple
 from functools import partial
 
 import torch
 import torch.nn as nn
 from torch import Tensor
-import torch.distributed as dist
 
 # Import ring utilities from V3
 from .ring_attention_utils import (
-    exists,
     all_ring_pass,
     split_by_rank,
-    create_causal_mask,
 )
 
-# Import LSE utilities from V3
-from .ring_attention_lse import (
-    StableRingAccumulator,
-    compute_attention_with_lse,
-)
+# Import LSE accumulator from V3
+from .ring_attention_lse import StableRingAccumulator, compute_attention_with_lse
 
-# Import memory pool from V2
+# Import V2's utilities
+from .utils.gpu_utils import get_optimal_dtype
+from .core.pattern_cache import get_global_pattern_cache
+
+
+# Simple validation function
+def validate_inputs(segment_lengths, dilation_rates):
+    """Validate segment lengths and dilation rates."""
+    if not segment_lengths or not dilation_rates:
+        raise ValueError("segment_lengths and dilation_rates cannot be empty")
+    if len(segment_lengths) != len(dilation_rates):
+        raise ValueError(
+            f"segment_lengths and dilation_rates must have same length: "
+            f"{len(segment_lengths)} != {len(dilation_rates)}"
+        )
+
+
+# Import create_causal_mask
+
+# Flash attention imports
+HAS_FLASH_UTILS = False
 try:
-    from .core.enhanced_memory_pool import get_enhanced_memory_pool
-
-    HAS_ENHANCED_MEMORY_POOL = True
-except ImportError:
-    HAS_ENHANCED_MEMORY_POOL = False
-
-# Import pattern cache from V2
-try:
-    from .core.pattern_cache import get_global_pattern_cache
-
-    HAS_PATTERN_CACHE = True
-except ImportError:
-    HAS_PATTERN_CACHE = False
-
-# Import Flash Attention utilities from V2
-try:
-    from .utils.flash_attention_utils import (
-        flash_attention_forward,
-        get_flash_attention_support,
+    from .utils.attention_utils import (
+        detect_available_backend,
     )
+    from flash_attn import flash_attn_func as flash_attention_forward
 
     HAS_FLASH_UTILS = True
 except ImportError:
-    HAS_FLASH_UTILS = False
+    pass
 
 
-class RingDilatedAttentionHybrid(nn.Module):
+# Helper function
+def exists(val):
+    return val is not None
+
+
+class RingDilatedAttentionHybridFixed(nn.Module):
     """
-    Hybrid Ring Dilated Attention combining the best of V2 and V3.
+    Fixed Ring Dilated Attention implementation that correctly applies
+    dilated attention semantics with true ring communication.
 
-    Features:
-    - True ring communication with O(n/p) memory scaling (V3)
-    - Full dilation support in multi-GPU mode (V2) - FIXED to use segment-wise dilation
-    - LSE accumulation for numerical stability (V3)
-    - Memory pool and pattern caching (V2)
-    - Flash Attention integration (V2)
-    - Hardware-aware execution paths (V2)
+    Key fix: Properly segments sequences and applies dilation within
+    segments, not globally across the entire sequence.
     """
 
     def __init__(
         self,
-        segment_lengths: list[int],
-        dilation_rates: list[int],
+        segment_lengths: List[int],
+        dilation_rates: List[int],
         dropout: float = 0.0,
         ring_size: Optional[int] = None,
         device: Optional[torch.device] = None,
         dtype: Optional[torch.dtype] = None,
-        # V2 optimization features
         enable_memory_pool: bool = True,
-        enable_profiling: bool = False,
-        lightweight_pool: bool = True,
         use_pattern_cache: bool = True,
-        memory_pool_threshold_mb: float = 16.0,
         use_flash_attention: bool = True,
-        # V3 features (bucketing disabled due to issues)
-        use_bucketed: bool = False,
     ):
-        """Initialize Hybrid Ring Dilated Attention."""
         super().__init__()
 
-        assert len(segment_lengths) == len(dilation_rates)
+        # Validate inputs
+        validate_inputs(segment_lengths, dilation_rates)
 
         self.segment_lengths = segment_lengths
         self.dilation_rates = dilation_rates
-        self.dropout = dropout if dropout is not None else 0.0
+        self.dropout = dropout
 
         # Device and dtype setup
         self.device = device or torch.cuda.current_device()
-        self.dtype = dtype
+        if dtype is None:
+            # Use GPU utilities to select optimal dtype
+            self.dtype = get_optimal_dtype(
+                self.device, prefer_fp16=True, warn_pascal=False
+            )
+        else:
+            self.dtype = dtype
 
         # Ring setup
-        if dist.is_initialized():
-            self.rank = dist.get_rank()
-            self.ring_size = ring_size or dist.get_world_size()
+        if torch.distributed.is_initialized():
+            self.rank = torch.distributed.get_rank()
+            self.ring_size = ring_size or torch.distributed.get_world_size()
         else:
             self.rank = 0
             self.ring_size = 1
 
-        # V2 optimization features
-        self.enable_memory_pool = enable_memory_pool and HAS_ENHANCED_MEMORY_POOL
-        self.enable_profiling = enable_profiling
-        self.lightweight_pool = lightweight_pool
-        self.use_pattern_cache = use_pattern_cache and HAS_PATTERN_CACHE
-        self.memory_pool_threshold_mb = memory_pool_threshold_mb
+        # Features
+        self.enable_memory_pool = enable_memory_pool
+        self.use_pattern_cache = use_pattern_cache
         self.use_flash_attention = use_flash_attention and HAS_FLASH_UTILS
 
-        # Initialize memory pool if enabled
-        self._memory_pool = None
-        if self.enable_memory_pool:
-            self._memory_pool = get_enhanced_memory_pool(
-                enable_profiling=self.enable_profiling,
-            )
+        # Pattern cache setup
+        self._pattern_cache = get_global_pattern_cache() if use_pattern_cache else None
+        self._local_pattern_cache = {}
 
-        # Initialize pattern cache
-        self._pattern_cache = None
-        if self.use_pattern_cache:
-            self._pattern_cache = get_global_pattern_cache()
-
-        # Local caches (always used)
-        self._dilation_pattern_cache = {}
-        self._causal_mask_cache = {}
-
-        # Flash Attention setup
+        # Flash attention setup
         self._can_use_flash = False
-        self._skip_flash_attempt = False
-        self._use_direct_sdpa = False
         self.flash_backend = None
-
         if self.use_flash_attention and HAS_FLASH_UTILS:
-            # Get Flash Attention support info
-            support_info = get_flash_attention_support(self.device, self.dtype)
-            self._can_use_flash = support_info["supported"]
-            self.flash_backend = support_info.get("backend")
+            try:
+                self.flash_backend = detect_available_backend(self.device)
+                self._can_use_flash = self.flash_backend is not None
+            except Exception:
+                pass
 
-            # Determine if we should skip Flash attempts
-            if hasattr(torch.cuda, "get_device_capability"):
-                major, minor = torch.cuda.get_device_capability(self.device)
-                compute_capability = major + minor / 10
-
-                # For Pascal GPUs, prefer direct SDPA
-                if compute_capability <= 6.1:
-                    self._skip_flash_attempt = True
-                    self._use_direct_sdpa = True
-                    if self.rank == 0:
-                        print(
-                            f"RingDilatedAttentionHybrid: Using SDPA path for CC {compute_capability}"
-                        )
-
-        # Smart dtype selection based on GPU
-        if self.dtype is None:
-            from .utils.gpu_utils import get_optimal_dtype
-
-            self.dtype = get_optimal_dtype(
-                self.device, prefer_fp16=True, warn_pascal=False
-            )
-
-        # Pre-allocate buffers for ring communication
+        # Pre-allocate buffers
         self._kv_receive_buffer = None
-
-        # Dropout
-        self.dropout_p = dropout
 
     def forward(
         self,
@@ -186,10 +139,10 @@ class RingDilatedAttentionHybrid(nn.Module):
         is_causal: bool = False,
     ) -> Tensor:
         """
-        Forward pass using true ring attention with V2's features.
+        Forward pass with correct dilated attention semantics.
 
-        Key: Uses ring passing (V3) instead of all_gather (V2) for true O(n/p) scaling.
-        Fixed: Now properly applies dilated attention within segments.
+        The key fix: We now properly segment sequences and apply
+        dilation within segments during attention computation.
         """
         b, n, h, d = q.shape
 
@@ -197,7 +150,7 @@ class RingDilatedAttentionHybrid(nn.Module):
         if self.ring_size == 1:
             return self._single_device_forward(q, k, v, is_causal)
 
-        # Use proper dilated attention with segmentation
+        # Multi-GPU ring attention with proper dilated attention
         return self._ring_forward_with_dilated_segments(q, k, v, is_causal)
 
     def _ring_forward_with_dilated_segments(
@@ -210,8 +163,8 @@ class RingDilatedAttentionHybrid(nn.Module):
         """
         Ring attention that properly handles dilated attention within segments.
 
-        This is the key fix: We segment sequences and apply dilation within
-        segments during attention computation, not globally beforehand.
+        Key insight: Each GPU processes its chunk of the sequence, but when
+        computing attention, we apply dilation within logical segments.
         """
         b, n, h, d = q.shape
 
@@ -225,25 +178,24 @@ class RingDilatedAttentionHybrid(nn.Module):
         k_local = split_by_rank(k, self.rank, self.ring_size)
         v_local = split_by_rank(v, self.rank, self.ring_size)
 
-        # Stack for ring passing (NO dilation applied yet!)
+        # Stack for ring passing
         kv_local = torch.stack((k_local, v_local))
 
-        # Pre-allocate receive buffer if needed
+        # Pre-allocate receive buffer
         if (
             self._kv_receive_buffer is None
             or self._kv_receive_buffer.shape != kv_local.shape
         ):
             self._kv_receive_buffer = torch.empty_like(kv_local)
 
-        # Initialize LSE accumulator (V3's numerical stability)
+        # Initialize accumulator
         accumulator = StableRingAccumulator(
-            output_shape=(b, h, n, d),  # Note: heads before seq for LSE
+            output_shape=(b, h, n, d),
             device=q.device,
             dtype=q.dtype,
         )
 
-        # TRUE RING ATTENTION: Pass K,V chunks around the ring
-        # This is the key difference from V2 which uses all_gather
+        # Ring passing with dilated attention computation
         ring_pass_fn = partial(
             all_ring_pass,
             receive_buffer=self._kv_receive_buffer,
@@ -269,12 +221,11 @@ class RingDilatedAttentionHybrid(nn.Module):
                 is_causal,
             )
 
-            # Accumulate with LSE
+            # Accumulate
             accumulator.update(chunk_output, chunk_lse)
 
-        # Get final output and transpose back
-        output = accumulator.get_output().transpose(1, 2)  # (b, n, h, d)
-
+        # Get final output
+        output = accumulator.get_output().transpose(1, 2)
         return output
 
     def _compute_dilated_chunk_attention(
@@ -303,15 +254,8 @@ class RingDilatedAttentionHybrid(nn.Module):
         heads_per_group = self._calculate_head_groups(h)
 
         # Pre-allocate output
-        if self.enable_memory_pool and self._memory_pool is not None:
-            output = self._memory_pool.allocate(
-                (b, h, n, d), dtype=q.dtype, device=q.device
-            )
-            lse = self._memory_pool.allocate((b, h, n), dtype=q.dtype, device=q.device)
-            lse.fill_(float("-inf"))
-        else:
-            output = torch.zeros(b, h, n, d, device=q.device, dtype=q.dtype)
-            lse = torch.full((b, h, n), float("-inf"), device=q.device, dtype=q.dtype)
+        output = torch.zeros(b, h, n, d, device=q.device, dtype=q.dtype)
+        lse = torch.full((b, h, n), float("-inf"), device=q.device, dtype=q.dtype)
 
         # Process each head group with its segment configuration
         head_start = 0
@@ -323,7 +267,7 @@ class RingDilatedAttentionHybrid(nn.Module):
 
             head_end = head_start + group_size
 
-            # Process this head group with proper segmentation
+            # Process this head group
             group_output, group_lse = self._process_head_group_segments(
                 q_t[:, head_start:head_end],  # Q for this head group
                 k_chunk_t[:, head_start:head_end],  # K chunk for this head group
@@ -397,11 +341,9 @@ class RingDilatedAttentionHybrid(nn.Module):
             # Apply dilation within segment
             if dilation_rate > 1:
                 # Calculate offset for this segment
-                offset = (
-                    offset_idx % dilation_rate
-                )  # Fixed: consistent offset across segments
+                offset = (offset_idx + seg_idx) % dilation_rate
 
-                # Get dilation pattern for segment
+                # Get dilation pattern
                 pattern = self._get_segment_dilation_pattern(
                     actual_seg_len, dilation_rate, offset
                 )
@@ -454,20 +396,10 @@ class RingDilatedAttentionHybrid(nn.Module):
         """Get dilation pattern for a segment."""
         cache_key = (seg_len, dilation_rate, offset)
 
-        # Check local cache first
-        if cache_key in self._dilation_pattern_cache:
-            return self._dilation_pattern_cache[cache_key]
+        if cache_key in self._local_pattern_cache:
+            return self._local_pattern_cache[cache_key]
 
-        # Check global cache if enabled
-        if self.use_pattern_cache and self._pattern_cache is not None:
-            full_key = f"segment_dilation_{cache_key}"
-            if full_key in self._pattern_cache:
-                pattern = self._pattern_cache[full_key]
-                if pattern.device != self.device:
-                    pattern = pattern.to(self.device)
-                return pattern
-
-        # Create pattern for segment
+        # Create pattern
         indices = []
         for i in range(0, seg_len, dilation_rate):
             idx = (i + offset) % seg_len
@@ -484,16 +416,7 @@ class RingDilatedAttentionHybrid(nn.Module):
                         indices.append(indices[i])
 
         pattern = torch.tensor(indices, device=self.device, dtype=torch.long)
-
-        # Cache locally
-        self._dilation_pattern_cache[cache_key] = pattern
-
-        # Store in global cache if enabled
-        if self.use_pattern_cache and self._pattern_cache is not None:
-            full_key = f"segment_dilation_{cache_key}"
-            self._pattern_cache[full_key] = (
-                pattern.cpu() if pattern.is_cuda else pattern
-            )
+        self._local_pattern_cache[cache_key] = pattern
 
         return pattern
 
@@ -506,6 +429,7 @@ class RingDilatedAttentionHybrid(nn.Module):
     ) -> Optional[Tensor]:
         """Map segment-local pattern to chunk-local indices."""
         # Filter pattern to only include positions in overlap
+        _ = overlap_start - seg_start
         valid_indices = []
 
         for idx in pattern:
@@ -529,8 +453,8 @@ class RingDilatedAttentionHybrid(nn.Module):
         is_causal: bool,
     ) -> Tuple[Tensor, Tensor]:
         """Compute attention for a dilated segment."""
-        # Try Flash Attention if available
-        if self._can_use_flash and not self._skip_flash_attempt:
+        # Use Flash Attention if available
+        if self._can_use_flash:
             try:
                 # Transpose for Flash
                 q_flash = q_seg.transpose(1, 2)  # (b, seg_len, h, d)
@@ -546,12 +470,12 @@ class RingDilatedAttentionHybrid(nn.Module):
                     backend=self.flash_backend,
                 )
 
-                # Compute LSE separately for accumulation
+                # Compute LSE separately
                 scores = torch.matmul(q_seg, k_seg.transpose(-2, -1)) / math.sqrt(
                     q_seg.shape[-1]
                 )
                 if is_causal:
-                    # Apply causal mask properly for segment
+                    # Apply causal mask
                     q_len, k_len = q_seg.shape[2], k_seg.shape[2]
                     for i in range(q_len):
                         for j in range(k_len):
@@ -562,9 +486,9 @@ class RingDilatedAttentionHybrid(nn.Module):
                 return output.transpose(1, 2), lse
 
             except Exception:
-                pass  # Fall through to standard
+                pass  # Fall through
 
-        # Standard attention computation with LSE
+        # Standard attention computation
         return compute_attention_with_lse(
             q_seg,
             k_seg,
@@ -589,27 +513,16 @@ class RingDilatedAttentionHybrid(nn.Module):
         if not is_causal:
             return None
 
-        cache_key = (q_len, k_len, seg_start, overlap_start)
+        mask = torch.ones(q_len, k_len, device=self.device, dtype=torch.bool)
 
-        if cache_key not in self._causal_mask_cache:
-            mask = torch.ones(q_len, k_len, device=self.device, dtype=torch.bool)
+        for i in range(q_len):
+            for j in range(k_len):
+                q_pos = seg_start + i
+                k_pos = overlap_start + j
+                if q_pos < k_pos:
+                    mask[i, j] = False
 
-            for i in range(q_len):
-                for j in range(k_len):
-                    q_pos = seg_start + i
-                    k_pos = overlap_start + j
-                    if q_pos < k_pos:
-                        mask[i, j] = False
-
-            self._causal_mask_cache[cache_key] = mask
-
-            # Limit cache size
-            if len(self._causal_mask_cache) > 100:
-                keys_to_remove = list(self._causal_mask_cache.keys())[:50]
-                for key in keys_to_remove:
-                    del self._causal_mask_cache[key]
-
-        return self._causal_mask_cache[cache_key]
+        return mask
 
     def _calculate_head_groups(self, num_heads: int) -> List[int]:
         """Calculate how many heads belong to each segment/dilation configuration."""
@@ -679,7 +592,7 @@ class RingDilatedAttentionHybrid(nn.Module):
         offset_idx: int,
         is_causal: bool,
     ) -> Tensor:
-        """Process segments on single device with proper dilation."""
+        """Process segments on single device."""
         b, gh, n, d = q_group.shape
         output = torch.zeros_like(q_group)
 
@@ -696,11 +609,9 @@ class RingDilatedAttentionHybrid(nn.Module):
             k_seg = k_group[:, :, seg_start:seg_end, :]
             v_seg = v_group[:, :, seg_start:seg_end, :]
 
-            # Apply dilation within segment
+            # Apply dilation
             if dilation_rate > 1:
-                offset = (
-                    offset_idx % dilation_rate
-                )  # Fixed: consistent offset across segments
+                offset = (offset_idx + seg_idx) % dilation_rate
                 pattern = self._get_segment_dilation_pattern(
                     actual_seg_len, dilation_rate, offset
                 )
@@ -709,7 +620,7 @@ class RingDilatedAttentionHybrid(nn.Module):
                 k_seg = k_seg.index_select(2, pattern)
                 v_seg = v_seg.index_select(2, pattern)
 
-            # Compute attention for segment
+            # Compute attention
             seg_output, _ = compute_attention_with_lse(
                 q_seg,
                 k_seg,
@@ -732,86 +643,6 @@ class RingDilatedAttentionHybrid(nn.Module):
 
         return output
 
-    # Keep all other methods from original implementation
-    def _get_causal_mask(
-        self, seq_len_q: int, seq_len_kv: int, chunk_offset: int = 0
-    ) -> Tensor:
-        """Get cached causal mask (from V2) - kept for compatibility."""
-        cache_key = (seq_len_q, seq_len_kv, chunk_offset)
-
-        if cache_key not in self._causal_mask_cache:
-            # Create causal mask for chunk
-            if chunk_offset > 0:
-                # For ring chunks
-                q_positions = torch.arange(seq_len_q, device=self.device)
-                kv_positions = torch.arange(
-                    chunk_offset, chunk_offset + seq_len_kv, device=self.device
-                )
-                mask = create_causal_mask(q_positions, kv_positions, self.device)
-            else:
-                # Standard causal mask
-                mask = torch.triu(
-                    torch.ones(
-                        seq_len_q, seq_len_kv, device=self.device, dtype=torch.bool
-                    ),
-                    diagonal=1,
-                )
-                mask = ~mask  # Invert for True = attend
-
-            self._causal_mask_cache[cache_key] = mask
-
-            # Limit cache size
-            if len(self._causal_mask_cache) > 100:
-                keys_to_remove = list(self._causal_mask_cache.keys())[:50]
-                for key in keys_to_remove:
-                    del self._causal_mask_cache[key]
-
-        return self._causal_mask_cache[cache_key]
-
-    def _get_dilation_pattern(
-        self, seq_len: int, dilation_rate: int, offset: int = 0
-    ) -> Tensor:
-        """Get cached dilation pattern (from V2) - kept for compatibility."""
-        cache_key = f"{seq_len}_{dilation_rate}_{offset}"
-
-        # Check global pattern cache first
-        if self.use_pattern_cache and self._pattern_cache is not None:
-            if cache_key in self._pattern_cache:
-                pattern = self._pattern_cache[cache_key]
-                # Convert back to tensor if needed
-                if not isinstance(pattern, torch.Tensor):
-                    pattern = torch.tensor(pattern, device=self.device)
-                elif pattern.device != self.device:
-                    pattern = pattern.to(self.device)
-                return pattern
-
-        # Check local cache
-        if cache_key not in self._dilation_pattern_cache:
-            # Create dilation pattern
-            if dilation_rate > 1:
-                indices = torch.arange(
-                    offset, seq_len, dilation_rate, device=self.device
-                )
-                if len(indices) < seq_len:
-                    # Pad by cycling
-                    repeats = (seq_len + len(indices) - 1) // len(indices)
-                    extended = indices.repeat(repeats)
-                    indices = extended[:seq_len]
-            else:
-                indices = torch.arange(seq_len, device=self.device)
-
-            self._dilation_pattern_cache[cache_key] = indices
-
-            # Store in global pattern cache
-            if self.use_pattern_cache and self._pattern_cache is not None:
-                full_key = f"dilation_{cache_key}"
-                # Store on CPU to save GPU memory
-                self._pattern_cache[full_key] = (
-                    indices.cpu() if indices.is_cuda else indices
-                )
-
-        return self._dilation_pattern_cache[cache_key]
-
 
 # Alias for compatibility
-RingDilatedAttentionTrue = RingDilatedAttentionHybrid
+RingDilatedAttentionHybridCorrected = RingDilatedAttentionHybridFixed
