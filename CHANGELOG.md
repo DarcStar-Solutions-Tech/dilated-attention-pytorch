@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **RingMultiheadDilatedAttention**: Proper multihead wrapper for Ring Attention
+  - Drop-in replacement for nn.MultiheadAttention with O(n) memory scaling
+  - Supports MAGNETO LayerNorm and all Ring Attention optimizations
+  - Compatible with factory pattern
 - **Pattern Caching**: Global pattern cache for Ring Attention implementations
   - 2x speedup for repeated forward passes
   - 23% memory reduction through CPU storage
@@ -42,6 +46,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - AttentionBufferManager added 3.5x overhead vs direct allocation
   - Users should use ImprovedDilatedAttention instead
   - Removed related test files and buffer manager module
+- **RingDilatedAttentionV2**: Removed deprecated implementation
+  - Had distributed communication issues with isend/irecv
+  - Users should use RingDilatedAttention (alias for V2Collective) instead
+- **Educational Implementations**: Moved to examples directory
+  - TrueRingDilatedAttention → examples/ring_attention/reference_implementation.py
+  - SimulatedRingDilatedAttention → examples/ring_attention/single_gpu_simulation.py
 
 ### Changed
 - **Ring Attention V2 Optimizations**:
@@ -77,7 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Pascal GPU Performance**: FP16 operations now automatically use FP32
   - Fixes 8x performance regression on GTX 10-series GPUs
-  - Inheritance issue resolved in RingDilatedAttentionV2Flash
+  - Inheritance issue resolved in RingDilatedAttentionV2Collective
 - **Memory Issues**: OOM errors reduced through optimized memory pooling
 - **Import Errors**: Fixed distributed testing module imports
 

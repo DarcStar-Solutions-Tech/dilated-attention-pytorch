@@ -151,7 +151,9 @@ Tests use pytest with parameterized testing:
 
 The project includes advanced Ring Attention implementations that provide O(n) memory complexity for arbitrarily long sequences:
 
-- **RingDilatedAttention** (`dilated_attention_pytorch/ring_dilated_attention.py`): Core ring attention with dilated patterns and memory pool optimization
+- **RingDilatedAttention**: Alias for RingDilatedAttentionV2Collective (recommended for general use)
+- **RingDilatedAttentionV2Collective** (`dilated_attention_pytorch/ring_dilated_attention_v2_collective.py`): The main ring attention implementation using robust collective operations with integrated Flash Attention support
+- **RingDilatedAttentionProduction** (`dilated_attention_pytorch/ring_dilated_attention_production.py`): Production-ready implementation with advanced error recovery and monitoring
 - **RingMultiheadDilatedAttention** (`dilated_attention_pytorch/ring_multihead_dilated_attention.py`): Multi-head wrapper with fused QKV projections and buffer reuse
 - **RingDistributedDilatedAttention** (`dilated_attention_pytorch/ring_distributed_dilated_attention.py`): Enterprise-grade distributed implementation with DeepSpeed integration
 
@@ -434,7 +436,8 @@ dilated_attention_pytorch/
 ├── improved_multihead_dilated_attention.py # Enhanced multihead version
 ├── distributed_dilated_attention.py # Multi-GPU support
 ├── improved_distributed_dilated_attention.py # Enhanced distributed version
-├── ring_dilated_attention.py       # Ring attention core (O(n) memory)
+├── ring_dilated_attention_v2_collective.py # Main ring attention core (O(n) memory with Flash support)
+├── ring_dilated_attention_production.py # Production-ready ring attention with monitoring
 ├── ring_multihead_dilated_attention.py # Ring multi-head wrapper
 ├── ring_distributed_dilated_attention.py # Enterprise ring attention
 ├── block_sparse_ring_dilated_attention.py # Block-sparse ring attention
@@ -479,7 +482,12 @@ docs/                       # Extensive documentation
 └── archive/                # Historical/obsolete documentation
 
 examples/                   # Example scripts
-└── distributed_training_example.py # Distributed training example
+├── distributed_training_example.py # Distributed training example
+├── basic_dilated_attention.py # Basic usage examples
+├── distributed_ring_attention.py # Ring attention distributed example
+├── factory_pattern_example.py # Factory pattern usage examples
+├── simple_usage.py         # Simple usage examples
+└── ring_attention/         # Ring Attention educational implementations
 
 scripts/                    # Utility scripts
 └── launch_distributed_training.py # Launch distributed training

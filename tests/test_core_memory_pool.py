@@ -99,14 +99,18 @@ class TestUnifiedMemoryPool:
         pool = UnifiedMemoryPool(config)
 
         shape = (10, 10)
+        device = None
 
         # Access buffer multiple times
         # Need 4 accesses because promotion happens AFTER incrementing count to 3
         for _ in range(4):
-            _ = pool.get_buffer(shape, torch.float32)
+            buffer = pool.get_buffer(shape, torch.float32, device=device)
+            # Get the actual device from the returned buffer
+            if device is None and _ == 0:
+                device = buffer.device
 
         # Should be in hot cache now
-        key = (shape, torch.float32, None, False, "default")
+        key = (shape, torch.float32, device, False, "default")
         assert key in pool._hot_cache
 
     def test_hot_cache_size_limit(self):
@@ -312,14 +316,17 @@ class TestMemoryPoolEdgeCases:
         pool = UnifiedMemoryPool()
 
         shape = (50, 50)
-        key = (shape, torch.float32, None, False, "default")
+        device = None
 
         # Access buffer multiple times
         for i in range(5):
-            _ = pool.get_buffer(shape, torch.float32)
+            buffer = pool.get_buffer(shape, torch.float32, device=device)
+            if device is None and i == 0:
+                device = buffer.device
             time.sleep(0.01)  # Small delay
 
         # Check statistics
+        key = (shape, torch.float32, device, False, "default")
         assert key in pool._stats
         stats = pool._stats[key]
         assert stats.access_count == 5

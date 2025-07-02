@@ -8,7 +8,9 @@ verifying correctness, memory efficiency, and performance.
 import pytest
 import torch
 
-from dilated_attention_pytorch.ring_dilated_attention_v2 import RingDilatedAttentionV2
+from dilated_attention_pytorch.ring_dilated_attention_v2_collective import (
+    RingDilatedAttentionV2Collective as RingDilatedAttentionV2,
+)
 from dilated_attention_pytorch.improved_dilated_attention import (
     ImprovedDilatedAttention,
 )

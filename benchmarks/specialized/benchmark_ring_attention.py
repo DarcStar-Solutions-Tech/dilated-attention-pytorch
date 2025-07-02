@@ -19,7 +19,6 @@ import warnings
 
 from dilated_attention_pytorch import (
     RingDilatedAttentionV2Collective,
-    RingDilatedAttentionV2Flash,
 )
 
 
@@ -158,7 +157,7 @@ class RingAttentionBenchmark:
             # 3. With Flash backend
             print("\n3. Flash Backend:")
             try:
-                model_flash = RingDilatedAttentionV2Flash(
+                model_flash = RingDilatedAttentionV2Collective(
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
                     device=self.device,
@@ -204,7 +203,7 @@ class RingAttentionBenchmark:
         # Single GPU
         print("\n--- Single GPU ---")
         try:
-            model_single = RingDilatedAttentionV2Flash(
+            model_single = RingDilatedAttentionV2Collective(
                 segment_lengths=segment_lengths,
                 dilation_rates=dilation_rates,
                 device=self.device,

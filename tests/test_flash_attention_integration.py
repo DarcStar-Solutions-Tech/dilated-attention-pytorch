@@ -9,8 +9,8 @@ from dilated_attention_pytorch.utils.flash_attention_utils import (
     select_attention_backend,
     flash_attention_forward,
 )
-from dilated_attention_pytorch.ring_dilated_attention_v2_flash import (
-    RingDilatedAttentionV2Flash,
+from dilated_attention_pytorch import (
+    RingDilatedAttentionV2Collective,
 )
 
 
@@ -221,7 +221,7 @@ class TestRingDilatedAttentionFlash:
         """Test creating Ring Attention with Flash support."""
         device = torch.device("cuda:0")
 
-        model = RingDilatedAttentionV2Flash(
+        model = RingDilatedAttentionV2Collective(
             segment_lengths=[512, 1024],
             dilation_rates=[1, 2],
             device=device,
@@ -241,7 +241,7 @@ class TestRingDilatedAttentionFlash:
         num_heads = 8
         head_dim = 64
 
-        model = RingDilatedAttentionV2Flash(
+        model = RingDilatedAttentionV2Collective(
             segment_lengths=[512, 1024],
             dilation_rates=[1, 2],
             device=device,
@@ -273,7 +273,7 @@ class TestRingDilatedAttentionFlash:
         head_dim = 32
 
         # Create models
-        model_flash = RingDilatedAttentionV2Flash(
+        model_flash = RingDilatedAttentionV2Collective(
             segment_lengths=[256],
             dilation_rates=[1],
             device=device,
@@ -282,7 +282,7 @@ class TestRingDilatedAttentionFlash:
             ring_size=1,  # Single GPU for simpler comparison
         )
 
-        model_standard = RingDilatedAttentionV2Flash(
+        model_standard = RingDilatedAttentionV2Collective(
             segment_lengths=[256],
             dilation_rates=[1],
             device=device,

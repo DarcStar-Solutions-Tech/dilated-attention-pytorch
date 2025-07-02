@@ -48,6 +48,16 @@ from .core import (
 )
 from .dilated_attention import DilatedAttention
 from .improved_dilated_attention import ImprovedDilatedAttention
+
+# Hybrid Ring Attention - best of V2 and V3
+from .ring_dilated_attention_hybrid import (
+    RingDilatedAttentionHybrid,
+    RingDilatedAttentionTrue,  # Alias
+)
+from .ring_multihead_dilated_attention_hybrid import (
+    RingMultiheadDilatedAttentionHybrid,
+    create_ring_multihead_attention_hybrid,
+)
 from .improved_distributed_dilated_attention import (
     DistributedImprovedDilatedAttention,
     DistributedImprovedMultiheadDilatedAttention,
@@ -57,23 +67,14 @@ from .long_net import LongNet
 from .multihead_dilated_attention import MultiheadDilatedAttention
 
 # Ring Attention implementations
-from .ring_dilated_attention_v2 import RingDilatedAttentionV2
 from .ring_dilated_attention_v2_collective import RingDilatedAttentionV2Collective
+from .ring_multihead_dilated_attention import RingMultiheadDilatedAttention
 from .ring_dilated_attention_production import (
     RingDilatedAttentionProduction,
     RingAttentionConfig,
     create_production_ring_attention,
 )
 
-# Import Flash-optimized version if available
-try:
-    from .ring_dilated_attention_v2_flash import RingDilatedAttentionV2Flash
-
-    _ = RingDilatedAttentionV2Flash  # Mark as used
-
-    HAS_FLASH_RING = True
-except ImportError:
-    HAS_FLASH_RING = False
 from .transformer import DilatedTransformerDecoderLayer, DilatedTransformerEncoderLayer
 from .utils.sparse_pattern_utils import (
     PatternConfig,
@@ -106,11 +107,16 @@ __all__ = [
     "create_adaptive_block_sparse",
     # Ring Attention implementations
     "RingDilatedAttention",  # Alias for RingDilatedAttentionV2Collective
-    "RingDilatedAttentionV2",
     "RingDilatedAttentionV2Collective",
+    "RingMultiheadDilatedAttention",
     "RingDilatedAttentionProduction",
     "RingAttentionConfig",
     "create_production_ring_attention",
+    # Hybrid Ring Attention - true O(n/p) scaling with all features
+    "RingDilatedAttentionHybrid",
+    "RingDilatedAttentionTrue",  # Alias for Hybrid
+    "RingMultiheadDilatedAttentionHybrid",
+    "create_ring_multihead_attention_hybrid",
     # Original implementations
     "DilatedAttention",
     "DilatedTransformerDecoderLayer",
@@ -137,6 +143,5 @@ __all__ = [
     "create_multihead_dilated_attention",
 ]
 
-# Add Flash-optimized Ring Attention if available
-if HAS_FLASH_RING:
-    __all__.append("RingDilatedAttentionV2Flash")
+# Flash optimizations are now integrated into V2Collective
+HAS_FLASH_RING = True  # Flash is integrated into V2Collective

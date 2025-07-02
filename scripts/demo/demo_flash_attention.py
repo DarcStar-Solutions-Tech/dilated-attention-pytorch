@@ -23,7 +23,6 @@ from dilated_attention_pytorch.utils import (
 # Import attention implementations
 from dilated_attention_pytorch import (
     RingDilatedAttentionV2Collective,
-    RingDilatedAttentionV2Flash,
 )
 
 
@@ -159,9 +158,9 @@ def compare_implementations():
     print(f"  Throughput: {results_standard['throughput']:.0f} tokens/s")
 
     # Flash Attention implementation
-    print("\n2. Flash-optimized RingDilatedAttentionV2Flash:")
+    print("\n2. Flash-optimized RingDilatedAttentionV2Collective:")
     try:
-        model_flash = RingDilatedAttentionV2Flash(
+        model_flash = RingDilatedAttentionV2Collective(
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
             device=device,
@@ -213,7 +212,7 @@ def test_long_sequences():
         print(f"\nTesting sequence length: {seq_len}")
 
         try:
-            model = RingDilatedAttentionV2Flash(
+            model = RingDilatedAttentionV2Collective(
                 segment_lengths=[2048, 4096],
                 dilation_rates=[1, 2],
                 device=device,
