@@ -1,269 +1,269 @@
-#!/usr/bin/env python3
+# \!/usr/bin/env python3
 """
-Benchmark hybrid ring dilated attention with optimized attention backends.
-Tests the performance impact of using Flash/SDPA/xFormers vs standard einsum.
+Benchmark the optimized hybrid ring dilated attention against the original.
+Tests single GPU performance improvements from proper V2 integration.
 """
 
 import torch
-import torch.distributed as dist
 import time
-import os
+import gc
 from typing import Dict, List
 import json
 
+# Import both implementations
 from dilated_attention_pytorch.ring_dilated_attention_hybrid import (
-    RingDilatedAttentionHybrid,
+    RingDilatedAttentionHybrid as HybridOriginal,
 )
-from dilated_attention_pytorch.ring_attention_lse_optimized import (
-    get_attention_backend_info,
+from dilated_attention_pytorch.ring_dilated_attention_hybrid_optimized import (
+    RingDilatedAttentionHybridOptimized as HybridOptimized,
+)
+from dilated_attention_pytorch.improved_dilated_attention import (
+    ImprovedDilatedAttention,
 )
 
 
-def setup_distributed():
-    """Initialize distributed training."""
-    rank = int(os.environ.get("RANK", 0))
-    world_size = int(os.environ.get("WORLD_SIZE", 1))
-
-    if world_size > 1:
-        dist.init_process_group(backend="nccl")
-        torch.cuda.set_device(rank)
-
-    return rank, world_size
-
-
-def measure_attention_performance(
-    seq_len: int,
+def benchmark_implementation(
+    model_class,
+    model_name: str,
+    seq_lengths: List[int],
     batch_size: int = 1,
     num_heads: int = 8,
     head_dim: int = 64,
-    segment_lengths: List[int] = [2048, 4096, 8192],
-    dilation_rates: List[int] = [1, 2, 4],
-    warmup_steps: int = 5,
-    benchmark_steps: int = 10,
-    device: str = "cuda",
-) -> Dict:
-    """Measure performance of hybrid attention with optimized backends."""
+    segment_lengths: list = None,
+    dilation_rates: list = None,
+    warmup_iterations: int = 2,
+    benchmark_iterations: int = 5,
+) -> List[Dict]:
+    """Benchmark a specific implementation."""
 
-    # Get backend info
-    backend_info = get_attention_backend_info()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Create model with optimized attention
-    device_obj = torch.device(device) if isinstance(device, str) else device
-    model = RingDilatedAttentionHybrid(
-        segment_lengths=segment_lengths,
-        dilation_rates=dilation_rates,
-        dropout=0.0,
-        device=device_obj,
-        dtype=torch.float32,  # Use float32 for Pascal GPUs
-        use_flash_attention=True,  # Enable optimized backends
-    )
+    if segment_lengths is None:
+        segment_lengths = [512, 1024]
+    if dilation_rates is None:
+        dilation_rates = [1, 2]
 
-    # Create inputs
-    q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
-    k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
-    v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
+    results = []
 
-    # Warmup
-    for _ in range(warmup_steps):
-        with torch.no_grad():
-            _ = model(q, k, v, is_causal=False)
+    for seq_len in seq_lengths:
+        # Ensure divisibility
+        max_seg = max(segment_lengths)
+        if seq_len % max_seg != 0:
+            seq_len = ((seq_len // max_seg) + 1) * max_seg
 
-    # Benchmark
-    torch.cuda.synchronize()
-    start_time = time.time()
+        try:
+            # Clear cache
+            gc.collect()
+            torch.cuda.empty_cache()
+            torch.cuda.reset_peak_memory_stats()
 
-    for _ in range(benchmark_steps):
-        with torch.no_grad():
-            _ = model(q, k, v, is_causal=False)
+            # Create model
+            if model_name == "improved":
+                model = model_class(
+                    segment_lengths=segment_lengths,
+                    dilation_rates=dilation_rates,
+                    dropout=0.0,
+                    enable_memory_pool=True,
+                    lightweight_pool=False,
+                )
+            else:
+                # Hybrid models
+                model = model_class(
+                    segment_lengths=segment_lengths,
+                    dilation_rates=dilation_rates,
+                    dropout=0.0,
+                    ring_size=1,  # Single GPU
+                    device=device,
+                    dtype=torch.float32,
+                    enable_memory_pool=True,
+                    use_flash_attention=True,
+                    use_pattern_cache=True,
+                )
 
-    torch.cuda.synchronize()
-    end_time = time.time()
+            # Create inputs
+            q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
+            k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
+            v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
 
-    # Calculate metrics
-    avg_time = (end_time - start_time) / benchmark_steps
-    throughput = (batch_size * seq_len * num_heads) / avg_time / 1e6  # M tokens/s
+            # Warmup
+            for _ in range(warmup_iterations):
+                with torch.no_grad():
+                    _ = model(q, k, v)
+                torch.cuda.synchronize()
 
-    # Memory usage
-    torch.cuda.reset_peak_memory_stats()
-    with torch.no_grad():
-        _ = model(q, k, v, is_causal=False)
-    peak_memory = torch.cuda.max_memory_allocated() / 1024**2  # MB
+            # Benchmark
+            torch.cuda.reset_peak_memory_stats()
+            times = []
 
-    return {
-        "seq_len": seq_len,
-        "batch_size": batch_size,
-        "num_heads": num_heads,
-        "head_dim": head_dim,
-        "time_ms": avg_time * 1000,
-        "throughput_mtokens": throughput,
-        "memory_mb": peak_memory,
-        "backend_info": backend_info,
-        "model_info": {
-            "can_use_flash": model._can_use_flash,
-            "flash_backend": model.flash_backend,
-            "has_optimized_lse": model.enable_memory_pool,
-        },
-    }
+            for _ in range(benchmark_iterations):
+                torch.cuda.synchronize()
+                start = time.time()
 
+                with torch.no_grad():
+                    output = model(q, k, v)
 
-def compare_with_standard(
-    seq_len: int,
-    batch_size: int = 1,
-    num_heads: int = 8,
-    head_dim: int = 64,
-    segment_lengths: List[int] = [2048, 4096, 8192],
-    dilation_rates: List[int] = [1, 2, 4],
-    device: str = "cuda",
-) -> Dict:
-    """Compare optimized vs standard attention performance."""
+                torch.cuda.synchronize()
+                times.append(time.time() - start)
 
-    device_obj = torch.device(device) if isinstance(device, str) else device
+            # Get stats
+            avg_time = sum(times) / len(times)
+            peak_memory = torch.cuda.max_memory_allocated(device) / 1024**2  # MB
+            memory_per_token = peak_memory * 1024 / seq_len  # KB per token
+            throughput = seq_len * batch_size / avg_time
 
-    # Test with optimized backends enabled
-    model_optimized = RingDilatedAttentionHybrid(
-        segment_lengths=segment_lengths,
-        dilation_rates=dilation_rates,
-        dropout=0.0,
-        device=device_obj,
-        dtype=torch.float32,
-        use_flash_attention=True,
-    )
+            result = {
+                "model": model_name,
+                "seq_len": seq_len,
+                "time_ms": avg_time * 1000,
+                "memory_mb": peak_memory,
+                "memory_per_token_kb": memory_per_token,
+                "throughput_tokens_per_sec": throughput,
+            }
 
-    # Test with optimized backends disabled
-    model_standard = RingDilatedAttentionHybrid(
-        segment_lengths=segment_lengths,
-        dilation_rates=dilation_rates,
-        dropout=0.0,
-        device=device_obj,
-        dtype=torch.float32,
-        use_flash_attention=False,
-    )
+            results.append(result)
 
-    # Create inputs
-    q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
-    k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
-    v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
+            print(
+                f"{model_name} @ {seq_len:,}: {avg_time * 1000:.1f}ms, "
+                f"{peak_memory:.0f}MB, {throughput:,.0f} tok/s"
+            )
 
-    # Benchmark optimized
-    times_optimized = []
-    for _ in range(10):
-        torch.cuda.synchronize()
-        start = time.time()
-        with torch.no_grad():
-            out_opt = model_optimized(q, k, v, is_causal=False)
-        torch.cuda.synchronize()
-        times_optimized.append(time.time() - start)
+            # Clean up
+            del q, k, v, output, model
+            gc.collect()
+            torch.cuda.empty_cache()
 
-    # Benchmark standard
-    times_standard = []
-    for _ in range(10):
-        torch.cuda.synchronize()
-        start = time.time()
-        with torch.no_grad():
-            out_std = model_standard(q, k, v, is_causal=False)
-        torch.cuda.synchronize()
-        times_standard.append(time.time() - start)
+        except torch.cuda.OutOfMemoryError:
+            print(f"{model_name} @ {seq_len:,}: OOM")
+            break
+        except Exception as e:
+            print(f"{model_name} @ {seq_len:,}: Error - {e}")
+            break
 
-    # Check outputs match
-    max_diff = (out_opt - out_std).abs().max().item()
-
-    avg_optimized = sum(times_optimized) / len(times_optimized)
-    avg_standard = sum(times_standard) / len(times_standard)
-    speedup = avg_standard / avg_optimized
-
-    return {
-        "seq_len": seq_len,
-        "optimized_ms": avg_optimized * 1000,
-        "standard_ms": avg_standard * 1000,
-        "speedup": speedup,
-        "max_diff": max_diff,
-        "backend_used": get_attention_backend_info(),
-    }
+    return results
 
 
 def main():
-    """Run benchmarks."""
-    rank, world_size = setup_distributed()
+    """Run comparison benchmarks."""
 
-    if rank == 0:
-        print("=== Hybrid Ring Dilated Attention with Optimized Backends ===")
-        print(f"World size: {world_size}")
+    print("=== Hybrid Ring Attention Optimization Benchmark ===")
 
-        # Check backend availability
-        backend_info = get_attention_backend_info()
-        print("\nAvailable backends:")
-        for key, value in backend_info.items():
-            print(f"  {key}: {value}")
-
-    # Test different sequence lengths
-    seq_lengths = [1024, 2048, 4096, 8192, 16384]
-
-    results = []
-    comparisons = []
-
-    for seq_len in seq_lengths:
-        if rank == 0:
-            print(f"\nTesting sequence length: {seq_len}")
-
-        # Performance benchmark
-        result = measure_attention_performance(
-            seq_len=seq_len,
-            batch_size=2,
-            num_heads=8,
-            head_dim=64,
-            segment_lengths=[min(2048, seq_len)],
-            dilation_rates=[1],
+    if torch.cuda.is_available():
+        print(f"GPU: {torch.cuda.get_device_name(0)}")
+        print(
+            f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB"
         )
-        results.append(result)
 
-        if rank == 0:
-            print(f"  Time: {result['time_ms']:.2f} ms")
-            print(f"  Throughput: {result['throughput_mtokens']:.2f} M tokens/s")
-            print(f"  Memory: {result['memory_mb']:.2f} MB")
+    # Test configurations
+    test_sequences = [1024, 2048, 4096, 8192, 16384, 32768, 65536]
 
-        # Compare with standard (only on single GPU)
-        if world_size == 1 and seq_len <= 4096:
-            comparison = compare_with_standard(
-                seq_len=seq_len,
-                batch_size=2,
-                num_heads=8,
-                head_dim=64,
-                segment_lengths=[min(2048, seq_len)],
-                dilation_rates=[1],
+    print("\n" + "=" * 60)
+    print("Benchmarking Original Hybrid Implementation")
+    print("=" * 60)
+
+    original_results = benchmark_implementation(
+        HybridOriginal, "hybrid_original", test_sequences
+    )
+
+    print("\n" + "=" * 60)
+    print("Benchmarking Optimized Hybrid Implementation")
+    print("=" * 60)
+
+    optimized_results = benchmark_implementation(
+        HybridOptimized, "hybrid_optimized", test_sequences
+    )
+
+    print("\n" + "=" * 60)
+    print("Benchmarking Improved Dilated Attention (Reference)")
+    print("=" * 60)
+
+    improved_results = benchmark_implementation(
+        ImprovedDilatedAttention, "improved", test_sequences
+    )
+
+    # Summary
+    print("\n" + "=" * 60)
+    print("PERFORMANCE COMPARISON")
+    print("=" * 60)
+
+    print(
+        f"\n{'Seq Length':>10}  < /dev/null |  {'Original':>12} | {'Optimized':>12} | {'Improved':>12} | {'Speedup':>8}"
+    )
+    print("-" * 70)
+
+    for seq_len in test_sequences:
+        orig = next((r for r in original_results if r["seq_len"] == seq_len), None)
+        opt = next((r for r in optimized_results if r["seq_len"] == seq_len), None)
+        imp = next((r for r in improved_results if r["seq_len"] == seq_len), None)
+
+        if orig and opt:
+            speedup = orig["time_ms"] / opt["time_ms"]
+            print(
+                f"{seq_len:>10,} | {orig['time_ms']:>10.1f}ms | "
+                f"{opt['time_ms']:>10.1f}ms | "
+                f"{imp['time_ms'] if imp else 'N/A':>10} | "
+                f"{speedup:>6.2f}x"
             )
-            comparisons.append(comparison)
 
-            if rank == 0:
-                print(f"  Optimized vs Standard: {comparison['speedup']:.2f}x speedup")
-                print(f"  Max difference: {comparison['max_diff']:.2e}")
+    print("\n" + "=" * 60)
+    print("MEMORY EFFICIENCY COMPARISON")
+    print("=" * 60)
+
+    print(
+        f"\n{'Seq Length':>10} | {'Original':>15} | {'Optimized':>15} | {'Improved':>15}"
+    )
+    print("-" * 60)
+
+    for seq_len in test_sequences:
+        orig = next((r for r in original_results if r["seq_len"] == seq_len), None)
+        opt = next((r for r in optimized_results if r["seq_len"] == seq_len), None)
+        imp = next((r for r in improved_results if r["seq_len"] == seq_len), None)
+
+        if orig and opt:
+            print(
+                f"{seq_len:>10,} | {orig['memory_per_token_kb']:>13.1f}KB | "
+                f"{opt['memory_per_token_kb']:>13.1f}KB | "
+                f"{imp['memory_per_token_kb'] if imp else 0:>13.1f}KB"
+            )
+
+    # Calculate average improvements
+    speedups = []
+    memory_reductions = []
+
+    for seq_len in test_sequences:
+        orig = next((r for r in original_results if r["seq_len"] == seq_len), None)
+        opt = next((r for r in optimized_results if r["seq_len"] == seq_len), None)
+
+        if orig and opt:
+            speedups.append(orig["time_ms"] / opt["time_ms"])
+            memory_reductions.append(1 - opt["memory_mb"] / orig["memory_mb"])
+
+    if speedups:
+        print(f"\nAverage speedup: {sum(speedups) / len(speedups):.2f}x")
+    if memory_reductions:
+        print(
+            f"Average memory reduction: {sum(memory_reductions) / len(memory_reductions) * 100:.1f}%"
+        )
+
+    print("\nKey Optimizations Applied:")
+    print("✓ Properly initialized memory pools")
+    print("✓ Pattern pre-computation and caching")
+    print("✓ Batch segment processing")
+    print("✓ Optimized memory access patterns")
+    print("✓ Single-GPU fast path")
+    print("✓ Direct use of optimize_attention_computation")
 
     # Save results
-    if rank == 0:
-        output = {
-            "world_size": world_size,
-            "backend_info": backend_info,
-            "performance_results": results,
-            "comparison_results": comparisons,
-        }
+    results = {
+        "original": original_results,
+        "optimized": optimized_results,
+        "improved": improved_results,
+        "timestamp": time.strftime("%Y%m%d_%H%M%S"),
+    }
 
-        with open(f"hybrid_optimized_benchmark_results_gpu{world_size}.json", "w") as f:
-            json.dump(output, f, indent=2)
+    with open("hybrid_optimization_results.json", "w") as f:
+        json.dump(results, f, indent=2)
 
-        print("\n=== Summary ===")
-        print("Performance with optimized attention backends:")
-        for result in results:
-            print(
-                f"  Seq {result['seq_len']}: {result['time_ms']:.2f} ms, "
-                f"{result['throughput_mtokens']:.2f} M tokens/s"
-            )
-
-        if comparisons:
-            print("\nSpeedup vs standard attention:")
-            for comp in comparisons:
-                print(f"  Seq {comp['seq_len']}: {comp['speedup']:.2f}x faster")
-
-    if world_size > 1:
-        dist.destroy_process_group()
+    print("\nResults saved to hybrid_optimization_results.json")
 
 
 if __name__ == "__main__":
