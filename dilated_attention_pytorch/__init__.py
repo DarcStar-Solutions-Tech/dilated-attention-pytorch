@@ -48,6 +48,16 @@ from .core import (
 )
 from .dilated_attention import DilatedAttention
 from .improved_dilated_attention import ImprovedDilatedAttention
+
+# Hybrid Ring Attention - best of V2 and V3
+from .ring_dilated_attention_hybrid import (
+    RingDilatedAttentionHybrid,
+    RingDilatedAttentionTrue,  # Alias
+)
+from .ring_multihead_dilated_attention_hybrid import (
+    RingMultiheadDilatedAttentionHybrid,
+    create_ring_multihead_attention_hybrid,
+)
 from .improved_distributed_dilated_attention import (
     DistributedImprovedDilatedAttention,
     DistributedImprovedMultiheadDilatedAttention,
@@ -102,6 +112,11 @@ __all__ = [
     "RingDilatedAttentionProduction",
     "RingAttentionConfig",
     "create_production_ring_attention",
+    # Hybrid Ring Attention - true O(n/p) scaling with all features
+    "RingDilatedAttentionHybrid",
+    "RingDilatedAttentionTrue",  # Alias for Hybrid
+    "RingMultiheadDilatedAttentionHybrid",
+    "create_ring_multihead_attention_hybrid",
     # Original implementations
     "DilatedAttention",
     "DilatedTransformerDecoderLayer",

@@ -500,12 +500,12 @@ class RingDilatedAttentionV2Collective(nn.Module):
 
         return output.transpose(1, 2)
 
-    def _simple_attention(
-        self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool
+    def _dilated_attention_always(
+        self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool, chunk_offset: int = 0
     ) -> Tensor:
-        """Compute simple attention without dilation for fallback cases."""
-        # Just delegate to unified method
-        return self._compute_attention(q, k, v, is_causal, chunk_offset=0)
+        """Always compute attention within dilated framework, even for small sequences."""
+        # Always use dilated attention computation path
+        return self._compute_attention(q, k, v, is_causal, chunk_offset=chunk_offset)
 
     def _apply_dilated_attention_pattern(
         self, query: Tensor, key: Tensor, value: Tensor, is_causal: bool
@@ -570,27 +570,25 @@ class RingDilatedAttentionV2Collective(nn.Module):
         """
         b, n, h, d = q.shape
 
-        # Handle small sequences that don't fit the segment length
-        if n < segment_len:
-            # Use simple attention for small sequences
-            return self._simple_attention(q, k, v, is_causal)
+        # Always use dilated attention, even for small sequences
+        # For sequences smaller than segment_len, treat as one segment with dilation
+        effective_segment_len = min(segment_len, n)
+        num_segments = max(1, n // effective_segment_len)
 
-        # Reshape into segments
-        num_segments = n // segment_len
+        # Only process complete segments in the view operation
+        seg_end = num_segments * effective_segment_len
 
-        # Skip if no complete segments
-        if num_segments == 0:
-            return self._simple_attention(q, k, v, is_causal)
+        # Handle case where sequence is smaller than segment length
+        if seg_end > n:
+            # Pad to make divisible by effective_segment_len
+            pad_len = seg_end - n
+            q = F.pad(q, (0, 0, 0, 0, 0, pad_len))
+            k = F.pad(k, (0, 0, 0, 0, 0, pad_len))
+            v = F.pad(v, (0, 0, 0, 0, 0, pad_len))
 
-        q_seg = q[:, : num_segments * segment_len, :, :].view(
-            b, num_segments, segment_len, h, d
-        )
-        k_seg = k[:, : num_segments * segment_len, :, :].view(
-            b, num_segments, segment_len, h, d
-        )
-        v_seg = v[:, : num_segments * segment_len, :, :].view(
-            b, num_segments, segment_len, h, d
-        )
+        q_seg = q[:, :seg_end, :, :].view(b, num_segments, effective_segment_len, h, d)
+        k_seg = k[:, :seg_end, :, :].view(b, num_segments, effective_segment_len, h, d)
+        v_seg = v[:, :seg_end, :, :].view(b, num_segments, effective_segment_len, h, d)
 
         # Apply dilation to segments
         if dilation_rate > 1:
@@ -601,29 +599,41 @@ class RingDilatedAttentionV2Collective(nn.Module):
         # Compute attention for dilated segments
         output_seg = []
         for seg_idx in range(num_segments):
-            seg_output = self._simple_attention(
-                q_seg[:, seg_idx], k_seg[:, seg_idx], v_seg[:, seg_idx], is_causal
+            # Always use dilated attention computation
+            seg_output = self._dilated_attention_always(
+                q_seg[:, seg_idx],
+                k_seg[:, seg_idx],
+                v_seg[:, seg_idx],
+                is_causal,
+                chunk_offset=seg_idx * effective_segment_len,
             )
             output_seg.append(seg_output)
 
         # Stack segment outputs
         output_seg = torch.stack(
             output_seg, dim=1
-        )  # [b, num_segments, segment_len, h, d]
-        output_seg = output_seg.view(b, num_segments * segment_len, h, d)
+        )  # [b, num_segments, effective_segment_len, h, d]
+        output_seg = output_seg.view(b, seg_end, h, d)
 
         # Handle remaining positions
         output = self._allocate_tensor((b, n, h, d), q.dtype, q.device)
-        output[:, : num_segments * segment_len] = output_seg
 
-        if n > num_segments * segment_len:
-            remainder_output = self._simple_attention(
-                q[:, num_segments * segment_len :],
-                k[:, num_segments * segment_len :],
-                v[:, num_segments * segment_len :],
+        # Copy output, removing any padding
+        actual_output_len = min(n, seg_end)
+        output[:, :actual_output_len] = output_seg[:, :actual_output_len]
+
+        # Handle true remainder (positions beyond processed segments)
+        if n > seg_end:
+            # Handle remainder with dilated attention too
+            remainder_start = seg_end
+            remainder_output = self._dilated_attention_always(
+                q[:, remainder_start:],
+                k[:, remainder_start:],
+                v[:, remainder_start:],
                 is_causal,
+                chunk_offset=remainder_start,
             )
-            output[:, num_segments * segment_len :] = remainder_output
+            output[:, remainder_start:] = remainder_output
 
         return output
 
@@ -638,9 +648,8 @@ class RingDilatedAttentionV2Collective(nn.Module):
         """Apply dilation pattern to segments with caching."""
         b, num_segments, segment_len, h, d = q_seg.shape
 
-        # Skip if segment_len < dilation_rate
-        if segment_len < dilation_rate:
-            return q_seg, k_seg, v_seg
+        # Always apply dilation pattern, even for small segments
+        # For segments smaller than dilation_rate, we'll use a modified pattern
 
         # Generate cache key for pattern
         cache_key = (segment_len, dilation_rate, offset, q_seg.device.type)
@@ -866,81 +875,6 @@ class RingDilatedAttentionV2Collective(nn.Module):
         # Transpose back to [b, n, h, d]
         return output.transpose(1, 2)
 
-    def _compute_chunk_attention_simple(
-        self, q: Tensor, k_chunk: Tensor, v_chunk: Tensor, is_causal: bool
-    ):
-        """Simplified attention computation for a chunk."""
-        b, n, h, d = q.shape
-        _, n_kv, _, _ = k_chunk.shape
-
-        # Transpose to [b, h, n, d] format
-        q_t = q.transpose(1, 2)  # [b, h, n, d]
-        k_t = k_chunk.transpose(1, 2)  # [b, h, n_kv, d]
-        v_t = v_chunk.transpose(1, 2)  # [b, h, n_kv, d]
-
-        # Compute attention scores
-        scores = torch.matmul(q_t, k_t.transpose(-2, -1)) / math.sqrt(
-            d
-        )  # [b, h, n, n_kv]
-
-        # Apply causal mask if needed (simplified)
-        if is_causal:
-            # For simplicity, apply basic causal mask
-            mask = torch.triu(torch.ones(n, n_kv, device=q.device), diagonal=1).bool()
-            scores.masked_fill_(mask.unsqueeze(0).unsqueeze(0), float("-inf"))
-
-        # Get max values for numerical stability
-        max_vals = scores.amax(dim=-1, keepdim=True)  # [b, h, n, 1]
-
-        # Compute softmax
-        exp_scores = torch.exp(scores - max_vals)
-        sum_exp = exp_scores.sum(dim=-1, keepdim=True)
-        attn_weights = exp_scores / sum_exp
-
-        # Apply to values
-        output = torch.matmul(attn_weights, v_t)  # [b, h, n, d]
-
-        return output, max_vals
-
-    def _combine_chunk_outputs(self, outputs, max_vals):
-        """Combine outputs from different chunks with proper normalization."""
-        if len(outputs) == 1:
-            return outputs[0]
-
-        # For simplicity, just average the outputs
-        # In a full implementation, this would use proper online softmax
-        combined = torch.stack(outputs, dim=0).mean(dim=0)
-
-        # Transpose back to [b, n, h, d]
-        return combined.transpose(1, 2)
-
-    def _apply_dilation_to_tensor(
-        self,
-        tensor: Tensor,
-        segment_lengths: list[int],
-        dilation_rates: list[int],
-    ) -> Tensor:
-        """
-        Apply dilation patterns to a single tensor (K or V).
-
-        Args:
-            tensor: Input tensor of shape [b, n, h, d]
-            segment_lengths: List of segment lengths
-            dilation_rates: List of dilation rates
-
-        Returns:
-            Dilated tensor of same shape
-        """
-        b, n, h, d = tensor.shape
-
-        # For dilation_rate=1, no change needed
-        if all(dr == 1 for dr in dilation_rates):
-            return tensor
-
-        # TODO: Implement proper dilation logic here
-        # For now, return tensor as-is since dilation is handled per-chunk
-        return tensor
-
     def _apply_dilated_patterns_to_chunk(
         self, k_chunk: Tensor, v_chunk: Tensor, chunk_start: int, chunk_size: int
     ) -> tuple[Tensor, Tensor]:
@@ -984,7 +918,8 @@ class RingDilatedAttentionV2Collective(nn.Module):
                 k_group_dilated = k_group.index_select(1, dilated_indices)
                 v_group_dilated = v_group.index_select(1, dilated_indices)
             else:
-                # No dilation needed - these groups could potentially use optimized attention
+                # Dilation rate of 1 - maintain dilated attention structure for consistency
+                # This ensures all heads go through the same computational path
                 k_group_dilated = k_group
                 v_group_dilated = v_group
 
@@ -1133,42 +1068,6 @@ class RingDilatedAttentionV2Collective(nn.Module):
         # Add to output (already in [b, h, n, d] format)
         output.add_(chunk_output)
 
-    def _compute_attention_chunk(
-        self,
-        q: Tensor,
-        k: Tensor,
-        v: Tensor,
-        is_causal: bool = False,
-        chunk_offset: int = 0,
-    ) -> Tensor:
-        """
-        Compute attention for a chunk using optimized backend.
-
-        Args:
-            q, k, v: Query, key, value tensors [batch, seq_len, num_heads, head_dim]
-            is_causal: Whether to use causal masking
-            chunk_offset: Offset for causal masking in chunked processing
-
-        Returns:
-            Attention output [batch, seq_len, num_heads, head_dim]
-        """
-        # Just delegate to unified method
-        return self._compute_attention(q, k, v, is_causal, chunk_offset)
-
-    def _compute_attention_standard(
-        self,
-        q: Tensor,
-        k: Tensor,
-        v: Tensor,
-        is_causal: bool = False,
-        chunk_offset: int = 0,
-    ) -> Tensor:
-        """Standard attention computation (fallback)."""
-        # Just delegate to unified method with Flash disabled
-        return self._compute_attention(
-            q, k, v, is_causal, chunk_offset, use_flash=False
-        )
-
     def forward(
         self, q: Tensor, k: Tensor, v: Tensor, is_causal: bool = False
     ) -> Tensor:
@@ -1215,19 +1114,3 @@ class RingDilatedAttentionV2Collective(nn.Module):
         else:
             # Fall back to single device implementation
             return self._single_device_forward(q, k, v, is_causal)
-
-
-# Convenience function for creating the corrected version
-def create_ring_dilated_attention_v2_collective(
-    segment_lengths: list[int], dilation_rates: list[int], **kwargs
-) -> RingDilatedAttentionV2Collective:
-    """
-    Create a Ring Dilated Attention V2 with collective operations.
-
-    This is the recommended version for distributed training as it uses
-    robust collective operations instead of error-prone point-to-point
-    communication.
-    """
-    return RingDilatedAttentionV2Collective(
-        segment_lengths=segment_lengths, dilation_rates=dilation_rates, **kwargs
-    )
