@@ -75,6 +75,9 @@ from .ring_dilated_attention_production import (
     create_production_ring_attention,
 )
 
+# Hilbert Ring Attention - combines Ring Attention with Hilbert ordering
+from .ring_hilbert_dilated_attention import HilbertRingDilatedAttention
+
 from .transformer import DilatedTransformerDecoderLayer, DilatedTransformerEncoderLayer
 from .utils.sparse_pattern_utils import (
     PatternConfig,
@@ -112,6 +115,8 @@ __all__ = [
     "RingDilatedAttentionProduction",
     "RingAttentionConfig",
     "create_production_ring_attention",
+    # Hilbert Ring Attention - combines cache efficiency with ring attention
+    "HilbertRingDilatedAttention",
     # Hybrid Ring Attention - true O(n/p) scaling with all features
     "RingDilatedAttentionHybrid",
     "RingDilatedAttentionTrue",  # Alias for Hybrid
