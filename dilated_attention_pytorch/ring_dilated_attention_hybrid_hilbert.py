@@ -16,8 +16,7 @@ Hilbert enhancement:
 - Maintain all memory-efficient properties of the original
 """
 
-import math
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Any
 from functools import partial
 
 import torch
@@ -78,6 +77,9 @@ class RingDilatedAttentionHybridHilbert(RingDilatedAttentionHybridOptimizedV2):
         # Hilbert-specific
         use_hilbert: bool = True,
         hilbert_chunk_size: int = 4096,
+        # DilatedAttention options
+        use_xformers: bool = True,
+        attention_op: Optional[Any] = None,
     ):
         """Initialize Hilbert Ring Dilated Attention."""
         # Initialize parent class with all required parameters
@@ -100,6 +102,19 @@ class RingDilatedAttentionHybridHilbert(RingDilatedAttentionHybridOptimizedV2):
         self.use_hilbert = use_hilbert
         self.hilbert_chunk_size = hilbert_chunk_size
         self._hilbert_cache = {}
+
+        # Create DilatedAttention instance for single-device computation
+        from .dilated_attention import DilatedAttention
+
+        self.dilated_attention = DilatedAttention(
+            segment_lengths=segment_lengths,
+            dilation_rates=dilation_rates,
+            attention_dropout=dropout,
+            op=attention_op if use_xformers else None,
+            enable_memory_pool=enable_memory_pool,
+            enable_profiling=enable_profiling,
+            lightweight_pool=True,  # Use lightweight pool for performance
+        )
 
     def _generate_hilbert_curve(self, n: int) -> torch.Tensor:
         """Generate Hilbert curve mapping for size n."""
@@ -211,25 +226,17 @@ class RingDilatedAttentionHybridHilbert(RingDilatedAttentionHybridOptimizedV2):
         k_hilbert = self._apply_hilbert_to_chunk(k)
         v_hilbert = self._apply_hilbert_to_chunk(v)
 
-        # For efficiency testing, use simple scaled dot-product attention
-        # The parent's complex implementation was causing the slowdown
-        scale = 1.0 / math.sqrt(q.shape[-1])
-
-        # Compute attention scores
-        scores = torch.matmul(q, k_hilbert.transpose(-2, -1)) * scale
-
-        # Apply causal mask if needed
-        if is_causal:
-            mask = torch.triu(torch.ones_like(scores), diagonal=1)
-            scores = scores.masked_fill(mask.bool(), float("-inf"))
-
-        # Compute attention weights
-        attn_weights = torch.softmax(scores, dim=-1)
-        if self.dropout_p > 0 and self.training:
-            attn_weights = torch.nn.functional.dropout(attn_weights, p=self.dropout_p)
-
-        # Compute output
-        output = torch.matmul(attn_weights, v_hilbert)
+        # Use the DilatedAttention module which includes:
+        # - Memory pooling
+        # - Pattern caching
+        # - xFormers/Flash Attention support
+        # - Proper dilated attention computation
+        output = self.dilated_attention(
+            query=q,
+            key=k_hilbert,
+            value=v_hilbert,
+            is_causal=is_causal,
+        )
 
         return output
 
