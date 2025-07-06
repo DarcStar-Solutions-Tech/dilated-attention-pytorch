@@ -92,7 +92,7 @@ horovodrun --check-build
 ```python
 import torch
 import horovod.torch as hvd
-from dilated_attention_pytorch import RingDilatedAttentionV2Collective
+from dilated_attention_pytorch import RingDilatedAttentionProduction
 
 # Initialize Horovod
 hvd.init()
@@ -101,7 +101,7 @@ hvd.init()
 torch.cuda.set_device(hvd.local_rank())
 
 # Create model with Horovod-aware ring size
-model = RingDilatedAttentionV2Collective(
+model = RingDilatedAttentionProduction(
     segment_lengths=[2048, 4096],
     dilation_rates=[1, 2],
     ring_size=hvd.size(),  # Automatically get world size
@@ -208,7 +208,7 @@ timeline.stop_timeline()
 
 ## Integration Roadmap
 
-1. **Phase 1**: Add Horovod backend option to RingDilatedAttentionV2Collective
+1. **Phase 1**: Add Horovod backend option to RingDilatedAttentionProduction
 2. **Phase 2**: Implement overlapped communication patterns
 3. **Phase 3**: Add compression support for K/V communication
 4. **Phase 4**: Benchmark against PyTorch distributed

@@ -126,9 +126,33 @@ pip install "dilated-attention-pytorch[distributed]"
 
 ## Benchmark
 
-I follow the benchmarking procedure from the [LongNet paper](https://arxiv.org/abs/2307.02486) (Section 3.1) as best I can.  They tested in a distributed, multi-GPU setting (and by my estimation, with much better GPUs), and I test on a single GTX 2080 Ti, but the same general scaling trends still apply.  Rather than 1B tokens, I scale the batch size so that the total number of tokens is 32M, which is the largest sequence that fits in memory on my GPU when running dilated attention.
+The project includes a comprehensive benchmarking suite with shared utilities for consistent and reproducible results.
 
-See: [benchmark.py](./benchmark.py)
+### Running Benchmarks
+
+```bash
+# Quick verification of all implementations
+python benchmarks/verify_all.py
+
+# Test improved implementations
+python benchmarks/test_improved_suite.py
+
+# Test distributed implementations (multi-GPU)
+python benchmarks/test_distributed_suite.py
+
+# Run full benchmark suite
+python benchmark.py
+```
+
+### Benchmark Infrastructure
+
+The benchmarking suite has been refactored to eliminate code duplication:
+- **Shared utilities** in `benchmarks/core/` for timing, memory tracking, and data generation
+- **Consistent methodology** across all benchmark scripts
+- **Automated multi-GPU testing** with proper synchronization
+- **Memory profiling** with detailed allocation tracking
+
+I follow the benchmarking procedure from the [LongNet paper](https://arxiv.org/abs/2307.02486) (Section 3.1) as best I can.  They tested in a distributed, multi-GPU setting (and by my estimation, with much better GPUs), and I test on a single GTX 2080 Ti, but the same general scaling trends still apply.  Rather than 1B tokens, I scale the batch size so that the total number of tokens is 32M, which is the largest sequence that fits in memory on my GPU when running dilated attention.
 
 ![benchmark](./docs/benchmarks/benchmark.png)
 

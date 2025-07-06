@@ -30,11 +30,11 @@ Enable pattern caching when:
 
 ### How to Enable
 
-#### Ring Attention V2/V3
+#### Ring Attention Production
 ```python
-from dilated_attention_pytorch.ring_dilated_attention_v2 import RingDilatedAttentionV2
+from dilated_attention_pytorch import RingDilatedAttentionProduction
 
-model = RingDilatedAttentionV2(
+model = RingDilatedAttentionProduction(
     segment_lengths=[2048, 4096, 8192],
     dilation_rates=[1, 2, 4],
     use_pattern_cache=True  # Enable pattern caching
@@ -146,7 +146,7 @@ reset_global_memory_pool()
 Memory pool behavior can be configured:
 ```python
 # Use lightweight pool for faster allocation
-model = RingDilatedAttentionV2(
+model = RingDilatedAttentionProduction(
     segment_lengths=[2048, 4096],
     dilation_rates=[1, 2],
     enable_memory_pool=True,
@@ -159,14 +159,14 @@ model = RingDilatedAttentionV2(
 For best performance, combine both optimizations:
 
 ```python
-from dilated_attention_pytorch.ring_dilated_attention_v3 import RingDilatedAttentionV3
+from dilated_attention_pytorch import RingDilatedAttentionProduction
 
-model = RingDilatedAttentionV3(
+model = RingDilatedAttentionProduction(
     segment_lengths=[2048, 4096, 8192],
     dilation_rates=[1, 2, 4],
     use_pattern_cache=True,     # Enable pattern caching
     enable_memory_pool=True,    # Enable memory pooling
-    cache_on_gpu=True          # Keep patterns on GPU (V3 only)
+    cache_on_gpu=True          # Keep patterns on GPU
 )
 ```
 
@@ -186,10 +186,11 @@ When using both optimizations:
 |----------------|---------------|-------------|-------|
 | DilatedAttention | ❌ | ✅ | Basic implementation |
 | ImprovedDilatedAttention | ❌ | ✅ | Enhanced features |
-| MultiheadDilatedAttention | ❌ | ❌ | Planned for future |
-| ImprovedMultiheadDilatedAttention | ❌ | ❌ | Planned for future |
-| RingDilatedAttentionV2 | ✅ | ✅ | Full support |
-| RingDilatedAttentionV3 | ✅ | ✅ | GPU-resident cache |
+| MultiheadDilatedAttention | ❌ | ❌ | Wrapper class |
+| ImprovedMultiheadDilatedAttention | ❌ | ❌ | Wrapper class |
+| RingDilatedAttentionProduction | ✅ | ✅ | Full support, production ready |
+| RingDilatedAttentionHilbertOptimized | ✅ | ✅ | Hilbert curve optimization |
+| RingDistributedDilatedAttention | ✅ | ✅ | Multi-node support |
 | BlockSparseRingDilatedAttention | ❌ | ❌ | Performance optimized |
 
 ### Adding Support

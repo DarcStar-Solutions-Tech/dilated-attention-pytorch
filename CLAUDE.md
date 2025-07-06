@@ -14,8 +14,8 @@ This is an unofficial PyTorch implementation of DilatedAttention from the LongNe
 - **MultiheadDilatedAttention** (`dilated_attention_pytorch/multihead_dilated_attention.py`): Drop-in replacement for nn.MultiheadAttention with dilated attention and MAGNETO improvements
 - **ImprovedDilatedAttention** (`dilated_attention_pytorch/improved_dilated_attention.py`): Enhanced version with additional optimizations
 - **ImprovedMultiheadDilatedAttention** (`dilated_attention_pytorch/improved_multihead_dilated_attention.py`): Enhanced multihead version with further optimizations
-- **DistributedImprovedDilatedAttention** (`dilated_attention_pytorch/improved_distributed_dilated_attention.py`): Enhanced distributed/multi-GPU implementation
-- **DistributedImprovedMultiheadDilatedAttention** (`dilated_attention_pytorch/improved_distributed_dilated_attention.py`): Enhanced distributed multihead version
+- **RingDilatedAttentionProduction** (`dilated_attention_pytorch/ring_dilated_attention_production.py`): Production-ready ring attention with O(n) memory complexity and advanced error recovery
+- **RingDistributedDilatedAttention** (`dilated_attention_pytorch/ring_distributed_dilated_attention.py`): Enterprise-grade distributed implementation with DeepSpeed integration
 - **LongNet** (`dilated_attention_pytorch/long_net.py`): Full transformer architecture for language modeling
 - **Transformer** (`dilated_attention_pytorch/transformer.py`): General transformer with dilated attention
 
@@ -96,7 +96,24 @@ pytest tests/
 ```
 
 ### Benchmarking
+
+The project includes a comprehensive benchmarking suite with shared utilities to reduce code duplication:
+
 ```bash
+# Core benchmark utilities (NEW)
+benchmarks/core/
+├── base_benchmark.py        # Base classes for all benchmarks
+├── utils/
+│   ├── distributed.py      # Distributed computing utilities
+│   ├── memory.py          # Memory management utilities
+│   ├── timing.py          # Timing utilities with CUDA events
+│   └── data.py            # Data generation utilities
+
+# Run benchmarks
+python benchmarks/test_improved_suite.py      # Test all improved implementations
+python benchmarks/test_distributed_suite.py   # Test distributed implementations
+python benchmarks/verify_all.py               # Comprehensive verification
+
 # Using Hatch environments (recommended)
 hatch run benchmark:run                # Run benchmarks with default settings
 hatch run benchmark:run --batch_size 2 --total_tokens 26 --heads 8  # Custom parameters
@@ -151,11 +168,10 @@ Tests use pytest with parameterized testing:
 
 The project includes advanced Ring Attention implementations that provide O(n) memory complexity for arbitrarily long sequences:
 
-- **RingDilatedAttention**: Alias for RingDilatedAttentionV2Collective (recommended for general use)
-- **RingDilatedAttentionV2Collective** (`dilated_attention_pytorch/ring_dilated_attention_v2_collective.py`): The main ring attention implementation using robust collective operations with integrated Flash Attention support
+- **RingDilatedAttention**: Alias for RingDilatedAttentionProduction (recommended for general use)
 - **RingDilatedAttentionProduction** (`dilated_attention_pytorch/ring_dilated_attention_production.py`): Production-ready implementation with advanced error recovery and monitoring
-- **RingMultiheadDilatedAttention** (`dilated_attention_pytorch/ring_multihead_dilated_attention.py`): Multi-head wrapper with fused QKV projections and buffer reuse
 - **RingDistributedDilatedAttention** (`dilated_attention_pytorch/ring_distributed_dilated_attention.py`): Enterprise-grade distributed implementation with DeepSpeed integration
+- **RingDilatedAttentionHilbertOptimized** (`dilated_attention_pytorch/ring_dilated_attention_hilbert_optimized.py`): Ring attention with Hilbert curve reordering for improved cache locality
 
 ## Block-Sparse Attention Implementation
 
@@ -335,7 +351,28 @@ The codebase has been successfully refactored to reduce duplication and improve 
 - Improved validation and error messages
 - Added thread-safe operations for concurrent execution
 
-### Recent Optimizations (December 2024)
+### Recent Changes (July 2025)
+
+### Deprecated Class Removal
+
+Removed all implementations that used the poorly-performing `all_gather` operation:
+- ~~`head_parallel_dilated_attention.py`~~ - Used all_gather with poor scalability
+- ~~`improved_distributed_dilated_attention.py`~~ - Used all_gather 
+- ~~`ring_dilated_attention_v2_collective.py`~~ - Used all_gather
+- ~~`ring_hilbert_dilated_attention.py`~~ - Used all_gather
+- ~~`ring_multihead_dilated_attention.py`~~ - Depended on deprecated V2Collective
+
+Use `RingDilatedAttentionProduction` or `RingDistributedDilatedAttention` instead, which use efficient isend/irecv operations.
+
+### Benchmark Suite Refactoring
+
+Consolidated and refactored the benchmark suite to eliminate ~60% code duplication:
+- Created shared utilities in `benchmarks/core/` for consistent benchmarking
+- Consolidated redundant benchmark files into organized test suites
+- Removed 17 redundant files while maintaining all testing capabilities
+- Net reduction of ~500 lines of code with improved maintainability
+
+## Recent Optimizations (December 2024)
 
 #### **Block Sparse Ring Distributed Attention Optimizations**
 
@@ -435,11 +472,11 @@ dilated_attention_pytorch/
 ├── improved_dilated_attention.py   # Enhanced version
 ├── improved_multihead_dilated_attention.py # Enhanced multihead version
 ├── distributed_dilated_attention.py # Multi-GPU support
-├── improved_distributed_dilated_attention.py # Enhanced distributed version
-├── ring_dilated_attention_v2_collective.py # Main ring attention core (O(n) memory with Flash support)
 ├── ring_dilated_attention_production.py # Production-ready ring attention with monitoring
-├── ring_multihead_dilated_attention.py # Ring multi-head wrapper
 ├── ring_distributed_dilated_attention.py # Enterprise ring attention
+├── ring_dilated_attention_hilbert_optimized.py # Ring attention with Hilbert curve ordering
+├── ring_dilated_attention_refactored.py # Refactored ring attention base
+├── ring_dilated_attention_fixed.py # Ring attention with bug fixes
 ├── block_sparse_ring_dilated_attention.py # Block-sparse ring attention
 ├── block_sparse_ring_multihead_dilated_attention.py # Block-sparse multihead
 ├── block_sparse_ring_distributed_dilated_attention.py # Distributed block-sparse
@@ -493,6 +530,16 @@ scripts/                    # Utility scripts
 └── launch_distributed_training.py # Launch distributed training
 
 benchmarks/                 # Performance benchmarking
+├── core/                   # Shared benchmark utilities (NEW)
+│   ├── base_benchmark.py   # Base classes for benchmarks
+│   └── utils/             # Utility modules
+│       ├── distributed.py # Distributed utilities
+│       ├── memory.py      # Memory utilities
+│       ├── timing.py      # Timing utilities
+│       └── data.py        # Data generation
+├── test_improved_suite.py  # Consolidated improved tests
+├── test_distributed_suite.py # Consolidated distributed tests
+├── verify_all.py           # Comprehensive verification
 ├── benchmark.py            # Main benchmark script
 ├── benchmark_all.py        # Comprehensive benchmarks
 ├── benchmark_ring_billion_tokens.py # Billion-token tests

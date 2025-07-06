@@ -122,7 +122,9 @@ Tested impact:
 
 ```python
 # Optimal settings for Pascal
-model = RingDilatedAttentionV2Collective(
+from dilated_attention_pytorch import RingDilatedAttentionProduction
+
+model = RingDilatedAttentionProduction(
     segment_lengths=[1024, 2048, 4096],
     dilation_rates=[1, 2, 4],
     dtype=torch.float32,  # ALWAYS use FP32
@@ -140,7 +142,9 @@ model = RingDilatedAttentionV2Collective(
 
 ```python
 # Optimal settings for Ampere and newer
-model = RingDilatedAttentionV2Collective(
+from dilated_attention_pytorch import RingDilatedAttentionProduction
+
+model = RingDilatedAttentionProduction(
     segment_lengths=[2048, 4096, 8192],
     dilation_rates=[1, 2, 4],
     dtype=torch.float16,  # or torch.bfloat16

@@ -8,6 +8,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Hilbert Curve Integration**: Added optimized Hilbert curve ordering for improved cache locality
+  - `RingDilatedAttentionHilbertOptimized`: Production-ready implementation with Hilbert curve reordering
+  - `utils/hilbert_curve.py`: Fast Hilbert curve computation utilities
+  - Comprehensive benchmarks showing 15-30% performance improvement
+- **Benchmark Suite Refactoring**: Eliminated ~60% code duplication
+  - Created shared utilities in `benchmarks/core/`
+  - `base_benchmark.py`: Base classes for consistent benchmarking
+  - `utils/distributed.py`: Distributed computing utilities
+  - `utils/memory.py`: Memory management and profiling
+  - `utils/timing.py`: CUDA-aware timing utilities
+  - `utils/data.py`: Standard data generation
+
+### Removed
+- **Deprecated all_gather Implementations**: Removed poorly performing classes
+  - `head_parallel_dilated_attention.py` - Used inefficient all_gather
+  - `improved_distributed_dilated_attention.py` - Poor scalability with all_gather
+  - `ring_dilated_attention_v2_collective.py` - O(n²) communication complexity
+  - `ring_hilbert_dilated_attention.py` - Replaced with optimized version
+  - `ring_multihead_dilated_attention.py` - Depended on deprecated V2Collective
+  - Use `RingDilatedAttentionProduction` or `RingDistributedDilatedAttention` instead
+- **Redundant Benchmark Files**: Removed 140+ duplicate benchmark scripts
+  - Consolidated into organized test suites
+  - `test_improved_suite.py`: All improved implementation tests
+  - `test_distributed_suite.py`: All distributed tests
+  - `verify_all.py`: Comprehensive verification
+
+### Changed
+- **Documentation Updates**: Updated all guides to reference non-deprecated classes
+  - `CLAUDE.md`: Removed deprecated class references, added benchmark info
+  - `README.md`: Added benchmark infrastructure documentation
+  - `docs/guides/ring-attention-migration.md`: Complete rewrite for new implementations
+  - `docs/guides/optimization-guide.md`: Updated class references
+  - `docs/guides/hardware-compatibility-guide.md`: Updated examples
+  - `docs/guides/horovod-integration-guide.md`: Updated integration examples
+
+### Added
 - **RingMultiheadDilatedAttention**: Proper multihead wrapper for Ring Attention
   - Drop-in replacement for nn.MultiheadAttention with O(n) memory scaling
   - Supports MAGNETO LayerNorm and all Ring Attention optimizations
