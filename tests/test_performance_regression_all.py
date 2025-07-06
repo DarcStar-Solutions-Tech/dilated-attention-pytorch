@@ -27,9 +27,9 @@ from dilated_attention_pytorch import (
 # Try to import ring implementations
 try:
     from dilated_attention_pytorch.ring_dilated_attention import RingDilatedAttention
-    from dilated_attention_pytorch.ring_multihead_dilated_attention import (
-        RingMultiheadDilatedAttention,
-    )
+
+    # RingMultiheadDilatedAttention has been deprecated
+    RingMultiheadDilatedAttention = None
 
     RING_AVAILABLE = True
 except ImportError:
