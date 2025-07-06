@@ -16,8 +16,8 @@ import torch
 from torch import Tensor
 
 from .core.constants import GPU_TYPE, HAS_FLASH_ATTN_3
-from .ring_dilated_attention_v2_collective import (
-    RingDilatedAttentionV2Collective as RingDilatedAttentionV2,
+from .ring_dilated_attention_production import (
+    RingDilatedAttentionProduction as RingDilatedAttentionV2,
 )
 from .utils.flash_attention_3_utils import create_fa3_block_sparse_mask, get_fa3_config
 

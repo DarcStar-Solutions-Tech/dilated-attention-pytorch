@@ -58,17 +58,11 @@ from .ring_multihead_dilated_attention_hybrid import (
     RingMultiheadDilatedAttentionHybrid,
     create_ring_multihead_attention_hybrid,
 )
-from .improved_distributed_dilated_attention import (
-    DistributedImprovedDilatedAttention,
-    DistributedImprovedMultiheadDilatedAttention,
-)
 from .improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttention
 from .long_net import LongNet
 from .multihead_dilated_attention import MultiheadDilatedAttention
 
 # Ring Attention implementations
-from .ring_dilated_attention_v2_collective import RingDilatedAttentionV2Collective
-from .ring_multihead_dilated_attention import RingMultiheadDilatedAttention
 from .ring_dilated_attention_production import (
     RingDilatedAttentionProduction,
     RingAttentionConfig,
@@ -76,7 +70,6 @@ from .ring_dilated_attention_production import (
 )
 
 # Hilbert Ring Attention - combines Ring Attention with Hilbert ordering
-from .ring_hilbert_dilated_attention import HilbertRingDilatedAttention
 from .ring_dilated_attention_hilbert_optimized import (
     RingDilatedAttentionHilbertOptimized,
 )
@@ -90,8 +83,6 @@ from .utils.sparse_pattern_utils import (
     SparsePatternGenerator,
 )
 
-# Alias for backward compatibility - use the collective operations version
-RingDilatedAttention = RingDilatedAttentionV2Collective
 
 # Note: Optimizations have been integrated into the main block-sparse implementations
 
@@ -112,14 +103,10 @@ __all__ = [
     "AdaptiveSparsityTrainer",
     "create_adaptive_block_sparse",
     # Ring Attention implementations
-    "RingDilatedAttention",  # Alias for RingDilatedAttentionV2Collective
-    "RingDilatedAttentionV2Collective",
-    "RingMultiheadDilatedAttention",
     "RingDilatedAttentionProduction",
     "RingAttentionConfig",
     "create_production_ring_attention",
     # Hilbert Ring Attention - combines cache efficiency with ring attention
-    "HilbertRingDilatedAttention",
     "RingDilatedAttentionHilbertOptimized",  # Non-deprecated Hilbert implementation
     # Hybrid Ring Attention - true O(n/p) scaling with all features
     "RingDilatedAttentionHybrid",
@@ -130,8 +117,6 @@ __all__ = [
     "DilatedAttention",
     "DilatedTransformerDecoderLayer",
     "DilatedTransformerEncoderLayer",
-    "DistributedImprovedDilatedAttention",
-    "DistributedImprovedMultiheadDilatedAttention",
     "DistributedSparseConfig",
     "DistributedSparsePattern",
     "ImprovedDilatedAttention",

@@ -669,33 +669,8 @@ def _register_implementations():
     except ImportError as e:
         logger.warning(f"Failed to register ring distributed implementation: {e}")
 
-    try:
-        # Register distributed implementations
-        from ..improved_distributed_dilated_attention import (
-            DistributedImprovedDilatedAttention,
-        )
-
-        register_attention("distributed", DistributedImprovedDilatedAttention)
-        register_attention("improved_distributed", DistributedImprovedDilatedAttention)
-        logger.debug("Registered distributed dilated attention implementation")
-
-        from ..improved_distributed_dilated_attention import (
-            DistributedImprovedMultiheadDilatedAttention,
-        )
-
-        register_multihead_attention(
-            "multihead_distributed", DistributedImprovedMultiheadDilatedAttention
-        )
-        register_multihead_attention(
-            "multihead_improved_distributed",
-            DistributedImprovedMultiheadDilatedAttention,
-        )
-        logger.debug(
-            "Registered distributed multihead dilated attention implementation"
-        )
-
-    except ImportError as e:
-        logger.warning(f"Failed to register distributed implementations: {e}")
+    # Distributed implementations have been removed (deprecated)
+    # Use ring attention implementations instead
 
     try:
         # Register block-sparse implementations
