@@ -54,8 +54,10 @@ from .factory import (
     register_attention,
     register_multihead_attention,
 )
-from .memory_pool import (
-    UnifiedMemoryPool,
+from .unified_memory_pool import (
+    SimplifiedMemoryPool,
+    UnifiedMemoryPool,  # Compatibility alias
+    MemoryPool,  # Compatibility alias
     get_global_memory_pool,
     reset_global_memory_pool,
 )
