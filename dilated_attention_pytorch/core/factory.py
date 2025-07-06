@@ -617,18 +617,18 @@ def _register_implementations():
         logger.warning(f"Failed to register improved implementations: {e}")
 
     try:
-        # Register corrected ring attention V2 implementations
-        from ..ring_dilated_attention_v2_collective import (
-            RingDilatedAttentionV2Collective,
+        # Register ring attention production implementations
+        from ..ring_dilated_attention_production import (
+            RingDilatedAttentionProduction,
         )
 
         # Create a wrapper to match the expected interface
-        class RingDilatedAttentionV2Wrapper(BaseDilatedAttention):
-            """Wrapper to make RingDilatedAttentionV2Collective compatible with factory."""
+        class RingDilatedAttentionProductionWrapper(BaseDilatedAttention):
+            """Wrapper to make RingDilatedAttentionProduction compatible with factory."""
 
             def __init__(self, config):
                 super().__init__(config)
-                self.ring_attention = RingDilatedAttentionV2Collective(
+                self.ring_attention = RingDilatedAttentionProduction(
                     segment_lengths=config.segment_lengths,
                     dilation_rates=config.dilation_rates,
                     dropout=config.dropout,
@@ -640,17 +640,19 @@ def _register_implementations():
             def forward(self, query, key, value, is_causal=False, attention_mask=None):
                 return self.ring_attention(query, key, value, is_causal, attention_mask)
 
-        register_attention("ring", RingDilatedAttentionV2Wrapper)
-        logger.debug(
-            "Registered corrected ring dilated attention V2 collective implementation"
+        register_attention("ring", RingDilatedAttentionProductionWrapper)
+        logger.debug("Registered ring dilated attention production implementation")
+
+        # Register the hybrid multihead implementation
+        from ..ring_multihead_dilated_attention_hybrid import (
+            RingMultiheadDilatedAttentionHybrid,
         )
 
-        # Register the new RingMultiheadDilatedAttention
-        from ..ring_multihead_dilated_attention import RingMultiheadDilatedAttention
-
-        register_multihead_attention("multihead_ring", RingMultiheadDilatedAttention)
+        register_multihead_attention(
+            "multihead_ring", RingMultiheadDilatedAttentionHybrid
+        )
         logger.debug(
-            "Registered corrected ring multihead dilated attention V2 implementation"
+            "Registered ring multihead dilated attention hybrid implementation"
         )
 
     except ImportError as e:
@@ -659,7 +661,7 @@ def _register_implementations():
 
     try:
         # Register ring distributed implementation
-        from ..ring_distributed_refactored import RingDistributedDilatedAttention
+        from ..ring_distributed_dilated_attention import RingDistributedDilatedAttention
 
         register_multihead_attention(
             "multihead_ring_distributed", RingDistributedDilatedAttention
