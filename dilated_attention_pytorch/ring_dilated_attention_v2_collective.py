@@ -1,6 +1,9 @@
 """
 Ring Dilated Attention V2 - Corrected with Collective Operations + Flash Attention.
 
+DEPRECATED: This implementation uses all_gather which has poor performance.
+Use RingDilatedAttentionHybridOptimizedV2 or other implementations instead.
+
 This implementation fixes the distributed communication issues by using
 collective operations (all_gather) instead of error-prone isend/irecv.
 
@@ -12,6 +15,11 @@ Key improvements:
 5. Flash Attention integration for improved performance
 6. Automatic backend selection (Flash Attention 3/2, xformers, SDPA)
 7. Memory-efficient chunked processing for very long sequences
+
+.. deprecated:: 0.3.0
+   This implementation uses all_gather which has poor performance characteristics.
+   Use :class:`RingDilatedAttentionHybridOptimizedV2` or other ring implementations
+   that use isend/irecv for better performance.
 """
 
 import math
@@ -23,6 +31,16 @@ import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
+
+# DEPRECATED WARNING
+warnings.warn(
+    "RingDilatedAttentionV2Collective is deprecated. "
+    "This implementation uses all_gather which has poor performance characteristics. "
+    "Please use RingDilatedAttentionHybridOptimizedV2 or other ring implementations "
+    "that use isend/irecv for better performance.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 # Note: Optimized attention is now handled via Flash Attention utilities
 # The optimize_attention_computation function is no longer needed as we use
@@ -68,6 +86,9 @@ except ImportError:
 
 class RingDilatedAttentionV2Collective(nn.Module):
     """
+    DEPRECATED: This implementation uses all_gather which has poor performance.
+    Use RingDilatedAttentionHybridOptimizedV2 or other implementations instead.
+
     Corrected Ring Dilated Attention using collective operations.
 
     This version replaces the problematic isend/irecv communication with

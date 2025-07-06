@@ -1,6 +1,9 @@
 """
 Advanced Distributed Dilated Attention implementation using the refactored core architecture.
 
+DEPRECATED: This implementation uses all_gather which has poor performance.
+Use RingDilatedAttentionHybridOptimizedV2 or other implementations instead.
+
 This module provides highly optimized distributed attention classes that leverage:
 - DeepSpeed ZeRO for memory optimization
 - FairScale for model parallelism
@@ -8,6 +11,11 @@ This module provides highly optimized distributed attention classes that leverag
 - FlashAttention for memory efficiency
 - Mixed precision training
 - Gradient checkpointing
+
+.. deprecated:: 0.3.0
+   This implementation uses all_gather which has poor performance characteristics.
+   Use :class:`RingDilatedAttentionHybridOptimizedV2` or other ring implementations
+   that use isend/irecv for better performance.
 """
 
 import warnings
@@ -16,6 +24,26 @@ from typing import Any
 import torch
 import torch.distributed as dist  # noqa: PLC0415
 from torch import Tensor, nn
+
+# Import from core architecture
+from .core import (
+    BaseDilatedAttention,
+    BaseMultiheadDilatedAttention,
+    DilatedAttentionConfig,
+    DistributedConfig,
+    MultiheadConfig,
+)
+from .improved_dilated_attention import ImprovedDilatedAttention
+
+# DEPRECATED WARNING
+warnings.warn(
+    "DistributedImprovedDilatedAttention is deprecated. "
+    "This implementation uses all_gather which has poor performance characteristics. "
+    "Please use RingDilatedAttentionHybridOptimizedV2 or other ring implementations "
+    "that use isend/irecv for better performance.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 # Advanced distributed training libraries
 try:
@@ -42,19 +70,12 @@ try:
 except ImportError:
     HAS_APEX = False
 
-# Import from core architecture
-from .core import (
-    BaseDilatedAttention,
-    BaseMultiheadDilatedAttention,
-    DilatedAttentionConfig,
-    DistributedConfig,
-    MultiheadConfig,
-)
-from .improved_dilated_attention import ImprovedDilatedAttention
-
 
 class DistributedImprovedDilatedAttention(BaseDilatedAttention):
     """
+    DEPRECATED: This implementation uses all_gather which has poor performance.
+    Use RingDilatedAttentionHybridOptimizedV2 or other implementations instead.
+
     Distributed version of ImprovedDilatedAttention with advanced optimizations.
 
     Features:
@@ -307,6 +328,9 @@ class DistributedImprovedDilatedAttention(BaseDilatedAttention):
 
 class DistributedImprovedMultiheadDilatedAttention(BaseMultiheadDilatedAttention):
     """
+    DEPRECATED: This implementation uses all_gather which has poor performance.
+    Use RingDilatedAttentionHybridOptimizedV2 or other implementations instead.
+
     Distributed version of ImprovedMultiheadDilatedAttention with enterprise-grade features.
 
     Features:

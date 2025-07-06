@@ -1,8 +1,16 @@
 """
 Head-Parallel Dilated Attention - A better approach for multi-GPU.
 
+DEPRECATED: This implementation uses all_gather which has poor performance.
+Use RingDilatedAttentionHybridOptimizedV2 or other implementations instead.
+
 Instead of splitting sequences across GPUs (ring attention), we split attention heads.
 This preserves the locality needed for efficient dilated attention patterns.
+
+.. deprecated:: 0.3.0
+   This implementation uses all_gather which has poor performance characteristics.
+   Use :class:`RingDilatedAttentionHybridOptimizedV2` or other ring implementations
+   that use isend/irecv for better performance.
 """
 
 from typing import Optional, Tuple, List
@@ -10,10 +18,24 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 import torch.distributed as dist
+import warnings
+
+# DEPRECATED WARNING
+warnings.warn(
+    "HeadParallelDilatedAttention is deprecated. "
+    "This implementation uses all_gather which has poor performance characteristics. "
+    "Please use RingDilatedAttentionHybridOptimizedV2 or other ring implementations "
+    "that use isend/irecv for better performance.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 class HeadParallelDilatedAttention(nn.Module):
     """
+    DEPRECATED: This implementation uses all_gather which has poor performance.
+    Use RingDilatedAttentionHybridOptimizedV2 or other implementations instead.
+
     Head-parallel dilated attention for multi-GPU training.
 
     Key insight: Dilated attention patterns require sequence locality.

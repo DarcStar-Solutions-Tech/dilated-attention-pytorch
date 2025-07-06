@@ -2,8 +2,16 @@
 """
 Ring Attention with Hilbert Curve Optimization.
 
+DEPRECATED: This implementation uses all_gather which has poor performance.
+Use RingDilatedAttentionHybridOptimizedV2 or other implementations instead.
+
 Combines the memory efficiency of ring attention with the cache efficiency
 of Hilbert curve ordering for improved performance on very long sequences.
+
+.. deprecated:: 0.3.0
+   This implementation uses all_gather which has poor performance characteristics.
+   Use :class:`RingDilatedAttentionHybridOptimizedV2` or other ring implementations
+   that use isend/irecv for better performance.
 """
 
 import math
@@ -17,9 +25,22 @@ from .core.base import BaseDilatedAttention
 from .core.memory_pool import UnifiedMemoryPool as MemoryPool
 from .core.config import DilatedAttentionConfig
 
+# DEPRECATED WARNING
+warnings.warn(
+    "HilbertRingDilatedAttention is deprecated. "
+    "This implementation uses all_gather which has poor performance characteristics. "
+    "Please use RingDilatedAttentionHybridOptimizedV2 or other ring implementations "
+    "that use isend/irecv for better performance.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
 
 class HilbertRingDilatedAttention(BaseDilatedAttention):
     """
+    DEPRECATED: This implementation uses all_gather which has poor performance.
+    Use RingDilatedAttentionHybridOptimizedV2 or other implementations instead.
+
     Ring Dilated Attention with Hilbert Curve memory ordering.
 
     Combines:
