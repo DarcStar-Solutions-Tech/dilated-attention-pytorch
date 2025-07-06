@@ -18,6 +18,7 @@ from torch import Tensor
 from .core.constants import GPU_TYPE, HAS_FLASH_ATTN_3
 from .ring_dilated_attention_production import (
     RingDilatedAttentionProduction as RingDilatedAttentionV2,
+    RingAttentionConfig,
 )
 from .utils.flash_attention_3_utils import create_fa3_block_sparse_mask, get_fa3_config
 
@@ -60,32 +61,29 @@ class BlockSparseRingDilatedAttention(RingDilatedAttentionV2):
         if "sparsity_config" in kwargs:
             sparse_config = kwargs.pop("sparsity_config")
 
-        # Extract memory pool parameters before filtering
-        enable_memory_pool = kwargs.get("enable_memory_pool", False)
-        enable_profiling = kwargs.get("enable_profiling", False)
-        lightweight_pool = kwargs.get("lightweight_pool", True)
+        # Extract parameters for RingAttentionConfig
+        dropout = kwargs.get("dropout", 0.0)
+        ring_size = kwargs.get("ring_size", None)
+        use_gradient_checkpointing = kwargs.get("use_gradient_checkpointing", True)
+        use_memory_pool = kwargs.get("enable_memory_pool", True)
+        mixed_precision = kwargs.get("mixed_precision", True)
+
+        # Create RingAttentionConfig
+        ring_config = RingAttentionConfig(
+            segment_lengths=segment_lengths,
+            dilation_rates=dilation_rates,
+            dropout=dropout,
+            ring_size=ring_size,
+            use_gradient_checkpointing=use_gradient_checkpointing,
+            use_memory_pool=use_memory_pool,
+            mixed_precision=mixed_precision,
+        )
+
+        # Initialize parent with config
+        super().__init__(ring_config)
 
         # Extract sparsity_ratio if provided directly (for compatibility)
         sparsity_ratio = kwargs.pop("sparsity_ratio", None)
-
-        # Filter out any remaining BlockSparse-specific parameters
-        block_sparse_params = {
-            "use_adaptive_sparsity",
-            "quality_threshold",
-            "enable_packed_comm",
-            "enable_hardware_opt",
-            "use_tf32",  # RingDilatedAttentionV2 doesn't accept this
-        }
-        filtered_kwargs = {
-            k: v for k, v in kwargs.items() if k not in block_sparse_params
-        }
-
-        # Pass memory pool parameters to parent
-        filtered_kwargs["enable_memory_pool"] = enable_memory_pool
-        filtered_kwargs["enable_profiling"] = enable_profiling
-        filtered_kwargs["lightweight_pool"] = lightweight_pool
-
-        super().__init__(segment_lengths, dilation_rates, **filtered_kwargs)
 
         # Handle both dict and SparsePatternConfig
         if isinstance(sparse_config, dict):

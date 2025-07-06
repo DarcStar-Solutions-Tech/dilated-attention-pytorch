@@ -72,7 +72,7 @@ class SimplifiedMemoryPool:
         self._free_tensors: Dict[Tuple[torch.Size, torch.dtype], List[Tensor]] = (
             defaultdict(list)
         )
-        self._allocated_tensors: weakref.WeakSet = weakref.WeakSet()
+        self._allocated_tensors: set = set()  # Track tensor ids instead
 
         # Bucketing (if enabled)
         if self.config.enable_bucketing:
@@ -147,7 +147,7 @@ class SimplifiedMemoryPool:
                     self._stats["allocations"] += 1
 
             # Track allocation
-            self._allocated_tensors.add(tensor)
+            self._allocated_tensors.add(id(tensor))
             self._update_memory_stats()
 
             return tensor
