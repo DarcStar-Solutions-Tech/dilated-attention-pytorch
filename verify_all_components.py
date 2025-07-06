@@ -32,6 +32,7 @@ class ComponentVerifier:
 
     def test_core_attention(self) -> str:
         """Test core attention modules."""
+        # Import from installed package (works with src/ layout)
         from dilated_attention_pytorch import (
             DilatedAttention,
             MultiheadDilatedAttention,

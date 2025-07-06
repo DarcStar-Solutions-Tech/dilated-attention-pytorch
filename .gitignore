@@ -1,6 +1,10 @@
 .vscode
 .idea
 
+# Hatch specific
+.hatch/
+hatch-build.*.pyz
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

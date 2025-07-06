@@ -111,12 +111,12 @@ The project includes a comprehensive benchmarking suite with shared utilities to
 ```bash
 # Core benchmark utilities (NEW)
 benchmarks/core/
-├── base_benchmark.py        # Base classes for all benchmarks
-├── utils/
-│   ├── distributed.py      # Distributed computing utilities
-│   ├── memory.py          # Memory management utilities
-│   ├── timing.py          # Timing utilities with CUDA events
-│   └── data.py            # Data generation utilities
+    ├── base_benchmark.py        # Base classes for all benchmarks
+    ├── utils/
+│       ├── distributed.py      # Distributed computing utilities
+│       ├── memory.py          # Memory management utilities
+│       ├── timing.py          # Timing utilities with CUDA events
+│       └── data.py            # Data generation utilities
 
 # Run benchmarks
 python benchmarks/test_improved_suite.py      # Test all improved implementations
@@ -462,107 +462,108 @@ All performance optimizations from Ring Distributed Attention have been successf
 ## File Organization
 
 ```
-dilated_attention_pytorch/
-├── __init__.py              # Package init with exports
-├── core/                    # Core refactored components (NEW)
-│   ├── __init__.py         # Core module exports
-│   ├── base.py             # Base classes for all implementations
-│   ├── config.py           # Configuration dataclasses
-│   ├── constants.py        # Feature detection and constants
-│   ├── memory_pool.py      # Unified memory pool
-│   └── factory.py          # Factory pattern for module creation
-├── utils/                   # Utility modules
-│   ├── __init__.py         # Utils module exports
-│   ├── validation.py       # Validation utilities
-│   ├── attention_utils.py  # Common attention utilities
-│   └── sparse_pattern_utils.py # Sparse pattern generation and optimization
-├── dilated_attention.py     # Core dilated attention
-├── multihead_dilated_attention.py  # Multi-head wrapper
-├── improved_dilated_attention.py   # Enhanced version
-├── improved_multihead_dilated_attention.py # Enhanced multihead version
-├── distributed_dilated_attention.py # Multi-GPU support (PyTorch Lightning)
-├── ring_dilated_attention_hybrid.py # Hybrid ring attention (best features)
-├── ring_multihead_dilated_attention_hybrid.py # Multihead ring hybrid
-├── ring_dilated_attention_production.py # Production-ready ring attention with monitoring
-├── ring_distributed_dilated_attention.py # Enterprise ring attention
-├── ring_dilated_attention_hilbert_optimized.py # Ring attention with Hilbert curve ordering
-├── head_parallel_dilated_attention_optimized.py # Head-parallel processing
-├── block_sparse_ring_dilated_attention.py # Block-sparse ring attention
-├── block_sparse_ring_multihead_dilated_attention.py # Block-sparse multihead
-├── block_sparse_ring_distributed_dilated_attention.py # Distributed block-sparse
-├── block_sparse_optimized.py # Optimized block-sparse operations
-├── block_sparse_torch_sparse.py # PyTorch sparse tensor implementation
-├── block_sparse_hierarchical.py # Hierarchical sparse patterns
-├── block_sparse_adaptive.py # Content-adaptive sparse patterns
-├── transformer.py           # Transformer with dilated attention
-└── long_net.py             # Full LongNet architecture
+src/
+    └── dilated_attention_pytorch/
+        ├── __init__.py              # Package init with exports
+        ├── core/                    # Core refactored components (NEW)
+    │       ├── __init__.py         # Core module exports
+    │       ├── base.py             # Base classes for all implementations
+    │       ├── config.py           # Configuration dataclasses
+    │       ├── constants.py        # Feature detection and constants
+    │       ├── memory_pool.py      # Unified memory pool
+    │       └── factory.py          # Factory pattern for module creation
+        ├── utils/                   # Utility modules
+    │       ├── __init__.py         # Utils module exports
+    │       ├── validation.py       # Validation utilities
+    │       ├── attention_utils.py  # Common attention utilities
+    │       └── sparse_pattern_utils.py # Sparse pattern generation and optimization
+    ├── dilated_attention.py     # Core dilated attention
+    ├── multihead_dilated_attention.py  # Multi-head wrapper
+    ├── improved_dilated_attention.py   # Enhanced version
+    ├── improved_multihead_dilated_attention.py # Enhanced multihead version
+    ├── distributed_dilated_attention.py # Multi-GPU support (PyTorch Lightning)
+    ├── ring_dilated_attention_hybrid.py # Hybrid ring attention (best features)
+    ├── ring_multihead_dilated_attention_hybrid.py # Multihead ring hybrid
+    ├── ring_dilated_attention_production.py # Production-ready ring attention with monitoring
+    ├── ring_distributed_dilated_attention.py # Enterprise ring attention
+    ├── ring_dilated_attention_hilbert_optimized.py # Ring attention with Hilbert curve ordering
+    ├── head_parallel_dilated_attention_optimized.py # Head-parallel processing
+    ├── block_sparse_ring_dilated_attention.py # Block-sparse ring attention
+    ├── block_sparse_ring_multihead_dilated_attention.py # Block-sparse multihead
+    ├── block_sparse_ring_distributed_dilated_attention.py # Distributed block-sparse
+    ├── block_sparse_optimized.py # Optimized block-sparse operations
+    ├── block_sparse_torch_sparse.py # PyTorch sparse tensor implementation
+    ├── block_sparse_hierarchical.py # Hierarchical sparse patterns
+    ├── block_sparse_adaptive.py # Content-adaptive sparse patterns
+    ├── transformer.py           # Transformer with dilated attention
+    └── long_net.py             # Full LongNet architecture
 
 tests/
-├── __init__.py               # Tests package init
-├── test_dilated_attention.py # Core attention tests  
-├── test_long_net.py          # LongNet architecture tests
-├── test_improved_multihead.py # Improved multihead attention tests
-├── test_memory_optimizations.py # Memory optimization tests
-├── test_ring_attention.py   # Ring attention tests
-├── test_distributed_ring_attention.py # Distributed ring attention tests
-├── test_block_sparse_attention.py # Block-sparse attention tests
-├── test_edge_cases_validation.py # Edge case validation tests
-├── test_thread_safety.py    # Thread safety tests
-├── test_flash_attention_3.py # Flash Attention 3 integration tests
-├── test_core_refactoring.py # Core module tests (NEW)
-├── compare_implementations.py # Implementation comparison benchmarks
-├── detailed_memory_analysis.py # Detailed memory profiling
-├── memory_estimation.py     # Memory usage estimation utilities
-├── multihead_memory_analysis.py # Multihead memory analysis
-└── simple_comparison.py     # Simple performance comparisons
+    ├── __init__.py               # Tests package init
+    ├── test_dilated_attention.py # Core attention tests  
+    ├── test_long_net.py          # LongNet architecture tests
+    ├── test_improved_multihead.py # Improved multihead attention tests
+    ├── test_memory_optimizations.py # Memory optimization tests
+    ├── test_ring_attention.py   # Ring attention tests
+    ├── test_distributed_ring_attention.py # Distributed ring attention tests
+    ├── test_block_sparse_attention.py # Block-sparse attention tests
+    ├── test_edge_cases_validation.py # Edge case validation tests
+    ├── test_thread_safety.py    # Thread safety tests
+    ├── test_flash_attention_3.py # Flash Attention 3 integration tests
+    ├── test_core_refactoring.py # Core module tests (NEW)
+    ├── compare_implementations.py # Implementation comparison benchmarks
+    ├── detailed_memory_analysis.py # Detailed memory profiling
+    ├── memory_estimation.py     # Memory usage estimation utilities
+    ├── multihead_memory_analysis.py # Multihead memory analysis
+    └── simple_comparison.py     # Simple performance comparisons
 
 docs/                       # Extensive documentation
-├── README.md               # Documentation overview
-├── guides/                 # User guides (permanent names)
-│   ├── ring-attention-guide.md
-│   ├── block-sparse-attention-guide.md
-│   ├── distributed-training-guide.md
-│   ├── practical-usage-guide.md
-│   └── factory-pattern-guide.md
-├── benchmarks/             # Benchmark results (timestamped)
-│   └── benchmark-results-YYYY-MM-DD-HHMM-UTC.md
-├── feasibility/            # Feasibility studies (timestamped)
-│   └── feasibility-study-YYYY-MM-DD-HHMM-UTC.md
-├── reports/                # Technical reports (mixed naming)
-│   └── defect-analysis-YYYY-MM-DD-HHMM-UTC.md
-└── archive/                # Historical/obsolete documentation
+    ├── README.md               # Documentation overview
+    ├── guides/                 # User guides (permanent names)
+│       ├── ring-attention-guide.md
+│       ├── block-sparse-attention-guide.md
+│       ├── distributed-training-guide.md
+│       ├── practical-usage-guide.md
+│       └── factory-pattern-guide.md
+    ├── benchmarks/             # Benchmark results (timestamped)
+│       └── benchmark-results-YYYY-MM-DD-HHMM-UTC.md
+    ├── feasibility/            # Feasibility studies (timestamped)
+│       └── feasibility-study-YYYY-MM-DD-HHMM-UTC.md
+    ├── reports/                # Technical reports (mixed naming)
+│       └── defect-analysis-YYYY-MM-DD-HHMM-UTC.md
+    └── archive/                # Historical/obsolete documentation
 
 examples/                   # Example scripts
-├── distributed_training_example.py # Distributed training example
-├── basic_dilated_attention.py # Basic usage examples
-├── distributed_ring_attention.py # Ring attention distributed example
-├── factory_pattern_example.py # Factory pattern usage examples
-├── simple_usage.py         # Simple usage examples
-└── ring_attention/         # Ring Attention educational implementations
+    ├── distributed_training_example.py # Distributed training example
+    ├── basic_dilated_attention.py # Basic usage examples
+    ├── distributed_ring_attention.py # Ring attention distributed example
+    ├── factory_pattern_example.py # Factory pattern usage examples
+    ├── simple_usage.py         # Simple usage examples
+    └── ring_attention/         # Ring Attention educational implementations
 
 scripts/                    # Utility scripts
-└── launch_distributed_training.py # Launch distributed training
+    └── launch_distributed_training.py # Launch distributed training
 
 benchmarks/                 # Performance benchmarking
-├── core/                   # Shared benchmark utilities (NEW)
-│   ├── base_benchmark.py   # Base classes for benchmarks
-│   └── utils/             # Utility modules
-│       ├── distributed.py # Distributed utilities
-│       ├── memory.py      # Memory utilities
-│       ├── timing.py      # Timing utilities
-│       └── data.py        # Data generation
-├── test_improved_suite.py  # Consolidated improved tests
-├── test_distributed_suite.py # Consolidated distributed tests
-├── verify_all.py           # Comprehensive verification
-├── benchmark.py            # Main benchmark script
-├── benchmark_all.py        # Comprehensive benchmarks
-├── benchmark_ring_billion_tokens.py # Billion-token tests
-└── benchmark_sequence_limits.py # Sequence limit testing
+    ├── core/                   # Shared benchmark utilities (NEW)
+│       ├── base_benchmark.py   # Base classes for benchmarks
+│       └── utils/             # Utility modules
+│           ├── distributed.py # Distributed utilities
+│           ├── memory.py      # Memory utilities
+│           ├── timing.py      # Timing utilities
+│           └── data.py        # Data generation
+    ├── test_improved_suite.py  # Consolidated improved tests
+    ├── test_distributed_suite.py # Consolidated distributed tests
+    ├── verify_all.py           # Comprehensive verification
+    ├── benchmark.py            # Main benchmark script
+    ├── benchmark_all.py        # Comprehensive benchmarks
+    ├── benchmark_ring_billion_tokens.py # Billion-token tests
+    └── benchmark_sequence_limits.py # Sequence limit testing
 
 analysis/                   # Analysis scripts
-├── billion_token_analysis.py # Billion-token scaling
-├── ring_attention_analysis.py # Ring attention analysis
-└── ring_performance_analysis.py # Performance analysis
+    ├── billion_token_analysis.py # Billion-token scaling
+    ├── ring_attention_analysis.py # Ring attention analysis
+    └── ring_performance_analysis.py # Performance analysis
 
 README.md                  # Project documentation
 CLAUDE.md                  # This file - AI instructions
