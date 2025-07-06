@@ -79,6 +79,9 @@ try:
     HAS_OPTIMIZED_CACHE = True
 except ImportError:
     HAS_OPTIMIZED_CACHE = False
+    get_optimized_pattern_cache = None
+    clear_optimized_cache = None
+    OptimizedPatternCache = None
 
 __all__ = [
     # Base classes
@@ -113,7 +116,9 @@ __all__ = [
     "GPU_TYPE",
     "CURRENT_OPTIMAL_SETTINGS",
     # Memory pool
+    "SimplifiedMemoryPool",
     "UnifiedMemoryPool",
+    "MemoryPool",
     "get_global_memory_pool",
     "reset_global_memory_pool",
     # Pattern cache

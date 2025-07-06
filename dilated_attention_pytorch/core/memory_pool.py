@@ -3,6 +3,9 @@ Unified memory pool implementation for efficient buffer management.
 
 This module provides a consolidated memory pool that can be used across all
 dilated attention implementations, replacing multiple separate pools.
+
+DEPRECATED: This implementation is scheduled for removal in v0.4.0.
+Please use unified_memory_pool.py instead.
 """
 # ruff: noqa: PLR0912
 
@@ -10,6 +13,7 @@ import gc
 import logging
 import math
 import threading
+import warnings
 import weakref
 from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
@@ -19,6 +23,14 @@ import torch
 from torch import Tensor
 
 from .config import MemoryPoolConfig
+
+# Issue deprecation warning
+warnings.warn(
+    "memory_pool.py is deprecated and will be removed in v0.4.0. "
+    "Please use unified_memory_pool.py instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 logger = logging.getLogger("dilated_attention_pytorch.memory_pool")
 

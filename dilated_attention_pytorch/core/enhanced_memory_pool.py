@@ -1,4 +1,6 @@
 """
+
+# DEPRECATED: This file is scheduled for removal in v0.4.0.\n# Please use unified_memory_pool.py instead.\n\nimport warnings\nwarnings.warn(\n    f"{__file__} is deprecated and will be removed in v0.4.0. "\n    "Please use unified_memory_pool.py instead.",\n    DeprecationWarning,\n    stacklevel=2\n)\n
 Enhanced memory pool integrating fragment-aware and bucketed allocation.
 
 This module combines the fragment-aware memory pool with the bucketed memory pool

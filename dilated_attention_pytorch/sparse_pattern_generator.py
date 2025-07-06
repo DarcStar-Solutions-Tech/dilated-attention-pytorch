@@ -7,7 +7,7 @@ sparse attention patterns optimized for distributed training.
 
 import os
 import threading
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 import torch
 from torch import Tensor
@@ -18,17 +18,17 @@ from .distributed_sparse_config import DistributedSparseConfig
 class HierarchicalSparsePatternGenerator:
     """
     Sparse pattern generator for distributed systems.
-    
+
     This class creates hierarchical sparse attention patterns that are optimized
     for multi-node distributed training. It generates different sparsity levels
     for local (within-node), global, and inter-node attention patterns.
-    
+
     Features:
     - Three-level hierarchy: local, global, and inter-node patterns
     - Pattern caching for efficient reuse
     - Load balancing based on computation statistics
     - Thread-safe pattern generation
-    
+
     The generator adapts patterns based on:
     - Node topology (GPUs per node)
     - Load imbalance across ranks
@@ -37,7 +37,7 @@ class HierarchicalSparsePatternGenerator:
 
     def __init__(self, config: DistributedSparseConfig, world_size: int, rank: int):
         """Initialize the pattern generator.
-        
+
         Args:
             config: Distributed sparse attention configuration
             world_size: Total number of distributed processes
@@ -66,7 +66,7 @@ class HierarchicalSparsePatternGenerator:
 
     def _detect_node_size(self) -> int:
         """Detect number of GPUs per node.
-        
+
         Returns:
             Number of GPUs per node
         """
@@ -82,11 +82,11 @@ class HierarchicalSparsePatternGenerator:
         self, seq_len: int, num_heads: int
     ) -> Dict[str, Tensor]:
         """Create hierarchical sparse pattern for distributed attention.
-        
+
         Args:
             seq_len: Sequence length
             num_heads: Number of attention heads
-            
+
         Returns:
             Dictionary containing local, global, and inter_node patterns
         """
@@ -109,15 +109,13 @@ class HierarchicalSparsePatternGenerator:
 
         return patterns
 
-    def _create_local_node_pattern(
-        self, num_blocks: int, num_heads: int
-    ) -> Tensor:
+    def _create_local_node_pattern(self, num_blocks: int, num_heads: int) -> Tensor:
         """Create pattern for local node attention.
-        
+
         Args:
             num_blocks: Number of blocks in the sequence
             num_heads: Number of attention heads
-            
+
         Returns:
             Local attention pattern tensor
         """
@@ -155,11 +153,11 @@ class HierarchicalSparsePatternGenerator:
 
     def _create_global_pattern(self, num_blocks: int, num_heads: int) -> Tensor:
         """Create pattern for global attention within node.
-        
+
         Args:
             num_blocks: Number of blocks in the sequence
             num_heads: Number of attention heads
-            
+
         Returns:
             Global attention pattern tensor
         """
@@ -200,15 +198,13 @@ class HierarchicalSparsePatternGenerator:
 
         return pattern
 
-    def _create_inter_node_pattern(
-        self, num_blocks: int, num_heads: int
-    ) -> Tensor:
+    def _create_inter_node_pattern(self, num_blocks: int, num_heads: int) -> Tensor:
         """Create pattern for inter-node attention (very sparse).
-        
+
         Args:
             num_blocks: Number of blocks in the sequence
             num_heads: Number of attention heads
-            
+
         Returns:
             Inter-node attention pattern tensor
         """
@@ -251,11 +247,11 @@ class HierarchicalSparsePatternGenerator:
         self, patterns: Dict[str, Tensor], num_blocks: int
     ) -> Dict[str, Tensor]:
         """Apply load balancing adjustments to patterns.
-        
+
         Args:
             patterns: Dictionary of attention patterns
             num_blocks: Number of blocks
-            
+
         Returns:
             Adjusted patterns
         """
@@ -290,15 +286,13 @@ class HierarchicalSparsePatternGenerator:
 
         return patterns
 
-    def _adjust_pattern_sparsity(
-        self, pattern: Tensor, adjustment: float
-    ) -> Tensor:
+    def _adjust_pattern_sparsity(self, pattern: Tensor, adjustment: float) -> Tensor:
         """Adjust pattern sparsity by given factor.
-        
+
         Args:
             pattern: Attention pattern tensor
             adjustment: Sparsity adjustment factor
-            
+
         Returns:
             Adjusted pattern
         """
@@ -329,7 +323,7 @@ class HierarchicalSparsePatternGenerator:
         self, computation_time: float, communication_volume: int, memory_usage: int
     ) -> None:
         """Update load balancing statistics.
-        
+
         Args:
             computation_time: Time taken for computation
             communication_volume: Volume of communication

@@ -37,10 +37,10 @@ class DistributedSparsePattern(Enum):
 @dataclass
 class DistributedSparseConfig:
     """Configuration for distributed sparse attention patterns.
-    
+
     This configuration controls how sparsity is applied across different
     levels of the distributed system hierarchy (within-node vs cross-node).
-    
+
     Attributes:
         pattern_type: Type of distributed sparse pattern to use
         sparsity_ratio: Overall sparsity ratio (fraction of zeros)
@@ -76,27 +76,39 @@ class DistributedSparseConfig:
     enable_pinned_memory: bool = True
     gradient_bucket_size_mb: float = 25.0
     gradient_bucket_count: int = 32
-    
+
     def __post_init__(self):
         """Validate configuration after initialization."""
         # Validate sparsity ratios
         if not 0 <= self.sparsity_ratio <= 1:
-            raise ValueError(f"sparsity_ratio must be in [0, 1], got {self.sparsity_ratio}")
+            raise ValueError(
+                f"sparsity_ratio must be in [0, 1], got {self.sparsity_ratio}"
+            )
         if not 0 <= self.local_sparsity <= 1:
-            raise ValueError(f"local_sparsity must be in [0, 1], got {self.local_sparsity}")
+            raise ValueError(
+                f"local_sparsity must be in [0, 1], got {self.local_sparsity}"
+            )
         if not 0 <= self.global_sparsity <= 1:
-            raise ValueError(f"global_sparsity must be in [0, 1], got {self.global_sparsity}")
+            raise ValueError(
+                f"global_sparsity must be in [0, 1], got {self.global_sparsity}"
+            )
         if not 0 <= self.inter_node_sparsity <= 1:
-            raise ValueError(f"inter_node_sparsity must be in [0, 1], got {self.inter_node_sparsity}")
-        
+            raise ValueError(
+                f"inter_node_sparsity must be in [0, 1], got {self.inter_node_sparsity}"
+            )
+
         # Validate compression ratio
         if not 0 < self.compression_ratio <= 1:
-            raise ValueError(f"compression_ratio must be in (0, 1], got {self.compression_ratio}")
-        
+            raise ValueError(
+                f"compression_ratio must be in (0, 1], got {self.compression_ratio}"
+            )
+
         # Validate block size
         if self.block_size <= 0 or (self.block_size & (self.block_size - 1)) != 0:
-            raise ValueError(f"block_size must be a positive power of 2, got {self.block_size}")
-            
+            raise ValueError(
+                f"block_size must be a positive power of 2, got {self.block_size}"
+            )
+
         # Logical consistency checks
         if self.inter_node_sparsity > self.global_sparsity:
             raise ValueError(
@@ -106,7 +118,7 @@ class DistributedSparseConfig:
 
 __all__ = [
     "DistributedSparsePattern",
-    "DistributedSparseConfig", 
+    "DistributedSparseConfig",
     "HAS_DEEPSPEED",
     "HAS_APEX",
 ]
