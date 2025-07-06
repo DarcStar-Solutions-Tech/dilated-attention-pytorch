@@ -28,9 +28,15 @@ All dilated attention modules require:
 
 ## Development Commands
 
-### Testing
+### Testing and Verification
 ```bash
-# Run all tests
+# Quick comprehensive test (NEW)
+python scripts/test_comprehensive.py
+
+# Component verification (NEW)
+python verify_all_components.py
+
+# Run all pytest tests
 pytest tests/
 
 # Run specific test files
@@ -39,6 +45,9 @@ pytest tests/test_long_net.py
 
 # Run tests with specific parameters
 pytest tests/test_dilated_attention.py -v
+
+# Run with coverage
+pytest tests/ --cov=dilated_attention_pytorch --cov-report=html
 ```
 
 ### Dependencies Management
@@ -298,9 +307,9 @@ The codebase has been successfully refactored to reduce duplication and improve 
 2. ✅ MultiheadDilatedAttention  
 3. ✅ ImprovedDilatedAttention
 4. ✅ ImprovedMultiheadDilatedAttention
-5. ✅ DistributedImprovedDilatedAttention
-6. ✅ DistributedImprovedMultiheadDilatedAttention
-7. ✅ RingDilatedAttention (partially - uses base classes)
+5. ✅ RingDilatedAttentionHybrid (uses base classes)
+6. ✅ DistributedMultiheadDilatedAttention
+7. ✅ Various block-sparse implementations
 
 **Not Refactored (by design):**
 8. ⚡ BlockSparseRingDilatedAttention - Preserved for performance optimization
@@ -471,15 +480,20 @@ dilated_attention_pytorch/
 ├── multihead_dilated_attention.py  # Multi-head wrapper
 ├── improved_dilated_attention.py   # Enhanced version
 ├── improved_multihead_dilated_attention.py # Enhanced multihead version
-├── distributed_dilated_attention.py # Multi-GPU support
+├── distributed_dilated_attention.py # Multi-GPU support (PyTorch Lightning)
+├── ring_dilated_attention_hybrid.py # Hybrid ring attention (best features)
+├── ring_multihead_dilated_attention_hybrid.py # Multihead ring hybrid
 ├── ring_dilated_attention_production.py # Production-ready ring attention with monitoring
 ├── ring_distributed_dilated_attention.py # Enterprise ring attention
 ├── ring_dilated_attention_hilbert_optimized.py # Ring attention with Hilbert curve ordering
-├── ring_dilated_attention_refactored.py # Refactored ring attention base
-├── ring_dilated_attention_fixed.py # Ring attention with bug fixes
+├── head_parallel_dilated_attention_optimized.py # Head-parallel processing
 ├── block_sparse_ring_dilated_attention.py # Block-sparse ring attention
 ├── block_sparse_ring_multihead_dilated_attention.py # Block-sparse multihead
 ├── block_sparse_ring_distributed_dilated_attention.py # Distributed block-sparse
+├── block_sparse_optimized.py # Optimized block-sparse operations
+├── block_sparse_torch_sparse.py # PyTorch sparse tensor implementation
+├── block_sparse_hierarchical.py # Hierarchical sparse patterns
+├── block_sparse_adaptive.py # Content-adaptive sparse patterns
 ├── transformer.py           # Transformer with dilated attention
 └── long_net.py             # Full LongNet architecture
 

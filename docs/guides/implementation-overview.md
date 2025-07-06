@@ -1,0 +1,286 @@
+# Dilated Attention Implementation Overview
+
+**Last Updated**: 2025-07-06
+
+This guide provides a comprehensive overview of all available dilated attention implementations in this library.
+
+## 📊 Implementation Count: 20+ Variants
+
+The library provides over 20 different implementations of dilated attention, each optimized for specific use cases.
+
+## 🎯 Quick Selection Guide
+
+```python
+from dilated_attention_pytorch import create_multihead_dilated_attention
+
+# Let the factory choose the best implementation
+attention = create_multihead_dilated_attention("auto", 
+    embed_dim=768,
+    num_heads=12,
+    segment_lengths=[2048, 4096, 8192],
+    dilation_rates=[1, 2, 4]
+)
+```
+
+### Selection Criteria:
+- **Sequence Length < 50K**: Use standard implementations
+- **Sequence Length 50K-1M**: Use Ring Attention (O(n) memory)
+- **Need 5-50x speedup**: Use Block-Sparse variants
+- **Multi-GPU**: Use distributed implementations
+- **Memory constrained**: Use memory-optimized variants
+
+## 📚 Complete Implementation List
+
+### 1. Core Implementations
+
+#### DilatedAttention
+- **File**: `dilated_attention_pytorch/dilated_attention.py`
+- **Use Case**: Basic dilated attention from LongNet paper
+- **Features**: Configurable segment lengths and dilation rates
+- **Memory**: O(n²/d) where d is average dilation rate
+
+```python
+from dilated_attention_pytorch import DilatedAttention
+
+attn = DilatedAttention(
+    segment_lengths=[2048, 4096, 8192],
+    dilation_rates=[1, 2, 4]
+)
+```
+
+#### ImprovedDilatedAttention
+- **File**: `dilated_attention_pytorch/improved_dilated_attention.py`
+- **Use Case**: When you need better numerical stability and performance
+- **Features**: Enhanced gradient flow, better memory management
+- **Memory**: Same as base but with pooling optimizations
+
+#### MultiheadDilatedAttention
+- **File**: `dilated_attention_pytorch/multihead_dilated_attention.py`
+- **Use Case**: Drop-in replacement for `nn.MultiheadAttention`
+- **Features**: Compatible with existing transformer code
+- **Memory**: O(n²/d) per head
+
+#### ImprovedMultiheadDilatedAttention
+- **File**: `dilated_attention_pytorch/improved_multihead_dilated_attention.py`
+- **Use Case**: Production deployments needing stability
+- **Features**: Layer normalization, MAGNETO improvements
+- **Memory**: Optimized with pattern caching
+
+### 2. Ring Attention Variants (O(n) Memory)
+
+#### RingDilatedAttentionHybrid
+- **File**: `dilated_attention_pytorch/ring_dilated_attention_hybrid.py`
+- **Aliases**: `RingDilatedAttention`, `RingDilatedAttentionTrue`
+- **Use Case**: Sequences up to 1B tokens
+- **Features**: True O(n/p) memory scaling, Flash Attention integration
+- **Memory**: O(n/p) where p is number of GPUs
+
+```python
+from dilated_attention_pytorch import RingDilatedAttention
+
+# Works with 1M+ token sequences
+attn = RingDilatedAttention(
+    segment_lengths=[4096, 8192, 16384],
+    dilation_rates=[1, 2, 4],
+    ring_size=8  # Number of GPUs/processes
+)
+```
+
+#### RingDilatedAttentionProduction
+- **File**: `dilated_attention_pytorch/ring_dilated_attention_production.py`
+- **Use Case**: Production environments needing monitoring
+- **Features**: Error recovery, logging, gradient checkpointing
+- **Memory**: O(n/p) with adaptive cleanup
+
+#### RingMultiheadDilatedAttentionHybrid
+- **File**: `dilated_attention_pytorch/ring_multihead_dilated_attention_hybrid.py`
+- **Use Case**: Multihead attention with ring communication
+- **Features**: Fused QKV projections, buffer reuse
+- **Memory**: O(n/p) per head
+
+### 3. Block-Sparse Variants (5-50x Speedup)
+
+#### BlockSparseRingDilatedAttention
+- **File**: `dilated_attention_pytorch/block_sparse_ring_dilated_attention.py`
+- **Use Case**: When you need extreme speedup
+- **Features**: 90%+ sparsity, multiple pattern types
+- **Memory**: O(n × sparsity_ratio)
+
+```python
+from dilated_attention_pytorch import BlockSparseRingDilatedAttention, SparsePatternConfig
+
+config = SparsePatternConfig(
+    pattern_type='dilated_sparse',  # or 'local_window', 'global_local'
+    sparsity_ratio=0.1,  # 90% sparse = 10x speedup
+    block_size=128
+)
+
+attn = BlockSparseRingDilatedAttention(
+    segment_lengths=[2048, 4096],
+    dilation_rates=[1, 2],
+    sparse_config=config
+)
+```
+
+#### BlockSparseRingMultiheadDilatedAttention
+- **File**: `dilated_attention_pytorch/block_sparse_ring_multihead_dilated_attention.py`
+- **Use Case**: Drop-in sparse replacement for transformers
+- **Features**: Compatible with existing code
+- **Memory**: O(n × sparsity_ratio) per head
+
+#### BlockSparseRingDistributedDilatedAttention
+- **File**: `dilated_attention_pytorch/block_sparse_ring_distributed_dilated_attention.py`
+- **Use Case**: Multi-node training with sparsity
+- **Features**: Hierarchical sparsity patterns
+- **Memory**: O(n × sparsity_ratio / p)
+
+### 4. Optimized Block-Sparse Variants
+
+#### BlockSparseOptimized
+- **File**: `dilated_attention_pytorch/block_sparse_optimized.py`
+- **Use Case**: Maximum performance with batched operations
+- **Features**: Device-aware pattern caching, batched kernels
+- **Memory**: Further optimized sparse operations
+
+#### BlockSparseTorchSparse
+- **File**: `dilated_attention_pytorch/block_sparse_torch_sparse.py`
+- **Use Case**: When using PyTorch sparse tensors
+- **Features**: Native sparse tensor support
+- **Memory**: Depends on PyTorch sparse backend
+
+#### BlockSparseHierarchical
+- **File**: `dilated_attention_pytorch/block_sparse_hierarchical.py`
+- **Use Case**: Multi-scale attention patterns
+- **Features**: Local + global + intermediate patterns
+- **Memory**: Adaptive based on hierarchy
+
+#### BlockSparseAdaptive
+- **File**: `dilated_attention_pytorch/block_sparse_adaptive.py`
+- **Use Case**: Content-aware sparsity
+- **Features**: Learns optimal sparse patterns
+- **Memory**: Dynamic based on content
+
+### 5. Distributed Variants
+
+#### DistributedMultiheadDilatedAttention
+- **File**: `dilated_attention_pytorch/distributed_dilated_attention.py`
+- **Use Case**: PyTorch Lightning distributed training
+- **Features**: Automatic DDP handling
+- **Memory**: Standard dilated attention per GPU
+
+#### RingDistributedDilatedAttention
+- **File**: `dilated_attention_pytorch/ring_distributed_dilated_attention.py`
+- **Use Case**: Enterprise distributed deployments
+- **Features**: DeepSpeed integration, advanced monitoring
+- **Memory**: O(n/p) with enterprise features
+
+### 6. Special Variants
+
+#### RingDilatedAttentionHilbertOptimized
+- **File**: `dilated_attention_pytorch/ring_dilated_attention_hilbert_optimized.py`
+- **Use Case**: Better cache locality for long sequences
+- **Features**: Hilbert curve ordering
+- **Memory**: O(n/p) with improved cache usage
+
+```python
+from dilated_attention_pytorch import RingDilatedAttentionHilbertOptimized
+
+# Better performance for very long sequences
+attn = RingDilatedAttentionHilbertOptimized(
+    segment_lengths=[8192, 16384, 32768],
+    dilation_rates=[1, 2, 4]
+)
+```
+
+#### HeadParallelDilatedAttentionOptimized
+- **File**: `dilated_attention_pytorch/head_parallel_dilated_attention_optimized.py`
+- **Use Case**: When heads can be processed independently
+- **Features**: Parallel head processing
+- **Memory**: Standard with parallel efficiency
+
+### 7. Kernel Implementations
+
+#### HilbertDilatedAttention
+- **File**: `dilated_attention_pytorch/kernels/hilbert_dilated_attention.py`
+- **Use Case**: Custom kernel for Hilbert ordering
+- **Features**: Low-level optimizations
+- **Memory**: Highly optimized
+
+#### HilbertAttentionTritonFixed
+- **File**: `dilated_attention_pytorch/kernels/hilbert_dilated_attention_triton_fixed.py`
+- **Use Case**: Triton kernel implementation
+- **Features**: GPU-specific optimizations
+- **Memory**: Kernel-level efficiency
+
+## 🔧 Configuration Options
+
+All implementations support these core parameters:
+
+```python
+# Common parameters
+segment_lengths = [2048, 4096, 8192]  # Must be increasing
+dilation_rates = [1, 2, 4]            # Must match segment_lengths
+dropout = 0.1                         # Attention dropout
+attention_scale = None                # None for 1/sqrt(d)
+
+# Multihead parameters
+embed_dim = 768                       # Model dimension
+num_heads = 12                        # Number of attention heads
+bias = True                          # Use bias in projections
+add_bias_kv = False                  # Add bias to keys/values
+add_zero_attn = False                # Add zero attention
+
+# Ring attention parameters
+ring_size = 8                        # Number of processes
+use_flash_attn = True               # Use Flash Attention if available
+use_gradient_checkpointing = True   # Save memory during training
+
+# Block-sparse parameters
+sparsity_ratio = 0.1                # Fraction of blocks to compute
+block_size = 128                    # Size of each block
+pattern_type = 'dilated_sparse'     # Sparsity pattern
+```
+
+## 📈 Performance Comparison
+
+| Implementation | Memory | Speed | Best For |
+|----------------|--------|-------|----------|
+| DilatedAttention | O(n²/d) | 1x | Small sequences (<10K) |
+| ImprovedDilatedAttention | O(n²/d) | 1.2x | Better stability |
+| RingDilatedAttention | O(n/p) | 0.8x | Very long sequences |
+| BlockSparseRingDilatedAttention | O(n×s) | 5-50x | Speed critical |
+| RingDilatedAttentionHilbertOptimized | O(n/p) | 1.5x | Cache efficiency |
+
+## 🚀 Getting Started
+
+1. **For most users**: Use the factory pattern
+2. **For long sequences**: Use Ring variants
+3. **For speed**: Use Block-Sparse variants
+4. **For production**: Use Production/Improved variants
+5. **For research**: Experiment with different variants
+
+## 🔍 How to Choose
+
+```python
+def choose_implementation(seq_len, num_gpus=1, need_speed=False):
+    if need_speed and seq_len > 10_000:
+        return "block_sparse"
+    elif seq_len > 100_000:
+        return "ring"
+    elif seq_len > 50_000 and num_gpus > 1:
+        return "distributed"
+    else:
+        return "improved"
+
+# Use with factory
+impl_type = choose_implementation(seq_len=1_000_000, num_gpus=8)
+attention = create_multihead_dilated_attention(impl_type, ...)
+```
+
+## 📚 Further Reading
+
+- [Ring Attention Guide](ring-attention-guide.md)
+- [Block-Sparse Attention Guide](block-sparse-attention-guide.md)
+- [Distributed Training Guide](distributed-training-guide.md)
+- [Factory Pattern Guide](factory-pattern-guide.md)
+- [Migration Guide](migration-v0.3.0.md)

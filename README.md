@@ -9,6 +9,8 @@
 
 (Unofficial) Implementation of `DilatedAttention` from *[LongNet: Scaling Transformers to 1,000,000,000 Tokens](https://arxiv.org/abs/2307.02486)* in PyTorch.
 
+**Now with 20+ optimized implementations** including Ring Attention (O(n) memory), Block-Sparse (5-50x speedup), Distributed, and specialized variants.
+
 ## 🎉 New in v0.2.0: Core Architecture Refactoring + Major Performance Boost
 
 We've completely refactored the codebase and added significant performance optimizations:
@@ -185,13 +187,16 @@ x = torch.randn(2, 8192, 768, device="cuda", dtype=torch.float16)
 output = attention(x, x, x, is_causal=True)
 ```
 
-Available implementations:
-- `"auto"` - Automatically selects best implementation
+Available implementations (20+ variants):
+- `"auto"` - Automatically selects best implementation based on your hardware
 - `"standard"` - Basic dilated attention
 - `"improved"` - Optimized with Flash Attention support
-- `"ring"` - Ring attention for extreme sequence lengths
-- `"distributed"` - Multi-GPU distributed attention
+- `"ring"` - O(n) memory complexity for extreme sequence lengths
 - `"block_sparse"` - Block-sparse attention (5-50x speedup)
+- `"distributed"` - Multi-GPU distributed attention
+- Plus many specialized variants (Hilbert, adaptive, hierarchical, etc.)
+
+See [Implementation Overview](docs/guides/implementation-overview.md) for all 20+ implementations.
 
 ### `DilatedAttention`
 

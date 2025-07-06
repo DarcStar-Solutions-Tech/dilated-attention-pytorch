@@ -68,10 +68,10 @@ The Hilbert Ring Attention:
 ### Basic Usage
 
 ```python
-from dilated_attention_pytorch import HilbertRingDilatedAttention
+from dilated_attention_pytorch import RingDilatedAttentionHilbertOptimized
 
 # Initialize
-attention = HilbertRingDilatedAttention(
+attention = RingDilatedAttentionHilbertOptimized(
     segment_lengths=[2048, 4096, 8192],
     dilation_rates=[1, 2, 4],
     dropout=0.1,
@@ -92,7 +92,7 @@ import torch.distributed as dist
 dist.init_process_group(backend='nccl')
 
 # Create model with automatic ring size detection
-model = HilbertRingDilatedAttention(
+model = RingDilatedAttentionHilbertOptimized(
     segment_lengths=[4096, 8192],
     dilation_rates=[2, 4],
     ring_size=None,  # Auto-detects world size
@@ -105,7 +105,7 @@ model = HilbertRingDilatedAttention(
 
 ```python
 # For extreme sequence lengths (1B+ tokens)
-attention = HilbertRingDilatedAttention(
+attention = RingDilatedAttentionHilbertOptimized(
     segment_lengths=[16384, 32768, 65536],
     dilation_rates=[4, 8, 16],
     
