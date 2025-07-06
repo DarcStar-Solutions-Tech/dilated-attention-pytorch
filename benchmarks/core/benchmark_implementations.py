@@ -22,8 +22,10 @@ try:
 except ImportError:
     HAS_BLOCK_SPARSE = False
 
+# Ring attention implementations have been updated
+# Use RingDilatedAttentionProduction instead of deprecated V2Collective
 try:
-    from dilated_attention_pytorch import RingDilatedAttentionV2Collective
+    from dilated_attention_pytorch import RingDilatedAttentionProduction
 
     HAS_RING = True
 except ImportError:
@@ -98,7 +100,7 @@ class ImplementationComparisonBenchmark(BaseBenchmark):
         # Ring attention (if available)
         if HAS_RING:
             try:
-                models["ring_v2_collective"] = RingDilatedAttentionV2Collective(
+                models["ring_production"] = RingDilatedAttentionProduction(
                     segment_lengths=segment_lengths,
                     dilation_rates=dilation_rates,
                     dropout=0.0,

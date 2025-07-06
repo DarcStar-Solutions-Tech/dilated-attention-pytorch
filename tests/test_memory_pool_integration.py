@@ -17,8 +17,8 @@ from dilated_attention_pytorch import (
     DilatedAttention,
     ImprovedDilatedAttention,
 )
-from dilated_attention_pytorch.ring_dilated_attention_v2_collective import (
-    RingDilatedAttentionV2Collective as RingDilatedAttentionV2,
+from dilated_attention_pytorch.ring_dilated_attention_production import (
+    RingDilatedAttentionProduction as RingDilatedAttentionV2,
 )
 
 # RingDilatedAttentionV3 is deprecated, removed from tests

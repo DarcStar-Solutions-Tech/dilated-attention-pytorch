@@ -35,10 +35,10 @@ try:
     )
     from dilated_attention_pytorch import RingDilatedAttention
 
-    # Note: RingMultiheadDilatedAttention may not be available yet
+    # Use RingMultiheadDilatedAttentionHybrid instead of deprecated RingMultiheadDilatedAttention
     try:
-        from dilated_attention_pytorch.ring_multihead_dilated_attention import (
-            RingMultiheadDilatedAttention,
+        from dilated_attention_pytorch.ring_multihead_dilated_attention_hybrid import (
+            RingMultiheadDilatedAttentionHybrid as RingMultiheadDilatedAttention,
         )
     except ImportError:
         RingMultiheadDilatedAttention = None
