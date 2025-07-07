@@ -280,11 +280,7 @@ def main():
             "dilation_rates": [1],
             "sparsity_ratio": 0.001,
         },
-        "Hierarchical": {
-            "variant": "hierarchical",
-            "segment_lengths": [2048],
-            "dilation_rates": [1],
-        },
+        # Hierarchical removed - achieved poor memory efficiency
         "Adaptive": {
             "variant": "adaptive",
             "segment_lengths": [2048],
@@ -367,7 +363,7 @@ def main():
     print("PERFORMANCE ANALYSIS")
     print(f"{'=' * 70}")
 
-    for variant_name in ["90% Sparse", "95% Sparse", "99% Sparse", "Hierarchical"]:
+    for variant_name in ["90% Sparse", "95% Sparse", "99% Sparse"]:
         if variant_name in all_results:
             results = all_results[variant_name]["performance"]
             if results:
@@ -447,7 +443,7 @@ def save_detailed_results(all_results: Dict, max_lengths: Dict):
         # Performance details
         f.write("\n## Performance Scaling\n\n")
 
-        for variant in ["90% Sparse", "95% Sparse", "99% Sparse", "Hierarchical"]:
+        for variant in ["90% Sparse", "95% Sparse", "99% Sparse"]:
             if variant in all_results and all_results[variant]["performance"]:
                 f.write(f"### {variant}\n\n")
                 f.write("| Sequence Length | Time (ms) | Memory (MB) | ms/K tokens |\n")

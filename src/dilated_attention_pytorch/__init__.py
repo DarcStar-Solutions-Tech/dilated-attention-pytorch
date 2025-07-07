@@ -25,12 +25,8 @@ from .block_sparse_ring_multihead_dilated_attention import (
 # Optimized Block-Sparse implementations
 # from .block_sparse_optimized import BlockSparseOptimized  # Merged into BlockSparseRingDilatedAttention
 # from .block_sparse_torch_sparse import BlockSparseTorchSparse  # Removed - provided no benefit over base implementation
-from .block_sparse_hierarchical import (
-    BlockSparseHierarchical,
-    HierarchicalConfig,
-    create_hierarchical_attention,
-    get_hierarchical_presets,
-)
+# Hierarchical variant removed due to poor memory efficiency
+# Use create_block_sparse_attention with pattern_type='dilated_sparse' instead
 from .block_sparse_adaptive import (
     BlockSparseAdaptive,
     AdaptiveConfig,
@@ -49,7 +45,6 @@ from .core import (
 from .block_sparse_factory import (
     create_block_sparse_attention,
     get_block_sparse_preset,
-    create_hierarchical_block_sparse,
     create_adaptive_block_sparse,
     create_multihead_block_sparse,
 )
@@ -130,7 +125,6 @@ __all__ = [
     # Block-sparse factory functions
     "create_block_sparse_attention",
     "get_block_sparse_preset",
-    "create_hierarchical_block_sparse",
     "create_adaptive_block_sparse",
     "create_multihead_block_sparse",
     # Factory functions (v0.2.0+)

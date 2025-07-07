@@ -60,7 +60,7 @@ def benchmark_sparsity_levels():
         ("90% sparse", {"sparsity_ratio": 0.1}),
         ("95% sparse", {"sparsity_ratio": 0.05}),
         ("99% sparse", {"sparsity_ratio": 0.01}),
-        ("Hierarchical", {"variant": "hierarchical"}),
+        # Hierarchical removed - use dilated_sparse with high sparsity instead
     ]
 
     for name, kwargs in configs:

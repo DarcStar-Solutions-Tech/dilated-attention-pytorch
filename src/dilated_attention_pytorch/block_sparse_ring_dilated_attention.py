@@ -48,7 +48,6 @@ class SparsePatternConfig:
             "local_window",
             "dilated_sparse",
             "global_local",
-            "hierarchical",
             "adaptive",
         ]:
             raise ValueError(f"Unknown pattern_type: {self.pattern_type}")

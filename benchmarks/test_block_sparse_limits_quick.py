@@ -121,11 +121,7 @@ def main():
             "dilation_rates": [1],
             "sparsity_ratio": 0.01,
         },
-        "Hierarchical": {
-            "variant": "hierarchical",
-            "segment_lengths": [2048],
-            "dilation_rates": [1],
-        },
+        # Hierarchical removed - use dilated_sparse with 95-99% sparsity instead
         "Adaptive": {
             "variant": "adaptive",
             "segment_lengths": [2048],

@@ -11,11 +11,9 @@ from .block_sparse_ring_dilated_attention import (
     BlockSparseRingDilatedAttention,
     SparsePatternConfig,
 )
-from .block_sparse_hierarchical import (
-    BlockSparseHierarchical,
-    HierarchicalConfig,
-    get_hierarchical_presets,
-)
+
+# Hierarchical variant removed due to poor memory efficiency
+# Use dilated_sparse pattern with high sparsity (95-99%) instead
 from .block_sparse_adaptive_fixed import (
     BlockSparseAdaptive,
     AdaptiveConfig,
@@ -29,9 +27,7 @@ from .block_sparse_ring_distributed_dilated_attention import (
 from .distributed_sparse_config import DistributedSparseConfig
 
 
-BlockSparseVariant = Literal[
-    "auto", "base", "hierarchical", "adaptive", "multihead", "distributed"
-]
+BlockSparseVariant = Literal["auto", "base", "adaptive", "multihead", "distributed"]
 
 
 def create_block_sparse_attention(
@@ -43,7 +39,6 @@ def create_block_sparse_attention(
     sparsity_ratio: Optional[float] = None,
     block_size: Optional[int] = None,
     # Variant-specific configs
-    hierarchical_config: Optional[HierarchicalConfig] = None,
     adaptive_config: Optional[AdaptiveConfig] = None,
     distributed_config: Optional[DistributedSparseConfig] = None,
     # Multihead parameters
@@ -53,7 +48,6 @@ def create_block_sparse_attention(
     **kwargs,
 ) -> Union[
     BlockSparseRingDilatedAttention,
-    BlockSparseHierarchical,
     BlockSparseAdaptive,
     BlockSparseRingMultiheadDilatedAttention,
     BlockSparseRingDistributedDilatedAttention,
@@ -65,7 +59,6 @@ def create_block_sparse_attention(
         variant: Which implementation to use:
             - "auto": Automatically select based on parameters
             - "base": Standard block-sparse attention
-            - "hierarchical": Multi-scale attention patterns
             - "adaptive": Learned, content-adaptive patterns
             - "multihead": Drop-in replacement for nn.MultiheadAttention
             - "distributed": Enterprise-grade distributed implementation
@@ -74,7 +67,6 @@ def create_block_sparse_attention(
         sparse_config: Sparse pattern configuration
         sparsity_ratio: Override sparsity ratio (0.1 = 90% sparse)
         block_size: Size of attention blocks
-        hierarchical_config: Configuration for hierarchical variant
         adaptive_config: Configuration for adaptive variant
         distributed_config: Configuration for distributed variant
         embed_dim: Embedding dimension (required for multihead)
@@ -123,8 +115,6 @@ def create_block_sparse_attention(
             variant = "multihead"
         elif adaptive_config is not None:
             variant = "adaptive"
-        elif hierarchical_config is not None:
-            variant = "hierarchical"
         else:
             variant = "base"
 
@@ -138,16 +128,11 @@ def create_block_sparse_attention(
         )
 
     elif variant == "hierarchical":
-        if hierarchical_config is None:
-            # Use default hierarchical config
-            hierarchical_config = HierarchicalConfig()
-
-        return BlockSparseHierarchical(
-            segment_lengths=segment_lengths,
-            dilation_rates=dilation_rates,
-            hierarchical_config=hierarchical_config,
-            sparse_config=sparse_config,
-            **kwargs,
+        # Deprecated - raise error with helpful message
+        raise ValueError(
+            "Hierarchical variant has been removed due to poor memory efficiency. "
+            "Use 'base' variant with pattern_type='dilated_sparse' and "
+            "sparsity_ratio=0.01-0.05 (95-99% sparse) for better multi-scale coverage."
         )
 
     elif variant == "adaptive":
@@ -199,7 +184,7 @@ def create_block_sparse_attention(
     else:
         raise ValueError(
             f"Unknown variant: {variant}. "
-            f"Choose from: auto, base, hierarchical, adaptive, multihead, distributed"
+            f"Choose from: auto, base, adaptive, multihead, distributed"
         )
 
 
@@ -208,7 +193,6 @@ def get_block_sparse_preset(
     **override_kwargs,
 ) -> Union[
     BlockSparseRingDilatedAttention,
-    BlockSparseHierarchical,
     BlockSparseAdaptive,
 ]:
     """
@@ -219,9 +203,6 @@ def get_block_sparse_preset(
             - "local": Local window attention only
             - "dilated": Multi-scale dilated attention
             - "global_local": Global tokens + local windows
-            - "hierarchical_standard": Standard 3-level hierarchy
-            - "hierarchical_fine": Fine-grained hierarchy
-            - "hierarchical_long": Long-range hierarchy
             - "adaptive_standard": Standard adaptive config
             - "ultra_sparse": Extreme sparsity (99%+)
         **override_kwargs: Override preset parameters
@@ -258,19 +239,6 @@ def get_block_sparse_preset(
                 window_size=256,
                 block_size=64,
             ),
-        },
-        # Hierarchical presets
-        "hierarchical_standard": {
-            "variant": "hierarchical",
-            "hierarchical_config": get_hierarchical_presets()["standard"],
-        },
-        "hierarchical_fine": {
-            "variant": "hierarchical",
-            "hierarchical_config": get_hierarchical_presets()["fine_grained"],
-        },
-        "hierarchical_long": {
-            "variant": "hierarchical",
-            "hierarchical_config": get_hierarchical_presets()["long_range"],
         },
         # Adaptive preset
         "adaptive_standard": {
@@ -310,19 +278,6 @@ def get_block_sparse_preset(
 
 
 # Convenience functions for specific variants
-def create_hierarchical_block_sparse(
-    preset: str = "standard",
-    **kwargs,
-) -> BlockSparseHierarchical:
-    """Create hierarchical block-sparse attention with preset."""
-    hierarchical_config = get_hierarchical_presets()[preset]
-    return create_block_sparse_attention(
-        "hierarchical",
-        hierarchical_config=hierarchical_config,
-        **kwargs,
-    )
-
-
 def create_adaptive_block_sparse(
     base_sparsity: float = 0.9,
     **kwargs,
