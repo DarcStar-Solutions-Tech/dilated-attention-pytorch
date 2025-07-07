@@ -17,8 +17,10 @@ from typing import List, Tuple, Optional, Dict
 import torch
 from torch import Tensor
 
-from .block_sparse_optimized import BlockSparseOptimized
-from .block_sparse_ring_dilated_attention import SparsePatternConfig
+from .block_sparse_ring_dilated_attention import (
+    BlockSparseRingDilatedAttention,
+    SparsePatternConfig,
+)
 
 
 @dataclass
@@ -58,11 +60,11 @@ class HierarchicalConfig:
         return len(self.level_configs)
 
 
-class BlockSparseHierarchical(BlockSparseOptimized):
+class BlockSparseHierarchical(BlockSparseRingDilatedAttention):
     """
     Block-Sparse attention with hierarchical multi-scale patterns.
 
-    This implementation extends BlockSparseOptimized with hierarchical attention
+    This implementation extends BlockSparseRingDilatedAttention with hierarchical attention
     patterns that provide different levels of granularity for capturing both
     local and global dependencies efficiently.
     """

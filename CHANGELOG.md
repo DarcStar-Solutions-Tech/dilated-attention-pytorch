@@ -8,6 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Block-Sparse Consolidation**: Merged redundant implementations
+  - Enhanced `BlockSparseRingDilatedAttention` with optimizations from `block_sparse_optimized.py`
+  - Added `PersistentPatternCache` for device-aware pattern caching with LRU eviction
+  - Added batched block operations for efficiency (threshold: 32 blocks)
+  - Added smart buffer reuse strategies
+  - All block-sparse implementations now extend the enhanced base class
+
+### Removed
+- **BlockSparseOptimized**: Merged into `BlockSparseRingDilatedAttention`
+  - All optimizations preserved in base implementation
+  - Use `BlockSparseRingDilatedAttention` directly
+- **BlockSparseTorchSparse**: Removed as it provided no benefits
+  - Did not actually use PyTorch sparse tensors
+  - Sequential processing made it slower than base implementation
+  - Use `BlockSparseRingDilatedAttention` instead
+
+### Changed
+- **Block-Sparse Class Hierarchy**: Updated inheritance
+  - `BlockSparseHierarchical` now extends `BlockSparseRingDilatedAttention`
+  - `BlockSparseAdaptive` now extends `BlockSparseRingDilatedAttention`
+  - All specialized implementations now inherit optimizations from base
+
+### Added
 - **Hilbert Curve Integration**: Added optimized Hilbert curve ordering for improved cache locality
   - `RingDilatedAttentionHilbertOptimized`: Production-ready implementation with Hilbert curve reordering
   - `utils/hilbert_curve.py`: Fast Hilbert curve computation utilities

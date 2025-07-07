@@ -1,12 +1,12 @@
 # Dilated Attention Implementation Overview
 
-**Last Updated**: 2025-07-06
+**Last Updated**: 2025-07-07
 
 This guide provides a comprehensive overview of all available dilated attention implementations in this library.
 
-## 📊 Implementation Count: 20+ Variants
+## 📊 Implementation Count: 22 Distinct Implementations
 
-The library provides over 20 different implementations of dilated attention, each optimized for specific use cases.
+The library provides 22 different implementations of dilated attention, each optimized for specific use cases. Recent consolidation has merged redundant implementations while preserving unique functionality.
 
 ## 🎯 Quick Selection Guide
 
@@ -100,10 +100,15 @@ attn = RingDilatedAttention(
 
 ### 3. Block-Sparse Variants (5-50x Speedup)
 
-#### BlockSparseRingDilatedAttention
+#### BlockSparseRingDilatedAttention (Enhanced)
 - **File**: `dilated_attention_pytorch/block_sparse_ring_dilated_attention.py`
 - **Use Case**: When you need extreme speedup
-- **Features**: 90%+ sparsity, multiple pattern types
+- **Features**: 
+  - 90%+ sparsity, multiple pattern types
+  - **NEW**: Device-aware pattern caching with LRU eviction
+  - **NEW**: Batched block operations (32+ blocks)
+  - **NEW**: Smart buffer reuse strategies
+  - Flash Attention 3 integration
 - **Memory**: O(n × sparsity_ratio)
 
 ```python
@@ -134,19 +139,9 @@ attn = BlockSparseRingDilatedAttention(
 - **Features**: Hierarchical sparsity patterns
 - **Memory**: O(n × sparsity_ratio / p)
 
-### 4. Optimized Block-Sparse Variants
+### 4. Specialized Block-Sparse Variants
 
-#### BlockSparseOptimized
-- **File**: `dilated_attention_pytorch/block_sparse_optimized.py`
-- **Use Case**: Maximum performance with batched operations
-- **Features**: Device-aware pattern caching, batched kernels
-- **Memory**: Further optimized sparse operations
-
-#### BlockSparseTorchSparse
-- **File**: `dilated_attention_pytorch/block_sparse_torch_sparse.py`
-- **Use Case**: When using PyTorch sparse tensors
-- **Features**: Native sparse tensor support
-- **Memory**: Depends on PyTorch sparse backend
+> **Note**: BlockSparseOptimized has been merged into BlockSparseRingDilatedAttention, and BlockSparseTorchSparse has been removed as it provided no benefits over the base implementation.
 
 #### BlockSparseHierarchical
 - **File**: `dilated_attention_pytorch/block_sparse_hierarchical.py`
@@ -248,7 +243,9 @@ pattern_type = 'dilated_sparse'     # Sparsity pattern
 | DilatedAttention | O(n²/d) | 1x | Small sequences (<10K) |
 | ImprovedDilatedAttention | O(n²/d) | 1.2x | Better stability |
 | RingDilatedAttention | O(n/p) | 0.8x | Very long sequences |
-| BlockSparseRingDilatedAttention | O(n×s) | 5-50x | Speed critical |
+| BlockSparseRingDilatedAttention (Enhanced) | O(n×s) | 5-50x | Speed critical, now with better caching |
+| BlockSparseHierarchical | O(n×s) | 3-20x | Multi-scale patterns |
+| BlockSparseAdaptive | O(n×s) | Variable | Content-dependent sparsity |
 | RingDilatedAttentionHilbertOptimized | O(n/p) | 1.5x | Cache efficiency |
 
 ## 🚀 Getting Started

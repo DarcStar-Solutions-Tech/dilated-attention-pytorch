@@ -20,8 +20,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 
-from .block_sparse_optimized import BlockSparseOptimized
-from .block_sparse_ring_dilated_attention import SparsePatternConfig
+from .block_sparse_ring_dilated_attention import (
+    BlockSparseRingDilatedAttention,
+    SparsePatternConfig,
+)
 
 
 @dataclass
@@ -185,7 +187,7 @@ class ImportanceScorer(nn.Module):
         return scores
 
 
-class BlockSparseAdaptive(BlockSparseOptimized):
+class BlockSparseAdaptive(BlockSparseRingDilatedAttention):
     """
     Block-Sparse attention with learned, content-adaptive sparsity patterns.
 
