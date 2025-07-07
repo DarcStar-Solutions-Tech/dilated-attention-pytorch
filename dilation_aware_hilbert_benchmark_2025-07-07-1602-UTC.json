@@ -1,0 +1,110 @@
+{
+  "metadata": {
+    "timestamp": "2025-07-07-1602-UTC",
+    "device": "NVIDIA GeForce GTX 1080"
+  },
+  "results": {
+    "4096": {
+      "1": {
+        "standard_ms": 29.912416730076075,
+        "hilbert_v1_ms": 59.74337263032794,
+        "dilation_aware_ms": 43.31688219681382,
+        "v1_speedup": 0.5006817562035564,
+        "da_speedup": 0.6905487009468166,
+        "access_groups": 22
+      },
+      "2": {
+        "standard_ms": 29.608531575649977,
+        "hilbert_v1_ms": 59.87505167722702,
+        "dilation_aware_ms": 46.97803454473615,
+        "v1_speedup": 0.4945053197659508,
+        "da_speedup": 0.6302633105574995,
+        "access_groups": 23
+      },
+      "4": {
+        "standard_ms": 30.41574200615287,
+        "hilbert_v1_ms": 59.827895276248455,
+        "dilation_aware_ms": 35.66054720431566,
+        "v1_speedup": 0.5083872976930187,
+        "da_speedup": 0.8529241526184975,
+        "access_groups": 25
+      },
+      "8": {
+        "standard_ms": 28.98141061887145,
+        "hilbert_v1_ms": 58.9188227429986,
+        "dilation_aware_ms": 35.44302545487881,
+        "v1_speedup": 0.4918871299463523,
+        "da_speedup": 0.8176900884425513,
+        "access_groups": 29
+      }
+    },
+    "8192": {
+      "1": {
+        "standard_ms": 63.37522221729159,
+        "hilbert_v1_ms": 123.85076275095344,
+        "dilation_aware_ms": 101.03466175496578,
+        "v1_speedup": 0.5117063537568218,
+        "da_speedup": 0.6272621802900898,
+        "access_groups": 44
+      },
+      "2": {
+        "standard_ms": 67.52760773524642,
+        "hilbert_v1_ms": 124.52444154769182,
+        "dilation_aware_ms": 85.39359457790852,
+        "v1_speedup": 0.5422839636617355,
+        "da_speedup": 0.7907807145141064,
+        "access_groups": 45
+      },
+      "4": {
+        "standard_ms": 64.8557960987091,
+        "hilbert_v1_ms": 123.63321259617805,
+        "dilation_aware_ms": 82.56442807614803,
+        "v1_speedup": 0.5245823087243309,
+        "da_speedup": 0.7855174148229247,
+        "access_groups": 47
+      },
+      "8": {
+        "standard_ms": 62.837359216064215,
+        "hilbert_v1_ms": 124.40659953281283,
+        "dilation_aware_ms": 78.56675134971738,
+        "v1_speedup": 0.5050966705306543,
+        "da_speedup": 0.7997958186709505,
+        "access_groups": 51
+      }
+    },
+    "16384": {
+      "1": {
+        "standard_ms": 246.80020194500685,
+        "hilbert_v1_ms": 318.3558911085129,
+        "dilation_aware_ms": 316.29918925464153,
+        "v1_speedup": 0.7752336577961549,
+        "da_speedup": 0.7802745322445849,
+        "access_groups": 86
+      },
+      "2": {
+        "standard_ms": 193.28384771943092,
+        "hilbert_v1_ms": 366.58551432192326,
+        "dilation_aware_ms": 327.51739164814353,
+        "v1_speedup": 0.5272544608778389,
+        "da_speedup": 0.5901483482961981,
+        "access_groups": 87
+      },
+      "4": {
+        "standard_ms": 200.98375845700502,
+        "hilbert_v1_ms": 299.25163174048066,
+        "dilation_aware_ms": 331.55271504074335,
+        "v1_speedup": 0.6716212616387794,
+        "da_speedup": 0.6061894514490911,
+        "access_groups": 89
+      },
+      "8": {
+        "standard_ms": 196.6706145554781,
+        "hilbert_v1_ms": 303.0533788725734,
+        "dilation_aware_ms": 361.55929369851947,
+        "v1_speedup": 0.6489636092728513,
+        "da_speedup": 0.5439512079572453,
+        "access_groups": 93
+      }
+    }
+  }
+}

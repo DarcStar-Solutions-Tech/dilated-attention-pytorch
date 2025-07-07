@@ -16,6 +16,11 @@ def generate_hilbert_indices(n: int) -> List[int]:
     Returns:
         List of indices in Hilbert curve order
     """
+    # Validate input
+    if n <= 0:
+        raise ValueError(f"Number of levels must be positive, got {n}")
+    if n > 16:  # Prevent overflow for very large curves
+        raise ValueError(f"Number of levels too large (max 16), got {n}")
 
     def hilbert_index_to_xy(index: int, n: int) -> tuple:
         """Convert Hilbert index to (x, y) coordinates."""
@@ -61,10 +66,19 @@ def generate_hilbert_indices(n: int) -> List[int]:
 
     # Generate all indices in Hilbert order
     size = 2**n
+    max_index = size * size
+
+    # Validate we won't overflow
+    if max_index > 2**31:  # Prevent integer overflow
+        raise ValueError(f"Hilbert curve too large: {max_index} points")
+
     indices = []
 
-    for i in range(size * size):
+    for i in range(max_index):
         x, y = hilbert_index_to_xy(i, n)
+        # Validate coordinates
+        if x >= size or y >= size or x < 0 or y < 0:
+            raise RuntimeError(f"Invalid coordinates ({x}, {y}) for size {size}")
         linear_index = y * size + x
         indices.append(linear_index)
 
@@ -85,6 +99,14 @@ def generate_hilbert_indices_rectangular(width: int, height: int) -> List[int]:
     Returns:
         List of indices in Hilbert-like order
     """
+    # Validate inputs
+    if width <= 0 or height <= 0:
+        raise ValueError(f"Width and height must be positive, got ({width}, {height})")
+
+    total_size = width * height
+    if total_size > 2**31:
+        raise ValueError(f"Grid too large: {total_size} points")
+
     # For simplicity, we'll use a Z-order curve for rectangular grids
     # This still provides good cache locality
     indices = []
@@ -93,17 +115,26 @@ def generate_hilbert_indices_rectangular(width: int, height: int) -> List[int]:
     max_dim = max(width, height)
     levels = int(np.ceil(np.log2(max_dim)))
 
+    # Validate levels
+    if levels > 16:
+        raise ValueError(
+            f"Grid dimensions too large, requiring {levels} levels (max 16)"
+        )
+
     # Generate Z-order indices
-    for i in range(width * height):
+    for i in range(total_size):
         y = i // width
         x = i % width
 
         # Interleave bits for Z-order
         z_index = 0
+        width_bits = int(np.ceil(np.log2(width))) if width > 1 else 0
+        height_bits = int(np.ceil(np.log2(height))) if height > 1 else 0
+
         for bit in range(levels):
-            if bit < int(np.log2(width)):
+            if bit < width_bits and x < width:
                 z_index |= ((x >> bit) & 1) << (2 * bit)
-            if bit < int(np.log2(height)):
+            if bit < height_bits and y < height:
                 z_index |= ((y >> bit) & 1) << (2 * bit + 1)
 
         indices.append((z_index, i))

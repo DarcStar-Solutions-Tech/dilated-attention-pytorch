@@ -25,9 +25,14 @@ from .block_sparse_ring_distributed_dilated_attention import (
     BlockSparseRingDistributedDilatedAttention,
 )
 from .distributed_sparse_config import DistributedSparseConfig
+from .block_sparse_ring_dilated_attention_hilbert import (
+    BlockSparseRingDilatedAttentionHilbert,
+)
 
 
-BlockSparseVariant = Literal["auto", "base", "adaptive", "multihead", "distributed"]
+BlockSparseVariant = Literal[
+    "auto", "base", "hilbert", "adaptive", "multihead", "distributed"
+]
 
 
 def create_block_sparse_attention(
@@ -48,6 +53,7 @@ def create_block_sparse_attention(
     **kwargs,
 ) -> Union[
     BlockSparseRingDilatedAttention,
+    BlockSparseRingDilatedAttentionHilbert,
     BlockSparseAdaptive,
     BlockSparseRingMultiheadDilatedAttention,
     BlockSparseRingDistributedDilatedAttention,
@@ -59,6 +65,7 @@ def create_block_sparse_attention(
         variant: Which implementation to use:
             - "auto": Automatically select based on parameters
             - "base": Standard block-sparse attention
+            - "hilbert": Block-sparse with Hilbert curve optimization
             - "adaptive": Learned, content-adaptive patterns
             - "multihead": Drop-in replacement for nn.MultiheadAttention
             - "distributed": Enterprise-grade distributed implementation
@@ -127,6 +134,15 @@ def create_block_sparse_attention(
             **kwargs,
         )
 
+    elif variant == "hilbert":
+        return BlockSparseRingDilatedAttentionHilbert(
+            segment_lengths=segment_lengths,
+            dilation_rates=dilation_rates,
+            sparse_config=sparse_config,
+            use_hilbert=True,
+            **kwargs,
+        )
+
     elif variant == "hierarchical":
         # Deprecated - raise error with helpful message
         raise ValueError(
@@ -184,7 +200,7 @@ def create_block_sparse_attention(
     else:
         raise ValueError(
             f"Unknown variant: {variant}. "
-            f"Choose from: auto, base, adaptive, multihead, distributed"
+            f"Choose from: auto, base, hilbert, adaptive, multihead, distributed"
         )
 
 
@@ -259,6 +275,29 @@ def get_block_sparse_preset(
             ),
             "segment_lengths": [4096, 8192, 16384],
             "dilation_rates": [1, 4, 16],
+        },
+        # Hilbert optimized presets
+        "hilbert_standard": {
+            "variant": "hilbert",
+            "sparse_config": SparsePatternConfig(
+                pattern_type="dilated_sparse",
+                sparsity_ratio=0.05,  # 95% sparse
+                block_size=64,
+            ),
+            "hilbert_block_level": True,
+            "hilbert_within_blocks": False,
+        },
+        "hilbert_ultra": {
+            "variant": "hilbert",
+            "sparse_config": SparsePatternConfig(
+                pattern_type="dilated_sparse",
+                sparsity_ratio=0.01,  # 99% sparse
+                block_size=128,
+            ),
+            "segment_lengths": [4096, 8192],
+            "dilation_rates": [1, 2],
+            "hilbert_block_level": True,
+            "hilbert_within_blocks": True,  # Full optimization
         },
     }
 
