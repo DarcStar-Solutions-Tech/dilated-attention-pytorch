@@ -28,7 +28,7 @@ def test_block_sparse_memory_pool(enable_memory_pool, seq_len, pattern_type):
         pattern_type=pattern_type,
         sparsity_ratio=0.1,  # 90% sparse
         block_size=128,
-        local_window_size=512,
+        window_size=512,
         global_tokens=64,
     )
 
@@ -64,11 +64,11 @@ def test_block_sparse_memory_pool(enable_memory_pool, seq_len, pattern_type):
         output_with_weights, weights = attention(q, k, v, return_attention_weights=True)
         assert output_with_weights.shape == q.shape
         assert isinstance(weights, dict)
-        assert "block_indices" in weights
-        assert "block_values" in weights
+        assert "indices" in weights
+        assert "shape" in weights
 
-    # Cleanup
-    attention.cleanup_buffers()
+    # Cleanup - clear pattern cache
+    attention.clear_pattern_cache()
 
 
 @pytest.mark.parametrize("sparsity_ratio", [0.05, 0.1, 0.2])
@@ -133,8 +133,8 @@ def test_memory_pool_cleanup():
     assert hasattr(attention, "_causal_mask_cache")
     assert len(attention._causal_mask_cache) > 0
 
-    # Cleanup
-    attention.cleanup_buffers()
+    # Cleanup - clear pattern cache
+    attention.clear_pattern_cache()
 
     # Verify cache is cleared
     assert len(attention._causal_mask_cache) == 0
@@ -154,7 +154,7 @@ def test_memory_pool_with_large_sequences():
         pattern_type="local_window",
         sparsity_ratio=0.05,  # 95% sparse for memory efficiency
         block_size=256,
-        local_window_size=1024,
+        window_size=1024,
     )
 
     attention = BlockSparseRingDilatedAttention(

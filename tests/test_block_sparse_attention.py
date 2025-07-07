@@ -158,8 +158,8 @@ class TestBlockSparseRingDilatedAttention:
 
         # Attention weights are returned as a dict with block information
         assert isinstance(attention_weights, dict)
-        assert "block_indices" in attention_weights
-        assert "block_values" in attention_weights
+        assert "indices" in attention_weights
+        assert "shape" in attention_weights
         assert "block_size" in attention_weights
 
     def test_causal_masking(self):
@@ -467,7 +467,15 @@ class TestPerformanceComparison:
         if not torch.cuda.is_available():
             pytest.skip("CUDA not available for memory testing")
 
-        config = TEST_CONFIGS["large"]
+        # Check available memory before running test
+        torch.cuda.empty_cache()
+        available_memory = torch.cuda.get_device_properties(0).total_memory
+        if available_memory < 12 * 1024**3:  # Less than 12GB
+            # Use medium config for smaller GPUs
+            config = TEST_CONFIGS["medium"]
+        else:
+            config = TEST_CONFIGS["large"]
+
         device = torch.device("cuda")
 
         # Clear cache
