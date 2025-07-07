@@ -1,0 +1,182 @@
+{
+  "timestamp": "2025-07-07 10:56:30",
+  "device": "cuda",
+  "results": {
+    "Small": {
+      "PyTorch (Baseline)": {
+        "time_ms": 21.529975533485413,
+        "time_std_ms": 2.695634376283248,
+        "memory_mb": 544.0,
+        "output_shape": [
+          4,
+          2048,
+          8,
+          64
+        ]
+      },
+      "Block-Sparse (90%)": {
+        "time_ms": 70.57233266532421,
+        "time_std_ms": 36.937516263517836,
+        "memory_mb": 323.0,
+        "output_shape": [
+          4,
+          2048,
+          8,
+          64
+        ]
+      },
+      "Block-Sparse (95%)": {
+        "time_ms": 37.56739627569914,
+        "time_std_ms": 6.842253807131252,
+        "memory_mb": 323.0,
+        "output_shape": [
+          4,
+          2048,
+          8,
+          64
+        ]
+      },
+      "Block-Sparse (98%)": {
+        "time_ms": 28.33221424371004,
+        "time_std_ms": 4.442508984530898,
+        "memory_mb": 323.0,
+        "output_shape": [
+          4,
+          2048,
+          8,
+          64
+        ]
+      }
+    },
+    "Medium": {
+      "PyTorch (Baseline)": {
+        "time_ms": 233.85668601840734,
+        "time_std_ms": 180.44028273989295,
+        "memory_mb": 1056.0,
+        "output_shape": [
+          2,
+          4096,
+          8,
+          64
+        ]
+      },
+      "Block-Sparse (90%)": {
+        "time_ms": 40.324463695287704,
+        "time_std_ms": 2.638015359134096,
+        "memory_mb": 333.5,
+        "output_shape": [
+          2,
+          4096,
+          8,
+          64
+        ]
+      },
+      "Block-Sparse (95%)": {
+        "time_ms": 206.6116139292717,
+        "time_std_ms": 112.99239861896227,
+        "memory_mb": 333.5,
+        "output_shape": [
+          2,
+          4096,
+          8,
+          64
+        ]
+      },
+      "Block-Sparse (98%)": {
+        "time_ms": 35.319678857922554,
+        "time_std_ms": 1.5161412947093504,
+        "memory_mb": 333.5,
+        "output_shape": [
+          2,
+          4096,
+          8,
+          64
+        ]
+      }
+    },
+    "Large": {
+      "PyTorch (Baseline)": {
+        "time_ms": 577.0248144865036,
+        "time_std_ms": 417.21650035040653,
+        "memory_mb": 2056.0,
+        "output_shape": [
+          1,
+          8192,
+          8,
+          64
+        ]
+      },
+      "Block-Sparse (90%)": {
+        "time_ms": 60.44003739953041,
+        "time_std_ms": 3.8870851187443587,
+        "memory_mb": 344.0,
+        "output_shape": [
+          1,
+          8192,
+          8,
+          64
+        ]
+      },
+      "Block-Sparse (95%)": {
+        "time_ms": 139.12111781537533,
+        "time_std_ms": 127.36169614034068,
+        "memory_mb": 344.0,
+        "output_shape": [
+          1,
+          8192,
+          8,
+          64
+        ]
+      },
+      "Block-Sparse (98%)": {
+        "time_ms": 127.63005383312704,
+        "time_std_ms": 124.7053424392274,
+        "memory_mb": 344.0,
+        "output_shape": [
+          1,
+          8192,
+          8,
+          64
+        ]
+      }
+    },
+    "Extra Large": {
+      "PyTorch (Baseline)": {
+        "error": "Forward failed: CUDA out of memory. Tried to allocate 4.00 GiB. GPU 0 has a total capacity of 7.88 GiB of which 389.50 MiB is free. Process 3093175 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 4.22 GiB memory in use. Of the allocated memory 4.05 GiB is allocated by PyTorch, and 39.88 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)"
+      },
+      "Block-Sparse (90%)": {
+        "time_ms": 304.6201664954424,
+        "time_std_ms": 258.6404235554575,
+        "memory_mb": 688.0,
+        "output_shape": [
+          1,
+          16384,
+          8,
+          64
+        ]
+      },
+      "Block-Sparse (95%)": {
+        "time_ms": 302.6008464396,
+        "time_std_ms": 242.2859186692338,
+        "memory_mb": 688.0,
+        "output_shape": [
+          1,
+          16384,
+          8,
+          64
+        ]
+      },
+      "Block-Sparse (98%)": {
+        "time_ms": 585.4131292551756,
+        "time_std_ms": 440.6145587053729,
+        "memory_mb": 688.0,
+        "output_shape": [
+          1,
+          16384,
+          8,
+          64
+        ]
+      }
+    }
+  }
+}
