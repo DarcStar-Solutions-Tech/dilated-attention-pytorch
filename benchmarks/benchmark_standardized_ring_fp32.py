@@ -21,9 +21,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from src.dilated_attention_pytorch.ring_dilated_attention_production_fixed import (
     RingDilatedAttentionProductionFixed,
 )
-from src.dilated_attention_pytorch.ring_dilated_attention_hybrid_fixed import (
-    RingDilatedAttentionHybridFixed,
-)
 from src.dilated_attention_pytorch.ring_dilated_attention_hilbert_optimized_fixed import (
     RingDilatedAttentionHilbertOptimizedFixed,
 )
@@ -199,14 +196,7 @@ class StandardizedBenchmark:
         except Exception as e:
             print(f"✗ Failed to create RingDilatedAttentionProduction-Fixed: {e}")
 
-        # 2. Ring Dilated Attention Hybrid (Fixed)
-        try:
-            models["RingDilatedAttentionHybrid-Fixed"] = (
-                RingDilatedAttentionHybridFixed(config=base_config).to(self.device)
-            )
-            print("✓ Created RingDilatedAttentionHybrid-Fixed")
-        except Exception as e:
-            print(f"✗ Failed to create RingDilatedAttentionHybrid-Fixed: {e}")
+        # 2. [Removed - Hybrid implementation deprecated due to poor performance]
 
         # 3. Ring Dilated Attention Hilbert Optimized (Fixed)
         try:

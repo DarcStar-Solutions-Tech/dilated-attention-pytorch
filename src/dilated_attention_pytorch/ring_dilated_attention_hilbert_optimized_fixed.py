@@ -221,47 +221,67 @@ class RingDilatedAttentionHilbertOptimizedFixed(
                 # Get segment queries for assigned heads
                 q_seg = q_ordered[:, start_idx:end_idx, head_start:head_end]
 
-                # For dilated attention, we need to gather the dilated keys and values
+                # Apply local dilation within the segment
                 if dilation_rate > 1:
-                    # Calculate the range for dilated attention
-                    # We want actual_seg_len keys/values with dilation
-                    dilated_indices = []
-                    for i in range(actual_seg_len):
-                        idx = start_idx + i * dilation_rate
-                        if idx < seq_len:
-                            dilated_indices.append(idx)
+                    # Get dilated indices within this segment
+                    local_indices = torch.arange(
+                        0, actual_seg_len, dilation_rate, device=q.device
+                    )
 
-                    # Convert to tensor
-                    if dilated_indices:
-                        dilated_indices = torch.tensor(
-                            dilated_indices, device=q.device, dtype=torch.long
-                        )
+                    # Get segment k/v first, then apply dilation
+                    k_seg_full = k_ordered[:, start_idx:end_idx, head_start:head_end]
+                    v_seg_full = v_ordered[:, start_idx:end_idx, head_start:head_end]
 
-                        # Gather dilated keys and values for assigned heads
-                        k_seg = k_ordered[:, dilated_indices, head_start:head_end]
-                        v_seg = v_ordered[:, dilated_indices, head_start:head_end]
-                    else:
-                        # Fallback if no valid indices
-                        k_seg = k_ordered[:, start_idx:end_idx, head_start:head_end]
-                        v_seg = v_ordered[:, start_idx:end_idx, head_start:head_end]
+                    # Apply local dilation
+                    k_seg = k_seg_full[:, local_indices]
+                    v_seg = v_seg_full[:, local_indices]
                 else:
                     # No dilation, use segment directly
                     k_seg = k_ordered[:, start_idx:end_idx, head_start:head_end]
                     v_seg = v_ordered[:, start_idx:end_idx, head_start:head_end]
 
                 # Compute attention scores
-                scores = torch.matmul(q_seg, k_seg.transpose(-2, -1)) * self.scale
+                # Need to handle head subset dimension
+                # q_seg: [batch, actual_seg_len, num_heads_subset, head_dim]
+                # k_seg: [batch, dilated_len, num_heads_subset, head_dim]
+
+                # Transpose for attention computation
+                q_seg_t = q_seg.transpose(
+                    1, 2
+                )  # [batch, num_heads_subset, actual_seg_len, head_dim]
+                k_seg_t = k_seg.transpose(
+                    1, 2
+                )  # [batch, num_heads_subset, dilated_len, head_dim]
+
+                scores = torch.matmul(q_seg_t, k_seg_t.transpose(-2, -1)) * self.scale
 
                 # Apply causal mask if needed
                 if is_causal:
-                    mask = torch.ones(
-                        actual_seg_len,
-                        k_seg.shape[1],
-                        device=q.device,
-                        dtype=torch.bool,
-                    ).tril()
+                    q_len = actual_seg_len
+                    k_len = k_seg.shape[1]
+
+                    if dilation_rate > 1:
+                        # For dilated attention, we need a special causal mask
+                        mask = torch.zeros(
+                            q_len, k_len, device=q.device, dtype=torch.bool
+                        )
+                        local_indices_cpu = (
+                            local_indices.cpu().numpy() if dilation_rate > 1 else None
+                        )
+                        for i in range(q_len):
+                            for j, k_pos in enumerate(
+                                local_indices_cpu if dilation_rate > 1 else range(k_len)
+                            ):
+                                if k_pos > i:
+                                    mask[i, j] = True
+                    else:
+                        mask = torch.triu(
+                            torch.ones(q_len, k_len, device=q.device, dtype=torch.bool),
+                            diagonal=1,
+                        )
+
                     scores = scores.masked_fill(
-                        ~mask.unsqueeze(0).unsqueeze(0), float("-inf")
+                        mask.unsqueeze(0).unsqueeze(0), float("-inf")
                     )
 
                 # Apply softmax
@@ -275,7 +295,17 @@ class RingDilatedAttentionHilbertOptimizedFixed(
                     attn_weights = self.dropout(attn_weights)
 
                 # Apply attention to values
-                seg_output = torch.matmul(attn_weights, v_seg)
+                v_seg_t = v_seg.transpose(
+                    1, 2
+                )  # [batch, num_heads_subset, dilated_len, head_dim]
+                seg_output_t = torch.matmul(
+                    attn_weights, v_seg_t
+                )  # [batch, num_heads_subset, actual_seg_len, head_dim]
+
+                # Transpose back
+                seg_output = seg_output_t.transpose(
+                    1, 2
+                )  # [batch, actual_seg_len, num_heads_subset, head_dim]
 
                 # Add to output for assigned heads
                 output[:, start_idx:end_idx, head_start:head_end] = seg_output

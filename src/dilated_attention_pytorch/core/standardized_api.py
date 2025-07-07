@@ -120,10 +120,8 @@ def create_standardized_ring_attention(
     Args:
         attention_type: Type of attention to create:
             - 'production': RingDilatedAttentionProduction
-            - 'hybrid': RingDilatedAttentionHybrid
             - 'hilbert': RingDilatedAttentionHilbertOptimized
             - 'block_sparse': BlockSparseRingDilatedAttention
-            - 'multihead_hybrid': RingMultiheadDilatedAttentionHybrid
             - 'block_sparse_multihead': BlockSparseRingMultiheadDilatedAttention
         dim: Head dimension (required for most types)
         heads: Number of attention heads (required for most types)
@@ -163,13 +161,6 @@ def create_standardized_ring_attention(
 
         return RingDilatedAttentionProductionFixed(config)
 
-    elif attention_type == "hybrid":
-        from ..ring_dilated_attention_hybrid_fixed import (
-            RingDilatedAttentionHybridFixed,
-        )
-
-        return RingDilatedAttentionHybridFixed(config)
-
     elif attention_type == "hilbert":
         from ..ring_dilated_attention_hilbert_optimized_fixed import (
             RingDilatedAttentionHilbertOptimizedFixed,
@@ -183,13 +174,6 @@ def create_standardized_ring_attention(
         )
 
         return BlockSparseRingDilatedAttentionFixed(config)
-
-    elif attention_type == "multihead_hybrid":
-        from ..ring_multihead_dilated_attention_hybrid_fixed import (
-            RingMultiheadDilatedAttentionHybridFixed,
-        )
-
-        return RingMultiheadDilatedAttentionHybridFixed(config)
 
     elif attention_type == "block_sparse_multihead":
         from ..block_sparse_ring_multihead_dilated_attention_fixed import (

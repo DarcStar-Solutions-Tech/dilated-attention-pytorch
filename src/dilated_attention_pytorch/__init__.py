@@ -52,15 +52,8 @@ from .improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttent
 from .long_net import LongNet
 from .multihead_dilated_attention import MultiheadDilatedAttention
 
-# Hybrid Ring Attention - best of V2 and V3
-from .ring_dilated_attention_hybrid import (
-    RingDilatedAttentionHybrid,
-    RingDilatedAttentionTrue,  # Alias
-)
-from .ring_multihead_dilated_attention_hybrid import (
-    RingMultiheadDilatedAttentionHybrid,
-    create_ring_multihead_attention_hybrid,
-)
+# [Removed: Hybrid implementation deprecated due to poor performance]
+# [Removed: RingMultiheadDilatedAttentionHybrid deprecated]
 
 # Ring Attention implementations
 from .ring_dilated_attention_production import (
@@ -69,10 +62,7 @@ from .ring_dilated_attention_production import (
     create_production_ring_attention,
 )
 
-# Hilbert Ring Attention - combines Ring Attention with Hilbert ordering
-from .ring_dilated_attention_hilbert_optimized import (
-    RingDilatedAttentionHilbertOptimized,
-)
+# [Removed: Hilbert implementation - use standardized API instead]
 
 from .transformer import DilatedTransformerDecoderLayer, DilatedTransformerEncoderLayer
 from .utils.sparse_pattern_utils import (
@@ -84,7 +74,7 @@ from .utils.sparse_pattern_utils import (
 )
 
 # Alias for backward compatibility
-RingDilatedAttention = RingDilatedAttentionHybrid
+RingDilatedAttention = RingDilatedAttentionProduction
 
 
 # Note: Optimizations have been integrated into the main block-sparse implementations
@@ -110,13 +100,8 @@ __all__ = [
     "RingDilatedAttentionProduction",
     "RingAttentionConfig",
     "create_production_ring_attention",
-    # Hilbert Ring Attention - combines cache efficiency with ring attention
-    "RingDilatedAttentionHilbertOptimized",  # Non-deprecated Hilbert implementation
-    # Hybrid Ring Attention - true O(n/p) scaling with all features
-    "RingDilatedAttentionHybrid",
-    "RingDilatedAttentionTrue",  # Alias for Hybrid
-    "RingMultiheadDilatedAttentionHybrid",
-    "create_ring_multihead_attention_hybrid",
+    # [Removed: Use standardized API with 'hilbert' type instead]
+    # [Removed: Hybrid implementations deprecated due to poor performance]
     # Original implementations
     "DilatedAttention",
     "DilatedTransformerDecoderLayer",
