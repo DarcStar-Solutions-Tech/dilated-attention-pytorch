@@ -194,7 +194,7 @@ Available implementations (20+ variants):
 - `"ring"` - O(n) memory complexity for extreme sequence lengths
 - `"block_sparse"` - Block-sparse attention (5-50x speedup)
 - `"distributed"` - Multi-GPU distributed attention
-- Plus many specialized variants (Hilbert, adaptive, hierarchical, etc.)
+- Plus many specialized variants (adaptive, multihead, etc.)
 
 See [Implementation Overview](docs/guides/implementation-overview.md) for all 20+ implementations.
 

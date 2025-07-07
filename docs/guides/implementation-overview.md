@@ -171,19 +171,22 @@ attn = BlockSparseRingDilatedAttention(
 
 ### 6. Special Variants
 
-#### RingDilatedAttentionHilbertOptimized
-- **File**: `dilated_attention_pytorch/ring_dilated_attention_hilbert_optimized.py`
-- **Use Case**: Better cache locality for long sequences
-- **Features**: Hilbert curve ordering
-- **Memory**: O(n/p) with improved cache usage
+#### BlockSparseRingDilatedAttentionHilbertPostPattern
+- **File**: `dilated_attention_pytorch/block_sparse_ring_dilated_attention_hilbert_post_pattern.py`
+- **Use Case**: Optimized processing order for better cache locality
+- **Features**: Post-pattern Hilbert optimization (up to 2.53x speedup)
+- **Memory**: Standard block-sparse with optimized access patterns
 
 ```python
-from dilated_attention_pytorch import RingDilatedAttentionHilbertOptimized
+from dilated_attention_pytorch.block_sparse_ring_dilated_attention_hilbert_post_pattern import (
+    create_post_pattern_hilbert_attention
+)
 
-# Better performance for very long sequences
-attn = RingDilatedAttentionHilbertOptimized(
-    segment_lengths=[8192, 16384, 32768],
-    dilation_rates=[1, 2, 4]
+# Optimized for sequences ≥ 4K tokens
+attn = create_post_pattern_hilbert_attention(
+    segment_lengths=[2048, 4096],
+    dilation_rates=[1, 2],
+    sparsity_ratio=0.1
 )
 ```
 

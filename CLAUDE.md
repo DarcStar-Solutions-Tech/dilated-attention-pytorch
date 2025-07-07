@@ -180,7 +180,7 @@ The project includes advanced Ring Attention implementations that provide O(n) m
 - **RingDilatedAttention**: Alias for RingDilatedAttentionProduction (recommended for general use)
 - **RingDilatedAttentionProduction** (`dilated_attention_pytorch/ring_dilated_attention_production.py`): Production-ready implementation with advanced error recovery and monitoring
 - **RingDistributedDilatedAttention** (`dilated_attention_pytorch/ring_distributed_dilated_attention.py`): Enterprise-grade distributed implementation with DeepSpeed integration
-- **RingDilatedAttentionHilbertOptimized** (`dilated_attention_pytorch/ring_dilated_attention_hilbert_optimized.py`): Ring attention with Hilbert curve reordering for improved cache locality
+- **RingDilatedAttentionHilbertOptimizedFixed** (`dilated_attention_pytorch/ring_dilated_attention_hilbert_optimized_fixed.py`): Fixed ring attention with standardized API
 
 ## Block-Sparse Attention Implementation
 
@@ -486,7 +486,8 @@ src/
     ├── ring_multihead_dilated_attention_hybrid.py # Multihead ring hybrid
     ├── ring_dilated_attention_production.py # Production-ready ring attention with monitoring
     ├── ring_distributed_dilated_attention.py # Enterprise ring attention
-    ├── ring_dilated_attention_hilbert_optimized.py # Ring attention with Hilbert curve ordering
+    ├── ring_dilated_attention_hilbert_optimized_fixed.py # Fixed ring attention with standardized API
+    ├── block_sparse_ring_dilated_attention_hilbert_post_pattern.py # Post-pattern Hilbert optimization
     ├── head_parallel_dilated_attention_optimized.py # Head-parallel processing
     ├── block_sparse_ring_dilated_attention.py # Block-sparse ring attention
     ├── block_sparse_ring_multihead_dilated_attention.py # Block-sparse multihead

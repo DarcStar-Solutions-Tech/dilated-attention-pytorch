@@ -25,14 +25,9 @@ from .block_sparse_ring_distributed_dilated_attention import (
     BlockSparseRingDistributedDilatedAttention,
 )
 from .distributed_sparse_config import DistributedSparseConfig
-from .block_sparse_ring_dilated_attention_hilbert import (
-    BlockSparseRingDilatedAttentionHilbert,
-)
 
 
-BlockSparseVariant = Literal[
-    "auto", "base", "hilbert", "adaptive", "multihead", "distributed"
-]
+BlockSparseVariant = Literal["auto", "base", "adaptive", "multihead", "distributed"]
 
 
 def create_block_sparse_attention(
@@ -53,7 +48,6 @@ def create_block_sparse_attention(
     **kwargs,
 ) -> Union[
     BlockSparseRingDilatedAttention,
-    BlockSparseRingDilatedAttentionHilbert,
     BlockSparseAdaptive,
     BlockSparseRingMultiheadDilatedAttention,
     BlockSparseRingDistributedDilatedAttention,
@@ -135,12 +129,13 @@ def create_block_sparse_attention(
         )
 
     elif variant == "hilbert":
-        return BlockSparseRingDilatedAttentionHilbert(
-            segment_lengths=segment_lengths,
-            dilation_rates=dilation_rates,
-            sparse_config=sparse_config,
-            use_hilbert=True,
-            **kwargs,
+        # Deprecated - raise error with helpful message
+        raise ValueError(
+            "Hilbert variant has been removed due to poor performance on GPUs. "
+            "GPUs prefer simple sequential access patterns over space-filling curves. "
+            "Use 'base' variant for best performance, or see "
+            "block_sparse_ring_dilated_attention_hilbert_post_pattern.py "
+            "for the only successful Hilbert optimization approach."
         )
 
     elif variant == "hierarchical":
