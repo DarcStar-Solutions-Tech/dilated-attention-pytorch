@@ -181,8 +181,15 @@ def create_block_sparse_attention(
         if distributed_config is None:
             distributed_config = DistributedSparseConfig()
 
-        # Note: distributed version has different API
+        # Distributed requires embed_dim and num_heads
+        if embed_dim is None:
+            embed_dim = kwargs.pop("embed_dim", 768)  # Default
+        if num_heads is None:
+            num_heads = kwargs.pop("num_heads", 12)  # Default
+
         return BlockSparseRingDistributedDilatedAttention(
+            embed_dim=embed_dim,
+            num_heads=num_heads,
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
             distributed_config=distributed_config,

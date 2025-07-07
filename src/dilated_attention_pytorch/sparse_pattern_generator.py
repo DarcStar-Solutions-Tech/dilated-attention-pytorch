@@ -141,7 +141,7 @@ class HierarchicalSparsePatternGenerator:
 
                 # Apply local sparsity
                 window_size = end - start
-                keep_indices = torch.randperm(window_size)[
+                keep_indices = torch.randperm(window_size, device=device)[
                     : int(window_size * self.config.local_sparsity)
                 ]
                 pattern[h, i, start : start + len(keep_indices)] = True
@@ -178,7 +178,7 @@ class HierarchicalSparsePatternGenerator:
         for h in range(num_heads):
             # Global tokens attend to everything with sparsity
             for i in range(global_blocks):
-                keep_indices = torch.randperm(num_blocks)[
+                keep_indices = torch.randperm(num_blocks, device=device)[
                     : int(num_blocks * self.config.global_sparsity)
                 ]
                 pattern[h, i, keep_indices] = True
@@ -231,7 +231,7 @@ class HierarchicalSparsePatternGenerator:
 
         for h in range(num_heads):
             # Random sparse connections for inter-node communication
-            flat_indices = torch.randperm(num_blocks * num_blocks)[
+            flat_indices = torch.randperm(num_blocks * num_blocks, device=device)[
                 :num_inter_connections
             ]
             row_indices = flat_indices // num_blocks
@@ -304,7 +304,9 @@ class HierarchicalSparsePatternGenerator:
             num_remove = int((current_density - target_density) * pattern.numel())
             active_indices = torch.nonzero(pattern, as_tuple=False)
             if len(active_indices) > num_remove:
-                remove_indices = torch.randperm(len(active_indices))[:num_remove]
+                remove_indices = torch.randperm(
+                    len(active_indices), device=pattern.device
+                )[:num_remove]
                 for idx in remove_indices:
                     pattern[tuple(active_indices[idx])] = False
 
@@ -313,7 +315,9 @@ class HierarchicalSparsePatternGenerator:
             num_add = int((target_density - current_density) * pattern.numel())
             inactive_indices = torch.nonzero(~pattern, as_tuple=False)
             if len(inactive_indices) > num_add:
-                add_indices = torch.randperm(len(inactive_indices))[:num_add]
+                add_indices = torch.randperm(
+                    len(inactive_indices), device=pattern.device
+                )[:num_add]
                 for idx in add_indices:
                     pattern[tuple(inactive_indices[idx])] = True
 

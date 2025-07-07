@@ -107,6 +107,8 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
 
     def __init__(
         self,
+        embed_dim: int,
+        num_heads: int,
         segment_lengths: Sequence[int],
         dilation_rates: Sequence[int],
         distributed_config: DistributedSparseConfig | None = None,
@@ -129,10 +131,15 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
             monitoring_interval: Interval for performance monitoring
             **kwargs: Additional arguments for base class
         """
-        super().__init__(segment_lengths, dilation_rates, **kwargs)
-
-        # Distributed configuration
+        # Initialize distributed config first before calling super()
         self.distributed_config = distributed_config or DistributedSparseConfig()
+
+        # Call parent initialization
+        super().__init__(
+            embed_dim, num_heads, segment_lengths, dilation_rates, **kwargs
+        )
+
+        # Set additional configuration
         self.enable_deepspeed_integration = (
             enable_deepspeed_integration and HAS_DEEPSPEED
         )
@@ -1124,7 +1131,6 @@ class BlockSparseRingDistributedDilatedAttention(RingDistributedDilatedAttention
         # Clear gradient compression buffers
         if hasattr(self, "gradient_compressor") and self.gradient_compressor:
             self.gradient_compressor.error_feedback.clear()
-            self.gradient_compressor.momentum_buffers.clear()
 
         # Force garbage collection for large tensors
         import gc

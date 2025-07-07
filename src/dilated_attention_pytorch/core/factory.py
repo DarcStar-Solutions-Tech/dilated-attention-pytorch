@@ -643,17 +643,13 @@ def _register_implementations():
         register_attention("ring", RingDilatedAttentionProductionWrapper)
         logger.debug("Registered ring dilated attention production implementation")
 
-        # Register the hybrid multihead implementation
-        from ..ring_multihead_dilated_attention_hybrid import (
-            RingMultiheadDilatedAttentionHybrid,
+        # Register the ring multihead implementation
+        from ..ring_multihead_dilated_attention import (
+            RingMultiheadDilatedAttention,
         )
 
-        register_multihead_attention(
-            "multihead_ring", RingMultiheadDilatedAttentionHybrid
-        )
-        logger.debug(
-            "Registered ring multihead dilated attention hybrid implementation"
-        )
+        register_multihead_attention("multihead_ring", RingMultiheadDilatedAttention)
+        logger.debug("Registered ring multihead dilated attention implementation")
 
     except ImportError as e:
         logger.error(f"Failed to register ring V2 implementations: {e}")

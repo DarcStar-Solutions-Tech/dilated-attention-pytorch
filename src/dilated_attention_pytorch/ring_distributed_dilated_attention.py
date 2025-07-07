@@ -427,8 +427,9 @@ class RingDistributedDilatedAttention(nn.Module):
         # Use factory to create Ring Multihead Dilated Attention as core
         from .core.factory import create_multihead_dilated_attention
 
+        # Use improved implementation as the core
         self.attention_core = create_multihead_dilated_attention(
-            attention_type="ring",
+            attention_type="improved",  # Changed from "ring" which doesn't exist
             embed_dim=embed_dim,
             num_heads=num_heads,
             segment_lengths=segment_lengths,
@@ -443,7 +444,11 @@ class RingDistributedDilatedAttention(nn.Module):
         )
 
         # Store ring size for reference
-        self.ring_size = self.attention_core.ring_attention.ring_size
+        self.ring_size = (
+            ring_size
+            if ring_size is not None
+            else (dist.get_world_size() if dist.is_initialized() else 1)
+        )
 
     def _setup_deepspeed_integration(self):
         """Setup DeepSpeed integration for memory optimization."""
