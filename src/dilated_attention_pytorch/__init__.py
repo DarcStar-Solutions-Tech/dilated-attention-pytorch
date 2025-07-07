@@ -36,15 +36,22 @@ from .block_sparse_adaptive import (
     AdaptiveConfig,
     ImportanceScorer,
     AdaptiveSparsityTrainer,
-    create_adaptive_block_sparse,
 )
 
 # Factory functions for easy creation
 from .core import (
     create_adaptive_sparse_attention,
-    create_block_sparse_attention,
     create_dilated_attention,
     create_multihead_dilated_attention,
+)
+
+# Block-sparse factory
+from .block_sparse_factory import (
+    create_block_sparse_attention,
+    get_block_sparse_preset,
+    create_hierarchical_block_sparse,
+    create_adaptive_block_sparse,
+    create_multihead_block_sparse,
 )
 from .dilated_attention import DilatedAttention
 from .improved_dilated_attention import ImprovedDilatedAttention
@@ -120,7 +127,12 @@ __all__ = [
     "SparsePatternConfig",
     "SparsePatternGenerator",
     "create_adaptive_sparse_attention",
+    # Block-sparse factory functions
     "create_block_sparse_attention",
+    "get_block_sparse_preset",
+    "create_hierarchical_block_sparse",
+    "create_adaptive_block_sparse",
+    "create_multihead_block_sparse",
     # Factory functions (v0.2.0+)
     "create_dilated_attention",
     "create_multihead_dilated_attention",

@@ -162,8 +162,12 @@ class BlockSparseHierarchical(BlockSparseRingDilatedAttention):
         # Use parent's pattern cache
         return self.pattern_cache.get(cache_key, device, generator)
 
-    def get_pattern_stats(self, seq_len: int) -> Dict[str, any]:
+    def get_pattern_stats(self, seq_len: Optional[int] = None) -> Dict[str, any]:
         """Get statistics about the hierarchical pattern."""
+        # Default sequence length if not provided
+        if seq_len is None:
+            seq_len = 8192  # Common default
+
         device = torch.device("cpu")
         row_indices, col_indices = self._generate_hierarchical_pattern(
             seq_len, 1, device

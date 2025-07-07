@@ -80,12 +80,14 @@ class BlockSparseRingMultiheadDilatedAttention(nn.Module):
         # Dropout
         self.dropout_layer = nn.Dropout(dropout) if dropout > 0.0 else nn.Identity()
 
-        # Sparse attention
+        # Sparse attention - ensure it gets device/dtype info
+        sparse_kwargs = kwargs.copy()
+        sparse_kwargs.update(factory_kwargs)
         self.sparse_attention = BlockSparseRingDilatedAttention(
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
             sparse_config=sparse_config,
-            **kwargs,
+            **sparse_kwargs,
         )
 
         # For compatibility with some implementations
@@ -184,3 +186,12 @@ class BlockSparseRingMultiheadDilatedAttention(nn.Module):
         if need_weights or self._always_return_tuple:
             return output, attn_weights
         return output
+
+    def to(self, *args, **kwargs):
+        """Override to ensure sparse_attention moves with the module."""
+        # Move all submodules
+        super().to(*args, **kwargs)
+        # Explicitly move sparse_attention if it has a to method
+        if hasattr(self.sparse_attention, "to"):
+            self.sparse_attention = self.sparse_attention.to(*args, **kwargs)
+        return self

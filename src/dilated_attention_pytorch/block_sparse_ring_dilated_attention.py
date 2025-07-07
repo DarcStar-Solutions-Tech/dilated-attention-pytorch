@@ -44,7 +44,13 @@ class SparsePatternConfig:
             raise ValueError("sparsity_ratio must be between 0 and 1")
         if self.block_size <= 0:
             raise ValueError("block_size must be positive")
-        if self.pattern_type not in ["local_window", "dilated_sparse", "global_local"]:
+        if self.pattern_type not in [
+            "local_window",
+            "dilated_sparse",
+            "global_local",
+            "hierarchical",
+            "adaptive",
+        ]:
             raise ValueError(f"Unknown pattern_type: {self.pattern_type}")
 
 
