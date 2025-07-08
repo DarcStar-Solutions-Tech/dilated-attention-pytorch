@@ -16,10 +16,8 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 
-from .ring_dilated_attention_production import (
-    RingAttentionConfig,
-    RingDilatedAttentionProduction,
-)
+from .core.config import RingAttentionConfig
+# RingDilatedAttentionProduction removed - was not actually ring attention
 
 # from .sparse_pattern_generator import SparsePatternGenerator  # Not used in this implementation
 from .core.constants import HAS_FLASH_ATTN_3, GPU_TYPE
@@ -138,7 +136,7 @@ class PersistentPatternCache:
             }
 
 
-class BlockSparseRingDilatedAttention(RingDilatedAttentionProduction):
+class BlockSparseRingDilatedAttention(torch.nn.Module):
     """
     Enhanced Block-Sparse Ring Dilated Attention with merged optimizations.
 
@@ -184,8 +182,17 @@ class BlockSparseRingDilatedAttention(RingDilatedAttentionProduction):
             mixed_precision=mixed_precision,
         )
 
-        # Initialize parent with config
-        super().__init__(ring_config)
+        # Initialize parent Module
+        super().__init__()
+
+        # Store configuration
+        self.config = ring_config
+        self.segment_lengths = segment_lengths
+        self.dilation_rates = dilation_rates
+        self.dropout = torch.nn.Dropout(dropout) if dropout > 0 else None
+
+        # Memory pool (from removed parent class)
+        self._memory_pool = None
 
         # Extract sparsity_ratio if provided directly (for compatibility)
         sparsity_ratio = kwargs.pop("sparsity_ratio", None)

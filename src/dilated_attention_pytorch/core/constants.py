@@ -32,6 +32,9 @@ except ImportError:
     HAS_FLASH_ATTN_3 = False
     FLASH_ATTN_VERSION = None
 
+# Alias for backward compatibility
+HAS_FLASH = HAS_FLASH_ATTN
+
 # xFormers detection
 try:
     import xformers
