@@ -60,7 +60,10 @@ from .multihead_dilated_attention import MultiheadDilatedAttention
 # [Removed: RingDilatedAttentionProduction - not actually ring attention]
 # See docs/reports/ring-production-not-ring-attention-2025-07-08-0327-UTC.md
 
-# [Removed: Hilbert implementation - use standardized API instead]
+# GPU-optimized Ring Hilbert Attention (new implementation with proper ring communication)
+from .ring_dilated_attention_hilbert_gpu_optimized import (
+    RingDilatedAttentionHilbertGPUOptimized,
+)
 
 from .transformer import DilatedTransformerDecoderLayer, DilatedTransformerEncoderLayer
 from .utils.sparse_pattern_utils import (
@@ -95,6 +98,8 @@ __all__ = [
     # [Removed: RingDilatedAttentionProduction - not actually ring attention]
     # [Removed: Use standardized API with 'hilbert' type instead]
     # [Removed: Hybrid implementations deprecated due to poor performance]
+    # GPU-optimized Ring Hilbert Attention
+    "RingDilatedAttentionHilbertGPUOptimized",
     # Original implementations
     "DilatedAttention",
     "DilatedTransformerDecoderLayer",

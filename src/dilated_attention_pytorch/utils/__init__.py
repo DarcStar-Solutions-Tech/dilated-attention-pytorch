@@ -37,6 +37,11 @@ from .gpu_utils import (
     is_pascal_or_older,
     get_optimal_dtype,
     warn_suboptimal_dtype,
+    GPUInfo,
+    GPUDetector,
+    get_gpu_info,
+    select_attention_backend as select_gpu_attention_backend,
+    benchmark_attention_backends,
 )
 
 # Flash Attention utilities
@@ -86,6 +91,11 @@ __all__ = [
     "is_pascal_or_older",
     "get_optimal_dtype",
     "warn_suboptimal_dtype",
+    "GPUInfo",
+    "GPUDetector",
+    "get_gpu_info",
+    "select_gpu_attention_backend",
+    "benchmark_attention_backends",
 ]
 
 # Add Flash Attention utilities if available
