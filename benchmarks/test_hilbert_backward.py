@@ -111,21 +111,22 @@ def main():
         print(f"\nOriginal implementation error: {e}")
         fwd_orig, bwd_orig = 0, 0
 
-    # Test optimized implementation
+    # Test unified implementation with custom backward
     try:
-        from dilated_attention_pytorch.kernels.hilbert_attention_triton_simple import (
-            HilbertAttentionTritonSimple,
+        from dilated_attention_pytorch.kernels.hilbert_attention_core import (
+            HilbertAttentionCore,
         )
 
-        model_optimized = HilbertAttentionTritonSimple(
+        model_optimized = HilbertAttentionCore(
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             segment_size=128,
             dilation_rate=1,
+            use_custom_backward=True,
         ).to(device)
 
         fwd_opt, bwd_opt, ratio_opt = benchmark_model(
-            model_optimized, x, "Optimized", num_iterations=10
+            model_optimized, x, "Unified (Custom Backward)", num_iterations=10
         )
         print("\nOptimized Implementation:")
         print(f"  Forward:  {fwd_opt:8.2f} ms")

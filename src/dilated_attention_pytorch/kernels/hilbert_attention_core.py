@@ -631,8 +631,3 @@ class HilbertAttentionCore(nn.Module):
         out = self.dropout(out)
 
         return out
-
-
-# Backward compatibility aliases
-HilbertAttentionTritonFixed = HilbertAttentionCore
-HilbertAttentionTritonOptimized = HilbertAttentionCore

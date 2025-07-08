@@ -448,43 +448,21 @@ class ExistingImplementationsBenchmark:
         # 7. Kernel implementations
         implementations["kernels"] = []
 
-        # HilbertDilatedAttention
-        try:
-            from dilated_attention_pytorch.kernels.hilbert_dilated_attention import (
-                HilbertDilatedAttention,
-            )
+        # HilbertDilatedAttention - Removed (deprecated CUDA implementation)
 
-            implementations["kernels"].append(
-                {
-                    "name": "HilbertDilatedAttention",
-                    "class": HilbertDilatedAttention,
-                    "init": lambda: HilbertDilatedAttention(
-                        num_heads=12,
-                        segment_lengths=[512, 1024, 2048],
-                        dilation_rates=[1, 2, 4],
-                    ),
-                    "input_format": "4d",
-                    "skip": True,
-                    "reason": "CUDA compilation errors",
-                }
-            )
-        except Exception as e:
-            print(f"Failed to load HilbertDilatedAttention: {e}")
-
-        # HilbertAttentionTritonFixed
+        # HilbertAttentionTritonFixed (Wrapper)
         try:
-            from dilated_attention_pytorch.kernels.hilbert_dilated_attention_triton_fixed import (
-                HilbertAttentionTritonFixed,
-            )
+            from dilated_attention_pytorch.kernels import HilbertAttentionTritonFixed
 
             implementations["kernels"].append(
                 {
                     "name": "HilbertAttentionTritonFixed",
                     "class": HilbertAttentionTritonFixed,
                     "init": lambda: HilbertAttentionTritonFixed(
-                        num_heads=12,
                         segment_lengths=[512, 1024, 2048],
                         dilation_rates=[1, 2, 4],
+                        num_heads=12,
+                        head_dim=64,
                     ),
                     "input_format": "4d",
                 }

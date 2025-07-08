@@ -118,15 +118,16 @@ def main():
 
     # Test our optimized simple implementation
     try:
-        from dilated_attention_pytorch.kernels.hilbert_attention_triton_simple import (
-            HilbertAttentionTritonSimple,
+        from dilated_attention_pytorch.kernels.hilbert_attention_core import (
+            HilbertAttentionCore,
         )
 
-        model_simple = HilbertAttentionTritonSimple(
+        model_simple = HilbertAttentionCore(
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             segment_size=128,
             dilation_rate=1,
+            use_custom_backward=True,
         ).to(device)
 
         fwd_simple, bwd_simple, ratio_simple = benchmark_model(
