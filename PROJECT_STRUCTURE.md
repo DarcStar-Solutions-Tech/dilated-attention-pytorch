@@ -76,9 +76,8 @@ dilated-attention-pytorch/
 │       ├── block_sparse_*.py             # Other block-sparse variants
 │       │
 │       ├── # Distributed & Special Variants
-│       ├── distributed_dilated_attention.py # PyTorch Lightning
+│       ├── distributed_dilated_attention.py        # PyTorch Lightning distributed implementation
 │       ├── head_parallel_dilated_attention_optimized.py # Head-parallel
-│       ├── improved_distributed_dilated_attention.py # (Deprecated)
 │       │
 │       ├── # Support Classes
 │       ├── distributed_memory_optimization.py # Memory optimization
