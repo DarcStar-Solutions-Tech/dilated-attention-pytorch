@@ -167,9 +167,10 @@ class BlockSparseRingDilatedAttention(torch.nn.Module):
         # Extract parameters for RingAttentionConfig
         dropout = kwargs.get("dropout", 0.0)
         ring_size = kwargs.get("ring_size", None)
-        use_gradient_checkpointing = kwargs.get("use_gradient_checkpointing", True)
+        use_checkpointing = kwargs.get(
+            "use_gradient_checkpointing", True
+        )  # Map old name
         use_memory_pool = kwargs.get("enable_memory_pool", True)
-        mixed_precision = kwargs.get("mixed_precision", True)
 
         # Create RingAttentionConfig
         ring_config = RingAttentionConfig(
@@ -177,9 +178,8 @@ class BlockSparseRingDilatedAttention(torch.nn.Module):
             dilation_rates=dilation_rates,
             dropout=dropout,
             ring_size=ring_size,
-            use_gradient_checkpointing=use_gradient_checkpointing,
+            use_checkpointing=use_checkpointing,
             use_memory_pool=use_memory_pool,
-            mixed_precision=mixed_precision,
         )
 
         # Initialize parent Module
