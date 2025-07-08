@@ -31,6 +31,14 @@ from .timing import (
     time_cuda_operation,
     time_with_events,
 )
+from .safety import (
+    SafetyConfig,
+    MemorySafetyChecker,
+    ProgressiveTester,
+    SafeBenchmarkRunner,
+    check_memory_before_allocation,
+    run_with_memory_limit,
+)
 
 __all__ = [
     # Data utilities
@@ -60,4 +68,11 @@ __all__ = [
     "Timer",
     "time_cuda_operation",
     "time_with_events",
+    # Safety utilities
+    "SafetyConfig",
+    "MemorySafetyChecker",
+    "ProgressiveTester",
+    "SafeBenchmarkRunner",
+    "check_memory_before_allocation",
+    "run_with_memory_limit",
 ]
