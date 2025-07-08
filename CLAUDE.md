@@ -500,8 +500,6 @@ src/
     ├── improved_dilated_attention.py   # Enhanced version
     ├── improved_multihead_dilated_attention.py # Enhanced multihead version
     ├── distributed_dilated_attention.py # Multi-GPU support (PyTorch Lightning)
-    ├── ring_dilated_attention_production.py # Production-ready ring attention
-    ├── ring_dilated_attention_production_fixed.py # Fixed API wrapper for production
     ├── ring_distributed_dilated_attention.py # Enterprise ring attention
     ├── ring_dilated_attention_hilbert_optimized_fixed.py # Hilbert optimized ring attention
     ├── block_sparse_ring_dilated_attention.py # Block-sparse ring attention

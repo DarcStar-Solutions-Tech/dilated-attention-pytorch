@@ -131,20 +131,8 @@ class DilatedAttentionBenchmark:
             print(f"Failed to import DistributedImprovedDilatedAttention: {e}")
 
         # 3. Ring attention implementations
-        try:
-            from dilated_attention_pytorch import RingDilatedAttentionProduction
-
-            implementations["RingDilatedAttentionProduction"] = {
-                "class": RingDilatedAttentionProduction,
-                "type": "ring",
-                "params": {
-                    "segment_lengths": [512, 1024, 2048],
-                    "dilation_rates": [1, 2, 4],
-                    "ring_size": 1,
-                },
-            }
-        except Exception as e:
-            print(f"Failed to import RingDilatedAttentionProduction: {e}")
+        # RingDilatedAttentionProduction removed - was not actually ring attention
+        # See docs/reports/ring-production-not-ring-attention-2025-07-08-0327-UTC.md
 
         # 4. Block-sparse implementations
         try:

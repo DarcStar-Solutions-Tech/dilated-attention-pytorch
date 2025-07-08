@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **RingDilatedAttentionProduction**: Not actually ring attention (July 2025)
+  - Despite its name, it computed full O(n²) attention matrices
+  - Failed at 16K sequence length when true ring attention handles 1M+
+  - See `docs/reports/ring-production-not-ring-attention-2025-07-08-0327-UTC.md`
+  - Use `RingDistributedDilatedAttention` for true distributed ring attention
+
 ### Added
 - **Block-Sparse Consolidation**: Merged redundant implementations
   - Enhanced `BlockSparseRingDilatedAttention` with optimizations from `block_sparse_optimized.py`

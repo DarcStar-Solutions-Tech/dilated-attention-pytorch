@@ -62,9 +62,7 @@ try:
 except ImportError:
     HAS_WANDB = False
 
-from .ring_dilated_attention_production import (
-    RingDilatedAttentionProduction as RingDilatedAttentionV2,
-)
+# RingDilatedAttentionProduction removed - was not actually ring attention
 
 
 class RingDistributedDilatedAttention(nn.Module):
@@ -389,17 +387,10 @@ class RingDistributedDilatedAttention(nn.Module):
         else:
             self.norm = None
 
-        # Ring attention (handles its own parallelism)
-        self.ring_attention = RingDilatedAttentionV2(
-            segment_lengths=segment_lengths,
-            dilation_rates=dilation_rates,
-            dropout=dropout,
-            use_tf32=use_tf32,
-            block_size=block_size,
-            ring_size=ring_size,
-            use_checkpointing=use_checkpointing,
-            device=device,
-        )
+        # Ring attention component removed - RingDilatedAttentionProduction was not actually ring attention
+        # TODO: This class needs to be reimplemented with true ring attention
+        # For now, this will use standard attention which limits sequence length
+        self.ring_attention = None  # Placeholder - needs reimplementation
 
     def _init_standard_components(
         self,
@@ -914,6 +905,12 @@ class RingDistributedDilatedAttention(nn.Module):
                 buffers["v"].copy_(v_view)
 
         # Apply ring attention
+        if self.ring_attention is None:
+            raise NotImplementedError(
+                "RingDistributedDilatedAttention needs reimplementation. "
+                "The previous RingDilatedAttentionProduction was not actually ring attention. "
+                "See docs/reports/ring-production-not-ring-attention-2025-07-08-0327-UTC.md"
+            )
         attn_output = self.ring_attention(
             buffers["q"], buffers["k"], buffers["v"], is_causal
         )
@@ -1096,8 +1093,10 @@ class RingDistributedDilatedAttention(nn.Module):
             self.attention_core.clear_cache()
 
         # Clear ring attention cache if available
-        if hasattr(self, "ring_attention") and hasattr(
-            self.ring_attention, "clear_cache"
+        if (
+            hasattr(self, "ring_attention")
+            and self.ring_attention is not None
+            and hasattr(self.ring_attention, "clear_cache")
         ):
             self.ring_attention.clear_cache()
 
@@ -1206,8 +1205,9 @@ class RingDistributedDilatedAttention(nn.Module):
                                 buf.data = torch.empty(0, device=buf.device)
 
             # Clear any pending communications
-            if hasattr(self, "ring_attention"):
-                self.ring_attention._cleanup_ring_communication()
+            if hasattr(self, "ring_attention") and self.ring_attention is not None:
+                if hasattr(self.ring_attention, "_cleanup_ring_communication"):
+                    self.ring_attention._cleanup_ring_communication()
 
             # Quick memory recovery
             if torch.cuda.is_available():

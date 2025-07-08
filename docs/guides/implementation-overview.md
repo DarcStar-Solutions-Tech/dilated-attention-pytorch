@@ -86,11 +86,10 @@ attn = RingDilatedAttention(
 )
 ```
 
-#### RingDilatedAttentionProduction
-- **File**: `dilated_attention_pytorch/ring_dilated_attention_production.py`
-- **Use Case**: Production environments needing monitoring
-- **Features**: Error recovery, logging, gradient checkpointing
-- **Memory**: O(n/p) with adaptive cleanup
+#### [REMOVED] RingDilatedAttentionProduction
+- **Removed**: July 2025 - Was not actually implementing ring attention
+- **Issue**: Used O(n²) memory instead of O(n), defeating the purpose
+- **Details**: See `docs/reports/ring-production-not-ring-attention-2025-07-08-0327-UTC.md`
 
 #### RingMultiheadDilatedAttentionHybrid
 - **File**: `dilated_attention_pytorch/ring_multihead_dilated_attention_hybrid.py`
