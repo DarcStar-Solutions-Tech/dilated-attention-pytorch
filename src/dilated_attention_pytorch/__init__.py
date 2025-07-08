@@ -88,10 +88,10 @@ __all__ = [
     "BlockSparseRingMultiheadDilatedAttention",
     # "BlockSparseOptimized",  # Merged into BlockSparseRingDilatedAttention
     # "BlockSparseTorchSparse",  # Removed - provided no benefit over base implementation
-    "BlockSparseHierarchical",
-    "HierarchicalConfig",
-    "create_hierarchical_attention",
-    "get_hierarchical_presets",
+    # "BlockSparseHierarchical",  # Removed - poor memory efficiency
+    # "HierarchicalConfig",  # Removed with hierarchical implementation
+    # "create_hierarchical_attention",  # Removed with hierarchical implementation
+    # "get_hierarchical_presets",  # Removed with hierarchical implementation
     "BlockSparseAdaptive",
     "AdaptiveConfig",
     "ImportanceScorer",
