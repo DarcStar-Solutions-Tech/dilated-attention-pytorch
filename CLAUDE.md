@@ -8,6 +8,8 @@ This is an unofficial PyTorch implementation of DilatedAttention from the LongNe
 
 ## Core Architecture
 
+The project contains **21 active dilated attention implementations** organized into several categories.
+
 ### Main Components
 
 - **DilatedAttention** (`dilated_attention_pytorch/dilated_attention.py`): Core dilated attention mechanism that supports variable segment lengths and dilation rates
@@ -179,8 +181,9 @@ The project includes advanced Ring Attention implementations that provide O(n) m
 
 - **RingDilatedAttention**: Alias for RingDilatedAttentionProduction (recommended for general use)
 - **RingDilatedAttentionProduction** (`dilated_attention_pytorch/ring_dilated_attention_production.py`): Production-ready implementation with advanced error recovery and monitoring
+- **RingDilatedAttentionProductionFixed** (`dilated_attention_pytorch/ring_dilated_attention_production_fixed.py`): Fixed version with standardized API wrapper
 - **RingDistributedDilatedAttention** (`dilated_attention_pytorch/ring_distributed_dilated_attention.py`): Enterprise-grade distributed implementation with DeepSpeed integration
-- **RingDilatedAttentionHilbertOptimizedFixed** (`dilated_attention_pytorch/ring_dilated_attention_hilbert_optimized_fixed.py`): Fixed ring attention with standardized API
+- **RingDilatedAttentionHilbertOptimizedFixed** (`dilated_attention_pytorch/ring_dilated_attention_hilbert_optimized_fixed.py`): Ring attention with Hilbert optimization and standardized API
 
 ## Block-Sparse Attention Implementation
 
@@ -189,8 +192,12 @@ The project includes advanced Ring Attention implementations that provide O(n) m
 The project includes revolutionary Block-Sparse Attention implementations that combine O(n) memory complexity with 5-50x additional speedup:
 
 - **BlockSparseRingDilatedAttention** (`dilated_attention_pytorch/block_sparse_ring_dilated_attention.py`): Core block-sparse ring attention with multiple pattern types
+- **BlockSparseRingDilatedAttentionFixed** (`dilated_attention_pytorch/block_sparse_ring_dilated_attention_fixed.py`): Fixed version with standardized API wrapper
 - **BlockSparseRingMultiheadDilatedAttention** (`dilated_attention_pytorch/block_sparse_ring_multihead_dilated_attention.py`): Drop-in replacement for nn.MultiheadAttention with block-sparse optimization
 - **BlockSparseRingDistributedDilatedAttention** (`dilated_attention_pytorch/block_sparse_ring_distributed_dilated_attention.py`): Enterprise distributed implementation with hierarchical sparsity
+- **BlockSparseAdaptive** (`dilated_attention_pytorch/block_sparse_adaptive.py`): Content-adaptive sparsity patterns that learn optimal attention
+- **BlockSparseAdaptiveFixed** (`dilated_attention_pytorch/block_sparse_adaptive_fixed.py`): Fixed API wrapper for BlockSparseAdaptive
+- **BlockSparseRingDilatedAttentionHilbertPostPattern** (`dilated_attention_pytorch/block_sparse_ring_dilated_attention_hilbert_post_pattern.py`): Hilbert curve optimization for block processing order (up to 2.53x speedup)
 
 ### Sparse Pattern Types
 
@@ -351,6 +358,17 @@ The codebase has been successfully refactored to reduce duplication and improve 
   )
   ```
 
+### Recent Changes (January 2025)
+
+#### **Removed Implementations**
+The following implementations were removed during cleanup:
+- `ring_dilated_attention_v2_collective.py` - Superseded by Production version
+- `ring_dilated_attention_refactored.py` - Merged into Production version
+- `ring_hilbert_dilated_attention.py` - Functionality in HilbertOptimizedFixed
+- `ring_dilated_attention_fixed.py` - Replaced by ProductionFixed
+- `improved_distributed_dilated_attention.py` - Use distributed_dilated_attention.py
+- `block_sparse_ring_dilated_attention_original.py` - Used deprecated APIs
+
 ### Recent Fixes and Optimizations (Latest Update - December 2024)
 
 #### **Test Suite Improvements**
@@ -482,20 +500,19 @@ src/
     ├── improved_dilated_attention.py   # Enhanced version
     ├── improved_multihead_dilated_attention.py # Enhanced multihead version
     ├── distributed_dilated_attention.py # Multi-GPU support (PyTorch Lightning)
-    ├── ring_dilated_attention_hybrid.py # Hybrid ring attention (best features)
-    ├── ring_multihead_dilated_attention_hybrid.py # Multihead ring hybrid
-    ├── ring_dilated_attention_production.py # Production-ready ring attention with monitoring
+    ├── ring_dilated_attention_production.py # Production-ready ring attention
+    ├── ring_dilated_attention_production_fixed.py # Fixed API wrapper for production
     ├── ring_distributed_dilated_attention.py # Enterprise ring attention
-    ├── ring_dilated_attention_hilbert_optimized_fixed.py # Fixed ring attention with standardized API
-    ├── block_sparse_ring_dilated_attention_hilbert_post_pattern.py # Post-pattern Hilbert optimization
-    ├── head_parallel_dilated_attention_optimized.py # Head-parallel processing
+    ├── ring_dilated_attention_hilbert_optimized_fixed.py # Hilbert optimized ring attention
     ├── block_sparse_ring_dilated_attention.py # Block-sparse ring attention
+    ├── block_sparse_ring_dilated_attention_fixed.py # Fixed API wrapper
+    ├── block_sparse_ring_dilated_attention_hilbert_post_pattern.py # Post-pattern Hilbert optimization
     ├── block_sparse_ring_multihead_dilated_attention.py # Block-sparse multihead
     ├── block_sparse_ring_distributed_dilated_attention.py # Distributed block-sparse
-    ├── block_sparse_optimized.py # Optimized block-sparse operations
-    ├── block_sparse_torch_sparse.py # PyTorch sparse tensor implementation
-    ├── block_sparse_hierarchical.py # Hierarchical sparse patterns
     ├── block_sparse_adaptive.py # Content-adaptive sparse patterns
+    ├── block_sparse_adaptive_fixed.py # Fixed API wrapper for adaptive
+    ├── block_sparse_factory.py # Factory for creating block-sparse variants
+    ├── head_parallel_dilated_attention_optimized.py # Head-parallel processing
     ├── transformer.py           # Transformer with dilated attention
     └── long_net.py             # Full LongNet architecture
 
