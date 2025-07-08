@@ -1,19 +1,17 @@
 """
-Wrapper for HilbertAttentionTritonFixed to match the standard q,k,v interface.
+Wrapper for HilbertAttentionCore to match the standard q,k,v interface.
 """
 
 import torch
 import torch.nn as nn
-from .hilbert_dilated_attention_triton_fixed import (
-    HilbertAttentionTritonFixed as HilbertAttentionTritonOriginal,
-)
+from .hilbert_attention_core import HilbertAttentionCore
 
 
 class HilbertAttentionTritonWrapper(nn.Module):
     """
-    Wrapper that adapts HilbertAttentionTritonFixed to accept separate q,k,v tensors.
+    Wrapper that adapts HilbertAttentionCore to accept separate q,k,v tensors.
 
-    This allows HilbertAttentionTritonFixed to be used with the standard benchmark interface
+    This allows HilbertAttentionCore to be used with the standard benchmark interface
     that expects forward(q, k, v) instead of forward(x).
     """
 
@@ -36,12 +34,13 @@ class HilbertAttentionTritonWrapper(nn.Module):
         hidden_dim = self.num_heads * self.head_dim
 
         # Create the underlying Hilbert attention
-        self.attention = HilbertAttentionTritonOriginal(
+        self.attention = HilbertAttentionCore(
             hidden_dim=hidden_dim,
             num_heads=self.num_heads,
             segment_size=segment_size,
             dilation_rate=dilation_rate,
             dropout=dropout,
+            use_custom_backward=True,  # Use optimized backward pass
         )
 
         # Create projection layers to convert from q,k,v format to x format

@@ -11,9 +11,9 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dilated_attention_pytorch.kernels.hilbert_dilated_attention_triton_fixed import (
-    HilbertAttentionTritonFixed,
-    create_hilbert_mapping_fixed,
+from dilated_attention_pytorch.kernels.hilbert_attention_core import (
+    HilbertAttentionCore as HilbertAttentionTritonFixed,
+    create_hilbert_mapping,
 )
 
 
@@ -24,7 +24,7 @@ def test_hilbert_mapping():
     test_sizes = [64, 128, 256, 512, 1000, 1024]
 
     for size in test_sizes:
-        mapping = create_hilbert_mapping_fixed(size)
+        mapping = create_hilbert_mapping(size)
 
         # Check mapping properties
         assert mapping.shape == (size,), f"Mapping shape mismatch for size {size}"
@@ -205,7 +205,7 @@ def test_memory_access_patterns():
     dilation_rate = 4
 
     # Create Hilbert mapping
-    mapping = create_hilbert_mapping_fixed(seq_len)
+    mapping = create_hilbert_mapping(seq_len)
 
     # Analyze access patterns for one segment
     segment_idx = 1
