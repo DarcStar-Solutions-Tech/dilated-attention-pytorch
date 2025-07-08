@@ -16,7 +16,7 @@ from .core.standardized_api import (
     StandardizedRingConfig,
     StandardizedRingAttentionMixin,
 )
-from .kernels.hilbert_attention_core_fixed import HilbertAttentionCoreFixed
+from .kernels.hilbert_attention_core import HilbertAttentionCore
 from .ring_attention_utils import all_ring_pass, split_by_rank
 from .ring_attention_lse import StableRingAccumulator
 
@@ -81,11 +81,11 @@ class RingDilatedAttentionHilbertCoreFixed(nn.Module, StandardizedRingAttentionM
             "segment_lengths and dilation_rates must have same length"
         )
 
-        # Create HilbertAttentionCoreFixed instances for each segment configuration
+        # Create HilbertAttentionCore instances for each segment configuration
         # Using the fixed version that applies Hilbert per-segment
         self.hilbert_modules = nn.ModuleList(
             [
-                HilbertAttentionCoreFixed(
+                HilbertAttentionCore(
                     hidden_dim=self.dim,
                     num_heads=self.heads,
                     segment_size=seg_len,
@@ -116,7 +116,7 @@ class RingDilatedAttentionHilbertCoreFixed(nn.Module, StandardizedRingAttentionM
         return_attention_weights: bool = False,
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, Optional[torch.Tensor]]]:
         """
-        Forward pass using HilbertAttentionCoreFixed with ring communication.
+        Forward pass using HilbertAttentionCore with ring communication.
 
         Args:
             q: Query tensor [batch, seq_len, num_heads, head_dim]
@@ -149,7 +149,7 @@ class RingDilatedAttentionHilbertCoreFixed(nn.Module, StandardizedRingAttentionM
         is_causal: bool,
         return_attention_weights: bool,
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, Optional[torch.Tensor]]]:
-        """Single GPU forward using HilbertAttentionCoreFixed."""
+        """Single GPU forward using HilbertAttentionCore."""
         batch_size, seq_len, num_heads, head_dim = q.shape
 
         # Reshape to [batch, seq_len, hidden_dim] for HilbertAttentionCore
@@ -178,7 +178,7 @@ class RingDilatedAttentionHilbertCoreFixed(nn.Module, StandardizedRingAttentionM
             # Extract segment
             x_segment = x[:, position:seg_end]
 
-            # Apply HilbertAttentionCoreFixed (per-segment Hilbert)
+            # Apply HilbertAttentionCore (per-segment Hilbert)
             out_segment = hilbert_module(x_segment, use_hilbert=self.use_hilbert)
 
             # Reshape back to [batch, seg_len, num_heads, head_dim]
@@ -272,7 +272,7 @@ class RingDilatedAttentionHilbertCoreFixed(nn.Module, StandardizedRingAttentionM
         v_chunk: torch.Tensor,
         is_causal: bool,
     ) -> torch.Tensor:
-        """Compute attention for one ring step using HilbertAttentionCoreFixed."""
+        """Compute attention for one ring step using HilbertAttentionCore."""
         batch_size, chunk_len, num_heads, head_dim = q_chunk.shape
 
         # Reshape for HilbertAttentionCore

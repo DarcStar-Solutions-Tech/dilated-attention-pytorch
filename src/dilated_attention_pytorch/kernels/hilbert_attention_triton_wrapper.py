@@ -44,12 +44,13 @@ class HilbertAttentionTritonWrapper(nn.Module):
         )
 
         # Create projection layers to convert from q,k,v format to x format
-        self.q_proj = nn.Linear(self.head_dim, hidden_dim, bias=False)
-        self.k_proj = nn.Linear(self.head_dim, hidden_dim, bias=False)
-        self.v_proj = nn.Linear(self.head_dim, hidden_dim, bias=False)
+        # Input is [batch, seq, heads * head_dim], output is [batch, seq, hidden_dim]
+        self.q_proj = nn.Linear(hidden_dim, hidden_dim, bias=False)
+        self.k_proj = nn.Linear(hidden_dim, hidden_dim, bias=False)
+        self.v_proj = nn.Linear(hidden_dim, hidden_dim, bias=False)
 
         # Output projection to convert back
-        self.out_proj = nn.Linear(hidden_dim, self.head_dim, bias=False)
+        self.out_proj = nn.Linear(hidden_dim, hidden_dim, bias=False)
 
     def forward(
         self,
@@ -73,21 +74,25 @@ class HilbertAttentionTritonWrapper(nn.Module):
         """
         B, M, H, D = q.shape
 
-        # Since HilbertAttentionTritonOriginal expects input with its own projections,
-        # we need to create a properly shaped input tensor
-        # For simplicity, we'll average across heads to create the input
-        x = q.mean(dim=2)  # Average across heads: [B, M, D]
+        # Reshape q,k,v to [batch, seq_len, hidden_dim] for processing
+        q_flat = q.reshape(B, M, -1)  # [B, M, H*D]
+        k_flat = k.reshape(B, M, -1)
+        v_flat = v.reshape(B, M, -1)
 
-        # The original expects hidden_dim = num_heads * head_dim
-        # So we need to project to the right dimension
-        if x.shape[-1] != self.num_heads * self.head_dim:
-            # Create a simple projection
-            x = x.repeat(1, 1, self.num_heads)  # [B, M, H*D]
+        # Project q,k,v through linear layers
+        q_proj = self.q_proj(q_flat)
+        k_proj = self.k_proj(k_flat)
+        v_proj = self.v_proj(v_flat)
+
+        # Combine into single tensor for HilbertAttentionCore
+        # This maintains gradient flow through all three inputs
+        x = (q_proj + k_proj + v_proj) / 3.0
 
         # Apply Hilbert attention
         output = self.attention(x, use_hilbert=True)
 
-        # The output is [B, M, hidden_dim], we need to reshape to [B, M, H, D]
+        # Project output and reshape back to [B, M, H, D]
+        output = self.out_proj(output)
         output = output.reshape(B, M, H, D)
 
         return output
