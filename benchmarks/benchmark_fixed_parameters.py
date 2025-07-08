@@ -141,24 +141,22 @@ class FixedParametersBenchmark:
         # 3. Kernel implementations (FIXED)
         implementations["kernels"] = []
 
-        # HilbertAttentionTritonFixed - FIX: Use correct parameters
+        # HilbertAttentionTritonFixed - Using wrapper for q,k,v interface
         try:
-            from dilated_attention_pytorch.kernels.hilbert_dilated_attention_triton_fixed import (
-                HilbertAttentionTritonFixed,
-            )
+            from dilated_attention_pytorch.kernels import HilbertAttentionTritonFixed
 
             implementations["kernels"].append(
                 {
                     "name": "HilbertAttentionTritonFixed",
                     "class": HilbertAttentionTritonFixed,
                     "init": lambda: HilbertAttentionTritonFixed(
-                        hidden_dim=768,  # Not segment_lengths!
-                        num_heads=12,
-                        segment_size=2048,  # Single segment size, not list
-                        dilation_rate=1,  # Single dilation rate, not list
+                        segment_lengths=[512, 1024, 2048],
+                        dilation_rates=[1, 2, 4],
                         dropout=0.0,
+                        num_heads=12,  # Must match benchmark parameters
+                        head_dim=64,  # Must match benchmark parameters
                     ),
-                    "input_format": "3d",  # Uses hidden_dim format
+                    "input_format": "4d",  # Now uses standard q,k,v format
                 }
             )
         except Exception as e:
