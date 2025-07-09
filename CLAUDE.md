@@ -12,14 +12,14 @@ The project contains **21 active dilated attention implementations** organized i
 
 ### Main Components
 
-- **DilatedAttention** (`dilated_attention_pytorch/dilated_attention.py`): Core dilated attention mechanism that supports variable segment lengths and dilation rates
-- **MultiheadDilatedAttention** (`dilated_attention_pytorch/multihead_dilated_attention.py`): Drop-in replacement for nn.MultiheadAttention with dilated attention and MAGNETO improvements
-- **ImprovedDilatedAttention** (`dilated_attention_pytorch/improved_dilated_attention.py`): Enhanced version with additional optimizations
-- **ImprovedMultiheadDilatedAttention** (`dilated_attention_pytorch/improved_multihead_dilated_attention.py`): Enhanced multihead version with further optimizations
-- **RingDilatedAttentionProduction** (`dilated_attention_pytorch/ring_dilated_attention_production.py`): Production-ready ring attention with O(n) memory complexity and advanced error recovery
-- **RingDistributedDilatedAttention** (`dilated_attention_pytorch/ring_distributed_dilated_attention.py`): Enterprise-grade distributed implementation with DeepSpeed integration
-- **LongNet** (`dilated_attention_pytorch/long_net.py`): Full transformer architecture for language modeling
-- **Transformer** (`dilated_attention_pytorch/transformer.py`): General transformer with dilated attention
+- **DilatedAttention** (`dilated_attention_pytorch/base/dilated_attention.py`): Core dilated attention mechanism that supports variable segment lengths and dilation rates
+- **MultiheadDilatedAttention** (`dilated_attention_pytorch/base/multihead_dilated_attention.py`): Drop-in replacement for nn.MultiheadAttention with dilated attention and MAGNETO improvements
+- **ImprovedDilatedAttention** (`dilated_attention_pytorch/base/improved_dilated_attention.py`): Enhanced version with additional optimizations
+- **ImprovedMultiheadDilatedAttention** (`dilated_attention_pytorch/base/improved_multihead_dilated_attention.py`): Enhanced multihead version with further optimizations
+- **RingDilatedAttentionProduction** (`dilated_attention_pytorch/ring/hilbert/ring_dilated_attention_hilbert_gpu_optimized.py`): Production-ready ring attention with O(n) memory complexity and advanced error recovery
+- **RingDistributedDilatedAttention** (`dilated_attention_pytorch/ring/distributed/ring_distributed_dilated_attention.py`): Enterprise-grade distributed implementation with DeepSpeed integration
+- **LongNet** (`dilated_attention_pytorch/models/long_net.py`): Full transformer architecture for language modeling
+- **Transformer** (`dilated_attention_pytorch/models/transformer.py`): General transformer with dilated attention
 
 ### Key Parameters
 
@@ -523,55 +523,103 @@ All performance optimizations from Ring Distributed Attention have been successf
 src/
     └── dilated_attention_pytorch/
         ├── __init__.py              # Package init with exports
-        ├── core/                    # Core refactored components (NEW)
-    │       ├── __init__.py         # Core module exports
-    │       ├── base.py             # Base classes for all implementations
-    │       ├── config.py           # Configuration dataclasses
-    │       ├── constants.py        # Feature detection and constants
-    │       ├── memory_pool.py      # Unified memory pool
-    │       └── factory.py          # Factory pattern for module creation
+        ├── base/                    # Core implementations
+        │   ├── __init__.py         # Base module exports
+        │   ├── dilated_attention.py # Core dilated attention
+        │   ├── multihead_dilated_attention.py  # Multi-head wrapper
+        │   ├── improved_dilated_attention.py   # Enhanced version
+        │   ├── improved_multihead_dilated_attention.py # Enhanced multihead
+        │   ├── distributed_dilated_attention.py # Multi-GPU support
+        │   └── head_parallel_dilated_attention_optimized.py # Head-parallel
+        ├── ring/                    # Ring attention variants
+        │   ├── __init__.py         # Ring module exports
+        │   ├── base/               # Base ring implementations
+        │   │   ├── ring_dilated_attention_correct.py
+        │   │   ├── ring_dilated_attention_fixed_simple.py
+        │   │   ├── ring_dilated_attention_memory_efficient.py
+        │   │   ├── ring_dilated_attention_sdpa.py
+        │   │   └── ring_dilated_attention_v3.py
+        │   ├── distributed/        # Distributed ring attention
+        │   │   └── ring_distributed_dilated_attention.py
+        │   ├── hilbert/            # Hilbert-optimized ring attention
+        │   │   ├── ring_dilated_attention_hilbert_core.py
+        │   │   ├── ring_dilated_attention_hilbert_gpu_optimized.py
+        │   │   ├── ring_dilated_attention_hilbert_optimized_fixed.py
+        │   │   └── ring_dilated_attention_hilbert_proper.py
+        │   └── utils/              # Ring attention utilities
+        │       ├── ring_attention_autograd.py
+        │       ├── ring_attention_lse.py
+        │       └── ring_attention_utils.py
+        ├── sparse/                  # Block-sparse implementations
+        │   ├── __init__.py         # Sparse module exports
+        │   ├── block_sparse_ring_dilated_attention.py
+        │   ├── block_sparse_ring_dilated_attention_fixed.py
+        │   ├── block_sparse_ring_dilated_attention_hilbert_post_pattern.py
+        │   ├── block_sparse_ring_multihead_dilated_attention.py
+        │   ├── block_sparse_ring_distributed_dilated_attention.py
+        │   ├── block_sparse_adaptive.py
+        │   ├── block_sparse_adaptive_fixed.py
+        │   ├── block_sparse_factory.py
+        │   └── sparse_pattern_generator.py
+        ├── models/                  # Full models
+        │   ├── __init__.py
+        │   ├── transformer.py      # Transformer with dilated attention
+        │   └── long_net.py         # Full LongNet architecture
+        ├── core/                    # Core refactored components
+        │   ├── __init__.py         # Core module exports
+        │   ├── base.py             # Base classes for all implementations
+        │   ├── config.py           # Configuration dataclasses
+        │   ├── constants.py        # Feature detection and constants
+        │   ├── memory_pool.py      # Unified memory pool
+        │   ├── factory.py          # Factory pattern for module creation
+        │   └── standardized_api.py # Standardized API wrappers
         ├── utils/                   # Utility modules
-    │       ├── __init__.py         # Utils module exports
-    │       ├── validation.py       # Validation utilities
-    │       ├── attention_utils.py  # Common attention utilities
-    │       └── sparse_pattern_utils.py # Sparse pattern generation and optimization
-    ├── dilated_attention.py     # Core dilated attention
-    ├── multihead_dilated_attention.py  # Multi-head wrapper
-    ├── improved_dilated_attention.py   # Enhanced version
-    ├── improved_multihead_dilated_attention.py # Enhanced multihead version
-    ├── distributed_dilated_attention.py # Multi-GPU support (PyTorch Lightning)
-    ├── ring_distributed_dilated_attention.py # Enterprise ring attention
-    ├── ring_dilated_attention_hilbert_optimized_fixed.py # Hilbert optimized ring attention
-    ├── block_sparse_ring_dilated_attention.py # Block-sparse ring attention
-    ├── block_sparse_ring_dilated_attention_fixed.py # Fixed API wrapper
-    ├── block_sparse_ring_dilated_attention_hilbert_post_pattern.py # Post-pattern Hilbert optimization
-    ├── block_sparse_ring_multihead_dilated_attention.py # Block-sparse multihead
-    ├── block_sparse_ring_distributed_dilated_attention.py # Distributed block-sparse
-    ├── block_sparse_adaptive.py # Content-adaptive sparse patterns
-    ├── block_sparse_adaptive_fixed.py # Fixed API wrapper for adaptive
-    ├── block_sparse_factory.py # Factory for creating block-sparse variants
-    ├── head_parallel_dilated_attention_optimized.py # Head-parallel processing
-    ├── transformer.py           # Transformer with dilated attention
-    └── long_net.py             # Full LongNet architecture
+        │   ├── __init__.py         # Utils module exports
+        │   ├── validation.py       # Validation utilities
+        │   ├── attention_utils.py  # Common attention utilities
+        │   ├── sparse_pattern_utils.py # Sparse pattern generation
+        │   ├── hilbert_curve.py    # Hilbert curve utilities
+        │   └── dynamic_segment_selector.py # Dynamic segment sizing
+        ├── kernels/                 # CUDA/Triton kernels (experimental)
+        │   ├── __init__.py
+        │   ├── hilbert_attention_core.py
+        │   └── hilbert_attention_triton_wrapper.py
+        └── dynamic_dilated_attention.py # Dynamic segment sizing wrapper
 
 tests/
     ├── __init__.py               # Tests package init
-    ├── test_dilated_attention.py # Core attention tests  
-    ├── test_long_net.py          # LongNet architecture tests
-    ├── test_improved_multihead.py # Improved multihead attention tests
-    ├── test_memory_optimizations.py # Memory optimization tests
-    ├── test_ring_attention.py   # Ring attention tests
-    ├── test_distributed_ring_attention.py # Distributed ring attention tests
-    ├── test_block_sparse_attention.py # Block-sparse attention tests
-    ├── test_edge_cases_validation.py # Edge case validation tests
-    ├── test_thread_safety.py    # Thread safety tests
-    ├── test_flash_attention_3.py # Flash Attention 3 integration tests
-    ├── test_core_refactoring.py # Core module tests (NEW)
-    ├── compare_implementations.py # Implementation comparison benchmarks
-    ├── detailed_memory_analysis.py # Detailed memory profiling
-    ├── memory_estimation.py     # Memory usage estimation utilities
-    ├── multihead_memory_analysis.py # Multihead memory analysis
-    └── simple_comparison.py     # Simple performance comparisons
+    ├── base/                     # Base implementation tests
+    │   ├── test_dilated_attention.py
+    │   ├── test_multihead_dilated_attention.py
+    │   ├── test_improved_dilated_attention.py
+    │   └── test_improved_multihead.py
+    ├── ring/                     # Ring attention tests
+    │   ├── test_ring_attention.py
+    │   ├── test_distributed_ring_attention.py
+    │   └── hilbert/             # Hilbert-specific tests
+    │       ├── test_hilbert_gradient_comparison.py
+    │       ├── test_multigpu_hilbert_ring.py
+    │       └── test_per_segment_hilbert.py
+    ├── sparse/                   # Block-sparse tests
+    │   ├── test_block_sparse_attention.py
+    │   ├── test_block_sparse_adaptive.py
+    │   └── test_block_sparse_ring_multihead.py
+    ├── models/                   # Model tests
+    │   ├── test_long_net.py
+    │   └── test_transformer.py
+    ├── core/                     # Core infrastructure tests
+    │   ├── test_factory.py
+    │   ├── test_memory_pool.py
+    │   └── test_core_refactoring.py
+    ├── utils/                    # Utility tests
+    │   ├── test_validation.py
+    │   └── test_dynamic_segment_selection.py
+    ├── misc/                     # Miscellaneous tests
+    │   ├── test_edge_cases_validation.py
+    │   ├── test_thread_safety.py
+    │   ├── test_flash_attention_3.py
+    │   └── test_memory_pool_consolidated.py
+    └── TEST_REDUNDANCY_ANALYSIS.md # Test cleanup documentation
 
 docs/                       # Extensive documentation
     ├── README.md               # Documentation overview
@@ -663,9 +711,12 @@ When creating new files, ALWAYS place them in the correct directory:
    - Example: `scripts/debug/debug_new_feature.py`, NOT `debug_new_feature.py`
 
 6. **Source Code**:
-   - Core implementations → `dilated_attention_pytorch/`
+   - Base implementations → `dilated_attention_pytorch/base/`
+   - Ring attention → `dilated_attention_pytorch/ring/`
+   - Block-sparse → `dilated_attention_pytorch/sparse/`
+   - Full models → `dilated_attention_pytorch/models/`
    - Utilities → `dilated_attention_pytorch/utils/`
-   - Core components → `dilated_attention_pytorch/core/`
+   - Core infrastructure → `dilated_attention_pytorch/core/`
 
 ### File Creation Rules:
 - ALWAYS check if an appropriate directory exists before creating a file

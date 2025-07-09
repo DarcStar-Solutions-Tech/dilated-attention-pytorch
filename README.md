@@ -53,10 +53,24 @@ See the [Migration Guide](docs/migration-guide-v0.2.md) for upgrading from v0.1.
 
 ## 📁 Project Structure
 
-The project has been reorganized for better maintainability. See [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) for detailed layout.
+The project has been reorganized into logical subdirectories for better maintainability. See [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) for detailed layout.
 
-- **Source code**: `dilated_attention_pytorch/` - Core implementations
-- **Tests**: `tests/` - Comprehensive test suite  
+```
+src/dilated_attention_pytorch/
+├── base/          # Core implementations (standard, improved, multihead)
+├── ring/          # Ring attention variants (O(n) memory)
+│   ├── base/      # Base ring implementations
+│   ├── distributed/  # Distributed ring attention
+│   ├── hilbert/   # Hilbert-optimized ring attention
+│   └── utils/     # Ring attention utilities
+├── sparse/        # Block-sparse implementations (5-50x speedup)
+├── models/        # Full models (LongNet, Transformer)
+├── core/          # Shared infrastructure (factory, config, memory pool)
+├── utils/         # Common utilities
+└── kernels/       # CUDA/Triton kernels (experimental)
+```
+
+- **Tests**: `tests/` - Comprehensive test suite mirroring source structure
 - **Benchmarks**: `benchmarks/` - Performance benchmarking scripts
 - **Documentation**: `docs/` - Guides and technical reports
 - **Examples**: `examples/` - Usage examples
@@ -230,7 +244,10 @@ out = dilated_attention(query, key, value, is_causal=False)
 #### Direct Import (Backward Compatible):
 ```python
 import torch
-from dilated_attention_pytorch.dilated_attention import DilatedAttention
+from dilated_attention_pytorch import DilatedAttention  # Works via __init__.py exports
+
+# Or use the full path:
+# from dilated_attention_pytorch.base.dilated_attention import DilatedAttention
 
 dilated_attention = DilatedAttention(
     segment_lengths=[2048, 4096, 8192],
@@ -281,8 +298,10 @@ y = mhda(x, x, x, is_causal=False)
 
 #### Direct Import (Backward Compatible):
 ```python
+from dilated_attention_pytorch import MultiheadDilatedAttention  # Works via __init__.py exports
 
-from dilated_attention_pytorch.multihead_dilated_attention import MultiheadDilatedAttention
+# Or use the full path:
+# from dilated_attention_pytorch.base.multihead_dilated_attention import MultiheadDilatedAttention
 
 device = torch.device("cuda")
 dtype = torch.float16
