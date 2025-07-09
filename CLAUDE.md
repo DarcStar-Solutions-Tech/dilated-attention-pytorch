@@ -32,79 +32,119 @@ All dilated attention modules require:
 
 ### Testing and Verification
 ```bash
-# Quick comprehensive test (NEW)
-python scripts/test_comprehensive.py
+# Single GPU tests
+hatch run test                         # Run all tests with coverage
+pytest tests/test_dilated_attention.py # Run specific test file
+pytest tests/ -v                       # Verbose output
 
-# Component verification (NEW)
-python verify_all_components.py
+# Multi-GPU tests (MUST use torchrun)
+torchrun --nproc_per_node=2 tests/test_ring_attention.py
+torchrun --nproc_per_node=4 tests/test_distributed_ring_attention.py
 
-# Run all pytest tests
-pytest tests/
+# Quick verification scripts
+python scripts/test_comprehensive.py   # Quick comprehensive test
+python verify_all_components.py        # Component verification
 
-# Run specific test files
-pytest tests/test_dilated_attention.py
-pytest tests/test_long_net.py
-
-# Run tests with specific parameters
-pytest tests/test_dilated_attention.py -v
-
-# Run with coverage
+# Coverage reporting
 pytest tests/ --cov=dilated_attention_pytorch --cov-report=html
 ```
 
-### Dependencies Management
-This project uses modern Python packaging with `pyproject.toml` and supports multiple tools:
+### Project Tooling
+
+This project uses a modern Python toolchain:
+- **Hatch**: Environment management and task runner
+- **uv**: Fast dependency installation (replaces pip)
+- **torchrun**: Required for multi-GPU execution
+
+### Environment Management with Hatch
 
 ```bash
-# Recommended: Using uv (fastest Python package manager)
+# Enter the development environment
+hatch shell
+
+# Create/recreate environments
+hatch env create                       # Create default environment
+hatch env create test                  # Create test environment
+hatch env create benchmark             # Create benchmark environment
+
+# Run commands in specific environments
+hatch run test                         # Run tests with coverage
+hatch run lint                         # Run linting (ruff)
+hatch run format                       # Format code (ruff)
+hatch run typecheck                    # Type checking (mypy)
+hatch run all                          # Run all checks
+
+# Benchmark environment commands
+hatch run benchmark:run                # Run benchmarks
+hatch run benchmark:profile            # Run with profiling
+```
+
+### Dependency Management with uv
+
+```bash
+# ALWAYS use uv for installing dependencies (not pip)
 uv pip install -e .                    # Install package
 uv pip install -e .[dev]               # Install with dev dependencies
 uv pip install -e .[test]              # Install with test dependencies
 uv pip install -e .[benchmark]         # Install with benchmark dependencies
 uv pip install -e .[distributed]       # Install with distributed training dependencies
-uv pip install -e .[all]               # Install with all optional dependencies
+uv pip install -e .[all]               # Install all optional dependencies
 
-# Alternative: Using Poetry (modern dependency management)
-poetry install                         # Install dependencies from poetry.lock
-poetry install --with dev              # Install with dev dependencies
-poetry install --all-extras            # Install with all optional dependencies
-poetry add <package>                   # Add new dependency
-poetry lock                            # Update lock file
+# Add new dependencies
+uv pip install <package>               # Install a new package
 
-# Alternative: Using Hatch (project management)
-hatch shell                            # Enter development environment
-hatch env create                       # Create development environment
-hatch build                            # Build the package
-
-# Legacy: Using pip
-pip install -e .                       # Install package
-pip install -e .[all]                  # Install with all dependencies
+# Why uv?
+# - 10-100x faster than pip
+# - Better resolver for complex dependencies
+# - Automatic cleanup of unused packages
 ```
 
-### Code Quality
-The project is configured with modern Python tooling via Hatch:
+### Multi-GPU Execution with torchrun
+
+When running any script that uses multiple GPUs, you MUST use `torchrun`:
 
 ```bash
-# Using Hatch (recommended)
-hatch run test                         # Run tests with coverage
-hatch run test-fast                    # Run tests (exit on first failure)
-hatch run lint                         # Run all linting (ruff)
-hatch run format                       # Format code (ruff)
-hatch run typecheck                    # Type checking (mypy)
-hatch run all                          # Run all checks (format, lint, typecheck, test)
+# Single node, multiple GPUs
+torchrun --nproc_per_node=2 benchmarks/test_ring_attention.py
+torchrun --nproc_per_node=4 scripts/train_model.py
 
-# Using uv + direct tools
-uv run pytest tests/                   # Run tests
-uv run ruff format .                   # Format code
-uv run ruff check .                    # Lint code (includes import sorting)
-uv run mypy dilated_attention_pytorch  # Type check
+# Multi-node execution
+torchrun --nproc_per_node=8 --nnodes=2 --node_rank=0 --master_addr=192.168.1.1 --master_port=29500 train.py
 
-# Legacy approach
-ruff format .
-ruff check .
-mypy .
-pytest tests/
+# Common torchrun options:
+# --nproc_per_node: Number of GPUs per node
+# --nnodes: Total number of nodes
+# --node_rank: Rank of this node (0-based)
+# --master_addr: IP address of rank 0 node
+# --master_port: Port for communication
+
+# Environment variables set by torchrun:
+# RANK: Global rank of the process
+# LOCAL_RANK: Local rank on the node
+# WORLD_SIZE: Total number of processes
+# MASTER_ADDR: Address of the master node
+# MASTER_PORT: Port of the master node
 ```
+
+### Common Workflows
+
+```bash
+# Development setup
+hatch shell                            # Enter dev environment
+uv pip install -e .[all]              # Install all dependencies
+
+# Run tests
+hatch run test                         # Single GPU tests
+torchrun --nproc_per_node=2 tests/test_ring_attention.py  # Multi-GPU tests
+
+# Benchmarking
+hatch run benchmark:run                # Single GPU benchmarks
+torchrun --nproc_per_node=4 benchmarks/test_distributed_suite.py  # Multi-GPU benchmarks
+
+# Code quality
+hatch run all                          # Format, lint, typecheck, and test
+```
+
 
 ### Benchmarking
 
@@ -120,21 +160,21 @@ benchmarks/core/
 │       ├── timing.py          # Timing utilities with CUDA events
 │       └── data.py            # Data generation utilities
 
-# Run benchmarks
-python benchmarks/test_improved_suite.py      # Test all improved implementations
-python benchmarks/test_distributed_suite.py   # Test distributed implementations
-python benchmarks/verify_all.py               # Comprehensive verification
-
-# Using Hatch environments (recommended)
+# Single GPU benchmarks
 hatch run benchmark:run                # Run benchmarks with default settings
 hatch run benchmark:run --batch_size 2 --total_tokens 26 --heads 8  # Custom parameters
 hatch run benchmark:profile            # Run with profiling
 
-# Direct execution
-python benchmark.py                    # Run benchmarks with default settings
-python benchmark.py --batch_size 2 --total_tokens 26 --heads 8      # Custom parameters
+# Multi-GPU benchmarks (MUST use torchrun)
+torchrun --nproc_per_node=2 benchmarks/test_distributed_suite.py
+torchrun --nproc_per_node=4 benchmarks/test_ring_attention.py
+torchrun --nproc_per_node=8 benchmarks/benchmark_ring_billion_tokens.py
 
-# Using uv
+# Direct execution (single GPU only)
+python benchmarks/test_improved_suite.py      # Test all improved implementations
+python benchmarks/verify_all.py               # Comprehensive verification
+
+# Using uv for direct execution
 uv run --extra benchmark python benchmark.py  # Run with benchmark dependencies
 ```
 
