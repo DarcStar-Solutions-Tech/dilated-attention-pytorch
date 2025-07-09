@@ -31,6 +31,16 @@ from .sparse_pattern_utils import (
 )
 from .validation import ValidationMixin
 
+# Ring validation utilities
+from .ring_validation import (
+    validate_ring_setup,
+    validate_sequence_split,
+    validate_ring_communication,
+    estimate_memory_usage,
+    check_hardware_compatibility,
+    suggest_optimal_ring_size,
+)
+
 # GPU utilities
 from .gpu_utils import (
     get_gpu_compute_capability,
@@ -68,6 +78,13 @@ except ImportError:
 __all__ = [
     # Validation
     "ValidationMixin",
+    # Ring validation
+    "validate_ring_setup",
+    "validate_sequence_split",
+    "validate_ring_communication",
+    "estimate_memory_usage",
+    "check_hardware_compatibility",
+    "suggest_optimal_ring_size",
     # Attention utilities
     "optimize_attention_computation",
     "create_4d_causal_mask",

@@ -9,6 +9,9 @@ from .ring_attention_lse import StableRingAccumulator
 from .ring_attention_memory_efficient import memory_efficient_ring_attention
 # Removed incorrect import - file contains functions, not a class
 
+# New standardized utilities
+from .ring_communication_mixin import RingCommunicationMixin, AsyncRingCommunicator
+
 __all__ = [
     "all_ring_pass",
     "split_by_rank",
@@ -17,4 +20,7 @@ __all__ = [
     "ring_attention",
     "StableRingAccumulator",
     "memory_efficient_ring_attention",
+    # New standardized utilities
+    "RingCommunicationMixin",
+    "AsyncRingCommunicator",
 ]
