@@ -162,6 +162,33 @@ class RingDilatedAttentionHilbertOptimizedFixed(
         # Apply ordering
         return tensor[:, indices]
 
+    def _apply_segment_hilbert_ordering(
+        self, tensor: torch.Tensor, inverse: bool = False
+    ) -> torch.Tensor:
+        """Apply Hilbert ordering to a segment tensor."""
+        if not self.use_hilbert:
+            return tensor
+
+        batch_size, seg_len, num_heads, head_dim = tensor.shape
+
+        # Skip if segment is too small
+        if seg_len <= 64:  # Minimum size for meaningful Hilbert curve
+            return tensor
+
+        # Get or generate indices for this segment length
+        if inverse:
+            indices = self._inverse_hilbert_cache.get(seg_len)
+            if indices is None:
+                self._generate_hilbert_indices(seg_len)
+                indices = self._inverse_hilbert_cache[seg_len]
+        else:
+            indices = self._hilbert_cache.get(seg_len)
+            if indices is None:
+                indices = self._generate_hilbert_indices(seg_len)
+
+        # Apply ordering to segment
+        return tensor[:, indices]
+
     def forward(
         self,
         q: torch.Tensor,
@@ -186,13 +213,8 @@ class RingDilatedAttentionHilbertOptimizedFixed(
         """
         batch_size, seq_len, num_heads, head_dim = q.shape
 
-        # Apply Hilbert ordering for better cache locality
-        q_ordered = self._apply_hilbert_ordering(q, inverse=False)
-        k_ordered = self._apply_hilbert_ordering(k, inverse=False)
-        v_ordered = self._apply_hilbert_ordering(v, inverse=False)
-
-        # Initialize output
-        output = torch.zeros_like(q_ordered)
+        # Initialize output (no global Hilbert ordering)
+        output = torch.zeros_like(q)
 
         # Process each segment with its dilation rate
         for seg_idx, (seg_len, dilation_rate) in enumerate(
@@ -218,8 +240,21 @@ class RingDilatedAttentionHilbertOptimizedFixed(
                 end_idx = min(start_idx + seg_len, seq_len)
                 actual_seg_len = end_idx - start_idx
 
-                # Get segment queries for assigned heads
-                q_seg = q_ordered[:, start_idx:end_idx, head_start:head_end]
+                # Get segment queries, keys, values for assigned heads
+                q_seg = q[:, start_idx:end_idx, head_start:head_end]
+                k_seg = k[:, start_idx:end_idx, head_start:head_end]
+                v_seg = v[:, start_idx:end_idx, head_start:head_end]
+
+                # Apply Hilbert ordering to this segment
+                q_seg_ordered = self._apply_segment_hilbert_ordering(
+                    q_seg, inverse=False
+                )
+                k_seg_ordered = self._apply_segment_hilbert_ordering(
+                    k_seg, inverse=False
+                )
+                v_seg_ordered = self._apply_segment_hilbert_ordering(
+                    v_seg, inverse=False
+                )
 
                 # Apply local dilation within the segment
                 if dilation_rate > 1:
@@ -228,28 +263,24 @@ class RingDilatedAttentionHilbertOptimizedFixed(
                         0, actual_seg_len, dilation_rate, device=q.device
                     )
 
-                    # Get segment k/v first, then apply dilation
-                    k_seg_full = k_ordered[:, start_idx:end_idx, head_start:head_end]
-                    v_seg_full = v_ordered[:, start_idx:end_idx, head_start:head_end]
-
-                    # Apply local dilation
-                    k_seg = k_seg_full[:, local_indices]
-                    v_seg = v_seg_full[:, local_indices]
+                    # Apply local dilation on Hilbert-ordered segments
+                    k_seg_dilated = k_seg_ordered[:, local_indices]
+                    v_seg_dilated = v_seg_ordered[:, local_indices]
                 else:
-                    # No dilation, use segment directly
-                    k_seg = k_ordered[:, start_idx:end_idx, head_start:head_end]
-                    v_seg = v_ordered[:, start_idx:end_idx, head_start:head_end]
+                    # No dilation, use Hilbert-ordered segments directly
+                    k_seg_dilated = k_seg_ordered
+                    v_seg_dilated = v_seg_ordered
 
                 # Compute attention scores
                 # Need to handle head subset dimension
-                # q_seg: [batch, actual_seg_len, num_heads_subset, head_dim]
-                # k_seg: [batch, dilated_len, num_heads_subset, head_dim]
+                # q_seg_ordered: [batch, actual_seg_len, num_heads_subset, head_dim]
+                # k_seg_dilated: [batch, dilated_len, num_heads_subset, head_dim]
 
                 # Transpose for attention computation
-                q_seg_t = q_seg.transpose(
+                q_seg_t = q_seg_ordered.transpose(
                     1, 2
                 )  # [batch, num_heads_subset, actual_seg_len, head_dim]
-                k_seg_t = k_seg.transpose(
+                k_seg_t = k_seg_dilated.transpose(
                     1, 2
                 )  # [batch, num_heads_subset, dilated_len, head_dim]
 
@@ -258,7 +289,7 @@ class RingDilatedAttentionHilbertOptimizedFixed(
                 # Apply causal mask if needed
                 if is_causal:
                     q_len = actual_seg_len
-                    k_len = k_seg.shape[1]
+                    k_len = k_seg_dilated.shape[1]
 
                     if dilation_rate > 1:
                         # For dilated attention, we need a special causal mask
@@ -295,7 +326,7 @@ class RingDilatedAttentionHilbertOptimizedFixed(
                     attn_weights = self.dropout(attn_weights)
 
                 # Apply attention to values
-                v_seg_t = v_seg.transpose(
+                v_seg_t = v_seg_dilated.transpose(
                     1, 2
                 )  # [batch, num_heads_subset, dilated_len, head_dim]
                 seg_output_t = torch.matmul(
@@ -307,11 +338,15 @@ class RingDilatedAttentionHilbertOptimizedFixed(
                     1, 2
                 )  # [batch, actual_seg_len, num_heads_subset, head_dim]
 
-                # Add to output for assigned heads
-                output[:, start_idx:end_idx, head_start:head_end] = seg_output
+                # Apply inverse Hilbert ordering to restore original segment order
+                seg_output_restored = self._apply_segment_hilbert_ordering(
+                    seg_output, inverse=True
+                )
 
-        # Apply inverse Hilbert ordering to restore original sequence order
-        output = self._apply_hilbert_ordering(output, inverse=True)
+                # Add to output for assigned heads
+                output[:, start_idx:end_idx, head_start:head_end] = seg_output_restored
+
+        # No need for global inverse Hilbert ordering since we're doing per-segment
 
         if return_attention_weights:
             return output, None
