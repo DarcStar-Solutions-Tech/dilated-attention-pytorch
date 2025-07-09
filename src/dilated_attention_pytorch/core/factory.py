@@ -587,8 +587,8 @@ def _register_implementations():
     """Register all available implementations."""
     try:
         # Register standard implementations
-        from ..dilated_attention import DilatedAttention
-        from ..multihead_dilated_attention import MultiheadDilatedAttention
+        from ..base.dilated_attention import DilatedAttention
+        from ..base.multihead_dilated_attention import MultiheadDilatedAttention
 
         register_attention("standard", DilatedAttention)
         register_multihead_attention("multihead_standard", MultiheadDilatedAttention)
@@ -599,12 +599,12 @@ def _register_implementations():
 
     try:
         # Register improved implementations
-        from ..improved_dilated_attention import ImprovedDilatedAttention
+        from ..base.improved_dilated_attention import ImprovedDilatedAttention
 
         register_attention("improved", ImprovedDilatedAttention)
         logger.debug("Registered improved dilated attention implementation")
 
-        from ..improved_multihead_dilated_attention import (
+        from ..base.improved_multihead_dilated_attention import (
             ImprovedMultiheadDilatedAttention,
         )
 
@@ -618,8 +618,8 @@ def _register_implementations():
 
     try:
         # Register ring attention production implementations
-        from ..ring_dilated_attention_production import (
-            RingDilatedAttentionProduction,
+        from ..ring.hilbert.ring_dilated_attention_hilbert_gpu_optimized import (
+            RingDilatedAttentionHilbertGPUOptimized as RingDilatedAttentionProduction,
         )
 
         # Create a wrapper to match the expected interface
@@ -657,7 +657,9 @@ def _register_implementations():
 
     try:
         # Register ring distributed implementation
-        from ..ring_distributed_dilated_attention import RingDistributedDilatedAttention
+        from ..ring.distributed.ring_distributed_dilated_attention import (
+            RingDistributedDilatedAttention,
+        )
 
         register_multihead_attention(
             "multihead_ring_distributed", RingDistributedDilatedAttention
@@ -672,7 +674,7 @@ def _register_implementations():
 
     try:
         # Register block-sparse implementations
-        from ..block_sparse_ring_dilated_attention import (
+        from ..sparse.block_sparse_ring_dilated_attention import (
             BlockSparseRingDilatedAttention,
         )
         from ..block_sparse_ring_multihead_dilated_attention import (
