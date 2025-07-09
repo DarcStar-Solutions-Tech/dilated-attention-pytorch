@@ -7,7 +7,7 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from dilated_attention_pytorch.block_sparse_factory import (
+from dilated_attention_pytorch import (
     create_block_sparse_attention,
     get_block_sparse_preset,
 )
