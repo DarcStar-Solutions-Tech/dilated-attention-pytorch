@@ -1,5 +1,6 @@
 """Unified benchmark runner for all attention implementations."""
 
+import time
 import traceback
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
@@ -16,9 +17,8 @@ from dilated_attention_pytorch import (
 
 from .base_benchmark import BaseBenchmark
 from .config import BenchmarkConfig
-from .output_manager import OutputManager
+from .output_manager import BenchmarkOutputManager as OutputManager
 from .utils.memory import get_memory_stats
-from .utils.timing import CUDATimer
 
 
 @dataclass
@@ -114,7 +114,6 @@ class UnifiedBenchmarkRunner(BaseBenchmark):
                 segment_lengths=segment_lengths,
                 dilation_rates=dilation_rates,
                 dropout=0.0,
-                batch_first=True,
             ),
             "improved": lambda: ImprovedMultiheadDilatedAttention(
                 embed_dim=embed_dim,
@@ -122,7 +121,6 @@ class UnifiedBenchmarkRunner(BaseBenchmark):
                 segment_lengths=segment_lengths,
                 dilation_rates=dilation_rates,
                 dropout=0.0,
-                batch_first=True,
             ),
             "ring": lambda: create_multihead_dilated_attention(
                 "ring",
@@ -131,7 +129,6 @@ class UnifiedBenchmarkRunner(BaseBenchmark):
                 segment_lengths=segment_lengths,
                 dilation_rates=dilation_rates,
                 dropout=0.0,
-                batch_first=True,
             ),
             "block_sparse": lambda: BlockSparseRingMultiheadDilatedAttention(
                 embed_dim=embed_dim,
@@ -140,7 +137,6 @@ class UnifiedBenchmarkRunner(BaseBenchmark):
                 dilation_rates=dilation_rates,
                 sparse_config=sparse_config,
                 dropout=0.0,
-                batch_first=True,
             ),
             "hilbert": lambda: create_multihead_dilated_attention(
                 "hilbert",
@@ -149,7 +145,6 @@ class UnifiedBenchmarkRunner(BaseBenchmark):
                 segment_lengths=segment_lengths,
                 dilation_rates=dilation_rates,
                 dropout=0.0,
-                batch_first=True,
             ),
             "distributed": lambda: create_multihead_dilated_attention(
                 "distributed",
@@ -158,7 +153,6 @@ class UnifiedBenchmarkRunner(BaseBenchmark):
                 segment_lengths=segment_lengths,
                 dilation_rates=dilation_rates,
                 dropout=0.0,
-                batch_first=True,
             ),
         }
 
@@ -202,6 +196,7 @@ class UnifiedBenchmarkRunner(BaseBenchmark):
             embed_dim=embed_dim,
             segment_lengths=segment_lengths,
             dilation_rates=dilation_rates,
+            forward_time_ms=0.0,  # Will be updated later
         )
 
         try:
@@ -229,31 +224,65 @@ class UnifiedBenchmarkRunner(BaseBenchmark):
             self.cleanup_memory()
 
             # Forward timing
-            timer = CUDATimer(self.device)
             forward_times = []
 
-            for _ in range(self.benchmark_iterations):
-                timer.start()
-                output, _ = module(x, x, x, is_causal=True)
-                timer.end()
-                forward_times.append(timer.elapsed_time())
+            if self.device.type == "cuda":
+                # Use CUDA events for accurate timing
+                for _ in range(self.benchmark_iterations):
+                    start = torch.cuda.Event(enable_timing=True)
+                    end = torch.cuda.Event(enable_timing=True)
+
+                    start.record()
+                    output = module(x, x, x, is_causal=True)
+                    if isinstance(output, tuple):
+                        output = output[0]
+                    end.record()
+
+                    torch.cuda.synchronize()
+                    forward_times.append(start.elapsed_time(end))
+            else:
+                # CPU timing
+                for _ in range(self.benchmark_iterations):
+                    start = time.time()
+                    output = module(x, x, x, is_causal=True)
+                    if isinstance(output, tuple):
+                        output = output[0]
+                    end = time.time()
+                    forward_times.append((end - start) * 1000)  # Convert to ms
 
             result.forward_time_ms = sum(forward_times) / len(forward_times)
 
             # Backward timing (if requested)
             if self.config.measure_memory:
-                timer.start()
-                loss = output.sum()
-                loss.backward()
-                timer.end()
-                result.backward_time_ms = timer.elapsed_time()
+                if self.device.type == "cuda":
+                    start = torch.cuda.Event(enable_timing=True)
+                    end = torch.cuda.Event(enable_timing=True)
+
+                    start.record()
+                    loss = output.sum()
+                    loss.backward()
+                    end.record()
+
+                    torch.cuda.synchronize()
+                    result.backward_time_ms = start.elapsed_time(end)
+                else:
+                    start = time.time()
+                    loss = output.sum()
+                    loss.backward()
+                    end = time.time()
+                    result.backward_time_ms = (end - start) * 1000
+
                 result.total_time_ms = result.forward_time_ms + result.backward_time_ms
 
             # Memory stats
             if self.config.measure_memory and self.device.type == "cuda":
+                # Get peak memory
+                peak_memory = torch.cuda.max_memory_allocated(self.device)
+                result.peak_memory_mb = peak_memory / (1024 * 1024)
+
+                # Get current allocated memory
                 memory_stats = get_memory_stats(self.device)
-                result.peak_memory_mb = memory_stats["peak"] / (1024 * 1024)
-                result.allocated_memory_mb = memory_stats["allocated"] / (1024 * 1024)
+                result.allocated_memory_mb = memory_stats["allocated"]
 
             # Throughput
             total_tokens = batch_size * seq_len
@@ -344,9 +373,26 @@ class UnifiedBenchmarkRunner(BaseBenchmark):
             self.output_manager.save_results(self.results)
 
         # Display summary
-        self.output_manager.display_summary(self.results)
+        if hasattr(self.output_manager, "display_summary"):
+            self.output_manager.display_summary(self.results)
+        else:
+            # Simple summary display
+            print("\nBenchmark Summary:")
+            print("-" * 60)
+            successful = [r for r in self.results if not r.error]
+            failed = [r for r in self.results if r.error]
+            print(f"Successful: {len(successful)}")
+            print(f"Failed: {len(failed)}")
+            if successful:
+                avg_time = sum(r.forward_time_ms for r in successful) / len(successful)
+                print(f"Average forward time: {avg_time:.2f} ms")
 
         return self.results
+
+    def run(self) -> Dict[str, Any]:
+        """Run the benchmark and return results (implements abstract method)."""
+        results = self.run_benchmarks()
+        return {"results": results}
 
     def run_sparse_benchmarks(self) -> List[BenchmarkResult]:
         """Run block sparse specific benchmarks."""
