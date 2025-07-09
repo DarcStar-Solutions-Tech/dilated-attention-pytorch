@@ -10,14 +10,19 @@ import torch.distributed as dist
 import os
 import time
 
-from dilated_attention_pytorch.ring.base import (
+from dilated_attention_pytorch.ring import (
     StandardRingAttention,
     RingAttentionConfig,
 )
-from dilated_attention_pytorch.ring.utils import (
+from dilated_attention_pytorch.ring.base.ring_communication_mixin import (
     RingCommunicationMixin,
-    AsyncRingCommunicator,
 )
+
+try:
+    from dilated_attention_pytorch.ring.utils import AsyncRingCommunicator
+except ImportError:
+    # AsyncRingCommunicator may not be implemented yet
+    AsyncRingCommunicator = None
 
 
 class TestRingCommunication:

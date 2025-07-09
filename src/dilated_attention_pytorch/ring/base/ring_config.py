@@ -69,7 +69,21 @@ class RingAttentionConfig(DilatedAttentionConfig):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        base_dict = super().to_dict()
+        # Get base class fields from dataclass
+        from dataclasses import fields
+
+        base_dict = {}
+
+        # Get fields from parent class
+        for field in fields(DilatedAttentionConfig):
+            value = getattr(self, field.name)
+            # Handle special types
+            if field.name == "device" and value is not None:
+                base_dict[field.name] = str(value)
+            elif field.name == "dtype" and value is not None:
+                base_dict[field.name] = str(value)
+            else:
+                base_dict[field.name] = value
 
         # Add ring-specific fields
         ring_fields = [

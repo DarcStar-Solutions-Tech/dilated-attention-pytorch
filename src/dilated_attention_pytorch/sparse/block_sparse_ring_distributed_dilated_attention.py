@@ -52,8 +52,8 @@ import torch.nn.functional as F
 from torch import Tensor
 
 # Import base implementations
-from ..ring.distributed.ring_distributed_dilated_attention import (
-    RingDistributedDilatedAttention,
+from ..ring.distributed_ring_attention import (
+    DistributedRingAttention as RingDistributedDilatedAttention,
 )
 
 # Import extracted components

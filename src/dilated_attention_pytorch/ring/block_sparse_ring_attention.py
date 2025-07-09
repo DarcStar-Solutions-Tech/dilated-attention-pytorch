@@ -13,7 +13,7 @@ from torch import Tensor
 from .base.base_ring_attention import BaseRingAttention, RingAttentionState
 from .base.ring_communication_mixin import RingCommunicationMixin
 from .base.ring_config import RingAttentionConfig
-from ..utils.attention_utils import create_causal_mask
+from .utils.ring_attention_utils import create_causal_mask
 from ..utils.sparse_pattern_utils import (
     create_block_sparse_pattern,
     apply_sparse_mask,
@@ -211,8 +211,12 @@ class BlockSparseRingAttention(BaseRingAttention, RingCommunicationMixin):
         # Apply causal mask if needed
         if is_causal:
             causal_mask = create_causal_mask(
-                q_len, kv_len, device=self.device, dtype=scores.dtype
+                q_len, device=self.device, dtype=scores.dtype
             )
+            # Adjust for kv_len if different from q_len
+            if kv_len != q_len:
+                causal_mask = causal_mask[:q_len, :kv_len]
+            causal_mask = causal_mask.unsqueeze(0).unsqueeze(0)
             scores = scores + causal_mask
 
         # Compute log-sum-exp for numerical stability
@@ -222,8 +226,8 @@ class BlockSparseRingAttention(BaseRingAttention, RingCommunicationMixin):
         attn_weights = torch.softmax(scores, dim=-1)
 
         # Apply dropout if configured
-        if self.dropout_p > 0 and self.training:
-            attn_weights = F.dropout(attn_weights, p=self.dropout_p)
+        if self.dropout > 0 and self.training:
+            attn_weights = F.dropout(attn_weights, p=self.dropout)
 
         # Compute attention output
         attn_output = torch.matmul(

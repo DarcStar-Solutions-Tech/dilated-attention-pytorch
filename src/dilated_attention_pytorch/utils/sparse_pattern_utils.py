@@ -1003,6 +1003,9 @@ def apply_sparse_mask(
         while mask.dim() < scores.dim():
             mask = mask.unsqueeze(0)
 
+    # Ensure mask is on the same device as scores
+    mask = mask.to(scores.device)
+
     # Apply mask
     masked_scores = scores.masked_fill(~mask, value)
 

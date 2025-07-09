@@ -14,7 +14,6 @@ from torch import Tensor
 
 from ...core.base import BaseDilatedAttention
 from ...core.config import DilatedAttentionConfig
-from ...utils.validation import validate_ring_setup
 
 
 class BaseRingAttention(BaseDilatedAttention, ABC):
@@ -44,7 +43,13 @@ class BaseRingAttention(BaseDilatedAttention, ABC):
             device: Device to place tensors on
             dtype: Data type for tensors
         """
-        super().__init__(config, device, dtype)
+        # Update config with device and dtype if provided
+        if device is not None:
+            config.device = device
+        if dtype is not None:
+            config.dtype = dtype
+
+        super().__init__(config)
 
         # Ring-specific attributes
         self.world_size = 1
@@ -69,7 +74,7 @@ class BaseRingAttention(BaseDilatedAttention, ABC):
 
             # Validate ring setup
             try:
-                validate_ring_setup(self.world_size, self.rank)
+                self._validate_ring_setup()
             except ValueError as e:
                 warnings.warn(f"Ring setup validation failed: {e}")
                 self.is_distributed = False
@@ -175,6 +180,23 @@ class BaseRingAttention(BaseDilatedAttention, ABC):
             setattr(self, buffer_attr, buffer)
 
         return buffer
+
+    def _validate_ring_setup(self) -> None:
+        """Validate ring setup for distributed training.
+
+        Raises:
+            ValueError: If ring setup is invalid
+        """
+        if not dist.is_initialized():
+            raise ValueError("Distributed not initialized but ring_size > 1")
+
+        if self.world_size < 2:
+            raise ValueError(
+                f"Ring attention requires world_size >= 2, got {self.world_size}"
+            )
+
+        if self.rank >= self.world_size:
+            raise ValueError(f"Rank {self.rank} >= world_size {self.world_size}")
 
     def _validate_sequence_length(self, seq_len: int) -> None:
         """Validate sequence length for ring attention.

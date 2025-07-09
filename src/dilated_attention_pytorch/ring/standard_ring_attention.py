@@ -1,6 +1,7 @@
-"""Standard ring attention implementation using the base class.
+"""Standard ring attention implementation.
 
-This is the reference implementation that other ring variants can build upon.
+This module provides the basic ring attention mechanism with proper
+isend/irecv communication for O(n/k) memory complexity.
 """
 
 import math
@@ -9,18 +10,17 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 
-from .base_ring_attention import BaseRingAttention, RingAttentionState
-from .ring_communication_mixin import RingCommunicationMixin
-from .ring_config import RingAttentionConfig
-from ...utils.attention_utils import create_causal_mask
+from .base.base_ring_attention import BaseRingAttention, RingAttentionState
+from .base.ring_communication_mixin import RingCommunicationMixin
+from .base.ring_config import RingAttentionConfig
+# Causal mask will be created inline
 
 
 class StandardRingAttention(BaseRingAttention, RingCommunicationMixin):
     """Standard ring attention implementation.
 
-    This class provides a clean, efficient implementation of ring attention
-    that serves as the reference for other variants. It uses isend/irecv
-    for true O(n/k) memory complexity.
+    This is the basic ring attention that provides O(n/k) memory scaling
+    through proper sequence splitting and ring communication.
     """
 
     def __init__(
@@ -46,7 +46,7 @@ class StandardRingAttention(BaseRingAttention, RingCommunicationMixin):
         self.config = config
 
         # Validate setup if distributed
-        if self.is_distributed and config.validate_gradients:
+        if self.is_distributed:
             if not self.validate_ring_setup():
                 raise RuntimeError("Ring setup validation failed")
 
@@ -63,7 +63,6 @@ class StandardRingAttention(BaseRingAttention, RingCommunicationMixin):
             Tuple of (local_chunk, start_idx, end_idx)
         """
         if already_split or not self.is_distributed:
-            # Sequence already split or not in distributed mode
             seq_len = x.shape[1]
             return x, 0, seq_len
 
@@ -80,6 +79,9 @@ class StandardRingAttention(BaseRingAttention, RingCommunicationMixin):
 
         # Extract local chunk
         local_chunk = x[:, start_idx:end_idx].contiguous()
+
+        # Store for later reference
+        self._last_local_seq_len = local_seq_len
 
         return local_chunk, start_idx, end_idx
 
@@ -141,9 +143,18 @@ class StandardRingAttention(BaseRingAttention, RingCommunicationMixin):
 
         # Apply causal mask if needed
         if is_causal:
-            causal_mask = create_causal_mask(
-                q_len, kv_len, device=self.device, dtype=scores.dtype
+            # Create causal mask
+            causal_mask = torch.triu(
+                torch.full(
+                    (q_len, kv_len),
+                    float("-inf"),
+                    device=scores.device,
+                    dtype=scores.dtype,
+                ),
+                diagonal=1,
             )
+            # Expand for batch and heads dimensions
+            causal_mask = causal_mask.unsqueeze(0).unsqueeze(0)
             scores = scores + causal_mask
 
         # Compute log-sum-exp for numerical stability
@@ -153,8 +164,8 @@ class StandardRingAttention(BaseRingAttention, RingCommunicationMixin):
         attn_weights = torch.softmax(scores, dim=-1)
 
         # Apply dropout if configured
-        if self.dropout_p > 0 and self.training:
-            attn_weights = F.dropout(attn_weights, p=self.dropout_p)
+        if self.dropout > 0 and self.training:
+            attn_weights = F.dropout(attn_weights, p=self.dropout)
 
         # Compute attention output
         attn_output = torch.matmul(
@@ -184,10 +195,6 @@ class StandardRingAttention(BaseRingAttention, RingCommunicationMixin):
         Returns:
             Tuple of (accumulated_output, accumulated_lse)
         """
-        # Ensure correct shapes
-        # local_lse shape: (batch, heads, seq)
-        # local_out shape: (batch, seq, heads, dim)
-
         # Compute stable accumulation using log-sum-exp trick
         max_lse = torch.maximum(local_lse, remote_lse)
 
@@ -268,7 +275,7 @@ class StandardRingAttention(BaseRingAttention, RingCommunicationMixin):
                 current_v,
                 attention_mask=attention_mask,
                 is_causal=is_causal,
-                segment_idx=0,  # TODO: Handle segment index properly
+                segment_idx=ring_step,
             )
 
             # Accumulate results
@@ -302,5 +309,4 @@ class StandardRingAttention(BaseRingAttention, RingCommunicationMixin):
 
     def extra_repr(self) -> str:
         """Extra representation for printing."""
-        base_repr = super().extra_repr()
-        return f"{base_repr}, backend={self.config.communication_backend}"
+        return super().extra_repr()

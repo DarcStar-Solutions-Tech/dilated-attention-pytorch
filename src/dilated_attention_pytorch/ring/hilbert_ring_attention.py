@@ -13,7 +13,7 @@ from torch import Tensor
 from .base.base_ring_attention import BaseRingAttention, RingAttentionState
 from .base.ring_communication_mixin import RingCommunicationMixin
 from .base.ring_config import RingAttentionConfig, HilbertConfig
-from ..utils.attention_utils import create_causal_mask
+from .utils.ring_attention_utils import create_causal_mask
 from ..utils.hilbert_curve import generate_hilbert_indices
 
 
@@ -78,9 +78,30 @@ class HilbertRingAttention(BaseRingAttention, RingCommunicationMixin):
         """
         if seq_len not in self._hilbert_cache:
             # Generate indices
-            indices = generate_hilbert_indices(
-                seq_len, level=self.hilbert_curve_level, device=self.device
+            # Find dimension that fits sequence length
+            dim = 1
+            while dim * dim < seq_len:
+                dim *= 2
+
+            # Calculate n such that 2^n = dim
+            n = int(math.log2(dim))
+
+            # Generate Hilbert indices for square grid
+            hilbert_list = generate_hilbert_indices(n)
+
+            # Take only the indices that fit within our sequence length
+            indices = torch.tensor(
+                [idx for idx in hilbert_list if idx < seq_len][:seq_len],
+                device=self.device,
+                dtype=torch.long,
             )
+
+            # If we don't have enough indices, pad with remaining sequential indices
+            if len(indices) < seq_len:
+                remaining = torch.arange(
+                    len(indices), seq_len, device=self.device, dtype=torch.long
+                )
+                indices = torch.cat([indices, remaining])
 
             # Cache if enabled
             if self.hilbert_config.use_cached_indices:
@@ -116,11 +137,11 @@ class HilbertRingAttention(BaseRingAttention, RingCommunicationMixin):
         if inverse:
             # Create inverse indices
             inverse_indices = torch.empty_like(indices)
-            inverse_indices[indices] = torch.arange(seq_len, device=self.device)
+            inverse_indices[indices] = torch.arange(seq_len, device=indices.device)
             indices = inverse_indices
 
         # Reorder along sequence dimension
-        return tensor[:, indices]
+        return tensor[:, indices.to(tensor.device)]
 
     def _split_sequence(
         self, x: Tensor, already_split: bool = False
@@ -218,8 +239,12 @@ class HilbertRingAttention(BaseRingAttention, RingCommunicationMixin):
         # Apply causal mask if needed
         if is_causal:
             causal_mask = create_causal_mask(
-                q_len, kv_len, device=self.device, dtype=scores.dtype
+                q_len, device=self.device, dtype=scores.dtype
             )
+            # Adjust for kv_len if different from q_len
+            if kv_len != q_len:
+                causal_mask = causal_mask[:q_len, :kv_len]
+            causal_mask = causal_mask.unsqueeze(0).unsqueeze(0)
             scores = scores + causal_mask
 
         # Compute log-sum-exp for numerical stability
@@ -229,8 +254,8 @@ class HilbertRingAttention(BaseRingAttention, RingCommunicationMixin):
         attn_weights = torch.softmax(scores, dim=-1)
 
         # Apply dropout if configured
-        if self.dropout_p > 0 and self.training:
-            attn_weights = F.dropout(attn_weights, p=self.dropout_p)
+        if self.dropout > 0 and self.training:
+            attn_weights = F.dropout(attn_weights, p=self.dropout)
 
         # Compute attention output
         attn_output = torch.matmul(
