@@ -11,8 +11,8 @@ from typing import Optional, List, Tuple, Union
 import torch
 import torch.nn as nn
 
-from .dilated_attention import DilatedAttention
-from .improved_dilated_attention import ImprovedDilatedAttention
+from .base.dilated_attention import DilatedAttention
+from .base.improved_dilated_attention import ImprovedDilatedAttention
 from .utils.dynamic_segment_selector import (
     DynamicSegmentSelector,
     SegmentSelectionConfig,

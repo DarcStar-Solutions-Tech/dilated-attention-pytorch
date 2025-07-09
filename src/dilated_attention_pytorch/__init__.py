@@ -9,16 +9,16 @@ __version__ = "0.2.0"
 
 
 # Block-Sparse Ring Attention implementations
-from .block_sparse_ring_dilated_attention import (
+from .sparse.block_sparse_ring_dilated_attention import (
     BlockSparseRingDilatedAttention,
     SparsePatternConfig,
 )
-from .block_sparse_ring_distributed_dilated_attention import (
+from .sparse.block_sparse_ring_distributed_dilated_attention import (
     BlockSparseRingDistributedDilatedAttention,
     DistributedSparseConfig,
     DistributedSparsePattern,
 )
-from .block_sparse_ring_multihead_dilated_attention import (
+from .sparse.block_sparse_ring_multihead_dilated_attention import (
     BlockSparseRingMultiheadDilatedAttention,
 )
 
@@ -27,7 +27,7 @@ from .block_sparse_ring_multihead_dilated_attention import (
 # from .block_sparse_torch_sparse import BlockSparseTorchSparse  # Removed - provided no benefit over base implementation
 # Hierarchical variant removed due to poor memory efficiency
 # Use create_block_sparse_attention with pattern_type='dilated_sparse' instead
-from .block_sparse_adaptive import (
+from .sparse.block_sparse_adaptive import (
     BlockSparseAdaptive,
     AdaptiveConfig,
     ImportanceScorer,
@@ -36,23 +36,22 @@ from .block_sparse_adaptive import (
 
 # Factory functions for easy creation
 from .core import (
-    create_adaptive_sparse_attention,
     create_dilated_attention,
     create_multihead_dilated_attention,
 )
 
 # Block-sparse factory
-from .block_sparse_factory import (
+from .sparse.block_sparse_factory import (
     create_block_sparse_attention,
     get_block_sparse_preset,
     create_adaptive_block_sparse,
     create_multihead_block_sparse,
 )
-from .dilated_attention import DilatedAttention
-from .improved_dilated_attention import ImprovedDilatedAttention
-from .improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttention
-from .long_net import LongNet
-from .multihead_dilated_attention import MultiheadDilatedAttention
+from .base.dilated_attention import DilatedAttention
+from .base.improved_dilated_attention import ImprovedDilatedAttention
+from .base.improved_multihead_dilated_attention import ImprovedMultiheadDilatedAttention
+from .models.long_net import LongNet
+from .base.multihead_dilated_attention import MultiheadDilatedAttention
 
 # [Removed: Hybrid implementation deprecated due to poor performance]
 # [Removed: RingMultiheadDilatedAttentionHybrid deprecated]
@@ -61,11 +60,14 @@ from .multihead_dilated_attention import MultiheadDilatedAttention
 # See docs/reports/ring-production-not-ring-attention-2025-07-08-0327-UTC.md
 
 # GPU-optimized Ring Hilbert Attention (new implementation with proper ring communication)
-from .ring_dilated_attention_hilbert_gpu_optimized import (
+from .ring.hilbert.ring_dilated_attention_hilbert_gpu_optimized import (
     RingDilatedAttentionHilbertGPUOptimized,
 )
 
-from .transformer import DilatedTransformerDecoderLayer, DilatedTransformerEncoderLayer
+from .models.transformer import (
+    DilatedTransformerDecoderLayer,
+    DilatedTransformerEncoderLayer,
+)
 from .utils.sparse_pattern_utils import (
     PatternConfig,
     PatternOptimizer,
@@ -128,7 +130,6 @@ __all__ = [
     # Configuration and utility classes
     "SparsePatternConfig",
     "SparsePatternGenerator",
-    "create_adaptive_sparse_attention",
     # Block-sparse factory functions
     "create_block_sparse_attention",
     "get_block_sparse_preset",
