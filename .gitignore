@@ -156,8 +156,10 @@ test_*_output.txt
 *_output_fixed.txt
 
 # Data directory for benchmark/test outputs
-data/
-!data/.gitkeep
+# NOTE: Currently tracking data for historical preservation
+# TODO: Implement proper data archival solution
+# data/
+# !data/.gitkeep
 
 
 # OS specific
