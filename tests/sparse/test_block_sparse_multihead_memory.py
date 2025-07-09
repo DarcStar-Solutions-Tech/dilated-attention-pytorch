@@ -10,7 +10,7 @@ from dilated_attention_pytorch import BlockSparseRingMultiheadDilatedAttention
 from dilated_attention_pytorch import (
     SparsePatternConfig,
 )
-from dilated_attention_pytorch.core.memory_pool import (
+from dilated_attention_pytorch.core.unified_memory_pool import (
     get_global_memory_pool,
     reset_global_memory_pool,
 )
