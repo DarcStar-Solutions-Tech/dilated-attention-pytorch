@@ -1,4 +1,0 @@
-[2025-07-02 13:03:36,044] [INFO] [real_accelerator.py:254:get_accelerator] Setting ds_accelerator to cuda (auto detect)
-[2025-07-02 13:03:37,296] [INFO] [logging.py:107:log_dist] [Rank -1] [TorchCheckpointEngine] Initialized with serialization = False
-/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/dilated_attention_pytorch/ring_attention_lse_optimized.py:100: UserWarning: Flash Attention failed, falling back: FlashAttention only supports Ampere GPUs or newer.
-  output = optimize_attention_computation(

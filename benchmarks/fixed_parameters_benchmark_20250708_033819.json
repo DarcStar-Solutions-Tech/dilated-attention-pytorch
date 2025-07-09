@@ -1,7 +1,0 @@
-{
-  "timestamp": "2025-07-08T03:38:19.968748+00:00",
-  "device": "cuda",
-  "cuda_available": true,
-  "note": "Fixed parameter benchmark - addresses all known parameter issues",
-  "results": []
-}

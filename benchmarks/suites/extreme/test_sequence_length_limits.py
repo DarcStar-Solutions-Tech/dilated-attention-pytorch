@@ -59,7 +59,7 @@ def test_sequence_length(model_type, max_seq_len=1_000_000, batch_size=1):
     ]
 
     # Filter to reasonable range
-    test_lengths = [l for l in test_lengths if l <= max_seq_len]
+    test_lengths = [length for length in test_lengths if length <= max_seq_len]
 
     # Fixed parameters
     num_heads = 8

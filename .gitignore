@@ -155,6 +155,10 @@ benchmark_*_output.txt
 test_*_output.txt
 *_output_fixed.txt
 
+# Data directory for benchmark/test outputs
+data/
+!data/.gitkeep
+
 
 # OS specific
 .DS_Store
