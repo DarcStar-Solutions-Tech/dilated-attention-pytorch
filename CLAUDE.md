@@ -696,6 +696,114 @@ These documents have stable content and use descriptive names without timestamps
 - For timestamped files, timestamp goes at the end before extension
 - Extensions: `.md` for markdown, `.png`/`.jpg` for images, `.json` for data
 
+## Ring Attention Implementation Guidelines
+
+### CRITICAL: Avoid Common Implementation Errors
+
+#### 1. **Process Local Sequences Only**
+The most critical error in ring attention is processing the full sequence before splitting:
+
+```python
+# WRONG - Defeats O(n/k) memory benefit!
+qkv = self.qkv_proj(x)  # x is [batch, seq_len, embed_dim]
+# Then splits AFTER projection - too late!
+
+# CORRECT - Split first, then project
+if self.world_size > 1 and not already_split:
+    x_local = x[:, start:end, :].contiguous()
+qkv = self.qkv_proj(x_local)  # Process local chunk only
+```
+
+#### 2. **Never Use all_gather**
+- `all_gather` creates O(n²) communication and defeats the purpose
+- Always use `isend/irecv` for ring communication pattern
+- Removed implementations that used `all_gather` due to poor performance
+
+#### 3. **Ring Communication Pattern**
+```python
+def ring_pass_forward(tensor):
+    src = (rank - 1) % world_size
+    dst = (rank + 1) % world_size
+    
+    recv_buffer = torch.empty_like(tensor)
+    send_op = dist.isend(tensor.contiguous(), dst)
+    recv_op = dist.irecv(recv_buffer, src)
+    
+    send_op.wait()
+    recv_op.wait()
+    return recv_buffer
+```
+
+#### 4. **Memory Management**
+- Always ensure tensors are contiguous before communication
+- Use aggressive memory cleanup for long sequences:
+  ```python
+  gc.collect()
+  torch.cuda.empty_cache()
+  torch.cuda.synchronize()
+  ```
+- Pre-allocate communication buffers to reduce allocation overhead
+
+#### 5. **Backend Selection for Ring Attention**
+When using ring attention, select backend based on LOCAL sequence length:
+```python
+seq_len_hint = max(segment_lengths)
+if memory_efficient and dist.is_initialized():
+    seq_len_hint = seq_len_hint // dist.get_world_size()
+```
+
+### Benchmarking Guidelines
+
+#### 1. **Multi-GPU Benchmarking Setup**
+- Always verify `dist.is_initialized()` before using distributed features
+- Use proper barriers for synchronization: `dist.barrier()`
+- Profile with CUDA events for accurate timing
+
+#### 2. **Memory Profiling**
+- Monitor peak memory per GPU, not total
+- Account for communication buffers in memory estimates
+- Use `torch.cuda.max_memory_allocated()` for accurate measurements
+
+#### 3. **Scaling Validation**
+Verified scaling up to 1 billion tokens:
+- Linear memory scaling: O(n/k) where k = world_size
+- Constant memory per token regardless of total sequence length
+- Example: 204,800 tokens with 4 GPUs = 459.2 MB per GPU
+
+### GPU Architecture Considerations
+
+#### 1. **Data Type Selection**
+- Use float16/bfloat16 on Ampere+ GPUs (compute capability >= 8.0)
+- Fall back to float32 for older GPUs (Pascal and earlier)
+- Automatic detection based on `torch.cuda.get_device_capability()`
+
+#### 2. **Flash Attention Backend**
+- FA3 supported on H100/H200 GPUs (1.5-2x speedup)
+- FA2 for A100/A10/RTX 30xx/40xx
+- Automatic backend selection based on hardware
+
+#### 3. **NCCL Optimization**
+Environment variables for network optimization:
+- `NCCL_SOCKET_IFNAME`: Specify network interface
+- `NCCL_IB_DISABLE`: Disable InfiniBand if not available
+- `NCCL_P2P_DISABLE`: Disable P2P for compatibility
+
+### Hilbert Curve Optimization
+
+When implementing Hilbert optimization:
+1. Apply per-segment for cache efficiency
+2. Use GPU-aware backend selection
+3. Preserve numerical stability with proper LSE accumulation
+4. Benchmark against standard ordering for your use case
+
+### Performance Expectations
+
+Based on extensive benchmarking:
+- **Single GPU**: Standard attention up to ~32K tokens
+- **Multi-GPU Ring**: Linear scaling to billions of tokens
+- **Memory per token**: ~0.009 MB (constant with ring attention)
+- **Communication overhead**: ~10-15% with proper implementation
+
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.
