@@ -4,6 +4,11 @@ Fixed Ring Dilated Attention with per-segment HilbertAttentionCore integration.
 This implementation fixes two critical issues:
 1. Applies Hilbert SFC per-segment instead of globally
 2. Implements proper ring communication using isend/irecv
+
+DEPRECATED: This implementation uses all_gather which has poor performance.
+Please use HilbertRingAttention from the standardized API instead:
+    from dilated_attention_pytorch.ring import create_ring_attention
+    attention = create_ring_attention("hilbert", config)
 """
 
 import torch
@@ -11,6 +16,7 @@ import torch.nn as nn
 import torch.distributed as dist
 from typing import Optional, List, Tuple, Union
 import logging
+import warnings
 
 from ...core.standardized_api import (
     StandardizedRingConfig,
@@ -52,6 +58,15 @@ class RingDilatedAttentionHilbertCoreFixed(nn.Module, StandardizedRingAttentionM
         use_custom_backward: bool = True,
         **kwargs,
     ):
+        warnings.warn(
+            "RingDilatedAttentionHilbertCoreFixed is deprecated due to use of all_gather "
+            "which has poor performance. Please use HilbertRingAttention instead:\n"
+            "    from dilated_attention_pytorch.ring import create_ring_attention\n"
+            "    attention = create_ring_attention('hilbert', config)\n"
+            "This implementation will be removed in v0.5.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__()
 
         # Handle different initialization patterns

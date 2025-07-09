@@ -20,7 +20,7 @@ import threading
 import warnings
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 import torch
 import torch.nn.functional as F
@@ -930,6 +930,85 @@ def _align_to_blocks(pattern: torch.Tensor, block_size: int) -> torch.Tensor:
     return optimized
 
 
+# Additional simple utility functions for BlockSparseRingAttention compatibility
+
+
+class BlockSparseConfig:
+    """Simple configuration for block-sparse attention patterns."""
+
+    def __init__(
+        self,
+        block_size: int = 64,
+        sparsity_ratio: float = 0.9,
+        pattern_type: str = "local",
+        num_heads: int = 1,
+        use_different_patterns_per_head: bool = False,
+    ):
+        self.block_size = block_size
+        self.sparsity_ratio = sparsity_ratio
+        self.pattern_type = pattern_type
+        self.num_heads = num_heads
+        self.use_different_patterns_per_head = use_different_patterns_per_head
+
+
+def create_block_sparse_pattern(
+    seq_len: int,
+    config: BlockSparseConfig,
+    device: Optional[torch.device] = None,
+    dtype: torch.dtype = torch.bool,
+) -> torch.Tensor:
+    """Create a block-sparse attention pattern using the SparsePatternGenerator."""
+    # Convert BlockSparseConfig to PatternConfig
+    pattern_config = PatternConfig(
+        pattern_type=PatternType.LOCAL_WINDOW
+        if config.pattern_type == "local"
+        else PatternType.DILATED_SPARSE
+        if config.pattern_type == "dilated"
+        else PatternType.GLOBAL_LOCAL,
+        sparsity_ratio=1.0 - config.sparsity_ratio,  # Convert to density
+        block_size=config.block_size,
+    )
+
+    generator = SparsePatternGenerator(pattern_config)
+
+    # Generate pattern
+    num_blocks = seq_len // config.block_size
+    pattern = generator.generate_pattern(seq_len, config.num_heads, device)
+
+    # Convert from block pattern to token pattern
+    token_pattern = torch.zeros(seq_len, seq_len, dtype=dtype, device=device)
+
+    # For simplicity, expand block pattern to token level
+    for i in range(num_blocks):
+        for j in range(num_blocks):
+            if pattern[0, i, j] if pattern.dim() == 3 else pattern[i, j]:
+                i_start = i * config.block_size
+                i_end = min((i + 1) * config.block_size, seq_len)
+                j_start = j * config.block_size
+                j_end = min((j + 1) * config.block_size, seq_len)
+                token_pattern[i_start:i_end, j_start:j_end] = True
+
+    return token_pattern
+
+
+def apply_sparse_mask(
+    scores: torch.Tensor,
+    mask: torch.Tensor,
+    value: float = -torch.inf,
+) -> torch.Tensor:
+    """Apply sparse mask to attention scores."""
+    # This function already exists above, but adding for clarity
+    if mask.dim() == 2:  # (seq_len, seq_len)
+        # Broadcast to match scores shape
+        while mask.dim() < scores.dim():
+            mask = mask.unsqueeze(0)
+
+    # Apply mask
+    masked_scores = scores.masked_fill(~mask, value)
+
+    return masked_scores
+
+
 # Export main classes and functions
 __all__ = [
     "PatternConfig",
@@ -939,4 +1018,7 @@ __all__ = [
     "PatternType",
     "PatternVisualizer",
     "SparsePatternGenerator",
+    "BlockSparseConfig",
+    "create_block_sparse_pattern",
+    "apply_sparse_mask",
 ]
