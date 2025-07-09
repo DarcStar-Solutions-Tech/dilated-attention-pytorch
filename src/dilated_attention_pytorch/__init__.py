@@ -74,6 +74,17 @@ from .utils.sparse_pattern_utils import (
     SparsePatternGenerator,
 )
 
+# Dynamic segment sizing implementations
+from .dynamic_dilated_attention import (
+    DynamicDilatedAttention,
+    DynamicMultiheadDilatedAttention,
+    create_dynamic_dilated_attention,
+)
+from .utils.dynamic_segment_selector import (
+    DynamicSegmentSelector,
+    SegmentSelectionConfig,
+)
+
 # [Removed: RingDilatedAttention alias - implementation was not actually ring attention]
 
 
@@ -126,6 +137,12 @@ __all__ = [
     # Factory functions (v0.2.0+)
     "create_dilated_attention",
     "create_multihead_dilated_attention",
+    # Dynamic segment sizing (v0.3.0+)
+    "DynamicDilatedAttention",
+    "DynamicMultiheadDilatedAttention",
+    "create_dynamic_dilated_attention",
+    "DynamicSegmentSelector",
+    "SegmentSelectionConfig",
 ]
 
 # Flash optimizations are now integrated into V2Collective
