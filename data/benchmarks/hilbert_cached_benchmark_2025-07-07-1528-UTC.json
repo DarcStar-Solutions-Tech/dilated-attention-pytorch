@@ -1,0 +1,128 @@
+{
+  "metadata": {
+    "timestamp": "2025-07-07-1528-UTC",
+    "device": "NVIDIA GeForce GTX 1080"
+  },
+  "results": [
+    {
+      "implementation": "standard",
+      "sequence_length": 2048,
+      "forward_time_ms": 14.204057585448027,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": null,
+      "cache_stats": null
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 4096,
+      "forward_time_ms": 30.82671221345663,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": null,
+      "cache_stats": null
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 8192,
+      "forward_time_ms": 59.34380907565355,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": null,
+      "cache_stats": null
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 16384,
+      "forward_time_ms": 195.7825444638729,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": null,
+      "cache_stats": null
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 32768,
+      "forward_time_ms": 412.9831140860915,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": null,
+      "cache_stats": null
+    },
+    {
+      "implementation": "hilbert_v1",
+      "sequence_length": 2048,
+      "forward_time_ms": 28.04123591631651,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": null,
+      "cache_stats": null
+    },
+    {
+      "implementation": "hilbert_v1",
+      "sequence_length": 4096,
+      "forward_time_ms": 112.92049959301949,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": null,
+      "cache_stats": null
+    },
+    {
+      "implementation": "hilbert_v1",
+      "sequence_length": 8192,
+      "forward_time_ms": 175.84313778206706,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": null,
+      "cache_stats": null
+    },
+    {
+      "implementation": "hilbert_v1",
+      "sequence_length": 16384,
+      "forward_time_ms": 308.15251572057605,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": null,
+      "cache_stats": null
+    },
+    {
+      "implementation": "hilbert_v1",
+      "sequence_length": 32768,
+      "forward_time_ms": 652.337218541652,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": null,
+      "cache_stats": null
+    },
+    {
+      "implementation": "cached",
+      "sequence_length": 2048,
+      "forward_time_ms": 14.825558755546808,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": 0.0009454786777496338,
+      "cache_stats": {}
+    },
+    {
+      "implementation": "cached",
+      "sequence_length": 4096,
+      "forward_time_ms": 84.36684552580118,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": 0.0009454786777496338,
+      "cache_stats": {}
+    },
+    {
+      "implementation": "cached",
+      "sequence_length": 8192,
+      "forward_time_ms": 126.01842926815152,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": 0.0009454786777496338,
+      "cache_stats": {}
+    },
+    {
+      "implementation": "cached",
+      "sequence_length": 16384,
+      "forward_time_ms": 181.8668265827,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": 0.0009454786777496338,
+      "cache_stats": {}
+    },
+    {
+      "implementation": "cached",
+      "sequence_length": 32768,
+      "forward_time_ms": 607.8251333907247,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": 0.0009454786777496338,
+      "cache_stats": {}
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "timestamp": "2025-07-04-2058-UTC",
+  "gpu": "NVIDIA GeForce GTX 1080",
+  "gpu_memory_gb": 7.8841552734375,
+  "dtype": "float32",
+  "results": [
+    {
+      "segments": [
+        8192
+      ],
+      "dilations": [
+        1
+      ],
+      "description": "Single segment, no dilation",
+      "max_seq_len": 237568,
+      "throughput": 9015.639288581868,
+      "memory_gb": 4.531280517578125,
+      "time_ms": 26350.65494477749
+    },
+    {
+      "segments": [
+        8192
+      ],
+      "dilations": [
+        2
+      ],
+      "description": "Single segment, dilation=2",
+      "max_seq_len": 237568,
+      "throughput": 52205.06178634227,
+      "memory_gb": 4.531341552734375,
+      "time_ms": 4550.669836811721
+    },
+    {
+      "segments": [
+        4096,
+        8192,
+        16384
+      ],
+      "dilations": [
+        1,
+        2,
+        4
+      ],
+      "description": "Three segments",
+      "max_seq_len": 212992,
+      "throughput": 49088.8201088464,
+      "memory_gb": 4.6016845703125,
+      "time_ms": 4338.910561054945
+    },
+    {
+      "segments": [
+        4096,
+        8192
+      ],
+      "dilations": [
+        1,
+        2
+      ],
+      "description": "Multi-segment, standard dilation",
+      "max_seq_len": 204800,
+      "throughput": 42967.40372769451,
+      "memory_gb": 4.6016845703125,
+      "time_ms": 4766.403883695602
+    },
+    {
+      "segments": [
+        8192,
+        16384
+      ],
+      "dilations": [
+        1,
+        2
+      ],
+      "description": "Large segments",
+      "max_seq_len": 196608,
+      "throughput": 19823.831633331305,
+      "memory_gb": 4.6016845703125,
+      "time_ms": 9917.75977704674
+    }
+  ]
+}

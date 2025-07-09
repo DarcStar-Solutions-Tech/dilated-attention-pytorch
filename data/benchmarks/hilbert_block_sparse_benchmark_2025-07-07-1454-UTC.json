@@ -1,0 +1,249 @@
+{
+  "metadata": {
+    "timestamp": "2025-07-07-1454-UTC",
+    "device": "NVIDIA GeForce GTX 1080",
+    "gpu_memory_gb": 7.8841552734375
+  },
+  "config_comparison": {
+    "standard": 208.09053000994027,
+    "hilbert_block": 333.26325360685587,
+    "hilbert_element": 251.63621245883405,
+    "hilbert_full": 371.52922255918384
+  },
+  "results": [
+    {
+      "implementation": "standard",
+      "sequence_length": 2048,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 15.105810668319464,
+      "memory_mb": 10.12890625,
+      "speedup_ratio": null
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 4096,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 29.964944813400507,
+      "memory_mb": 4.0068359375,
+      "speedup_ratio": null
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 8192,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 55.773877166211605,
+      "memory_mb": 8.013671875,
+      "speedup_ratio": null
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 16384,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 134.31680351495743,
+      "memory_mb": 16.02734375,
+      "speedup_ratio": null
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 32768,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 449.42940901964903,
+      "memory_mb": 32.0546875,
+      "speedup_ratio": null
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 65536,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 825.4454797133803,
+      "memory_mb": 64.109375,
+      "speedup_ratio": null
+    },
+    {
+      "implementation": "hilbert",
+      "sequence_length": 2048,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 28.161023184657097,
+      "memory_mb": 2.00390625,
+      "speedup_ratio": 0.5364084454342386
+    },
+    {
+      "implementation": "hilbert",
+      "sequence_length": 4096,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 62.19815853983164,
+      "memory_mb": 4.0068359375,
+      "speedup_ratio": 0.4817657872332504
+    },
+    {
+      "implementation": "hilbert",
+      "sequence_length": 8192,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 121.9594351015985,
+      "memory_mb": 8.013671875,
+      "speedup_ratio": 0.8608828490329278
+    },
+    {
+      "implementation": "hilbert",
+      "sequence_length": 16384,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 285.65374249592423,
+      "memory_mb": 16.02734375,
+      "speedup_ratio": 0.8350607662738609
+    },
+    {
+      "implementation": "hilbert",
+      "sequence_length": 32768,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 632.8013852238655,
+      "memory_mb": 32.0546875,
+      "speedup_ratio": 0.7102219108775415
+    },
+    {
+      "implementation": "hilbert",
+      "sequence_length": 65536,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 1222.1183331683278,
+      "memory_mb": 64.109375,
+      "speedup_ratio": 0.6754218943540617
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 8192,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 104.99278595671058,
+      "memory_mb": 8.013671875,
+      "speedup_ratio": null
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 16384,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 188.8508666306734,
+      "memory_mb": 16.02734375,
+      "speedup_ratio": null
+    },
+    {
+      "implementation": "hilbert",
+      "sequence_length": 8192,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 239.54283213242888,
+      "memory_mb": 8.013671875,
+      "speedup_ratio": 0.43830485354980836
+    },
+    {
+      "implementation": "hilbert",
+      "sequence_length": 16384,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 417.0490002259612,
+      "memory_mb": 16.02734375,
+      "speedup_ratio": 0.5719669222762801
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 8192,
+      "block_size": 128,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 42.81148370355368,
+      "memory_mb": 8.0068359375,
+      "speedup_ratio": null
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 16384,
+      "block_size": 128,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 228.28497095033526,
+      "memory_mb": 16.013671875,
+      "speedup_ratio": null
+    },
+    {
+      "implementation": "hilbert",
+      "sequence_length": 8192,
+      "block_size": 128,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 71.078728325665,
+      "memory_mb": 8.0068359375,
+      "speedup_ratio": 0.6023107716193534
+    },
+    {
+      "implementation": "hilbert",
+      "sequence_length": 16384,
+      "block_size": 128,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 269.4194322451949,
+      "memory_mb": 16.013671875,
+      "speedup_ratio": 0.8473218470098187
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 16384,
+      "block_size": 64,
+      "sparsity_ratio": 0.1,
+      "forward_time_ms": 245.6556904129684,
+      "memory_mb": 16.02734375,
+      "speedup_ratio": null
+    },
+    {
+      "implementation": "hilbert",
+      "sequence_length": 16384,
+      "block_size": 64,
+      "sparsity_ratio": 0.1,
+      "forward_time_ms": 460.4409352876246,
+      "memory_mb": 16.02734375,
+      "speedup_ratio": 0.5335226987572557
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 16384,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 238.53823309764266,
+      "memory_mb": 16.02734375,
+      "speedup_ratio": null
+    },
+    {
+      "implementation": "hilbert",
+      "sequence_length": 16384,
+      "block_size": 64,
+      "sparsity_ratio": 0.05,
+      "forward_time_ms": 430.75561318546534,
+      "memory_mb": 16.02734375,
+      "speedup_ratio": 0.5537669755099351
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 16384,
+      "block_size": 64,
+      "sparsity_ratio": 0.01,
+      "forward_time_ms": 249.8874619603157,
+      "memory_mb": 16.02734375,
+      "speedup_ratio": null
+    },
+    {
+      "implementation": "hilbert",
+      "sequence_length": 16384,
+      "block_size": 64,
+      "sparsity_ratio": 0.01,
+      "forward_time_ms": 365.1856071315706,
+      "memory_mb": 16.02734375,
+      "speedup_ratio": 0.684275220820204
+    }
+  ]
+}

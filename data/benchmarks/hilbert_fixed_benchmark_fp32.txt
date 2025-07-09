@@ -1,0 +1,46 @@
+[2025-07-08 13:34:42,090] [INFO] [real_accelerator.py:254:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-07-08 13:34:43,397] [INFO] [logging.py:107:log_dist] [Rank -1] [TorchCheckpointEngine] Initialized with serialization = False
+
+================================================================================
+Hilbert Attention Hardware Limit Benchmark - 2025-07-08 13:34:43.770954
+================================================================================
+
+GPU: NVIDIA GeForce GTX 1080
+Memory: 0.0GB used, 8.5GB free, 8.5GB total
+Safety limits: 90% max usage, 1.0GB min free
+
+--- Phase 1: Finding Maximum Sequence Lengths ---
+
+Finding max sequence length for batch_size=1, heads=8
+  Testing seq_len=131,072... ✓ (888.5ms)
+  Testing seq_len=196,608... ✓ (1054.5ms)
+  Testing seq_len=229,376... ✓ (1532.8ms)
+  Testing seq_len=245,760... ✓ (907.0ms)
+  Testing seq_len=253,952... ✓ (1222.5ms)
+  Testing seq_len=258,048... ✓ (1173.9ms)
+  Testing seq_len=260,096... ✓ (1451.5ms)
+  Testing seq_len=262,144... ✓ (1193.4ms)
+  Max for b1_h8: 262,144 tokens
+
+Finding max sequence length for batch_size=2, heads=8
+  Testing seq_len=65,536... ✓ (2870.1ms)
+  Testing seq_len=98,304... ✓ (3305.6ms)
+  Testing seq_len=114,688... ✓ (3335.5ms)
+  Testing seq_len=122,880... ✓ (4166.4ms)
+  Testing seq_len=126,976... ✓ (4160.7ms)
+  Testing seq_len=129,024... ✓ (4269.5ms)
+  Testing seq_len=131,072... ✓ (3912.3ms)
+  Max for b2_h8: 131,072 tokens
+
+Finding max sequence length for batch_size=4, heads=8
+  Testing seq_len=32,768... ✓ (8397.9ms)
+  Testing seq_len=49,152... ✓ (9435.3ms)
+  Testing seq_len=57,344... ✓ (8776.9ms)
+  Testing seq_len=61,440... ✓ (10276.2ms)
+  Testing seq_len=63,488... ✓ (9369.8ms)
+  Testing seq_len=65,536... ✓ (10021.2ms)
+  Max for b4_h8: 65,536 tokens
+
+Finding max sequence length for batch_size=1, heads=16
+  Testing seq_len=65,536... ✓ (5921.2ms)
+  Testing seq_len=98,304...

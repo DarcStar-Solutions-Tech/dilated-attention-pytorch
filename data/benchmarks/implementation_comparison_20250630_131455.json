@@ -1,0 +1,229 @@
+{
+  "config": {
+    "device": "cuda",
+    "dtype": "torch.float32",
+    "benchmark_config": {
+      "batch_sizes": [
+        2
+      ],
+      "seq_lengths": [
+        4096,
+        8192
+      ],
+      "num_heads_list": [
+        8
+      ],
+      "head_dim": 64,
+      "segment_lengths": [
+        [
+          512,
+          1024
+        ],
+        [
+          1024,
+          2048
+        ],
+        [
+          2048,
+          4096
+        ]
+      ],
+      "dilation_rates": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "warmup_steps": 3,
+      "benchmark_steps": 10,
+      "device": "cuda",
+      "use_fp16": true,
+      "use_memory_pool": true,
+      "memory_pool_size": null,
+      "use_pattern_cache": true,
+      "pattern_cache_size": 100,
+      "save_plots": true,
+      "save_csv": true,
+      "verbose": true
+    }
+  },
+  "results": [
+    {
+      "implementation": "standard",
+      "batch_size": 2,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 22.681454196572304,
+      "memory_mb": 173.0390625,
+      "throughput": 361176.13663580717,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "standard",
+      "batch_size": 2,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 332.1135951206088,
+      "memory_mb": 332.0390625,
+      "throughput": 49332.51827300253,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved",
+      "batch_size": 2,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 5.231843516230583,
+      "memory_mb": 141.0390625,
+      "throughput": 1565796.0668330803,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved",
+      "batch_size": 2,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 8.68901601061225,
+      "memory_mb": 268.0390625,
+      "throughput": 1885599.0114403693,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "multihead_standard",
+      "batch_size": 2,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 178.56283327564597,
+      "memory_mb": 229.1640625,
+      "throughput": 45877.4082474043,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "multihead_standard",
+      "batch_size": 2,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 290.46592004597187,
+      "memory_mb": 436.1640625,
+      "throughput": 56405.92878299428,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "multihead_improved",
+      "batch_size": 2,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 16.315236687660217,
+      "memory_mb": 341.1640625,
+      "throughput": 502107.334194906,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "multihead_improved",
+      "batch_size": 2,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 235.75931871309876,
+      "memory_mb": 692.1640625,
+      "throughput": 69494.60190771117,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "ring_v2_collective",
+      "batch_size": 2,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 261.6689134389162,
+      "memory_mb": 2213.1640625,
+      "throughput": 31306.737557544584,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "ring_v2_collective",
+      "batch_size": 2,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "CUDA out of memory. Tried to allocate 4.00 GiB. GPU 0 has a total capacity of 7.88 GiB of which 3.05 GiB is free. Process 3093175 has 16.45 MiB memory in use. Including non-PyTorch memory, this process has 1.23 GiB memory in use. Of the allocated memory 308.16 MiB is allocated by PyTorch, and 829.84 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)"
+    },
+    {
+      "implementation": "block_sparse",
+      "batch_size": 2,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 26.458950340747833,
+      "memory_mb": 137.666015625,
+      "throughput": 309611.67750422796,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "block_sparse",
+      "batch_size": 2,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 51.653710193932056,
+      "memory_mb": 248.6669921875,
+      "throughput": 317189.2190993995,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "block_sparse_multihead",
+      "batch_size": 2,
+      "seq_length": 4096,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 64.3758405931294,
+      "memory_mb": 198.1640625,
+      "throughput": 127252.70729706484,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "block_sparse_multihead",
+      "batch_size": 2,
+      "seq_length": 8192,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 70.50974080339074,
+      "memory_mb": 373.1640625,
+      "throughput": 232365.0578391023,
+      "success": true,
+      "error": null
+    }
+  ],
+  "timestamp": "20250630_131455"
+}

@@ -1,0 +1,446 @@
+{
+  "timestamp": "2025-07-04-2125-UTC",
+  "world_size": 1,
+  "gpu_type": "GTX 1080 (Pascal)",
+  "results": [
+    {
+      "description": "8K, no dilation",
+      "seq_len": 8192,
+      "segments": [
+        2048
+      ],
+      "dilations": [
+        1
+      ],
+      "world_size": 1,
+      "results": {
+        "Baseline (no Hilbert)": {
+          "avg_time_ms": 14.757813699543476,
+          "std_time_ms": 4.969985346697583,
+          "throughput": 555095.7727738096,
+          "memory_gb": 0.1234375
+        },
+        "Original Hilbert (before split)": {
+          "avg_time_ms": 103.9004111662507,
+          "std_time_ms": 107.81802973518535,
+          "throughput": 78844.73129651054,
+          "memory_gb": 0.154718017578125
+        },
+        "Hilbert V2 (dilated mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        },
+        "Hilbert V2 (segment mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        }
+      }
+    },
+    {
+      "description": "8K, dilation=2",
+      "seq_len": 8192,
+      "segments": [
+        2048
+      ],
+      "dilations": [
+        2
+      ],
+      "world_size": 1,
+      "results": {
+        "Baseline (no Hilbert)": {
+          "avg_time_ms": 5.824872199445963,
+          "std_time_ms": 1.5589284793971232,
+          "throughput": 1406382.787381874,
+          "memory_gb": 0.1234527587890625
+        },
+        "Original Hilbert (before split)": {
+          "avg_time_ms": 10.951928701251745,
+          "std_time_ms": 5.167181111803934,
+          "throughput": 747996.104016245,
+          "memory_gb": 0.1547332763671875
+        },
+        "Hilbert V2 (dilated mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        },
+        "Hilbert V2 (segment mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        }
+      }
+    },
+    {
+      "description": "8K, dilation=4",
+      "seq_len": 8192,
+      "segments": [
+        2048
+      ],
+      "dilations": [
+        4
+      ],
+      "world_size": 1,
+      "results": {
+        "Baseline (no Hilbert)": {
+          "avg_time_ms": 2.1608224138617516,
+          "std_time_ms": 0.5933005341636542,
+          "throughput": 3791149.1233375003,
+          "memory_gb": 0.1078277587890625
+        },
+        "Original Hilbert (before split)": {
+          "avg_time_ms": 40.482290741056204,
+          "std_time_ms": 24.100962984968,
+          "throughput": 202360.0900551772,
+          "memory_gb": 0.1391082763671875
+        },
+        "Hilbert V2 (dilated mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        },
+        "Hilbert V2 (segment mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        }
+      }
+    },
+    {
+      "description": "16K, no dilation",
+      "seq_len": 16384,
+      "segments": [
+        4096
+      ],
+      "dilations": [
+        1
+      ],
+      "world_size": 1,
+      "results": {
+        "Baseline (no Hilbert)": {
+          "avg_time_ms": 303.4215313382447,
+          "std_time_ms": 253.3543762437589,
+          "throughput": 53997.48636076732,
+          "memory_gb": 0.246875
+        },
+        "Original Hilbert (before split)": {
+          "avg_time_ms": 348.06536212563515,
+          "std_time_ms": 377.11477310448953,
+          "throughput": 47071.61867513306,
+          "memory_gb": 0.309405517578125
+        },
+        "Hilbert V2 (dilated mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        },
+        "Hilbert V2 (segment mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        }
+      }
+    },
+    {
+      "description": "16K, dilation=2",
+      "seq_len": 16384,
+      "segments": [
+        4096
+      ],
+      "dilations": [
+        2
+      ],
+      "world_size": 1,
+      "results": {
+        "Baseline (no Hilbert)": {
+          "avg_time_ms": 41.97590984404087,
+          "std_time_ms": 17.73927350838803,
+          "throughput": 390319.11543725507,
+          "memory_gb": 0.246905517578125
+        },
+        "Original Hilbert (before split)": {
+          "avg_time_ms": 133.33743996918201,
+          "std_time_ms": 124.32567962586809,
+          "throughput": 122876.2154409654,
+          "memory_gb": 0.30943603515625
+        },
+        "Hilbert V2 (dilated mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        },
+        "Hilbert V2 (segment mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        }
+      }
+    },
+    {
+      "description": "16K, dilation=4",
+      "seq_len": 16384,
+      "segments": [
+        4096
+      ],
+      "dilations": [
+        4
+      ],
+      "world_size": 1,
+      "results": {
+        "Baseline (no Hilbert)": {
+          "avg_time_ms": 5.230454262346029,
+          "std_time_ms": 1.098549579872174,
+          "throughput": 3132423.9116185755,
+          "memory_gb": 0.215655517578125
+        },
+        "Original Hilbert (before split)": {
+          "avg_time_ms": 6.408192403614521,
+          "std_time_ms": 0.6861975119128993,
+          "throughput": 2556727.2279088646,
+          "memory_gb": 0.27818603515625
+        },
+        "Hilbert V2 (dilated mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        },
+        "Hilbert V2 (segment mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        }
+      }
+    },
+    {
+      "description": "16K, multi-segment",
+      "seq_len": 16384,
+      "segments": [
+        2048,
+        4096
+      ],
+      "dilations": [
+        1,
+        2
+      ],
+      "world_size": 1,
+      "results": {
+        "Baseline (no Hilbert)": {
+          "avg_time_ms": 214.72925106063485,
+          "std_time_ms": 209.78415901798817,
+          "throughput": 76300.73648127947,
+          "memory_gb": 0.3016082763671875
+        },
+        "Original Hilbert (before split)": {
+          "avg_time_ms": 176.44249247387052,
+          "std_time_ms": 182.69016901330525,
+          "throughput": 92857.45043771878,
+          "memory_gb": 0.3641387939453125
+        },
+        "Hilbert V2 (dilated mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        },
+        "Hilbert V2 (segment mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        }
+      }
+    },
+    {
+      "description": "32K, no dilation",
+      "seq_len": 32768,
+      "segments": [
+        8192
+      ],
+      "dilations": [
+        1
+      ],
+      "world_size": 1,
+      "results": {
+        "Baseline (no Hilbert)": {
+          "avg_time_ms": 1594.9260633438826,
+          "std_time_ms": 525.5504456203307,
+          "throughput": 20545.153003079915,
+          "memory_gb": 0.49375
+        },
+        "Original Hilbert (before split)": {
+          "avg_time_ms": 1773.1198242865503,
+          "std_time_ms": 339.4531874789227,
+          "throughput": 18480.420528367198,
+          "memory_gb": 0.618780517578125
+        },
+        "Hilbert V2 (dilated mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        },
+        "Hilbert V2 (segment mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        }
+      }
+    },
+    {
+      "description": "32K, dilation=4",
+      "seq_len": 32768,
+      "segments": [
+        8192
+      ],
+      "dilations": [
+        4
+      ],
+      "world_size": 1,
+      "results": {
+        "Baseline (no Hilbert)": {
+          "avg_time_ms": 29.903635289520025,
+          "std_time_ms": 5.763034230391777,
+          "throughput": 1095786.5049766647,
+          "memory_gb": 0.43131103515625
+        },
+        "Original Hilbert (before split)": {
+          "avg_time_ms": 190.67447688430548,
+          "std_time_ms": 171.72808884978306,
+          "throughput": 171853.1002965985,
+          "memory_gb": 0.556341552734375
+        },
+        "Hilbert V2 (dilated mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        },
+        "Hilbert V2 (segment mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        }
+      }
+    },
+    {
+      "description": "32K, dilation=8",
+      "seq_len": 32768,
+      "segments": [
+        8192
+      ],
+      "dilations": [
+        8
+      ],
+      "world_size": 1,
+      "results": {
+        "Baseline (no Hilbert)": {
+          "avg_time_ms": 7.522285357117653,
+          "std_time_ms": 2.469800365411631,
+          "throughput": 4356122.965874277,
+          "memory_gb": 0.40006103515625
+        },
+        "Original Hilbert (before split)": {
+          "avg_time_ms": 60.77256565913558,
+          "std_time_ms": 44.73119218134617,
+          "throughput": 539190.6634942963,
+          "memory_gb": 0.525091552734375
+        },
+        "Hilbert V2 (dilated mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        },
+        "Hilbert V2 (segment mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        }
+      }
+    },
+    {
+      "description": "32K, multi-segment",
+      "seq_len": 32768,
+      "segments": [
+        4096,
+        8192
+      ],
+      "dilations": [
+        2,
+        4
+      ],
+      "world_size": 1,
+      "results": {
+        "Baseline (no Hilbert)": {
+          "avg_time_ms": 253.77849526703355,
+          "std_time_ms": 263.12864690988954,
+          "throughput": 129120.47557662638,
+          "memory_gb": 0.556341552734375
+        },
+        "Original Hilbert (before split)": {
+          "avg_time_ms": 233.55430169031024,
+          "std_time_ms": 255.69969708227447,
+          "throughput": 140301.4192538826,
+          "memory_gb": 0.6813720703125
+        },
+        "Hilbert V2 (dilated mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        },
+        "Hilbert V2 (segment mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        }
+      }
+    },
+    {
+      "description": "64K, no dilation",
+      "seq_len": 65536,
+      "segments": [
+        16384
+      ],
+      "dilations": [
+        1
+      ],
+      "world_size": 1,
+      "results": {
+        "Baseline (no Hilbert)": {
+          "avg_time_ms": 11893.633932434022,
+          "std_time_ms": 1864.1361934144377,
+          "throughput": 5510.1746339512665,
+          "memory_gb": 0.9875
+        },
+        "Original Hilbert (before split)": {
+          "avg_time_ms": 21359.718273114413,
+          "std_time_ms": 2822.5044580016597,
+          "throughput": 3068.205261980936,
+          "memory_gb": 1.237530517578125
+        },
+        "Hilbert V2 (dilated mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        },
+        "Hilbert V2 (segment mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        }
+      }
+    },
+    {
+      "description": "64K, dilation=4",
+      "seq_len": 65536,
+      "segments": [
+        16384
+      ],
+      "dilations": [
+        4
+      ],
+      "world_size": 1,
+      "results": {
+        "Baseline (no Hilbert)": {
+          "avg_time_ms": 1563.4064537473023,
+          "std_time_ms": 429.6025860455463,
+          "throughput": 41918.72167529939,
+          "memory_gb": 0.8626220703125
+        },
+        "Original Hilbert (before split)": {
+          "avg_time_ms": 1676.8569533713162,
+          "std_time_ms": 517.1135506884124,
+          "throughput": 39082.64200368436,
+          "memory_gb": 1.112652587890625
+        },
+        "Hilbert V2 (dilated mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        },
+        "Hilbert V2 (segment mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        }
+      }
+    },
+    {
+      "description": "64K, dilation=8",
+      "seq_len": 65536,
+      "segments": [
+        16384
+      ],
+      "dilations": [
+        8
+      ],
+      "world_size": 1,
+      "results": {
+        "Baseline (no Hilbert)": {
+          "avg_time_ms": 342.7285622805357,
+          "std_time_ms": 154.49732117828853,
+          "throughput": 191218.3786607094,
+          "memory_gb": 0.8001220703125
+        },
+        "Original Hilbert (before split)": {
+          "avg_time_ms": 564.4250052049756,
+          "std_time_ms": 146.1422923486246,
+          "throughput": 116111.08543321899,
+          "memory_gb": 1.050152587890625
+        },
+        "Hilbert V2 (dilated mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        },
+        "Hilbert V2 (segment mode)": {
+          "error": "RingDilatedAttentionHilbertV2.__init__() got an unexpected keyword argument 'use_xformers'"
+        }
+      }
+    }
+  ],
+  "improvements": []
+}

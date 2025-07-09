@@ -1,0 +1,181 @@
+{
+  "config": {
+    "device": "cuda",
+    "dtype": "torch.float32",
+    "benchmark_config": {
+      "batch_sizes": [
+        1
+      ],
+      "seq_lengths": [
+        512
+      ],
+      "num_heads_list": [
+        8,
+        16
+      ],
+      "head_dim": 64,
+      "segment_lengths": [
+        [
+          512,
+          1024
+        ],
+        [
+          1024,
+          2048
+        ],
+        [
+          2048,
+          4096
+        ]
+      ],
+      "dilation_rates": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "warmup_steps": 1,
+      "benchmark_steps": 2,
+      "device": "cuda",
+      "use_fp16": true,
+      "use_memory_pool": true,
+      "memory_pool_size": null,
+      "use_pattern_cache": true,
+      "pattern_cache_size": 100,
+      "save_plots": true,
+      "save_csv": true,
+      "verbose": true
+    }
+  },
+  "results": [
+    {
+      "implementation": "standard",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.6921100430190563,
+      "memory_mb": 18.03125,
+      "throughput": 739766.7540939046,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "standard",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 16,
+      "head_dim": 64,
+      "time_ms": 0.8539739064872265,
+      "memory_mb": 29.03125,
+      "throughput": 599549.9348523226,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.33500371500849724,
+      "memory_mb": 16.03125,
+      "throughput": 1528341.2602962127,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 16,
+      "head_dim": 64,
+      "time_ms": 0.45970454812049866,
+      "memory_mb": 25.03125,
+      "throughput": 1113758.830738811,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "multihead_standard",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.8396990597248077,
+      "memory_mb": 29.15625,
+      "throughput": 609742.2571460261,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "multihead_standard",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 16,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "Input embedding dimension (1024) doesn't match expected (512)"
+    },
+    {
+      "implementation": "multihead_improved",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.948549248278141,
+      "memory_mb": 36.15625,
+      "throughput": 539771.6575385103,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "multihead_improved",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 16,
+      "head_dim": 64,
+      "time_ms": 0.0,
+      "memory_mb": 0.0,
+      "throughput": 0.0,
+      "success": false,
+      "error": "mat1 and mat2 shapes cannot be multiplied (512x1024 and 512x1536)"
+    },
+    {
+      "implementation": "ring_v2_collective",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.47930749133229256,
+      "memory_mb": 41.03125,
+      "throughput": 1068207.7982483327,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "ring_v2_collective",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 16,
+      "head_dim": 64,
+      "time_ms": 0.7523857057094574,
+      "memory_mb": 65.03125,
+      "throughput": 680502.0298959732,
+      "success": true,
+      "error": null
+    }
+  ],
+  "timestamp": "20250630_115155"
+}

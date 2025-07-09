@@ -1,0 +1,577 @@
+{
+  "metadata": {
+    "implementation": "DilatedAttention (Original)",
+    "timestamp": "2025-07-06-2253-UTC",
+    "device": "cuda",
+    "gpu_name": "NVIDIA GeForce GTX 1080",
+    "pytorch_version": "2.7.1+cu126"
+  },
+  "scaling_analysis": {
+    "sequence_scaling": [
+      {
+        "config": {
+          "batch_size": 1,
+          "seq_len": 512,
+          "num_heads": 8,
+          "head_dim": 64,
+          "embed_dim": 512,
+          "segment_lengths": [
+            128,
+            256
+          ],
+          "dilation_rates": [
+            1,
+            2
+          ],
+          "num_segments": 2,
+          "param_count": 0
+        },
+        "timing": {
+          "mean_ms": 1.619729958474636,
+          "std_ms": 0.12420545086424153,
+          "min_ms": 1.5387265011668205,
+          "max_ms": 1.8664663657546043,
+          "median_ms": 1.5580076724290848,
+          "p95_ms": 1.8098028376698494
+        },
+        "memory": {
+          "before_mb": 1.5,
+          "after_mb": 2.0,
+          "peak_mb": 4.3759765625,
+          "delta_mb": 2.8759765625
+        },
+        "performance": {
+          "sequences_per_second": 617.3868642534337,
+          "tokens_per_second": 316102.07449775806,
+          "tflops": 0.16572852443428057,
+          "effective_bandwidth_gb_s": 1.2058337192449877,
+          "ms_per_token": 0.0031635350751457736
+        }
+      },
+      {
+        "config": {
+          "batch_size": 1,
+          "seq_len": 1024,
+          "num_heads": 8,
+          "head_dim": 64,
+          "embed_dim": 512,
+          "segment_lengths": [
+            256,
+            512
+          ],
+          "dilation_rates": [
+            1,
+            2
+          ],
+          "num_segments": 2,
+          "param_count": 0
+        },
+        "timing": {
+          "mean_ms": 4.2900606989860535,
+          "std_ms": 0.1788216606457116,
+          "min_ms": 4.005140624940395,
+          "max_ms": 4.4465819373726845,
+          "median_ms": 4.413389600813389,
+          "p95_ms": 4.443707689642906
+        },
+        "memory": {
+          "before_mb": 3.0,
+          "after_mb": 4.0,
+          "peak_mb": 8.751953125,
+          "delta_mb": 5.751953125
+        },
+        "performance": {
+          "sequences_per_second": 233.09693502386756,
+          "tokens_per_second": 238691.26146444038,
+          "tflops": 0.2502859281813371,
+          "effective_bandwidth_gb_s": 0.9105349024369828,
+          "ms_per_token": 0.004189512401353568
+        }
+      },
+      {
+        "config": {
+          "batch_size": 1,
+          "seq_len": 2048,
+          "num_heads": 8,
+          "head_dim": 64,
+          "embed_dim": 512,
+          "segment_lengths": [
+            512,
+            1024
+          ],
+          "dilation_rates": [
+            1,
+            2
+          ],
+          "num_segments": 2,
+          "param_count": 0
+        },
+        "timing": {
+          "mean_ms": 16.278797201812267,
+          "std_ms": 1.0038739347919219,
+          "min_ms": 14.484003186225891,
+          "max_ms": 17.28814374655485,
+          "median_ms": 16.41049236059189,
+          "p95_ms": 17.258205637335777
+        },
+        "memory": {
+          "before_mb": 6.0,
+          "after_mb": 8.0,
+          "peak_mb": 17.50390625,
+          "delta_mb": 11.50390625
+        },
+        "performance": {
+          "sequences_per_second": 61.42959996385194,
+          "tokens_per_second": 125807.82072596878,
+          "tflops": 0.2638381228511069,
+          "effective_bandwidth_gb_s": 0.47991874971759335,
+          "ms_per_token": 0.007948631446197396
+        }
+      },
+      {
+        "config": {
+          "batch_size": 1,
+          "seq_len": 4096,
+          "num_heads": 8,
+          "head_dim": 64,
+          "embed_dim": 512,
+          "segment_lengths": [
+            1024,
+            2048
+          ],
+          "dilation_rates": [
+            1,
+            2
+          ],
+          "num_segments": 2,
+          "param_count": 0
+        },
+        "timing": {
+          "mean_ms": 46.236407570540905,
+          "std_ms": 1.3073910925935914,
+          "min_ms": 44.76030729711056,
+          "max_ms": 48.39175473898649,
+          "median_ms": 46.20278440415859,
+          "p95_ms": 48.07004351168871
+        },
+        "memory": {
+          "before_mb": 12.0,
+          "after_mb": 16.0,
+          "peak_mb": 35.0078125,
+          "delta_mb": 23.0078125
+        },
+        "performance": {
+          "sequences_per_second": 21.627977875970206,
+          "tokens_per_second": 88588.19737997396,
+          "tflops": 0.37156583062361426,
+          "effective_bandwidth_gb_s": 0.33793715431203447,
+          "ms_per_token": 0.011288185442026588
+        }
+      },
+      {
+        "config": {
+          "batch_size": 1,
+          "seq_len": 8192,
+          "num_heads": 8,
+          "head_dim": 64,
+          "embed_dim": 512,
+          "segment_lengths": [
+            2048,
+            4096
+          ],
+          "dilation_rates": [
+            1,
+            2
+          ],
+          "num_segments": 2,
+          "param_count": 0
+        },
+        "timing": {
+          "mean_ms": 239.67095762491226,
+          "std_ms": 23.029407023467094,
+          "min_ms": 209.1319626197219,
+          "max_ms": 263.59270606189966,
+          "median_ms": 253.35401017218828,
+          "p95_ms": 262.42542918771505
+        },
+        "memory": {
+          "before_mb": 24.0,
+          "after_mb": 32.0,
+          "peak_mb": 70.015625,
+          "delta_mb": 46.015625
+        },
+        "performance": {
+          "sequences_per_second": 4.172387050603817,
+          "tokens_per_second": 34180.19471854647,
+          "tflops": 0.28672425485755665,
+          "effective_bandwidth_gb_s": 0.13038709533136927,
+          "ms_per_token": 0.029256708694447298
+        }
+      }
+    ],
+    "head_scaling": [
+      {
+        "config": {
+          "batch_size": 2,
+          "seq_len": 2048,
+          "num_heads": 2,
+          "head_dim": 64,
+          "embed_dim": 128,
+          "segment_lengths": [
+            512,
+            1024
+          ],
+          "dilation_rates": [
+            1,
+            2
+          ],
+          "num_segments": 2,
+          "param_count": 0
+        },
+        "timing": {
+          "mean_ms": 8.041049353778362,
+          "std_ms": 0.4805205534017299,
+          "min_ms": 7.455171085894108,
+          "max_ms": 8.546290919184685,
+          "median_ms": 8.289285935461521,
+          "p95_ms": 8.526493981480598
+        },
+        "memory": {
+          "before_mb": 3.0,
+          "after_mb": 4.0,
+          "peak_mb": 8.75390625,
+          "delta_mb": 5.75390625
+        },
+        "performance": {
+          "sequences_per_second": 124.36187815836695,
+          "tokens_per_second": 509386.252936671,
+          "tflops": 0.26706509977966136,
+          "effective_bandwidth_gb_s": 0.4857885865561209,
+          "ms_per_token": 0.0019631468148872955
+        }
+      },
+      {
+        "config": {
+          "batch_size": 2,
+          "seq_len": 2048,
+          "num_heads": 4,
+          "head_dim": 64,
+          "embed_dim": 256,
+          "segment_lengths": [
+            512,
+            1024
+          ],
+          "dilation_rates": [
+            1,
+            2
+          ],
+          "num_segments": 2,
+          "param_count": 0
+        },
+        "timing": {
+          "mean_ms": 15.96217155456543,
+          "std_ms": 0.9618243223782387,
+          "min_ms": 14.170491136610508,
+          "max_ms": 16.803023405373096,
+          "median_ms": 16.35982096195221,
+          "p95_ms": 16.779305785894394
+        },
+        "memory": {
+          "before_mb": 6.0,
+          "after_mb": 8.0,
+          "peak_mb": 17.50390625,
+          "delta_mb": 11.50390625
+        },
+        "performance": {
+          "sequences_per_second": 62.64811755603419,
+          "tokens_per_second": 256606.68950951603,
+          "tflops": 0.26907161605913027,
+          "effective_bandwidth_gb_s": 0.4894384184065171,
+          "ms_per_token": 0.0038970145396888256
+        }
+      },
+      {
+        "config": {
+          "batch_size": 2,
+          "seq_len": 2048,
+          "num_heads": 8,
+          "head_dim": 64,
+          "embed_dim": 512,
+          "segment_lengths": [
+            512,
+            1024
+          ],
+          "dilation_rates": [
+            1,
+            2
+          ],
+          "num_segments": 2,
+          "param_count": 0
+        },
+        "timing": {
+          "mean_ms": 55.324215069413185,
+          "std_ms": 7.706772200779218,
+          "min_ms": 46.87224607914686,
+          "max_ms": 66.66386779397726,
+          "median_ms": 51.52759421616793,
+          "p95_ms": 65.76839853078127
+        },
+        "memory": {
+          "before_mb": 12.0,
+          "after_mb": 16.0,
+          "peak_mb": 35.00390625,
+          "delta_mb": 23.00390625
+        },
+        "performance": {
+          "sequences_per_second": 18.07526774207891,
+          "tokens_per_second": 74036.29667155522,
+          "tflops": 0.15526536763734536,
+          "effective_bandwidth_gb_s": 0.2824260584699829,
+          "ms_per_token": 0.013506888444680953
+        }
+      },
+      {
+        "config": {
+          "batch_size": 2,
+          "seq_len": 2048,
+          "num_heads": 16,
+          "head_dim": 64,
+          "embed_dim": 1024,
+          "segment_lengths": [
+            512,
+            1024
+          ],
+          "dilation_rates": [
+            1,
+            2
+          ],
+          "num_segments": 2,
+          "param_count": 0
+        },
+        "timing": {
+          "mean_ms": 91.5120979771018,
+          "std_ms": 2.8620278948697893,
+          "min_ms": 89.01399374008179,
+          "max_ms": 96.56778909265995,
+          "median_ms": 89.92548007518053,
+          "p95_ms": 95.81074435263872
+        },
+        "memory": {
+          "before_mb": 24.0,
+          "after_mb": 32.0,
+          "peak_mb": 70.00390625,
+          "delta_mb": 46.00390625
+        },
+        "performance": {
+          "sequences_per_second": 10.927516930605398,
+          "tokens_per_second": 44759.10934775971,
+          "tflops": 0.18773331137374594,
+          "effective_bandwidth_gb_s": 0.3414849040814187,
+          "ms_per_token": 0.02234182079519087
+        }
+      },
+      {
+        "config": {
+          "batch_size": 2,
+          "seq_len": 2048,
+          "num_heads": 32,
+          "head_dim": 64,
+          "embed_dim": 2048,
+          "segment_lengths": [
+            512,
+            1024
+          ],
+          "dilation_rates": [
+            1,
+            2
+          ],
+          "num_segments": 2,
+          "param_count": 0
+        },
+        "timing": {
+          "mean_ms": 113.27830888330936,
+          "std_ms": 1.7005782659161297,
+          "min_ms": 110.24270672351122,
+          "max_ms": 114.8321321234107,
+          "median_ms": 113.93068823963404,
+          "p95_ms": 114.80733621865511
+        },
+        "memory": {
+          "before_mb": 48.0,
+          "after_mb": 64.0,
+          "peak_mb": 140.00390625,
+          "delta_mb": 92.00390625
+        },
+        "performance": {
+          "sequences_per_second": 8.827815403124736,
+          "tokens_per_second": 36158.73189119892,
+          "tflops": 0.3033214276123664,
+          "effective_bandwidth_gb_s": 0.551738462695296,
+          "ms_per_token": 0.0276558371297142
+        }
+      }
+    ],
+    "batch_scaling": [
+      {
+        "config": {
+          "batch_size": 1,
+          "seq_len": 2048,
+          "num_heads": 8,
+          "head_dim": 64,
+          "embed_dim": 512,
+          "segment_lengths": [
+            512,
+            1024
+          ],
+          "dilation_rates": [
+            1,
+            2
+          ],
+          "num_segments": 2,
+          "param_count": 0
+        },
+        "timing": {
+          "mean_ms": 33.740426041185856,
+          "std_ms": 2.9599581639580177,
+          "min_ms": 29.270785860717297,
+          "max_ms": 37.40225452929735,
+          "median_ms": 34.74188409745693,
+          "p95_ms": 37.08407748490572
+        },
+        "memory": {
+          "before_mb": 6.0,
+          "after_mb": 8.0,
+          "peak_mb": 17.50390625,
+          "delta_mb": 11.50390625
+        },
+        "performance": {
+          "sequences_per_second": 29.63803713620368,
+          "tokens_per_second": 60698.70005494513,
+          "tflops": 0.12729440021762828,
+          "effective_bandwidth_gb_s": 0.2315471651265912,
+          "ms_per_token": 0.01647481740292278
+        }
+      },
+      {
+        "config": {
+          "batch_size": 2,
+          "seq_len": 2048,
+          "num_heads": 8,
+          "head_dim": 64,
+          "embed_dim": 512,
+          "segment_lengths": [
+            512,
+            1024
+          ],
+          "dilation_rates": [
+            1,
+            2
+          ],
+          "num_segments": 2,
+          "param_count": 0
+        },
+        "timing": {
+          "mean_ms": 37.501647137105465,
+          "std_ms": 9.725036185706843,
+          "min_ms": 29.87071219831705,
+          "max_ms": 56.23519793152809,
+          "median_ms": 33.780595287680626,
+          "p95_ms": 52.42285765707493
+        },
+        "memory": {
+          "before_mb": 12.0,
+          "after_mb": 16.0,
+          "peak_mb": 35.00390625,
+          "delta_mb": 23.00390625
+        },
+        "performance": {
+          "sequences_per_second": 26.665495420614857,
+          "tokens_per_second": 109221.86924283845,
+          "tflops": 0.22905486152635712,
+          "effective_bandwidth_gb_s": 0.41664836594710714,
+          "ms_per_token": 0.009155675570582389
+        }
+      },
+      {
+        "config": {
+          "batch_size": 4,
+          "seq_len": 2048,
+          "num_heads": 8,
+          "head_dim": 64,
+          "embed_dim": 512,
+          "segment_lengths": [
+            512,
+            1024
+          ],
+          "dilation_rates": [
+            1,
+            2
+          ],
+          "num_segments": 2,
+          "param_count": 0
+        },
+        "timing": {
+          "mean_ms": 55.504448525607586,
+          "std_ms": 2.6236124715565956,
+          "min_ms": 53.04827727377415,
+          "max_ms": 60.36003865301609,
+          "median_ms": 54.67595066875219,
+          "p95_ms": 59.47211477905512
+        },
+        "memory": {
+          "before_mb": 24.0,
+          "after_mb": 32.0,
+          "peak_mb": 70.00390625,
+          "delta_mb": 46.00390625
+        },
+        "performance": {
+          "sequences_per_second": 18.016573924496143,
+          "tokens_per_second": 147591.7735894724,
+          "tflops": 0.30952238316670927,
+          "effective_bandwidth_gb_s": 0.5630179351405045,
+          "ms_per_token": 0.006775445376661082
+        }
+      },
+      {
+        "config": {
+          "batch_size": 8,
+          "seq_len": 2048,
+          "num_heads": 8,
+          "head_dim": 64,
+          "embed_dim": 512,
+          "segment_lengths": [
+            512,
+            1024
+          ],
+          "dilation_rates": [
+            1,
+            2
+          ],
+          "num_segments": 2,
+          "param_count": 0
+        },
+        "timing": {
+          "mean_ms": 293.3713288977742,
+          "std_ms": 357.2972034970637,
+          "min_ms": 92.91171096265316,
+          "max_ms": 1006.9390470162034,
+          "median_ms": 116.73167999833822,
+          "p95_ms": 835.3461239486932
+        },
+        "memory": {
+          "before_mb": 48.0,
+          "after_mb": 64.0,
+          "peak_mb": 140.00390625,
+          "delta_mb": 92.00390625
+        },
+        "performance": {
+          "sequences_per_second": 3.4086493855998174,
+          "tokens_per_second": 55847.31153366741,
+          "tflops": 0.11712030107745366,
+          "effective_bandwidth_gb_s": 0.21304058659998856,
+          "ms_per_token": 0.01790596489854579
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,157 @@
+{
+  "config": {
+    "device": "cuda",
+    "dtype": "torch.float32",
+    "benchmark_config": {
+      "batch_sizes": [
+        1
+      ],
+      "seq_lengths": [
+        512
+      ],
+      "num_heads_list": [
+        8,
+        16
+      ],
+      "head_dim": 64,
+      "segment_lengths": [
+        [
+          512,
+          1024
+        ],
+        [
+          1024,
+          2048
+        ],
+        [
+          2048,
+          4096
+        ]
+      ],
+      "dilation_rates": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "warmup_steps": 1,
+      "benchmark_steps": 2,
+      "device": "cuda",
+      "use_fp16": true,
+      "use_memory_pool": true,
+      "memory_pool_size": null,
+      "use_pattern_cache": true,
+      "pattern_cache_size": 100,
+      "save_plots": true,
+      "save_csv": true,
+      "verbose": true
+    }
+  },
+  "results": [
+    {
+      "implementation": "standard",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.6317188963294029,
+      "memory_mb": 10.0,
+      "throughput": 810487.0741954554,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "standard",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 16,
+      "head_dim": 64,
+      "time_ms": 0.7262560538947582,
+      "memory_mb": 20.0,
+      "throughput": 704985.5175103215,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.324777327477932,
+      "memory_mb": 8.0,
+      "throughput": 1576464.724234143,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "improved",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 16,
+      "head_dim": 64,
+      "time_ms": 0.47394633293151855,
+      "memory_mb": 16.0,
+      "throughput": 1080291.0887253976,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "ring_v2_collective",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 0.51143579185009,
+      "memory_mb": 32.125,
+      "throughput": 1001103.1847182008,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "ring_v2_collective",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 16,
+      "head_dim": 64,
+      "time_ms": 0.7625510916113853,
+      "memory_mb": 56.125,
+      "throughput": 671430.4203775604,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "block_sparse",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 2.3921020328998566,
+      "memory_mb": 17.3759765625,
+      "throughput": 214037.69277321393,
+      "success": true,
+      "error": null
+    },
+    {
+      "implementation": "block_sparse",
+      "batch_size": 1,
+      "seq_length": 512,
+      "num_heads": 16,
+      "head_dim": 64,
+      "time_ms": 1.9579953514039516,
+      "memory_mb": 26.6259765625,
+      "throughput": 261491.93849356077,
+      "success": true,
+      "error": null
+    }
+  ],
+  "timestamp": "20250630_120529"
+}
