@@ -7,8 +7,8 @@ block-sparse attention implementations based on use case.
 
 from typing import List, Optional, Union, Literal
 
-from .block_sparse_ring_attention import (
-    BlockSparseRingAttention,
+from .block_sparse_attention import (
+    BlockSparseAttention,
     SparsePatternConfig,
 )
 
@@ -47,7 +47,7 @@ def create_block_sparse_attention(
     # Other parameters
     **kwargs,
 ) -> Union[
-    BlockSparseRingAttention,
+    BlockSparseAttention,
     BlockSparseAdaptive,
     BlockSparseRingMultiheadDilatedAttention,
     BlockSparseRingDistributedDilatedAttention,
@@ -121,7 +121,7 @@ def create_block_sparse_attention(
 
     # Create the appropriate implementation
     if variant == "base":
-        return BlockSparseRingAttention(
+        return BlockSparseAttention(
             sparse_config=sparse_config,
             **kwargs,
         )
@@ -207,7 +207,7 @@ def get_block_sparse_preset(
     preset_name: str,
     **override_kwargs,
 ) -> Union[
-    BlockSparseRingAttention,
+    BlockSparseAttention,
     BlockSparseAdaptive,
 ]:
     """

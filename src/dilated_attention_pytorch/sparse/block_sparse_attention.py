@@ -1,8 +1,9 @@
 """
-Block-Sparse Ring Attention
+Block-Sparse Attention
 
 Pure block-sparse attention implementation with efficient pattern handling.
-This is NOT dilated attention - it applies sparse patterns at the block level.
+This is NOT ring attention or dilated attention - it applies sparse patterns
+at the block level on a single GPU.
 
 Key features:
 - Multiple sparse patterns: local_window, dilated_sparse, global_local
@@ -117,12 +118,16 @@ class PersistentPatternCache:
             }
 
 
-class BlockSparseRingAttention(torch.nn.Module):
+class BlockSparseAttention(torch.nn.Module):
     """
-    Block-Sparse Ring Attention with efficient pattern handling.
+    Block-Sparse Attention with efficient pattern handling.
 
     This is a pure block-sparse attention implementation that applies
     sparse patterns at the block level for significant speedup.
+
+    IMPORTANT: This is NOT ring attention - it does not distribute
+    computation across GPUs. It processes the full sequence on a
+    single GPU using sparse patterns.
 
     Key features:
     1. Memory-efficient block-sparse attention patterns
@@ -140,7 +145,7 @@ class BlockSparseRingAttention(torch.nn.Module):
         **kwargs,
     ):
         """
-        Initialize Block-Sparse Ring Attention.
+        Initialize Block-Sparse Attention.
 
         Args:
             sparse_config: Configuration for sparse patterns
@@ -676,5 +681,6 @@ class BlockSparseRingAttention(torch.nn.Module):
         }
 
 
-# For backward compatibility, keep the old name as an alias
-BlockSparseRingDilatedAttention = BlockSparseRingAttention
+# For backward compatibility, keep the old names as aliases
+BlockSparseRingAttention = BlockSparseAttention
+BlockSparseRingDilatedAttention = BlockSparseAttention
