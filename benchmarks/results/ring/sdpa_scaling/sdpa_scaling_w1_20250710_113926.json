@@ -1,0 +1,120 @@
+[
+  {
+    "time_per_iter": 0.7750164031982422,
+    "throughput": 5285.04943004707,
+    "peak_memory_mb": 115.015625,
+    "memory_used_mb": 86.0078125,
+    "memory_per_token_kb": 21.501953125,
+    "effective_seq_per_gpu": 2048,
+    "output_shape": [
+      2,
+      2048,
+      512
+    ],
+    "sequence_length": 2048,
+    "world_size": 1,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      512,
+      1024
+    ],
+    "dilation_rates": [
+      1,
+      2
+    ],
+    "embed_dim": 512,
+    "num_heads": 8,
+    "sparsity": 0.25
+  },
+  {
+    "time_per_iter": 2.7421112060546875,
+    "throughput": 2987.4791299170315,
+    "peak_memory_mb": 235.015625,
+    "memory_used_mb": 190.0078125,
+    "memory_per_token_kb": 23.7509765625,
+    "effective_seq_per_gpu": 4096,
+    "output_shape": [
+      2,
+      4096,
+      512
+    ],
+    "sequence_length": 4096,
+    "world_size": 1,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      512,
+      1024,
+      2048
+    ],
+    "dilation_rates": [
+      1,
+      2,
+      4
+    ],
+    "embed_dim": 512,
+    "num_heads": 8,
+    "sparsity": 0.375
+  },
+  {
+    "time_per_iter": 4.361927127838134,
+    "throughput": 3756.137945413193,
+    "peak_memory_mb": 457.0234375,
+    "memory_used_mb": 380.015625,
+    "memory_per_token_kb": 23.7509765625,
+    "effective_seq_per_gpu": 8192,
+    "output_shape": [
+      2,
+      8192,
+      512
+    ],
+    "sequence_length": 8192,
+    "world_size": 1,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      1024,
+      2048,
+      4096
+    ],
+    "dilation_rates": [
+      1,
+      2,
+      4
+    ],
+    "embed_dim": 512,
+    "num_heads": 8,
+    "sparsity": 0.375
+  },
+  {
+    "time_per_iter": 10.240384721755982,
+    "throughput": 3199.879778968018,
+    "peak_memory_mb": 901.0390625,
+    "memory_used_mb": 760.03125,
+    "memory_per_token_kb": 23.7509765625,
+    "effective_seq_per_gpu": 16384,
+    "output_shape": [
+      2,
+      16384,
+      512
+    ],
+    "sequence_length": 16384,
+    "world_size": 1,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      2048,
+      4096,
+      8192
+    ],
+    "dilation_rates": [
+      1,
+      2,
+      4
+    ],
+    "embed_dim": 512,
+    "num_heads": 8,
+    "sparsity": 0.375
+  }
+]
