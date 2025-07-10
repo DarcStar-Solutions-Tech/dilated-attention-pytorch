@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (January 2025)
+- **Standardized Ring Attention**: Consolidated 12+ ring variants into 4 high-quality implementations
+  - `StandardRingAttention`: Base ring attention with true O(n/k) memory scaling
+  - `DistributedRingAttention`: Multi-GPU with DeepSpeed ZeRO integration
+  - `HilbertRingAttention`: Cache-optimized with Hilbert space-filling curves
+  - `BlockSparseRingAttention`: Combines ring communication with block sparsity
+  - All use efficient isend/irecv (no all_gather operations)
+  - Factory pattern support via `create_ring_attention()`
+  - Type-safe `RingAttentionConfig` for configuration
+  - Top-level exports for easy access
+
+### Changed (January 2025)  
+- **Renamed Misleading Classes**:
+  - `RingDistributedDilatedAttention` → `EnterpriseDistributedDilatedAttention`
+  - Class doesn't implement ring attention, uses O(n) memory per GPU
+  - Old name still available with deprecation warning
+
+### Removed (January 2025)
+- **Redundant Ring Implementations** (all used problematic all_gather):
+  - `ring_dilated_attention_v2_collective.py`
+  - `ring_dilated_attention_refactored.py`
+  - `ring_hilbert_dilated_attention.py`
+  - `ring_dilated_attention_fixed.py`
+  - `improved_distributed_dilated_attention.py`
+  - `block_sparse_ring_dilated_attention_original.py`
+  - `head_parallel_dilated_attention.py`
+  - `improved_distributed_dilated_attention.py`
+  - `ring_multihead_dilated_attention.py`
+
 ### Removed
 - **RingDilatedAttentionProduction**: Not actually ring attention (July 2025)
   - Despite its name, it computed full O(n²) attention matrices

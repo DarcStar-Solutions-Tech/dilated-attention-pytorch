@@ -1,6 +1,6 @@
 # Project Structure
 
-**Last Updated**: 2025-07-09
+**Last Updated**: 2025-07-10
 
 This document describes the organization of the dilated-attention-pytorch codebase after the comprehensive reorganization.
 
@@ -8,7 +8,7 @@ This document describes the organization of the dilated-attention-pytorch codeba
 
 The project contains:
 - **69 Python source files** organized into logical subdirectories
-- **20+ implementations** of dilated attention variants
+- **25+ implementations** of dilated attention variants
 - **Comprehensive test suite** with 525 tests mirroring source structure
 - **Modern Python tooling** with uv, hatch, and poetry support
 
