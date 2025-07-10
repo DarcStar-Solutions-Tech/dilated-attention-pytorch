@@ -8,6 +8,7 @@ across different test files.
 import torch
 from typing import Dict, Any, Optional, Tuple
 import pytest
+import functools
 
 
 # Common test configurations
@@ -172,6 +173,7 @@ def skip_if_insufficient_memory(config_name: str, min_gpu_memory_gb: float = 8.0
     """Decorator to skip test if insufficient GPU memory for config."""
 
     def decorator(test_func):
+        @functools.wraps(test_func)
         def wrapper(*args, **kwargs):
             if torch.cuda.is_available():
                 available_gb = torch.cuda.get_device_properties(0).total_memory / (
