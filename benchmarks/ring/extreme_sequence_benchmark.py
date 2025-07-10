@@ -38,13 +38,14 @@ class ExtremeSequenceBenchmark:
     ):
         self.max_sequence_length = max_sequence_length
         self.test_lengths = test_lengths or [
+            1_024,  # 1K
+            2_048,  # 2K
+            4_096,  # 4K
+            8_192,  # 8K
+            16_384,  # 16K
+            32_768,  # 32K
+            65_536,  # 64K
             100_000,  # 100K
-            250_000,  # 250K
-            500_000,  # 500K
-            1_000_000,  # 1M
-            2_000_000,  # 2M
-            5_000_000,  # 5M
-            10_000_000,  # 10M
         ]
         self.batch_size = batch_size
         self.num_heads = num_heads
@@ -70,13 +71,19 @@ class ExtremeSequenceBenchmark:
 
     def get_optimal_segment_lengths(self, seq_len: int) -> Tuple[List[int], List[int]]:
         """Get optimal segment lengths and dilation rates for given sequence length."""
-        # For extreme sequences, use larger segments
+        # Choose base segment based on sequence length
         if seq_len >= 1_000_000:
             base_segment = 16384
         elif seq_len >= 100_000:
             base_segment = 8192
-        else:
+        elif seq_len >= 16384:
             base_segment = 4096
+        elif seq_len >= 4096:
+            base_segment = 1024
+        elif seq_len >= 1024:
+            base_segment = 512
+        else:
+            base_segment = min(256, seq_len // 2)
 
         # Create geometric sequence
         segments = []
@@ -95,6 +102,11 @@ class ExtremeSequenceBenchmark:
             if len(segments) >= 6:
                 break
 
+        # Ensure we have at least one segment
+        if not segments:
+            segments = [seq_len]
+            dilations = [1]
+
         # Ensure last segment covers the sequence
         if segments:
             segments[-1] = min(segments[-1], seq_len)
@@ -107,7 +119,7 @@ class ExtremeSequenceBenchmark:
         # Q, K, V: batch * seq * heads * dim * dtype_size
         bytes_per_element = 2 if self.dtype in (torch.float16, torch.bfloat16) else 4
 
-        # Input tensors
+        # Input tensors - we need to allocate FULL sequences
         input_memory = (
             3
             * self.batch_size
@@ -117,13 +129,16 @@ class ExtremeSequenceBenchmark:
             * bytes_per_element
         )
 
-        # Attention computation (with ring, only local chunk)
+        # Attention computation (with ring, only local chunk is processed)
         local_seq = seq_len // self.world_size if self.world_size > 1 else seq_len
         attention_memory = (
             self.batch_size * self.num_heads * local_seq * local_seq * bytes_per_element
         )
 
-        # Output and intermediates (rough estimate)
+        # Total memory includes full input tensors + local attention computation
+        # IMPORTANT: Ring attention saves memory on attention computation, not input allocation
+        # We still need to allocate full Q,K,V tensors initially, then ring attention
+        # processes them in chunks. The O(n/k) saving is in the attention matrix, not inputs.
         total_memory = input_memory + attention_memory * 2
 
         return total_memory / (1024**3)  # Convert to GB
@@ -194,21 +209,11 @@ class ExtremeSequenceBenchmark:
             else:
                 initial_memory = 0
 
-            # Create inputs (chunk for this rank if distributed)
-            if self.world_size > 1:
-                local_seq_len = seq_len // self.world_size
-                start_idx = self.rank * local_seq_len
-                print(
-                    f"  Rank {self.rank}: Processing tokens {start_idx:,} to {start_idx + local_seq_len:,}"
-                )
-            else:
-                local_seq_len = seq_len
-
-            # Create tensors
+            # Create FULL sequence tensors - let ring attention handle splitting
             print("  Creating input tensors...")
             q = torch.randn(
                 self.batch_size,
-                local_seq_len,
+                seq_len,  # Full sequence length
                 self.num_heads,
                 self.head_dim,
                 device=self.device,
@@ -233,9 +238,9 @@ class ExtremeSequenceBenchmark:
             else:
                 start_time = time.perf_counter()
 
-            # Forward pass
+            # Forward pass - let model handle splitting internally
             with torch.no_grad():
-                output = model(q, k, v, already_split=(self.world_size > 1))
+                output = model(q, k, v)  # No already_split flag!
 
             # Record time
             if self.device.type == "cuda":
@@ -508,6 +513,10 @@ def main():
     """Main entry point."""
     import argparse
 
+    # Initialize distributed if running with torchrun
+    if "RANK" in os.environ and "WORLD_SIZE" in os.environ:
+        dist.init_process_group(backend="nccl")
+
     parser = argparse.ArgumentParser(description="Extreme sequence length benchmarking")
     parser.add_argument(
         "--max-length",
@@ -534,6 +543,10 @@ def main():
     )
 
     benchmark.run_benchmarks()
+
+    # Cleanup distributed
+    if dist.is_initialized():
+        dist.destroy_process_group()
 
 
 if __name__ == "__main__":
