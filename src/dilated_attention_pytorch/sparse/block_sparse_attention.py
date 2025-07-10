@@ -499,9 +499,11 @@ class BlockSparseAttention(torch.nn.Module):
 
         return {
             "values": weight_values,
+            "indices": (weight_row_indices, weight_col_indices),
             "row_indices": weight_row_indices,
             "col_indices": weight_col_indices,
             "shape": (batch, num_heads, seq_len, seq_len),
+            "block_size": self.block_size,
         }
 
     def _generate_local_window_pattern(
