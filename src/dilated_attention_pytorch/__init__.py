@@ -8,11 +8,9 @@ including Ring Attention for O(n) memory scaling.
 __version__ = "0.2.0"
 
 
-# Block-Sparse Ring Attention implementations
+# Block-Sparse Attention implementation
 from .sparse.block_sparse_attention import (
     BlockSparseAttention,
-    BlockSparseRingAttention,  # Backward compatibility alias
-    BlockSparseRingDilatedAttention,  # Backward compatibility alias
     SparsePatternConfig,
 )
 from .sparse.block_sparse_ring_distributed_dilated_attention import (
@@ -116,8 +114,6 @@ from .utils.dynamic_segment_selector import (
 __all__ = [
     # Block-Sparse implementations
     "BlockSparseAttention",
-    "BlockSparseRingAttention",  # Backward compatibility alias
-    "BlockSparseRingDilatedAttention",  # Backward compatibility alias
     "BlockSparseRingDistributedDilatedAttention",
     "BlockSparseRingMultiheadDilatedAttention",
     # "BlockSparseOptimized",  # Merged into BlockSparseRingDilatedAttention

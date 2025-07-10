@@ -679,8 +679,3 @@ class BlockSparseAttention(torch.nn.Module):
             "memory_ratio": memory_ratio,
             "speedup_estimate": 1 / memory_ratio if memory_ratio > 0 else float("inf"),
         }
-
-
-# For backward compatibility, keep the old names as aliases
-BlockSparseRingAttention = BlockSparseAttention
-BlockSparseRingDilatedAttention = BlockSparseAttention

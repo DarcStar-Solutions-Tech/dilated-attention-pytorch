@@ -14,7 +14,6 @@ import torch
 # Import implementations to test
 from dilated_attention_pytorch import (
     BlockSparseAttention,
-    BlockSparseRingDilatedAttention,  # Backward compatibility alias
     SparsePatternConfig,
 )
 from dilated_attention_pytorch import (
@@ -168,9 +167,7 @@ class TestBlockSparseAttention:
             pattern_type="local_window", sparsity_ratio=0.3
         )
 
-        attention = BlockSparseRingDilatedAttention(
-            segment_lengths=[512],
-            dilation_rates=[1],
+        attention = BlockSparseAttention(
             sparse_config=sparse_config,
             device=device,
         )
@@ -200,9 +197,7 @@ class TestBlockSparseAttention:
             pattern_type="dilated_sparse", sparsity_ratio=0.25
         )
 
-        attention = BlockSparseRingDilatedAttention(
-            segment_lengths=[512],
-            dilation_rates=[1],
+        attention = BlockSparseAttention(
             sparse_config=sparse_config,
             device=device,
         )
@@ -414,9 +409,7 @@ class TestPerformanceComparison:
             pattern_type="dilated_sparse", sparsity_ratio=sparsity_ratio
         )
 
-        sparse_attention = BlockSparseRingDilatedAttention(
-            segment_lengths=[1024, 2048],
-            dilation_rates=[1, 2],
+        sparse_attention = BlockSparseAttention(
             sparse_config=sparse_config,
             device=device,
         )
@@ -484,9 +477,7 @@ class TestPerformanceComparison:
             sparsity_ratio=0.1,  # Very sparse
         )
 
-        attention = BlockSparseRingDilatedAttention(
-            segment_lengths=[2048, 4096],
-            dilation_rates=[1, 2],
+        attention = BlockSparseAttention(
             sparse_config=sparse_config,
             device=device,
         )
