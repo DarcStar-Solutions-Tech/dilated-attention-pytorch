@@ -28,7 +28,6 @@ from .utils import (
     split_by_rank,
     RingAttentionFunction,
     StableRingAccumulator,
-    memory_efficient_ring_attention,
 )
 
 # Import from legacy submodules (deprecated - will be removed in v0.5.0)
@@ -38,20 +37,14 @@ try:
     from .base import (
         RingDilatedAttentionCorrect,
         RingAttentionWrapper,
-        RingDilatedAttentionV3,
-        RingDilatedAttentionMemoryEfficient,
         RingDilatedAttentionSDPA,
-        RingDilatedAttentionFixedSimple,
     )
 
     _legacy_imports.update(
         {
             "RingDilatedAttentionCorrect": RingDilatedAttentionCorrect,
             "RingAttentionWrapper": RingAttentionWrapper,
-            "RingDilatedAttentionV3": RingDilatedAttentionV3,
-            "RingDilatedAttentionMemoryEfficient": RingDilatedAttentionMemoryEfficient,
             "RingDilatedAttentionSDPA": RingDilatedAttentionSDPA,
-            "RingDilatedAttentionFixedSimple": RingDilatedAttentionFixedSimple,
         }
     )
 except ImportError:
@@ -74,17 +67,11 @@ except ImportError:
 
 try:
     from .hilbert import (
-        RingDilatedAttentionHilbertCore,
-        RingDilatedAttentionHilbertOptimizedFixed,
-        RingDilatedAttentionHilbertProper,
         RingDilatedAttentionHilbertGPUOptimized,
     )
 
     _legacy_imports.update(
         {
-            "RingDilatedAttentionHilbertCore": RingDilatedAttentionHilbertCore,
-            "RingDilatedAttentionHilbertOptimizedFixed": RingDilatedAttentionHilbertOptimizedFixed,
-            "RingDilatedAttentionHilbertProper": RingDilatedAttentionHilbertProper,
             "RingDilatedAttentionHilbertGPUOptimized": RingDilatedAttentionHilbertGPUOptimized,
         }
     )
@@ -113,7 +100,6 @@ __all__ = [
     "split_by_rank",
     "RingAttentionFunction",
     "StableRingAccumulator",
-    "memory_efficient_ring_attention",
     # Aliases
     "RingDilatedAttention",
     "RingDilatedAttentionProduction",

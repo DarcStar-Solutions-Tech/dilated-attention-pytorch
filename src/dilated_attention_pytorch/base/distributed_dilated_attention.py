@@ -1,5 +1,12 @@
 import torch
-import xformers.ops as xops
+
+try:
+    import xformers.ops as xops
+
+    HAS_XFORMERS = True
+except ImportError:
+    HAS_XFORMERS = False
+    xops = None
 from einops import rearrange
 
 # from pytorch_lightning import LightningModule  # Optional dependency
