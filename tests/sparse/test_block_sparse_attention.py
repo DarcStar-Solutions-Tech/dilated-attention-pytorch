@@ -60,29 +60,7 @@ SPARSITY_RATIOS = [0.1, 0.25, 0.5, 0.75]
 PATTERN_TYPES = ["local_window", "dilated_sparse", "global_local"]
 
 
-class TestSparsePatternGeneration:
-    """Test sparse pattern generation and utilities"""
-
-    @pytest.mark.parametrize("pattern_type", PATTERN_TYPES)
-    @pytest.mark.parametrize("sparsity_ratio", [0.25, 0.5])
-    def test_pattern_generation(self, pattern_type, sparsity_ratio):
-        """Test basic pattern generation"""
-        # SparsePatternConfig and SparsePatternGenerator are incompatible
-        pytest.skip(
-            "SparsePatternGenerator expects PatternConfig, not SparsePatternConfig"
-        )
-
-    def test_pattern_caching(self):
-        """Test pattern caching functionality"""
-        # SparsePatternConfig and SparsePatternGenerator are incompatible
-        pytest.skip(
-            "SparsePatternGenerator expects PatternConfig, not SparsePatternConfig"
-        )
-
-    def test_adaptive_sparsity_learning(self):
-        """Test content-adaptive sparsity learning"""
-        # ContentAdaptiveSparsity not available - skip test
-        pytest.skip("ContentAdaptiveSparsity not available")
+# TestSparsePatternGeneration removed - SparsePatternGenerator uses incompatible PatternConfig
 
 
 class TestBlockSparseAttention:
@@ -220,43 +198,86 @@ class TestBlockSparseAttention:
         pass
 
 
-class TestBlockSparseRingMultiheadDilatedAttention:
+class TestBlockSparseMultiheadAttention:
     """Test multihead block-sparse attention implementation"""
 
     @pytest.mark.parametrize("config_name", ["small", "medium"])
     def test_multihead_forward_pass(self, config_name):
         """Test multihead attention forward pass"""
-        _ = TEST_CONFIGS[config_name]
-        _ = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        from dilated_attention_pytorch import create_multihead_block_sparse
 
-        # create_block_sparse_multihead_attention not available - skip test
-        pytest.skip("create_block_sparse_multihead_attention not available")
+        config = TEST_CONFIGS[config_name]
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        # Skip medium config on small GPUs
+        if config_name == "medium" and torch.cuda.is_available():
+            if torch.cuda.get_device_properties(0).total_memory < 12 * 1024**3:
+                pytest.skip("Not enough GPU memory for medium config")
+
+        attention = create_multihead_block_sparse(
+            embed_dim=config["embed_dim"],
+            num_heads=config["num_heads"],
+            sparsity_ratio=0.25,
+        )
+        attention = attention.to(device)
+
+        # Test forward pass
+        batch_size = config["batch_size"]
+        seq_len = config["seq_len"]
+        x = torch.randn(batch_size, seq_len, config["embed_dim"], device=device)
+
+        output = attention(x, x, x)
+        assert output.shape == (batch_size, seq_len, config["embed_dim"])
 
     def test_multihead_compatibility(self):
         """Test compatibility with nn.MultiheadAttention interface"""
-        _ = TEST_CONFIGS["small"]
+        from dilated_attention_pytorch import BlockSparseMultiheadAttention
+
+        config = TEST_CONFIGS["small"]
         _ = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        # create_block_sparse_multihead_attention not available - skip test
-        pytest.skip("create_block_sparse_multihead_attention not available")
+        attention = BlockSparseMultiheadAttention(
+            embed_dim=config["embed_dim"],
+            num_heads=config["num_heads"],
+            batch_first=True,
+        )
+
+        # Test that it has the expected interface
+        assert hasattr(attention, "forward")
+        assert hasattr(attention, "embed_dim")
+        assert hasattr(attention, "num_heads")
 
     # FusedQKVProjection test removed - class not available
 
     def test_adaptive_sparse_creation(self):
         """Test adaptive sparse attention creation"""
-        _ = TEST_CONFIGS["small"]
+        from dilated_attention_pytorch import create_adaptive_block_sparse
+
+        config = TEST_CONFIGS["small"]
         _ = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        # create_adaptive_sparse_multihead_attention not available - skip test
-        pytest.skip("create_adaptive_sparse_multihead_attention not available")
+        # Create adaptive sparse attention
+        attention = create_adaptive_block_sparse(
+            base_sparsity=0.9,
+            embed_dim=config["embed_dim"],
+            num_heads=config["num_heads"],
+        )
+
+        # Test that it was created successfully
+        assert attention is not None
+        assert hasattr(attention, "importance_scorer")
+        assert hasattr(attention, "adaptive_config")
 
 
 class TestBlockSparseAdvancedDistributedAttention:
     """Test advanced distributed block-sparse attention"""
 
-    def test_hierarchical_pattern_generation(self):
-        """Test hierarchical sparse pattern generation"""
-        _ = DistributedSparseConfig(
+    @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+    def test_distributed_config_creation(self):
+        """Test distributed sparse configuration"""
+
+        # Test creating various distributed configs
+        config = DistributedSparseConfig(
             pattern_type=DistributedSparsePattern.HIERARCHICAL,
             sparsity_ratio=0.25,
             local_sparsity=0.4,
@@ -264,39 +285,17 @@ class TestBlockSparseAdvancedDistributedAttention:
             inter_node_sparsity=0.05,
         )
 
-        # Mock distributed setup
-        _ = 8
-        _ = 0
+        assert config.pattern_type == DistributedSparsePattern.HIERARCHICAL
+        assert config.sparsity_ratio == 0.25
+        assert config.local_sparsity == 0.4
 
-        # HierarchicalSparsePatternGenerator not available - skip test
-        pytest.skip("HierarchicalSparsePatternGenerator not available")
-
-    def test_load_balancing(self):
-        """Test load balancing functionality"""
-        _ = DistributedSparseConfig(
+        # Test with load balancing
+        config2 = DistributedSparseConfig(
             enable_load_balancing=True, load_balance_threshold=0.15
         )
 
-        _ = 4
-        _ = 0
-
-        # HierarchicalSparsePatternGenerator not available - skip test
-        pytest.skip("HierarchicalSparsePatternGenerator not available")
-
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-    def test_distributed_attention_forward(self):
-        """Test distributed attention forward pass"""
-        _ = TEST_CONFIGS["small"]
-        _ = torch.device("cuda")
-
-        _ = DistributedSparseConfig(
-            pattern_type=DistributedSparsePattern.HIERARCHICAL, sparsity_ratio=0.25
-        )
-
-        # Skip this test - BlockSparseRingDistributedDilatedAttention has initialization issues
-        pytest.skip(
-            "BlockSparseRingDistributedDilatedAttention initialization is incompatible with parent class"
-        )
+        assert config2.enable_load_balancing is True
+        assert config2.load_balance_threshold == 0.15
 
 
 class TestSparsePatternUtils:
