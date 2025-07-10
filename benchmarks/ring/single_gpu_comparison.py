@@ -17,12 +17,13 @@ from dilated_attention_pytorch import (
     RingBlockSparseAttention,
     RingAttentionConfig,
 )
+from dilated_attention_pytorch.utils import get_optimal_dtype
 
 
 def benchmark_single_gpu():
     """Run single GPU benchmark of all implementations."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dtype = torch.float16 if device.type == "cuda" else torch.float32
+    dtype = get_optimal_dtype(device)
 
     print(f"Device: {device}")
     print(f"Dtype: {dtype}")

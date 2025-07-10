@@ -10,6 +10,7 @@ import torch
 import torch.distributed as dist
 import matplotlib.pyplot as plt
 import gc
+import os
 from typing import Dict, List, Tuple
 import json
 from pathlib import Path
@@ -21,6 +22,7 @@ from dilated_attention_pytorch import (
     RingAttentionConfig,
 )
 from dilated_attention_pytorch.base import DilatedAttention
+from dilated_attention_pytorch.utils import get_optimal_dtype
 
 
 class MemoryScalingAnalysis:
@@ -41,11 +43,17 @@ class MemoryScalingAnalysis:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.dtype = torch.float16 if self.device.type == "cuda" else torch.float32
-
         self.world_size = dist.get_world_size() if dist.is_initialized() else 1
         self.rank = dist.get_rank() if dist.is_initialized() else 0
+        self.local_rank = int(os.environ.get("LOCAL_RANK", 0))
+
+        # Device setup - CRITICAL: Use local_rank for multi-GPU
+        if torch.cuda.is_available():
+            torch.cuda.set_device(self.local_rank)
+            self.device = torch.device(f"cuda:{self.local_rank}")
+        else:
+            self.device = torch.device("cpu")
+        self.dtype = get_optimal_dtype(self.device)
 
     def measure_memory(
         self, model: torch.nn.Module, seq_len: int, warmup: bool = True
