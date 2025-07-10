@@ -2,6 +2,12 @@
 """
 Comprehensive performance benchmarking suite for standardized ring attention implementations.
 
+IMPORTANT: These implementations use STANDARD attention (not dilated) with ring communication.
+They achieve O(n/k) memory scaling by splitting sequences across GPUs, but still compute
+the full attention matrix (not sparse/dilated patterns).
+
+For dilated attention benchmarks, see dilated_vs_standard_ring_benchmark.py
+
 This script benchmarks all 4 ring attention variants across different:
 - Sequence lengths (1K to 1M tokens)
 - GPU configurations (1, 2, 4, 8 GPUs)
