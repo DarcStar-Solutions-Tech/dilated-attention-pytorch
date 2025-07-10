@@ -52,7 +52,13 @@ def create_dilated_attention(
             - "auto": Automatically select best implementation
             - "standard": Standard dilated attention
             - "improved": Improved dilated attention with optimizations
-            - "ring": Ring attention (O(n) memory)
+            - "ring": Standard ring attention (O(n/k) memory)
+            - "ring_standard": Standard ring attention
+            - "ring_distributed": Ring with enterprise features
+            - "ring_hilbert": Ring with Hilbert optimization
+            - "ring_hilbert_gpu": GPU-optimized Hilbert ring
+            - "ring_correct": Reference implementation
+            - "ring_sdpa": Ring with PyTorch SDPA
             - "distributed": Distributed dilated attention
             - "block_sparse_ring": Block-sparse ring attention
         segment_lengths: List of segment lengths (default: [2048, 4096, 8192])
@@ -63,11 +69,20 @@ def create_dilated_attention(
         Dilated attention module
 
     Example:
+        >>> # Standard usage
         >>> attention = create_dilated_attention(
         ...     "improved",
         ...     segment_lengths=[1024, 2048],
         ...     dilation_rates=[1, 2],
         ...     dropout=0.1
+        ... )
+        >>>
+        >>> # Ring attention with O(n/k) memory
+        >>> ring_attention = create_dilated_attention(
+        ...     "ring",
+        ...     segment_lengths=[2048, 4096],
+        ...     dilation_rates=[1, 2],
+        ...     ring_size=4  # Number of GPUs
         ... )
     """
     # Ensure implementations are registered
@@ -117,6 +132,61 @@ def create_dilated_attention(
             dtype=config.dtype,
             **kwargs,  # Pass through remaining kwargs
         )
+    elif attention_type.startswith("ring") and attention_type not in [
+        "ring_correct",
+        "ring_sdpa",
+        "ring_hilbert_gpu",
+    ]:
+        # New standardized ring implementations expect RingAttentionConfig
+        from ..ring import RingAttentionConfig
+
+        ring_config = RingAttentionConfig(
+            segment_lengths=config.segment_lengths,
+            dilation_rates=config.dilation_rates,
+            dropout=config.dropout,
+            ring_size=kwargs.get("ring_size", None),
+            use_tf32=config.use_tf32,
+            device=config.device,
+            dtype=config.dtype,
+        )
+        module = cls(
+            config=ring_config,
+            device=config.device,
+            dtype=config.dtype,
+        )
+    elif attention_type in ["ring_correct", "ring_sdpa"]:
+        # Legacy ring implementations need embed_dim and num_heads
+        ring_kwargs = {
+            "embed_dim": kwargs.get("embed_dim", 768),  # Default if not provided
+            "num_heads": kwargs.get("num_heads", 12),  # Default if not provided
+            "segment_lengths": config.segment_lengths,
+            "dilation_rates": config.dilation_rates,
+            "dropout": config.dropout,
+        }
+        # Add device/dtype if supported
+        if "device" in kwargs or config.device:
+            ring_kwargs["device"] = kwargs.get("device", config.device)
+        if "dtype" in kwargs or config.dtype:
+            ring_kwargs["dtype"] = kwargs.get("dtype", config.dtype)
+
+        module = cls(**ring_kwargs)
+    elif attention_type == "ring_hilbert_gpu":
+        # RingDilatedAttentionHilbertGPUOptimized needs embed_dim and num_heads
+        ring_kwargs = {
+            "embed_dim": kwargs.get("embed_dim", 768),
+            "num_heads": kwargs.get("num_heads", 12),
+            "segment_lengths": config.segment_lengths,
+            "dilation_rates": config.dilation_rates,
+            "dropout": config.dropout,
+        }
+        if "ring_size" in kwargs:
+            ring_kwargs["ring_size"] = kwargs["ring_size"]
+        if "device" in kwargs or config.device:
+            ring_kwargs["device"] = kwargs.get("device", config.device)
+        if "dtype" in kwargs or config.dtype:
+            ring_kwargs["dtype"] = kwargs.get("dtype", config.dtype)
+
+        module = cls(**ring_kwargs)
     elif attention_type in ["standard", "improved"]:
         # These implementations need individual parameters + memory pool settings
         # Filter kwargs to only include what each implementation accepts
@@ -617,42 +687,49 @@ def _register_implementations():
         logger.warning(f"Failed to register improved implementations: {e}")
 
     try:
-        # Register ring attention production implementations
+        # Register ring attention implementations
+        from ..ring import (
+            StandardRingAttention,
+            DistributedRingAttention,
+            HilbertRingAttention,
+            RingDilatedAttentionCorrect,
+            RingDilatedAttentionSDPA,
+        )
+
+        # Also import the GPU optimized version for backward compatibility
         from ..ring.hilbert.ring_dilated_attention_hilbert_gpu_optimized import (
-            RingDilatedAttentionHilbertGPUOptimized as RingDilatedAttentionProduction,
+            RingDilatedAttentionHilbertGPUOptimized,
         )
 
-        # Create a wrapper to match the expected interface
-        class RingDilatedAttentionProductionWrapper(BaseDilatedAttention):
-            """Wrapper to make RingDilatedAttentionProduction compatible with factory."""
+        # Register standard ring attention as default "ring"
+        register_attention("ring", StandardRingAttention)
+        register_attention("ring_standard", StandardRingAttention)
+        logger.debug("Registered standard ring attention implementation")
 
-            def __init__(self, config):
-                super().__init__(config)
-                self.ring_attention = RingDilatedAttentionProduction(
-                    segment_lengths=config.segment_lengths,
-                    dilation_rates=config.dilation_rates,
-                    dropout=config.dropout,
-                    ring_size=getattr(config, "ring_size", None),
-                    device=config.device,
-                    dtype=config.dtype,
-                )
+        # Register distributed ring attention
+        register_attention("ring_distributed", DistributedRingAttention)
+        logger.debug("Registered distributed ring attention implementation")
 
-            def forward(self, query, key, value, is_causal=False, attention_mask=None):
-                return self.ring_attention(query, key, value, is_causal, attention_mask)
+        # Register Hilbert ring attention
+        register_attention("ring_hilbert", HilbertRingAttention)
+        logger.debug("Registered Hilbert ring attention implementation")
 
-        register_attention("ring", RingDilatedAttentionProductionWrapper)
-        logger.debug("Registered ring dilated attention production implementation")
+        # Register GPU optimized Hilbert (backward compatibility)
+        register_attention("ring_hilbert_gpu", RingDilatedAttentionHilbertGPUOptimized)
+        logger.debug("Registered GPU optimized Hilbert ring attention")
 
-        # Register the ring multihead implementation
-        from ..ring_multihead_dilated_attention import (
-            RingMultiheadDilatedAttention,
-        )
+        # Register correct implementation
+        register_attention("ring_correct", RingDilatedAttentionCorrect)
+        logger.debug("Registered correct ring attention implementation")
 
-        register_multihead_attention("multihead_ring", RingMultiheadDilatedAttention)
-        logger.debug("Registered ring multihead dilated attention implementation")
+        # Register SDPA implementation
+        register_attention("ring_sdpa", RingDilatedAttentionSDPA)
+        logger.debug("Registered SDPA ring attention implementation")
+
+        logger.info("Ring attention implementations registered successfully")
 
     except ImportError as e:
-        logger.error(f"Failed to register ring V2 implementations: {e}")
+        logger.error(f"Failed to register ring attention implementations: {e}")
         logger.error("Ring attention is not available. Please check installation.")
 
     try:
