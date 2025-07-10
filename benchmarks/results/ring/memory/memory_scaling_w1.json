@@ -1,0 +1,142 @@
+[
+  {
+    "implementation": "standard_attention",
+    "sequence_length": 512,
+    "error": "dilated_attention_pytorch.core.config.DilatedAttentionConfig() got multiple values for keyword argument 'dropout'"
+  },
+  {
+    "implementation": "standard_attention",
+    "sequence_length": 1024,
+    "error": "dilated_attention_pytorch.core.config.DilatedAttentionConfig() got multiple values for keyword argument 'dropout'"
+  },
+  {
+    "implementation": "standard_attention",
+    "sequence_length": 2048,
+    "error": "dilated_attention_pytorch.core.config.DilatedAttentionConfig() got multiple values for keyword argument 'dropout'"
+  },
+  {
+    "implementation": "standard_attention",
+    "sequence_length": 4096,
+    "error": "dilated_attention_pytorch.core.config.DilatedAttentionConfig() got multiple values for keyword argument 'dropout'"
+  },
+  {
+    "implementation": "ring_standard",
+    "sequence_length": 512,
+    "input_memory_mb": 1.5,
+    "peak_memory_mb": 19.140625,
+    "output_memory_mb": 0.5,
+    "memory_per_token_kb": 38.28125,
+    "expected_scaling": "O(n/1)",
+    "world_size": 1
+  },
+  {
+    "implementation": "ring_standard",
+    "sequence_length": 1024,
+    "input_memory_mb": 3.0,
+    "peak_memory_mb": 38.03125,
+    "output_memory_mb": 1.0,
+    "memory_per_token_kb": 38.03125,
+    "expected_scaling": "O(n/1)",
+    "world_size": 1
+  },
+  {
+    "implementation": "ring_standard",
+    "sequence_length": 2048,
+    "input_memory_mb": 6.0,
+    "peak_memory_mb": 140.0625,
+    "output_memory_mb": 2.0,
+    "memory_per_token_kb": 70.03125,
+    "expected_scaling": "O(n/1)",
+    "world_size": 1
+  },
+  {
+    "implementation": "ring_standard",
+    "sequence_length": 4096,
+    "input_memory_mb": 12.0,
+    "peak_memory_mb": 536.125,
+    "output_memory_mb": 4.0,
+    "memory_per_token_kb": 134.03125,
+    "expected_scaling": "O(n/1)",
+    "world_size": 1
+  },
+  {
+    "implementation": "ring_hilbert",
+    "sequence_length": 512,
+    "input_memory_mb": 1.5,
+    "peak_memory_mb": 11.015625,
+    "output_memory_mb": 0.5,
+    "memory_per_token_kb": 22.03125,
+    "expected_scaling": "O(n/1)",
+    "world_size": 1
+  },
+  {
+    "implementation": "ring_hilbert",
+    "sequence_length": 1024,
+    "input_memory_mb": 3.0,
+    "peak_memory_mb": 38.03125,
+    "output_memory_mb": 1.0,
+    "memory_per_token_kb": 38.03125,
+    "expected_scaling": "O(n/1)",
+    "world_size": 1
+  },
+  {
+    "implementation": "ring_hilbert",
+    "sequence_length": 2048,
+    "input_memory_mb": 6.0,
+    "peak_memory_mb": 140.0625,
+    "output_memory_mb": 2.0,
+    "memory_per_token_kb": 70.03125,
+    "expected_scaling": "O(n/1)",
+    "world_size": 1
+  },
+  {
+    "implementation": "ring_hilbert",
+    "sequence_length": 4096,
+    "input_memory_mb": 12.0,
+    "peak_memory_mb": 536.125,
+    "output_memory_mb": 4.0,
+    "memory_per_token_kb": 134.03125,
+    "expected_scaling": "O(n/1)",
+    "world_size": 1
+  },
+  {
+    "implementation": "ring_block_sparse",
+    "sequence_length": 512,
+    "input_memory_mb": 1.5,
+    "peak_memory_mb": 11.265625,
+    "output_memory_mb": 0.5,
+    "memory_per_token_kb": 22.53125,
+    "expected_scaling": "O(n/1)",
+    "world_size": 1
+  },
+  {
+    "implementation": "ring_block_sparse",
+    "sequence_length": 1024,
+    "input_memory_mb": 3.0,
+    "peak_memory_mb": 39.03125,
+    "output_memory_mb": 1.0,
+    "memory_per_token_kb": 39.03125,
+    "expected_scaling": "O(n/1)",
+    "world_size": 1
+  },
+  {
+    "implementation": "ring_block_sparse",
+    "sequence_length": 2048,
+    "input_memory_mb": 6.0,
+    "peak_memory_mb": 146.03125,
+    "output_memory_mb": 2.0,
+    "memory_per_token_kb": 73.015625,
+    "expected_scaling": "O(n/1)",
+    "world_size": 1
+  },
+  {
+    "implementation": "ring_block_sparse",
+    "sequence_length": 4096,
+    "input_memory_mb": 12.0,
+    "peak_memory_mb": 564.0625,
+    "output_memory_mb": 4.0,
+    "memory_per_token_kb": 141.015625,
+    "expected_scaling": "O(n/1)",
+    "world_size": 1
+  }
+]
