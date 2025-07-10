@@ -1,5 +1,5 @@
 """
-Block-Sparse Ring Multihead Dilated Attention - Memory Efficient Implementation
+Block-Sparse Multihead Attention - Memory Efficient Implementation
 
 Multihead wrapper for the memory-efficient block-sparse implementation.
 """
@@ -8,15 +8,15 @@ from typing import Any
 
 from torch import Tensor, nn
 
-from .block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention,
+from .block_sparse_attention import (
+    BlockSparseAttention,
     SparsePatternConfig,
 )
 
 
-class BlockSparseRingMultiheadDilatedAttention(nn.Module):
+class BlockSparseMultiheadAttention(nn.Module):
     """
-    Memory-efficient multihead block-sparse ring dilated attention.
+    Memory-efficient multihead block-sparse attention.
 
     Drop-in replacement for nn.MultiheadAttention with block-sparse optimization.
     """
@@ -25,8 +25,6 @@ class BlockSparseRingMultiheadDilatedAttention(nn.Module):
         self,
         embed_dim: int,
         num_heads: int,
-        segment_lengths: list[int],
-        dilation_rates: list[int],
         dropout: float = 0.0,
         bias: bool = True,
         sparse_config: SparsePatternConfig | None = None,
@@ -39,13 +37,11 @@ class BlockSparseRingMultiheadDilatedAttention(nn.Module):
         Args:
             embed_dim: Total embedding dimension
             num_heads: Number of attention heads
-            segment_lengths: List of segment lengths for dilated attention
-            dilation_rates: List of dilation rates
             dropout: Dropout probability
             bias: Whether to use bias in projections
             sparse_config: Sparse pattern configuration
             batch_first: Whether batch dimension is first
-            **kwargs: Additional arguments for BlockSparseRingDilatedAttention
+            **kwargs: Additional arguments for BlockSparseAttention
         """
         super().__init__()
 
@@ -83,9 +79,7 @@ class BlockSparseRingMultiheadDilatedAttention(nn.Module):
         # Sparse attention - ensure it gets device/dtype info
         sparse_kwargs = kwargs.copy()
         sparse_kwargs.update(factory_kwargs)
-        self.sparse_attention = BlockSparseRingDilatedAttention(
-            segment_lengths=segment_lengths,
-            dilation_rates=dilation_rates,
+        self.sparse_attention = BlockSparseAttention(
             sparse_config=sparse_config,
             **sparse_kwargs,
         )

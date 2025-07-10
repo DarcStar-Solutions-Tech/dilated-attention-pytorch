@@ -6,7 +6,7 @@ import time
 
 import torch
 
-from dilated_attention_pytorch import BlockSparseRingMultiheadDilatedAttention
+from dilated_attention_pytorch import BlockSparseMultiheadAttention
 from dilated_attention_pytorch import (
     SparsePatternConfig,
 )
@@ -28,11 +28,9 @@ def test_block_sparse_multihead_memory_pool():
         block_size=128,
     )
 
-    attention = BlockSparseRingMultiheadDilatedAttention(
+    attention = BlockSparseMultiheadAttention(
         embed_dim=768,
         num_heads=12,
-        segment_lengths=[512, 1024],
-        dilation_rates=[1, 2],
         sparse_config=sparse_config,
         batch_first=True,
     )

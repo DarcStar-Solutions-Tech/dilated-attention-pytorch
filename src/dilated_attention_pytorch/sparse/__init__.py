@@ -9,14 +9,14 @@ from .block_sparse_attention import (
     BlockSparseAttention,
     SparsePatternConfig,
 )
-from .block_sparse_ring_dilated_attention_fixed import (
-    BlockSparseRingDilatedAttentionFixed,
+from .block_sparse_attention_fixed import (
+    BlockSparseAttentionFixed,
 )
-from .block_sparse_ring_dilated_attention_hilbert_post_pattern import (
-    BlockSparseRingDilatedAttentionHilbertPostPattern,
+from .block_sparse_attention_hilbert import (
+    BlockSparseAttentionHilbert,
 )
-from .block_sparse_ring_multihead_dilated_attention import (
-    BlockSparseRingMultiheadDilatedAttention,
+from .block_sparse_multihead_attention import (
+    BlockSparseMultiheadAttention,
 )
 from .block_sparse_ring_distributed_dilated_attention import (
     BlockSparseRingDistributedDilatedAttention,
@@ -36,9 +36,9 @@ from .block_sparse_factory import (
 __all__ = [
     # Core implementations
     "BlockSparseAttention",
-    "BlockSparseRingDilatedAttentionFixed",
-    "BlockSparseRingDilatedAttentionHilbertPostPattern",
-    "BlockSparseRingMultiheadDilatedAttention",
+    "BlockSparseAttentionFixed",
+    "BlockSparseAttentionHilbert",
+    "BlockSparseMultiheadAttention",
     "BlockSparseRingDistributedDilatedAttention",
     # Adaptive implementations
     "BlockSparseAdaptive",

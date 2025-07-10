@@ -18,8 +18,8 @@ from .sparse.block_sparse_ring_distributed_dilated_attention import (
     DistributedSparseConfig,
     DistributedSparsePattern,
 )
-from .sparse.block_sparse_ring_multihead_dilated_attention import (
-    BlockSparseRingMultiheadDilatedAttention,
+from .sparse.block_sparse_multihead_attention import (
+    BlockSparseMultiheadAttention,
 )
 
 # Optimized Block-Sparse implementations
@@ -115,7 +115,7 @@ __all__ = [
     # Block-Sparse implementations
     "BlockSparseAttention",
     "BlockSparseRingDistributedDilatedAttention",
-    "BlockSparseRingMultiheadDilatedAttention",
+    "BlockSparseMultiheadAttention",
     # "BlockSparseOptimized",  # Merged into BlockSparseRingDilatedAttention
     # "BlockSparseTorchSparse",  # Removed - provided no benefit over base implementation
     # "BlockSparseHierarchical",  # Removed - poor memory efficiency

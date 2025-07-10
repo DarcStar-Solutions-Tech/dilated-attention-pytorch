@@ -18,8 +18,8 @@ from .block_sparse_adaptive_fixed import (
     BlockSparseAdaptive,
     AdaptiveConfig,
 )
-from .block_sparse_ring_multihead_dilated_attention import (
-    BlockSparseRingMultiheadDilatedAttention,
+from .block_sparse_multihead_attention import (
+    BlockSparseMultiheadAttention,
 )
 from .block_sparse_ring_distributed_dilated_attention import (
     BlockSparseRingDistributedDilatedAttention,
@@ -49,7 +49,7 @@ def create_block_sparse_attention(
 ) -> Union[
     BlockSparseAttention,
     BlockSparseAdaptive,
-    BlockSparseRingMultiheadDilatedAttention,
+    BlockSparseMultiheadAttention,
     BlockSparseRingDistributedDilatedAttention,
 ]:
     """
@@ -168,11 +168,9 @@ def create_block_sparse_attention(
                 "embed_dim and num_heads are required for multihead variant"
             )
 
-        return BlockSparseRingMultiheadDilatedAttention(
+        return BlockSparseMultiheadAttention(
             embed_dim=embed_dim,
             num_heads=num_heads,
-            segment_lengths=segment_lengths,
-            dilation_rates=dilation_rates,
             sparse_config=sparse_config,
             **kwargs,
         )
@@ -343,7 +341,7 @@ def create_multihead_block_sparse(
     num_heads: int,
     sparsity_ratio: float = 0.1,
     **kwargs,
-) -> BlockSparseRingMultiheadDilatedAttention:
+) -> BlockSparseMultiheadAttention:
     """Create multihead block-sparse attention."""
     return create_block_sparse_attention(
         "multihead",

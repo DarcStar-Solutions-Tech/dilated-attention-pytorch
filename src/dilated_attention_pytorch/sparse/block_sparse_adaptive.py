@@ -20,8 +20,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 
-from .block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention,
+from .block_sparse_attention import (
+    BlockSparseAttention,
     SparsePatternConfig,
 )
 
@@ -187,7 +187,7 @@ class ImportanceScorer(nn.Module):
         return scores
 
 
-class BlockSparseAdaptive(BlockSparseRingDilatedAttention):
+class BlockSparseAdaptive(BlockSparseAttention):
     """
     Block-Sparse attention with learned, content-adaptive sparsity patterns.
 
@@ -220,9 +220,11 @@ class BlockSparseAdaptive(BlockSparseRingDilatedAttention):
             if k not in ["num_heads", "head_dim", "sparse_config"]
         }
 
-        super().__init__(
-            segment_lengths, dilation_rates, sparse_config, **filtered_kwargs
-        )
+        super().__init__(sparse_config, **filtered_kwargs)
+
+        # Store these for compatibility, even though they're not used
+        self.segment_lengths = segment_lengths
+        self.dilation_rates = dilation_rates
 
         self.num_heads = num_heads
         self.head_dim = head_dim

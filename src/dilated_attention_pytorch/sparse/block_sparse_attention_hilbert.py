@@ -1,5 +1,5 @@
 """
-Block-Sparse Ring Dilated Attention with Post-Pattern Hilbert Optimization.
+Block-Sparse Attention with Post-Pattern Hilbert Optimization.
 
 This implementation applies Hilbert ordering AFTER the sparse pattern is determined,
 optimizing only the order in which the selected blocks are processed, not which
@@ -12,8 +12,8 @@ from torch import Tensor
 from typing import Tuple, Dict, Optional, List
 import numpy as np
 
-from .block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention,
+from .block_sparse_attention import (
+    BlockSparseAttention,
     SparsePatternConfig,
 )
 from ..utils.hilbert_curve import generate_hilbert_indices
@@ -188,9 +188,7 @@ class PostPatternHilbertOptimizer:
             return final_order
 
 
-class BlockSparseRingDilatedAttentionHilbertPostPattern(
-    BlockSparseRingDilatedAttention
-):
+class BlockSparseAttentionHilbert(BlockSparseAttention):
     """
     Block-Sparse attention with post-pattern Hilbert optimization.
 
@@ -202,14 +200,12 @@ class BlockSparseRingDilatedAttentionHilbertPostPattern(
 
     def __init__(
         self,
-        segment_lengths: List[int],
-        dilation_rates: List[int],
         sparse_config: SparsePatternConfig,
         use_post_pattern_optimization: bool = True,
         cache_orderings: bool = True,
         **kwargs,
     ):
-        super().__init__(segment_lengths, dilation_rates, sparse_config, **kwargs)
+        super().__init__(sparse_config, **kwargs)
 
         self.use_post_pattern_optimization = use_post_pattern_optimization
         self.optimizer = PostPatternHilbertOptimizer(cache_orderings)
@@ -370,7 +366,7 @@ def create_post_pattern_hilbert_attention(
     pattern_type: str = "dilated_sparse",
     block_size: int = 64,
     **kwargs,
-) -> BlockSparseRingDilatedAttentionHilbertPostPattern:
+) -> BlockSparseAttentionHilbert:
     """
     Factory function for post-pattern Hilbert attention.
     """
@@ -380,9 +376,7 @@ def create_post_pattern_hilbert_attention(
         block_size=block_size,
     )
 
-    return BlockSparseRingDilatedAttentionHilbertPostPattern(
-        segment_lengths=segment_lengths,
-        dilation_rates=dilation_rates,
+    return BlockSparseAttentionHilbert(
         sparse_config=sparse_config,
         use_post_pattern_optimization=True,
         **kwargs,

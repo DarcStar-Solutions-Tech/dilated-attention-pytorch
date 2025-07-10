@@ -1,5 +1,5 @@
 """
-Fixed BlockSparseRingDilatedAttention with standardized API.
+Fixed BlockSparseAttention with standardized API.
 
 This wrapper ensures the Block-Sparse implementation uses the standardized API
 consistently.
@@ -9,8 +9,8 @@ import torch
 import torch.nn as nn
 from typing import Optional, List, Dict, Any, Union, Tuple
 
-from .block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention,
+from .block_sparse_attention import (
+    BlockSparseAttention,
     SparsePatternConfig,
 )
 from ..core.standardized_api import (
@@ -19,9 +19,9 @@ from ..core.standardized_api import (
 )
 
 
-class BlockSparseRingDilatedAttentionFixed(nn.Module, StandardizedRingAttentionMixin):
+class BlockSparseAttentionFixed(nn.Module, StandardizedRingAttentionMixin):
     """
-    Fixed version of BlockSparseRingDilatedAttention with standardized API.
+    Fixed version of BlockSparseAttention with standardized API.
 
     This wrapper ensures consistent API while maintaining the efficient
     block-sparse implementation.
@@ -97,19 +97,20 @@ class BlockSparseRingDilatedAttentionFixed(nn.Module, StandardizedRingAttentionM
             init_kwargs["block_size"] = block_size
 
         # Initialize the actual implementation
+        # Note: BlockSparseAttention doesn't use segment_lengths or dilation_rates
+        # Remove them from init_kwargs since they're not used
+        init_kwargs.pop("segment_lengths", None)
+        init_kwargs.pop("dilation_rates", None)
+
         try:
-            self.attention = BlockSparseRingDilatedAttention(
-                segment_lengths=segment_lengths,
-                dilation_rates=dilation_rates,
+            self.attention = BlockSparseAttention(
                 **init_kwargs,
             )
         except Exception:
             # If the original fails, try with sparse_config instead of sparse_pattern_config
             if "sparse_pattern_config" in init_kwargs:
                 init_kwargs["sparse_config"] = init_kwargs.pop("sparse_pattern_config")
-            self.attention = BlockSparseRingDilatedAttention(
-                segment_lengths=segment_lengths,
-                dilation_rates=dilation_rates,
+            self.attention = BlockSparseAttention(
                 **init_kwargs,
             )
 

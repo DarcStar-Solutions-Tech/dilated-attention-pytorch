@@ -12,7 +12,7 @@ from .block_sparse_adaptive import (
     BlockSparseAdaptive as _BlockSparseAdaptiveOriginal,
     AdaptiveConfig,
 )
-from .block_sparse_ring_dilated_attention import SparsePatternConfig
+from .block_sparse_attention import SparsePatternConfig
 
 
 class BlockSparseAdaptive(_BlockSparseAdaptiveOriginal):
