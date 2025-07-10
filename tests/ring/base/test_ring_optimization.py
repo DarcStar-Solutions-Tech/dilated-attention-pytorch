@@ -3,17 +3,14 @@ Test the optimization of RingDilatedAttention
 """
 
 import time
-
 import torch
 
 from dilated_attention_pytorch import DilatedAttention
-from dilated_attention_pytorch import (
-    RingDilatedAttentionHilbertGPUOptimized as RingDilatedAttention,
-)
+from dilated_attention_pytorch.ring import HilbertRingAttention, RingAttentionConfig
 
 
 def test_optimization():
-    print("Testing RingDilatedAttention Optimization")
+    print("Testing HilbertRingAttention Optimization")
     print("=" * 80)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -51,91 +48,63 @@ def test_optimization():
             batch_size, seq_len, num_heads, head_dim, device=device, dtype=dtype
         )
 
-        implementations = [
-            ("DilatedAttention", DilatedAttention(segments, dilation_rates, 0.0)),
-            (
-                "RingDilated (optimized)",
-                RingDilatedAttention(segments, dilation_rates, 0.0, ring_size=1),
-            ),
-        ]
+        # Standard DilatedAttention
+        standard = DilatedAttention(
+            segment_lengths=segments,
+            dilation_rates=dilation_rates,
+            dropout=0.0,
+        ).to(device)
 
-        results = []
-
-        for name, module in implementations:
-            module = module.to(device, dtype)
-
-            # Warmup
-            for _ in range(3):
-                with torch.no_grad():
-                    _ = module(q, k, v)
-
-            # Benchmark
-            torch.cuda.synchronize()
-            start = time.time()
-
-            iterations = 10
-            for _ in range(iterations):
-                with torch.no_grad():
-                    output = module(q, k, v)
-
-            torch.cuda.synchronize()
-            elapsed = (time.time() - start) / iterations * 1000
-
-            results.append((name, elapsed, output))
-            print(f"  {name:25} {elapsed:8.2f}ms")
-
-            del module
-
-        # Compare results
-        if len(results) == 2:
-            _, time1, output1 = results[0]
-            _, time2, output2 = results[1]
-
-            speedup = time1 / time2
-            print(f"  Speedup: {speedup:.2f}x")
-
-            if torch.allclose(output1, output2, rtol=1e-3):
-                print("  ✓ Results match")
-            else:
-                print("  ✗ Results differ!")
-
-        # Cleanup
-        del q, k, v
-        torch.cuda.empty_cache()
-
-    print("\n" + "=" * 80)
-    print("ANALYSIS:")
-    print("The optimization should show improvement, especially for sequences")
-    print("where offset=0 is common (which happens for 1/3 of the groups)")
-
-
-def analyze_offset_distribution():
-    """Analyze how often offset=0 occurs"""
-    print("\n\nOFFSET DISTRIBUTION ANALYSIS")
-    print("=" * 80)
-
-    dilation_rates = [1, 2, 4]
-    num_groups = len(dilation_rates)
-
-    print("With dilation_rates = [1, 2, 4]:")
-    for i, r in enumerate(dilation_rates):
-        offset = i % r
-        print(
-            f"  Group {i}: dilation={r}, offset={offset} {'<-- Direct slicing!' if offset == 0 else ''}"
+        # Ring Dilated Attention with Hilbert
+        config = RingAttentionConfig(
+            segment_lengths=segments,
+            dilation_rates=dilation_rates,
+            dropout=0.0,
+            use_hilbert=True,
+            hilbert_curve_level=8,
         )
+        ring = HilbertRingAttention(config, device=device, dtype=dtype)
 
-    # Count zero offsets
-    zero_offsets = sum(1 for i, r in enumerate(dilation_rates) if i % r == 0)
-    percentage = zero_offsets / num_groups * 100
+        # Warmup
+        with torch.no_grad():
+            for _ in range(3):
+                _ = standard(q, k, v)
+                _ = ring(q, k, v)
 
-    print(
-        f"\nDirect slicing applicable: {zero_offsets}/{num_groups} groups ({percentage:.0f}%)"
-    )
-    print(
-        "This means the optimization applies to a significant portion of computations!"
-    )
+        # Sync
+        if device.type == "cuda":
+            torch.cuda.synchronize()
+
+        # Timing for standard
+        start = time.perf_counter()
+        with torch.no_grad():
+            for _ in range(10):
+                out_standard = standard(q, k, v)
+        if device.type == "cuda":
+            torch.cuda.synchronize()
+        time_standard = (time.perf_counter() - start) / 10
+
+        # Timing for ring
+        start = time.perf_counter()
+        with torch.no_grad():
+            for _ in range(10):
+                out_ring = ring(q, k, v)
+        if device.type == "cuda":
+            torch.cuda.synchronize()
+        time_ring = (time.perf_counter() - start) / 10
+
+        # Check outputs are close
+        diff = (out_standard - out_ring).abs().mean().item()
+
+        print(f"  Standard time: {time_standard * 1000:.2f} ms")
+        print(f"  Ring time: {time_ring * 1000:.2f} ms")
+        print(f"  Speedup: {time_standard / time_ring:.2f}x")
+        print(f"  Output difference: {diff:.6f}")
+
+        # For single GPU, ring should be slightly slower due to overhead
+        # But it enables much longer sequences with multi-GPU
+        assert diff < 0.01, f"Output difference too large: {diff}"
 
 
 if __name__ == "__main__":
     test_optimization()
-    analyze_offset_distribution()

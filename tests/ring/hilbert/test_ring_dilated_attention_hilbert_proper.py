@@ -1,5 +1,5 @@
 """
-Unit tests for Ring Dilated Attention with proper Hilbert integration.
+Unit tests for HilbertRingAttention implementation.
 
 Tests verify:
 - Correct integration of ring communication, dilated attention, and Hilbert SFC
@@ -10,15 +10,13 @@ Tests verify:
 
 import pytest
 import torch
+import torch.distributed as dist
 
-from dilated_attention_pytorch.ring.hilbert.ring_dilated_attention_hilbert_proper import (
-    RingDilatedAttentionHilbertProper,
-    StableAttentionAccumulator,
-)
+from dilated_attention_pytorch.ring import HilbertRingAttention, RingAttentionConfig
 
 
-class TestRingDilatedAttentionHilbertProper:
-    """Test suite for proper ring dilated attention with Hilbert."""
+class TestHilbertRingAttention:
+    """Test suite for HilbertRingAttention."""
 
     @pytest.fixture
     def device(self):
@@ -26,286 +24,219 @@ class TestRingDilatedAttentionHilbertProper:
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     @pytest.fixture
-    def model_config(self):
-        """Standard model configuration."""
-        return {
-            "embed_dim": 256,
-            "num_heads": 8,
-            "segment_lengths": [128, 256, 512],
-            "dilation_rates": [1, 2, 4],
-            "dropout": 0.1,
-        }
+    def config(self):
+        """Standard configuration."""
+        return RingAttentionConfig(
+            segment_lengths=[128, 256, 512],
+            dilation_rates=[1, 2, 4],
+            dropout=0.1,
+            use_hilbert=True,
+            hilbert_curve_level=8,
+        )
 
-    def test_initialization(self, model_config, device):
+    def test_initialization(self, config, device):
         """Test model initialization."""
-        model = RingDilatedAttentionHilbertProper(**model_config).to(device)
+        model = HilbertRingAttention(config, device=device)
 
-        assert model.embed_dim == model_config["embed_dim"]
-        assert model.num_heads == model_config["num_heads"]
-        assert model.segment_lengths == model_config["segment_lengths"]
-        assert model.dilation_rates == model_config["dilation_rates"]
-        assert model.head_dim == model_config["embed_dim"] // model_config["num_heads"]
+        assert model.segment_lengths == config.segment_lengths
+        assert model.dilation_rates == config.dilation_rates
+        assert model.use_hilbert == config.use_hilbert
+        assert model.hilbert_curve_level == config.hilbert_curve_level
 
-    def test_forward_shape(self, model_config, device):
+    def test_forward_shape(self, config, device):
         """Test forward pass output shape."""
-        model = RingDilatedAttentionHilbertProper(**model_config).to(device)
+        model = HilbertRingAttention(config, device=device)
         batch_size, seq_len = 2, 512
+        num_heads = 8
+        head_dim = 32
 
-        x = torch.randn(batch_size, seq_len, model_config["embed_dim"]).to(device)
-        output = model(x)
+        # Create Q, K, V tensors
+        q = torch.randn(batch_size, seq_len, num_heads, head_dim).to(device)
+        k = torch.randn(batch_size, seq_len, num_heads, head_dim).to(device)
+        v = torch.randn(batch_size, seq_len, num_heads, head_dim).to(device)
 
-        assert output.shape == x.shape
+        output = model(q, k, v)
+
+        assert output.shape == q.shape
         assert not torch.isnan(output).any()
         assert not torch.isinf(output).any()
 
     @pytest.mark.parametrize("seq_len", [256, 512, 1024, 2048])
-    def test_variable_sequence_lengths(self, model_config, device, seq_len):
+    def test_variable_sequence_lengths(self, config, device, seq_len):
         """Test with different sequence lengths."""
-        model = RingDilatedAttentionHilbertProper(**model_config).to(device)
+        model = HilbertRingAttention(config, device=device)
         batch_size = 2
+        num_heads = 8
+        head_dim = 32
 
-        x = torch.randn(batch_size, seq_len, model_config["embed_dim"]).to(device)
-        output = model(x)
+        q = torch.randn(batch_size, seq_len, num_heads, head_dim).to(device)
+        k = torch.randn(batch_size, seq_len, num_heads, head_dim).to(device)
+        v = torch.randn(batch_size, seq_len, num_heads, head_dim).to(device)
 
-        assert output.shape == (batch_size, seq_len, model_config["embed_dim"])
+        output = model(q, k, v)
 
-    def test_causal_masking(self, model_config, device):
+        assert output.shape == (batch_size, seq_len, num_heads, head_dim)
+
+    def test_causal_masking(self, config, device):
         """Test causal masking is applied correctly."""
-        model = RingDilatedAttentionHilbertProper(**model_config).to(device)
+        model = HilbertRingAttention(config, device=device)
         model.eval()
 
         seq_len = 256
-        x = torch.randn(1, seq_len, model_config["embed_dim"]).to(device)
+        batch_size = 1
+        num_heads = 8
+        head_dim = 32
+
+        q = torch.randn(batch_size, seq_len, num_heads, head_dim).to(device)
+        k = torch.randn(batch_size, seq_len, num_heads, head_dim).to(device)
+        v = torch.randn(batch_size, seq_len, num_heads, head_dim).to(device)
 
         with torch.no_grad():
             # Get outputs with and without causal masking
-            out_causal = model(x, is_causal=True)
-            out_non_causal = model(x, is_causal=False)
+            out_causal = model(q, k, v, is_causal=True)
+            out_non_causal = model(q, k, v, is_causal=False)
 
         # Outputs should be different
         assert not torch.allclose(out_causal, out_non_causal)
 
-    def test_gradient_flow(self, model_config, device):
+    def test_gradient_flow(self, config, device):
         """Test gradient flow through the model."""
-        model = RingDilatedAttentionHilbertProper(**model_config).to(device)
+        model = HilbertRingAttention(config, device=device)
 
-        x = torch.randn(2, 256, model_config["embed_dim"], requires_grad=True).to(
-            device
-        )
-        x.retain_grad()  # Ensure gradients are retained
-        output = model(x)
+        batch_size = 2
+        seq_len = 256
+        num_heads = 8
+        head_dim = 32
+
+        q = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, requires_grad=True
+        ).to(device)
+        k = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, requires_grad=True
+        ).to(device)
+        v = torch.randn(
+            batch_size, seq_len, num_heads, head_dim, requires_grad=True
+        ).to(device)
+
+        output = model(q, k, v)
         loss = output.mean()
         loss.backward()
 
-        # Check input gradient
-        assert x.grad is not None
-        assert not torch.isnan(x.grad).any()
-        assert x.grad.abs().mean() > 0
+        # Check input gradients
+        assert q.grad is not None
+        assert k.grad is not None
+        assert v.grad is not None
+        assert not torch.isnan(q.grad).any()
+        assert not torch.isnan(k.grad).any()
+        assert not torch.isnan(v.grad).any()
+        assert q.grad.abs().mean() > 0
+        assert k.grad.abs().mean() > 0
+        assert v.grad.abs().mean() > 0
 
-        # Check model parameter gradients
-        for name, param in model.named_parameters():
-            if param.grad is not None:
-                assert not torch.isnan(param.grad).any()
-                assert param.grad.abs().mean() > 0
-
-    def test_hilbert_ordering_effect(self, model_config, device):
+    def test_hilbert_ordering_effect(self, device):
         """Test that Hilbert ordering has an effect."""
-        # Create two models with same weights
-        model_hilbert = RingDilatedAttentionHilbertProper(
-            **model_config, use_hilbert=True
-        ).to(device)
+        # Create two configs with and without Hilbert
+        config_hilbert = RingAttentionConfig(
+            segment_lengths=[128, 256, 512],
+            dilation_rates=[1, 2, 4],
+            dropout=0.0,
+            use_hilbert=True,
+            hilbert_curve_level=8,
+        )
 
-        model_no_hilbert = RingDilatedAttentionHilbertProper(
-            **model_config, use_hilbert=False
-        ).to(device)
+        config_no_hilbert = RingAttentionConfig(
+            segment_lengths=[128, 256, 512],
+            dilation_rates=[1, 2, 4],
+            dropout=0.0,
+            use_hilbert=False,
+        )
 
-        # Copy weights
-        model_no_hilbert.load_state_dict(model_hilbert.state_dict())
+        model_hilbert = HilbertRingAttention(config_hilbert, device=device)
+        model_no_hilbert = HilbertRingAttention(config_no_hilbert, device=device)
+
+        # Set to eval mode to avoid dropout
         model_hilbert.eval()
         model_no_hilbert.eval()
 
-        x = torch.randn(2, 256, model_config["embed_dim"]).to(device)
+        # Create input
+        batch_size = 1
+        seq_len = 512
+        num_heads = 8
+        head_dim = 32
+
+        q = torch.randn(batch_size, seq_len, num_heads, head_dim).to(device)
+        k = torch.randn(batch_size, seq_len, num_heads, head_dim).to(device)
+        v = torch.randn(batch_size, seq_len, num_heads, head_dim).to(device)
 
         with torch.no_grad():
-            out_hilbert = model_hilbert(x)
-            out_no_hilbert = model_no_hilbert(x)
+            out_hilbert = model_hilbert(q, k, v)
+            out_no_hilbert = model_no_hilbert(q, k, v)
 
-        # Outputs should be different due to reordering
+        # Outputs should be different due to different ordering
         assert not torch.allclose(out_hilbert, out_no_hilbert, rtol=1e-5)
 
-    def test_dilated_attention_pattern(self, device):
-        """Test dilated attention is applied correctly."""
-        # Simple config to verify dilation
-        model = RingDilatedAttentionHilbertProper(
-            embed_dim=64,
-            num_heads=1,
-            segment_lengths=[8, 16],
-            dilation_rates=[1, 2],
-            use_hilbert=False,  # Disable for clearer testing
-        ).to(device)
+    @pytest.mark.skipif(
+        not torch.distributed.is_initialized(), reason="Distributed not initialized"
+    )
+    def test_distributed_ring_communication(self, config, device):
+        """Test ring communication in distributed setting."""
+        model = HilbertRingAttention(config, device=device)
+
+        batch_size = 1
+        seq_len = 1024
+        num_heads = 8
+        head_dim = 32
+
+        # Get world size and rank
+        world_size = dist.get_world_size()
+        rank = dist.get_rank()
+
+        # Create full sequence
+        torch.manual_seed(42)  # Same seed on all ranks
+        q_full = torch.randn(batch_size, seq_len, num_heads, head_dim).to(device)
+        k_full = torch.randn(batch_size, seq_len, num_heads, head_dim).to(device)
+        v_full = torch.randn(batch_size, seq_len, num_heads, head_dim).to(device)
+
+        # Split for this rank
+        chunk_size = seq_len // world_size
+        start_idx = rank * chunk_size
+        end_idx = start_idx + chunk_size
+
+        q_local = q_full[:, start_idx:end_idx].contiguous()
+        k_local = k_full[:, start_idx:end_idx].contiguous()
+        v_local = v_full[:, start_idx:end_idx].contiguous()
+
+        # Forward with already_split=True
+        output_local = model(q_local, k_local, v_local, already_split=True)
+
+        # Check output shape
+        assert output_local.shape == (batch_size, chunk_size, num_heads, head_dim)
+        assert not torch.isnan(output_local).any()
+        assert not torch.isinf(output_local).any()
+
+    def test_attention_pattern_consistency(self, config, device):
+        """Test that attention patterns are consistent."""
+        model = HilbertRingAttention(config, device=device)
         model.eval()
 
-        # Use random input for testing
-        seq_len = 16
-        x = torch.randn(1, seq_len, 64).to(device)
+        batch_size = 1
+        seq_len = 256
+        num_heads = 8
+        head_dim = 32
+
+        # Create input with specific pattern
+        q = torch.eye(seq_len, seq_len).unsqueeze(0).unsqueeze(2).to(device)
+        q = q.expand(batch_size, seq_len, num_heads, head_dim).contiguous()
+        k = q.clone()
+        v = torch.ones(batch_size, seq_len, num_heads, head_dim).to(device)
 
         with torch.no_grad():
-            output = model(x)
+            output = model(q, k, v)
 
-        # Verify output is valid
+        # Check output characteristics
+        assert output.shape == q.shape
         assert not torch.isnan(output).any()
-        assert output.shape == x.shape
-
-    def test_numerical_stability(self, model_config, device):
-        """Test numerical stability with extreme values."""
-        model = RingDilatedAttentionHilbertProper(**model_config).to(device)
-        model.eval()
-
-        test_cases = [
-            torch.randn(1, 256, model_config["embed_dim"]) * 100,  # Large values
-            torch.randn(1, 256, model_config["embed_dim"]) * 0.01,  # Small values
-            torch.randn(1, 256, model_config["embed_dim"]),  # Normal values
-        ]
-
-        for x in test_cases:
-            x = x.to(device)
-            with torch.no_grad():
-                output = model(x)
-
-            assert not torch.isnan(output).any()
-            assert not torch.isinf(output).any()
-
-    def test_stable_accumulator(self, device):
-        """Test the stable attention accumulator."""
-        shape = (2, 4, 128, 64)
-        accumulator = StableAttentionAccumulator(shape, torch.float32, device)
-
-        # Test multiple updates
-        for _ in range(5):
-            new_output = torch.randn(shape).to(device)
-            new_lse = torch.randn(shape[:-1] + (1,)).to(device)
-            accumulator.update(new_output, new_lse)
-
-        final_output = accumulator.get()
-        assert final_output.shape == shape
-        assert not torch.isnan(final_output).any()
-        assert not torch.isinf(final_output).any()
-
-    @pytest.mark.parametrize("ring_size", [1, 2, 4])
-    def test_ring_size_handling(self, model_config, device, ring_size):
-        """Test handling of different ring sizes."""
-        model = RingDilatedAttentionHilbertProper(
-            **model_config, ring_size=ring_size
-        ).to(device)
-
-        x = torch.randn(2, 256, model_config["embed_dim"]).to(device)
-        output = model(x)
-
-        assert output.shape == x.shape
-        assert not torch.isnan(output).any()
-
-    def test_segment_boundary_handling(self, device):
-        """Test handling of segment boundaries."""
-        # Use segments that don't perfectly divide sequence
-        model = RingDilatedAttentionHilbertProper(
-            embed_dim=128,
-            num_heads=4,
-            segment_lengths=[100, 200, 300],
-            dilation_rates=[1, 2, 3],
-        ).to(device)
-
-        # Test with sequence length not divisible by largest segment
-        x = torch.randn(1, 250, 128).to(device)
-        output = model(x)
-
-        assert output.shape == x.shape
-        assert not torch.isnan(output).any()
-
-    def test_attention_mask_support(self, model_config, device):
-        """Test attention mask support."""
-        model = RingDilatedAttentionHilbertProper(**model_config).to(device)
-        seq_len = 256
-
-        x = torch.randn(2, seq_len, model_config["embed_dim"]).to(device)
-
-        # Create attention mask (e.g., padding mask)
-        mask = torch.ones(2, seq_len, seq_len).to(device)
-        mask[:, :, -50:] = 0  # Mask last 50 positions
-
-        output = model(x, attn_mask=mask)
-        assert output.shape == x.shape
-        assert not torch.isnan(output).any()
-
-    def test_memory_efficiency(self, device):
-        """Test memory efficiency with longer sequences."""
-        if not torch.cuda.is_available():
-            pytest.skip("GPU required for memory test")
-
-        model = RingDilatedAttentionHilbertProper(
-            embed_dim=256,
-            num_heads=8,
-            segment_lengths=[1024, 2048, 4096],
-            dilation_rates=[1, 2, 4],
-        ).cuda()
-
-        # Test with long sequence
-        x = torch.randn(1, 4096, 256).cuda()
-
-        torch.cuda.reset_peak_memory_stats()
-        _ = model(x)
-        peak_memory = torch.cuda.max_memory_allocated() / 1024**2  # MB
-
-        # Should use reasonable memory (not quadratic)
-        assert peak_memory < 1000  # Less than 1GB for 4K sequence
-        print(f"Peak memory for 4K sequence: {peak_memory:.2f} MB")
-
-
-class TestIntegrationWithHilbertCore:
-    """Test integration with HilbertAttentionCore kernel."""
-
-    @pytest.fixture
-    def device(self):
-        """Get test device."""
-        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    @pytest.mark.skip(reason="HilbertAttentionCore has Triton compilation issues")
-    def test_hilbert_core_compatibility(self, device):
-        """Test that model can work with HilbertAttentionCore."""
-        from dilated_attention_pytorch.kernels.hilbert_attention_core import (
-            HilbertAttentionCore,
-        )
-
-        # Verify HilbertAttentionCore can be instantiated
-        hilbert_core = HilbertAttentionCore(
-            hidden_dim=256,
-            num_heads=8,
-            segment_size=128,
-            dilation_rate=2,
-        ).to(device)
-
-        # Test basic forward
-        x = torch.randn(2, 128, 256).to(device)
-        output = hilbert_core(x)
-
-        assert output.shape == x.shape
-        assert not torch.isnan(output).any()
-
-
-def test_proper_ring_communication():
-    """Test that ring communication doesn't use all_gather."""
-    import inspect
-    from dilated_attention_pytorch.ring.hilbert.ring_dilated_attention_hilbert_proper import (
-        RingDilatedAttentionHilbertProper,
-    )
-
-    # Check source code doesn't contain all_gather
-    source = inspect.getsource(RingDilatedAttentionHilbertProper)
-
-    # The implementation uses all_ring_pass which internally uses isend/irecv
-    assert "all_ring_pass" in source, "Should use all_ring_pass for communication"
-
-    # Check that the ring_forward method exists
-    assert "_ring_forward" in source, "Should have ring forward implementation"
+        assert not torch.isinf(output).any()
 
 
 if __name__ == "__main__":

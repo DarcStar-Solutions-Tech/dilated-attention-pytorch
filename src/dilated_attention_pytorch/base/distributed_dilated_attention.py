@@ -25,7 +25,7 @@ class DistributedMultiheadDilatedAttention(
         dilation_rates,
         segment_lengths,
         dropout: float = 0.0,
-        op: xops.AttentionOp | None = None,
+        op=None,  # xops.AttentionOp | None
     ):
         super().__init__()
 

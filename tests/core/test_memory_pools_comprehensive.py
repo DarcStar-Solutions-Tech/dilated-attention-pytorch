@@ -89,7 +89,7 @@ class FragmentAwareMemoryPool(UnifiedMemoryPool):
 
     def defragment(self):
         """Simulate defragmentation."""
-        self.cleanup(force=True)
+        self._cleanup(force=True)
 
 
 class NUMAAwareMemoryPool(UnifiedMemoryPool):
