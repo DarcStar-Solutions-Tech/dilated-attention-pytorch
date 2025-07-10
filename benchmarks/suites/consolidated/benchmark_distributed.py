@@ -27,7 +27,10 @@ sys.path.insert(0, str(project_root))
 
 from benchmarks.core.config import BenchmarkConfig  # noqa: E402
 from benchmarks.core.unified_runner import UnifiedBenchmarkRunner  # noqa: E402
-from benchmarks.core.utils.distributed import cleanup_distributed, setup_distributed  # noqa: E402
+from benchmarks.core.utils.distributed import (  # noqa: E402
+    cleanup_distributed,
+    init_distributed as setup_distributed,
+)
 
 
 class DistributedBenchmark:

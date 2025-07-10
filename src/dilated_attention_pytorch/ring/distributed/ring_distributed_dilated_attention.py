@@ -1,23 +1,26 @@
 """
-Ring Distributed Dilated Attention implementation.
+Enterprise Distributed Dilated Attention implementation.
 
 This module implements a distributed attention system combining:
-- Ring Attention (O(n) memory complexity)
 - Dilated Attention (efficient long-range dependencies)
 - Distributed training features (DeepSpeed, FairScale, etc.)
 - Enterprise-grade optimizations and monitoring
 
-This represents the state-of-the-art in distributed attention mechanisms,
-capable of handling trillion-token contexts across thousands of GPUs while
-maintaining linear memory complexity and optimal communication patterns.
+NOTE: Despite the legacy name, this does NOT implement Ring Attention.
+It uses ImprovedMultiheadDilatedAttention internally and processes
+full sequences on each GPU, resulting in O(n) memory per GPU.
 
 Key Features:
-- O(n) memory complexity through Ring Attention
-- Multi-level parallelism (ring, model, data, sequence)
-- DeepSpeed ZeRO integration for extreme memory efficiency
+- Multi-level parallelism (model, data, sequence)
+- DeepSpeed ZeRO integration for memory efficiency
 - Fault tolerance and automatic recovery
 - Monitoring and profiling
 - Production-ready enterprise features
+
+For true Ring Attention with O(n/k) memory scaling, use:
+- RingDilatedAttentionHilbertGPUOptimized
+- StandardRingAttention (when exported)
+- BlockSparseRingDilatedAttention
 """
 # ruff: noqa: PLR0912 PLR0915
 
@@ -65,21 +68,25 @@ except ImportError:
 # RingDilatedAttentionProduction removed - was not actually ring attention
 
 
-class RingDistributedDilatedAttention(nn.Module):
+class EnterpriseDistributedDilatedAttention(nn.Module):
     """
-    Distributed attention system with Ring Attention and enterprise features.
+    Enterprise-grade distributed attention system with advanced features.
 
-    This implementation represents the pinnacle of distributed attention technology,
-    combining Ring Attention's O(n) memory complexity with distributed
-    training techniques to enable trillion-token contexts on massive clusters.
+    NOTE: This class does NOT implement Ring Attention despite the legacy module name.
+    It wraps ImprovedMultiheadDilatedAttention with distributed training features,
+    processing full sequences on each GPU (O(n) memory per GPU).
 
-    Key innovations:
-    - Multi-level parallelism hierarchy (ring → model → data)
+    Key features:
+    - Multi-level parallelism hierarchy (model → data → pipeline)
     - Dynamic load balancing across heterogeneous clusters
     - Fault tolerance with automatic failure recovery
     - Memory management with CPU/NVMe offloading
     - Real-time monitoring and adaptive optimization
     - Production-grade reliability and observability
+
+    For true Ring Attention with O(n/k) memory scaling, use:
+    - RingDilatedAttentionHilbertGPUOptimized
+    - BlockSparseRingDilatedAttention
     """
 
     def __init__(
@@ -1231,8 +1238,36 @@ class RingDistributedDilatedAttention(nn.Module):
 
 
 # Enable torch.compile for maximum optimization (optional)
-# RingDistributedDilatedAttention = torch.compile(
-#     RingDistributedDilatedAttention,
+# EnterpriseDistributedDilatedAttention = torch.compile(
+#     EnterpriseDistributedDilatedAttention,
 #     mode='max-autotune',
 #     fullgraph=True
 # )
+
+
+# Backward compatibility alias with deprecation warning
+class RingDistributedDilatedAttention(EnterpriseDistributedDilatedAttention):
+    """
+    DEPRECATED: This class has been renamed to EnterpriseDistributedDilatedAttention.
+
+    Despite its name, this class does NOT implement Ring Attention and does NOT
+    provide O(n/k) memory scaling. It processes full sequences on each GPU.
+
+    This alias is provided for backward compatibility only and will be removed
+    in a future version. Please update your code to use:
+    - EnterpriseDistributedDilatedAttention (this class, renamed)
+    - RingDilatedAttentionHilbertGPUOptimized (for true ring attention)
+    - BlockSparseRingDilatedAttention (for ring + sparse attention)
+    """
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "RingDistributedDilatedAttention has been renamed to "
+            "EnterpriseDistributedDilatedAttention because it does NOT implement "
+            "Ring Attention. This alias will be removed in a future version. "
+            "For true Ring Attention with O(n/k) memory scaling, use "
+            "RingDilatedAttentionHilbertGPUOptimized or BlockSparseRingDilatedAttention.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)

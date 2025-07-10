@@ -59,11 +59,18 @@ except ImportError:
     pass
 
 try:
-    from .distributed import RingDistributedDilatedAttention as LegacyRingDistributed
+    from .distributed import (
+        EnterpriseDistributedDilatedAttention,
+        RingDistributedDilatedAttention as LegacyRingDistributed,  # Deprecated
+    )
 
     _legacy_imports["LegacyRingDistributed"] = LegacyRingDistributed
+    _legacy_imports["EnterpriseDistributedDilatedAttention"] = (
+        EnterpriseDistributedDilatedAttention
+    )
 except ImportError:
     LegacyRingDistributed = None
+    EnterpriseDistributedDilatedAttention = None
 
 try:
     from .hilbert import (

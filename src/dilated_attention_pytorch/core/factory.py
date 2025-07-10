@@ -656,15 +656,23 @@ def _register_implementations():
         logger.error("Ring attention is not available. Please check installation.")
 
     try:
-        # Register ring distributed implementation
+        # Register enterprise distributed implementation
         from ..ring.distributed.ring_distributed_dilated_attention import (
-            RingDistributedDilatedAttention,
+            EnterpriseDistributedDilatedAttention,
+            RingDistributedDilatedAttention,  # Deprecated
         )
 
+        # Register with new name
+        register_multihead_attention(
+            "multihead_enterprise_distributed", EnterpriseDistributedDilatedAttention
+        )
+        # Keep old name for compatibility
         register_multihead_attention(
             "multihead_ring_distributed", RingDistributedDilatedAttention
         )
-        logger.debug("Registered ring distributed dilated attention implementation")
+        logger.debug(
+            "Registered enterprise distributed dilated attention implementation"
+        )
 
     except ImportError as e:
         logger.warning(f"Failed to register ring distributed implementation: {e}")
