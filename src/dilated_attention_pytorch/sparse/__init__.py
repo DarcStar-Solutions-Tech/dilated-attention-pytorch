@@ -21,6 +21,9 @@ from .block_sparse_multihead_attention import (
 from .block_sparse_ring_distributed_dilated_attention import (
     BlockSparseRingDistributedDilatedAttention,
 )
+from .block_sparse_dilated_attention import (
+    BlockSparseDilatedAttention,
+)
 from .block_sparse_adaptive import (
     BlockSparseAdaptive,
     AdaptiveConfig,
@@ -40,6 +43,7 @@ __all__ = [
     "BlockSparseAttentionHilbert",
     "BlockSparseMultiheadAttention",
     "BlockSparseRingDistributedDilatedAttention",
+    "BlockSparseDilatedAttention",
     # Adaptive implementations
     "BlockSparseAdaptive",
     "BlockSparseAdaptiveFixed",  # Alias for BlockSparseAdaptive from fixed module

@@ -24,10 +24,15 @@ from .block_sparse_multihead_attention import (
 from .block_sparse_ring_distributed_dilated_attention import (
     BlockSparseRingDistributedDilatedAttention,
 )
+from .block_sparse_dilated_attention import (
+    BlockSparseDilatedAttention,
+)
 from .distributed_sparse_config import DistributedSparseConfig
 
 
-BlockSparseVariant = Literal["auto", "base", "adaptive", "multihead", "distributed"]
+BlockSparseVariant = Literal[
+    "auto", "base", "adaptive", "multihead", "distributed", "dilated"
+]
 
 
 def create_block_sparse_attention(
@@ -51,6 +56,7 @@ def create_block_sparse_attention(
     BlockSparseAdaptive,
     BlockSparseMultiheadAttention,
     BlockSparseRingDistributedDilatedAttention,
+    BlockSparseDilatedAttention,
 ]:
     """
     Create a block-sparse attention module based on the specified variant.
@@ -59,7 +65,7 @@ def create_block_sparse_attention(
         variant: Which implementation to use:
             - "auto": Automatically select based on parameters
             - "base": Standard block-sparse attention
-            - "hilbert": Block-sparse with Hilbert curve optimization
+            - "dilated": Block-sparse with token-level dilated attention
             - "adaptive": Learned, content-adaptive patterns
             - "multihead": Drop-in replacement for nn.MultiheadAttention
             - "distributed": Enterprise-grade distributed implementation
@@ -194,10 +200,18 @@ def create_block_sparse_attention(
             **kwargs,
         )
 
+    elif variant == "dilated":
+        return BlockSparseDilatedAttention(
+            segment_lengths=segment_lengths,
+            dilation_rates=dilation_rates,
+            sparse_config=sparse_config,
+            **kwargs,
+        )
+
     else:
         raise ValueError(
             f"Unknown variant: {variant}. "
-            f"Choose from: auto, base, hilbert, adaptive, multihead, distributed"
+            f"Choose from: auto, base, dilated, adaptive, multihead, distributed"
         )
 
 
