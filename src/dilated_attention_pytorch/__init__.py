@@ -59,10 +59,29 @@ from .base.multihead_dilated_attention import MultiheadDilatedAttention
 # [Removed: RingDilatedAttentionProduction - not actually ring attention]
 # See docs/reports/ring-production-not-ring-attention-2025-07-08-0327-UTC.md
 
-# GPU-optimized Ring Hilbert Attention (new implementation with proper ring communication)
+# Ring Attention implementations with O(n/k) memory scaling
+from .ring import (
+    StandardRingAttention,
+    DistributedRingAttention,
+    HilbertRingAttention,
+    BlockSparseRingAttention as RingBlockSparseAttention,  # Avoid name conflict
+    create_ring_attention,
+    RingAttentionConfig,
+)
+
+# Additional ring implementations for advanced users
+from .ring.base import (
+    RingDilatedAttentionCorrect,  # Reference implementation that splits before projection
+    RingDilatedAttentionSDPA,  # Uses PyTorch's scaled_dot_product_attention
+)
+
+# GPU-optimized Ring Hilbert Attention (legacy name for compatibility)
 from .ring.hilbert.ring_dilated_attention_hilbert_gpu_optimized import (
     RingDilatedAttentionHilbertGPUOptimized,
 )
+
+# Enterprise distributed attention (formerly RingDistributedDilatedAttention)
+from .ring.distributed import EnterpriseDistributedDilatedAttention
 
 from .models.transformer import (
     DilatedTransformerDecoderLayer,
@@ -108,11 +127,20 @@ __all__ = [
     "ImportanceScorer",
     "AdaptiveSparsityTrainer",
     "create_adaptive_block_sparse",
-    # [Removed: RingDilatedAttentionProduction - not actually ring attention]
-    # [Removed: Use standardized API with 'hilbert' type instead]
-    # [Removed: Hybrid implementations deprecated due to poor performance]
-    # GPU-optimized Ring Hilbert Attention
+    # Ring Attention implementations (O(n/k) memory scaling)
+    "StandardRingAttention",
+    "DistributedRingAttention",
+    "HilbertRingAttention",
+    "RingBlockSparseAttention",
+    "create_ring_attention",
+    "RingAttentionConfig",
+    # Additional ring implementations for advanced users
+    "RingDilatedAttentionCorrect",
+    "RingDilatedAttentionSDPA",
+    # GPU-optimized Ring Hilbert Attention (legacy name)
     "RingDilatedAttentionHilbertGPUOptimized",
+    # Enterprise distributed attention
+    "EnterpriseDistributedDilatedAttention",
     # Original implementations
     "DilatedAttention",
     "DilatedTransformerDecoderLayer",
