@@ -518,6 +518,20 @@ if __name__ == "__main__":
     train_with_ring_attention()
 ```
 
+## Multi-GPU Communication Issues
+
+**Important**: Some ring attention implementations have known issues with multi-GPU communication that can cause CUDA errors or hangs. See the [Ring Attention Multi-GPU Fixes Guide](ring-attention-multi-gpu-fixes.md) for:
+
+- Common error patterns and their causes
+- Critical fixes from lucidrains/ring-attention-pytorch
+- Working examples with patched communication
+- Implementation status for each variant
+
+Key fixes include:
+1. Ensuring tensor contiguity with `.contiguous()` before communication
+2. Using `dist.barrier()` after P2P operations
+3. Using `dist.batch_isend_irecv()` instead of separate operations
+
 ## Conclusion
 
 Ring Attention is a powerful technique for scaling attention to extremely long sequences. With this guide, you should be able to:
@@ -526,5 +540,6 @@ Ring Attention is a powerful technique for scaling attention to extremely long s
 - Configure it properly for optimal performance  
 - Debug common issues
 - Migrate from older implementations
+- Fix multi-GPU communication issues
 
 For more examples, see the `examples/ring_attention/` directory in the repository.

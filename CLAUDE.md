@@ -887,6 +887,38 @@ When implementing Hilbert optimization:
 3. Preserve numerical stability with proper LSE accumulation
 4. Benchmark against standard ordering for your use case
 
+### Multi-GPU Ring Attention Fixes (Critical - July 2025)
+
+When implementing or debugging multi-GPU ring attention, **always apply these fixes from lucidrains**:
+
+1. **Ensure tensor contiguity** before any P2P communication:
+   ```python
+   send_tensor = send_tensor.contiguous()
+   receive_buffer = receive_buffer.contiguous()
+   ```
+
+2. **Use batch P2P operations**:
+   ```python
+   ops = []
+   ops.append(dist.P2POp(dist.isend, send_tensor, send_to_rank))
+   ops.append(dist.P2POp(dist.irecv, receive_buffer, receive_from_rank))
+   reqs = dist.batch_isend_irecv(ops)
+   ```
+
+3. **Always synchronize after communication**:
+   ```python
+   for req in reqs:
+       req.wait()
+   dist.barrier()  # Critical for preventing race conditions
+   ```
+
+Without these fixes, you will encounter:
+- CUDA illegal memory access errors
+- Non-contiguous tensor warnings
+- Process hangs during ring communication
+
+See `docs/guides/ring-attention-multi-gpu-fixes.md` for complete details and working examples.
+
 ### Performance Expectations
 
 Based on extensive benchmarking:
