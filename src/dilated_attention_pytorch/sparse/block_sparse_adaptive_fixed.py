@@ -36,7 +36,16 @@ class BlockSparseAdaptive(_BlockSparseAdaptiveOriginal):
         # Extract any provided dimensions
         self._num_heads = kwargs.pop("num_heads", None)
         self._head_dim = kwargs.pop("head_dim", None)
+        self._embed_dim = kwargs.pop("embed_dim", None)
         self._initialized = False
+
+        # If embed_dim and num_heads provided, calculate head_dim
+        if (
+            self._embed_dim is not None
+            and self._num_heads is not None
+            and self._head_dim is None
+        ):
+            self._head_dim = self._embed_dim // self._num_heads
 
         # Store initialization parameters
         self._init_segment_lengths = segment_lengths
@@ -69,6 +78,36 @@ class BlockSparseAdaptive(_BlockSparseAdaptiveOriginal):
                 block_size=kwargs.get("block_size", 64),
             )
             self.block_size = self.sparse_config.block_size
+
+    @property
+    def num_heads(self) -> Optional[int]:
+        """Get number of heads."""
+        if self._initialized and hasattr(self, "_adaptive_num_heads"):
+            return self._adaptive_num_heads
+        return self._num_heads
+
+    @num_heads.setter
+    def num_heads(self, value: int):
+        """Set number of heads."""
+        if self._initialized:
+            self._adaptive_num_heads = value
+        else:
+            self._num_heads = value
+
+    @property
+    def head_dim(self) -> Optional[int]:
+        """Get head dimension."""
+        if self._initialized and hasattr(self, "_adaptive_head_dim"):
+            return self._adaptive_head_dim
+        return self._head_dim
+
+    @head_dim.setter
+    def head_dim(self, value: int):
+        """Set head dimension."""
+        if self._initialized:
+            self._adaptive_head_dim = value
+        else:
+            self._head_dim = value
 
     def _lazy_init(self, q: Tensor):
         """Lazy initialization when dimensions are known."""

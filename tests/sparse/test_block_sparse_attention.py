@@ -13,7 +13,8 @@ import torch
 
 # Import implementations to test
 from dilated_attention_pytorch import (
-    BlockSparseRingDilatedAttention,
+    BlockSparseRingAttention,
+    BlockSparseRingDilatedAttention,  # Backward compatibility alias
     SparsePatternConfig,
 )
 from dilated_attention_pytorch import (
@@ -85,7 +86,7 @@ class TestSparsePatternGeneration:
         pytest.skip("ContentAdaptiveSparsity not available")
 
 
-class TestBlockSparseRingDilatedAttention:
+class TestBlockSparseRingAttention:
     """Test core block-sparse ring attention implementation"""
 
     @pytest.mark.parametrize("config_name", ["small", "medium"])
@@ -99,9 +100,7 @@ class TestBlockSparseRingDilatedAttention:
             pattern_type="dilated_sparse", sparsity_ratio=sparsity_ratio, block_size=128
         )
 
-        attention = BlockSparseRingDilatedAttention(
-            segment_lengths=[1024, 2048],
-            dilation_rates=[1, 2],
+        attention = BlockSparseRingAttention(
             sparse_config=sparse_config,
             device=device,
         )
@@ -134,9 +133,7 @@ class TestBlockSparseRingDilatedAttention:
             pattern_type="local_window", sparsity_ratio=0.5
         )
 
-        attention = BlockSparseRingDilatedAttention(
-            segment_lengths=[512, 1024],
-            dilation_rates=[1, 2],
+        attention = BlockSparseRingAttention(
             sparse_config=sparse_config,
             device=device,
         )

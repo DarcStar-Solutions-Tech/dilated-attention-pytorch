@@ -7,8 +7,8 @@ block-sparse attention implementations based on use case.
 
 from typing import List, Optional, Union, Literal
 
-from .block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention,
+from .block_sparse_ring_attention import (
+    BlockSparseRingAttention,
     SparsePatternConfig,
 )
 
@@ -47,7 +47,7 @@ def create_block_sparse_attention(
     # Other parameters
     **kwargs,
 ) -> Union[
-    BlockSparseRingDilatedAttention,
+    BlockSparseRingAttention,
     BlockSparseAdaptive,
     BlockSparseRingMultiheadDilatedAttention,
     BlockSparseRingDistributedDilatedAttention,
@@ -121,9 +121,7 @@ def create_block_sparse_attention(
 
     # Create the appropriate implementation
     if variant == "base":
-        return BlockSparseRingDilatedAttention(
-            segment_lengths=segment_lengths,
-            dilation_rates=dilation_rates,
+        return BlockSparseRingAttention(
             sparse_config=sparse_config,
             **kwargs,
         )
@@ -149,6 +147,12 @@ def create_block_sparse_attention(
     elif variant == "adaptive":
         if adaptive_config is None:
             adaptive_config = AdaptiveConfig()
+
+        # Pass embed_dim and num_heads if provided
+        if embed_dim is not None:
+            kwargs["embed_dim"] = embed_dim
+        if num_heads is not None:
+            kwargs["num_heads"] = num_heads
 
         return BlockSparseAdaptive(
             segment_lengths=segment_lengths,
@@ -203,7 +207,7 @@ def get_block_sparse_preset(
     preset_name: str,
     **override_kwargs,
 ) -> Union[
-    BlockSparseRingDilatedAttention,
+    BlockSparseRingAttention,
     BlockSparseAdaptive,
 ]:
     """
@@ -313,11 +317,20 @@ def get_block_sparse_preset(
 
 # Convenience functions for specific variants
 def create_adaptive_block_sparse(
+    embed_dim: Optional[int] = None,
+    num_heads: Optional[int] = None,
     base_sparsity: float = 0.9,
     **kwargs,
 ) -> BlockSparseAdaptive:
     """Create adaptive block-sparse attention."""
     adaptive_config = AdaptiveConfig(base_sparsity=base_sparsity)
+
+    # Pass dimensions if provided
+    if embed_dim is not None and num_heads is not None:
+        kwargs["embed_dim"] = embed_dim
+        kwargs["num_heads"] = num_heads
+        kwargs["head_dim"] = embed_dim // num_heads
+
     return create_block_sparse_attention(
         "adaptive",
         adaptive_config=adaptive_config,

@@ -5,8 +5,9 @@ This module contains various block-sparse attention implementations for
 efficient processing with reduced memory and computational requirements.
 """
 
-from .block_sparse_ring_dilated_attention import (
-    BlockSparseRingDilatedAttention,
+from .block_sparse_ring_attention import (
+    BlockSparseRingAttention,
+    BlockSparseRingDilatedAttention,  # Backward compatibility alias
     SparsePatternConfig,
 )
 from .block_sparse_ring_dilated_attention_fixed import (
@@ -35,7 +36,8 @@ from .block_sparse_factory import (
 
 __all__ = [
     # Core implementations
-    "BlockSparseRingDilatedAttention",
+    "BlockSparseRingAttention",
+    "BlockSparseRingDilatedAttention",  # Backward compatibility alias
     "BlockSparseRingDilatedAttentionFixed",
     "BlockSparseRingDilatedAttentionHilbertPostPattern",
     "BlockSparseRingMultiheadDilatedAttention",

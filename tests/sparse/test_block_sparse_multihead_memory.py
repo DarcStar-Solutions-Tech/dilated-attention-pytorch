@@ -45,8 +45,10 @@ def test_block_sparse_multihead_memory_pool():
     pool = get_global_memory_pool()
     stats_before = pool.get_stats()
     print("Global pool stats before:")
-    print(f"  Total buffers: {stats_before['total_buffers']}")
-    print(f"  Total allocated bytes: {stats_before['total_allocated_bytes']}")
+    print(f"  Available keys: {list(stats_before.keys())}")
+    print(f"  Cached tensors: {stats_before.get('cached_tensors', 0)}")
+    print(f"  Allocations: {stats_before.get('allocations', 0)}")
+    print(f"  Reuses: {stats_before.get('reuses', 0)}")
 
     # Test parameters
     batch_size = 1
@@ -71,9 +73,9 @@ def test_block_sparse_multihead_memory_pool():
         # Get pool stats after this pass
         stats_after = pool.get_stats()
         print(f"  Time: {time.time() - start_time:.3f}s")
-        print(f"  Total buffers: {stats_after['total_buffers']}")
-        print(f"  Total allocated bytes: {stats_after['total_allocated_bytes']}")
-        print(f"  Hot cache size: {stats_after['hot_cache_size']}")
+        print(f"  Cached tensors: {stats_after.get('cached_tensors', 0)}")
+        print(f"  Allocations: {stats_after.get('allocations', 0)}")
+        print(f"  Reuses: {stats_after.get('reuses', 0)}")
 
         # Force sync to ensure allocation happens
         if device.type == "cuda":
@@ -82,22 +84,24 @@ def test_block_sparse_multihead_memory_pool():
     # Final stats
     stats_final = pool.get_stats()
     print("\nFinal global pool stats:")
-    print(f"  Total buffers: {stats_final['total_buffers']}")
-    print(f"  Total allocated bytes: {stats_final['total_allocated_bytes']}")
-    print(f"  Hot cache size: {stats_final['hot_cache_size']}")
-    print(f"  Pool sizes: {stats_final['pool_sizes']}")
+    print(f"  Cached tensors: {stats_final.get('cached_tensors', 0)}")
+    print(f"  Total allocations: {stats_final.get('allocations', 0)}")
+    print(f"  Total reuses: {stats_final.get('reuses', 0)}")
+    print(f"  Total deallocations: {stats_final.get('deallocations', 0)}")
 
-    # Check if any buffers were allocated
-    buffers_allocated = stats_final["total_buffers"] - stats_before["total_buffers"]
-    bytes_allocated = (
-        stats_final["total_allocated_bytes"] - stats_before["total_allocated_bytes"]
+    # Check if any memory pool activity occurred
+    allocations_made = stats_final.get("allocations", 0) - stats_before.get(
+        "allocations", 0
     )
+    reuses_made = stats_final.get("reuses", 0) - stats_before.get("reuses", 0)
+    total_activity = allocations_made + reuses_made
 
     print("\nMemory pool usage by block sparse multihead:")
-    print(f"  Buffers allocated: {buffers_allocated}")
-    print(f"  Bytes allocated: {bytes_allocated}")
+    print(f"  New allocations: {allocations_made}")
+    print(f"  Buffer reuses: {reuses_made}")
+    print(f"  Total activity: {total_activity}")
 
-    if buffers_allocated > 0:
+    if total_activity > 0:
         print("✓ Block sparse multihead DOES use the global memory pool")
     else:
         print("✗ Block sparse multihead does NOT use the global memory pool")
