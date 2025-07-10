@@ -5,13 +5,6 @@
 ## Scaling Analysis
 
 
-### Ring Block Sparse
-
-- Sequence length increased: 4.0x
-- Memory increased: 14.7x
-- Observed scaling: ~O(n²)
-- Expected scaling: O(n/1)
-
 ### Ring Hilbert
 
 - Sequence length increased: 4.0x
@@ -19,17 +12,24 @@
 - Observed scaling: ~O(n²)
 - Expected scaling: O(n/1)
 
+### Ring Block Sparse
+
+- Sequence length increased: 4.0x
+- Memory increased: 14.5x
+- Observed scaling: ~O(n²)
+- Expected scaling: O(n/1)
+
 ### Ring Standard
 
 - Sequence length increased: 4.0x
-- Memory increased: 11.8x
+- Memory increased: 12.9x
 - Observed scaling: ~O(n²)
 - Expected scaling: O(n/1)
 
 ## Memory Efficiency (KB per Token)
 
-| Sequence Length | Ring Block Sparse | Ring Hilbert | Ring Standard |
+| Sequence Length | Ring Hilbert | Ring Block Sparse | Ring Standard |
 |-----------------|---------------------------------------------------------------------------|
-|           1,024 |                  38.031 |                  37.031 |                  45.156 |
-|           2,048 |                  72.016 |                  69.031 |                  69.031 |
-|           4,096 |                 140.016 |                 133.031 |                 133.031 |
+|           1,024 |                  74.062 |                  75.062 |                  82.188 |
+|           2,048 |                 138.062 |                 140.062 |                 138.062 |
+|           4,096 |                 266.062 |                 272.031 |                 266.062 |
