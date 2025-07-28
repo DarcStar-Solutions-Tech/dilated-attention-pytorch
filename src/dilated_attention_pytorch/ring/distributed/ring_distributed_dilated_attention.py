@@ -394,10 +394,18 @@ class EnterpriseDistributedDilatedAttention(nn.Module):
         else:
             self.norm = None
 
-        # Ring attention component removed - RingDilatedAttentionProduction was not actually ring attention
-        # TODO: This class needs to be reimplemented with true ring attention
-        # For now, this will use standard attention which limits sequence length
-        self.ring_attention = None  # Placeholder - needs reimplementation
+        # Initialize true ring attention component with adapter
+        self._init_ring_attention(
+            embed_dim,
+            _num_heads,
+            segment_lengths,
+            dilation_rates,
+            dropout,
+            bias,
+            ring_size,
+            device,
+            dtype,
+        )
 
     def _init_standard_components(
         self,
@@ -446,6 +454,19 @@ class EnterpriseDistributedDilatedAttention(nn.Module):
             ring_size
             if ring_size is not None
             else (dist.get_world_size() if dist.is_initialized() else 1)
+        )
+
+        # Initialize ring attention for standard components too
+        self._init_ring_attention(
+            embed_dim,
+            num_heads,
+            segment_lengths,
+            dilation_rates,
+            dropout,
+            bias,
+            ring_size,
+            device,
+            dtype,
         )
 
     def _setup_deepspeed_integration(self):
@@ -1225,6 +1246,104 @@ class EnterpriseDistributedDilatedAttention(nn.Module):
             # Don't let cleanup errors propagate
             if hasattr(self, "logger"):
                 self.logger.debug(f"Error during emergency cleanup: {e}")
+
+    def _init_ring_attention(
+        self,
+        embed_dim,
+        num_heads,
+        segment_lengths,
+        dilation_rates,
+        dropout,
+        bias,
+        ring_size,
+        device,
+        dtype,
+    ):
+        """Initialize ring attention with proper adapter for q/k/v interface."""
+
+        class RingAttentionAdapter(nn.Module):
+            """Adapter to handle separate q/k/v inputs for ring attention."""
+
+            def __init__(
+                self,
+                embed_dim,
+                num_heads,
+                segment_lengths,
+                dilation_rates,
+                dropout,
+                bias,
+                ring_size,
+                device,
+                dtype,
+            ):
+                super().__init__()
+                from ..hilbert.ring_dilated_attention_hilbert_gpu_optimized import (
+                    RingDilatedAttentionHilbertGPUOptimized,
+                )
+
+                # Initialize the actual ring attention
+                self.ring_attn = RingDilatedAttentionHilbertGPUOptimized(
+                    embed_dim=embed_dim,
+                    num_heads=num_heads,
+                    segment_lengths=segment_lengths,
+                    dilation_rates=dilation_rates,
+                    dropout=dropout,
+                    bias=bias,
+                    ring_size=ring_size,
+                    use_hilbert=False,  # Can be enabled for better cache locality
+                    device=device,
+                    dtype=dtype,
+                    attention_backend=None,  # Auto-select best backend
+                    benchmark_backends=False,
+                )
+
+                # The ring attention expects combined qkv, so we need to handle projections
+                self.head_dim = embed_dim // num_heads
+                self.num_heads = num_heads
+                self.embed_dim = embed_dim
+
+            def forward(self, q, k, v, is_causal=False):
+                """Forward pass adapting q/k/v interface to ring attention."""
+                # q, k, v are already projected and have shape [batch, seq, embed_dim]
+                batch_size, seq_len, _ = q.shape
+
+                # Reshape to separate heads: [batch, seq, num_heads, head_dim]
+                q = q.view(batch_size, seq_len, self.num_heads, self.head_dim)
+                k = k.view(batch_size, seq_len, self.num_heads, self.head_dim)
+                v = v.view(batch_size, seq_len, self.num_heads, self.head_dim)
+
+                # Combine into single tensor for ring attention
+                # Ring attention expects [batch, seq, num_heads, 3 * head_dim] for qkv
+                qkv = torch.cat([q, k, v], dim=-1)
+
+                # Ring attention returns [batch, seq, num_heads, head_dim]
+                output = self.ring_attn(qkv, is_causal=is_causal)
+
+                # Reshape back to [batch, seq, embed_dim]
+                return output.view(batch_size, seq_len, self.embed_dim)
+
+            def clear_cache(self):
+                """Clear any cached data."""
+                if hasattr(self.ring_attn, "clear_cache"):
+                    self.ring_attn.clear_cache()
+
+            def _cleanup_ring_communication(self):
+                """Clean up ring communication."""
+                if hasattr(self.ring_attn, "_cleanup_ring_communication"):
+                    self.ring_attn._cleanup_ring_communication()
+
+        # Create the adapter
+        self.ring_attention = RingAttentionAdapter(
+            embed_dim,
+            num_heads,
+            segment_lengths,
+            dilation_rates,
+            dropout,
+            bias,
+            ring_size,
+            device,
+            dtype,
+        )
 
     def extra_repr(self) -> str:
         """String representation for debugging."""
