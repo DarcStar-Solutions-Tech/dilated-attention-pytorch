@@ -22,7 +22,7 @@ def test_basic_initialization():
     print("Testing basic initialization...")
 
     # Test with default parameters
-    module = UnifiedHilbertAttention(
+    _ = UnifiedHilbertAttention(
         hidden_dim=768,
         num_heads=12,
     )
