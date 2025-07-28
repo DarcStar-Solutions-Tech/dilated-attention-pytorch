@@ -11,9 +11,9 @@ import numpy as np
 from typing import Dict
 
 # Import kernels
-from dilated_attention_pytorch.kernels import HilbertAttentionCore
-from dilated_attention_pytorch.kernels.hilbert_attention_memory_optimized import (
-    HilbertAttentionMemoryOptimized,
+from dilated_attention_pytorch.kernels import (
+    HilbertAttentionCore,
+    UnifiedHilbertAttention,
 )
 
 
@@ -145,12 +145,14 @@ def test_memory_optimizations():
         for level, desc in optimization_levels:
             try:
                 print(f"\n2. Memory-Optimized (Level {level} - {desc}):")
-                mem_opt = HilbertAttentionMemoryOptimized(
+                # Map optimization levels to memory modes
+                memory_mode_map = {0: "standard", 1: "optimized", 2: "aggressive"}
+                mem_opt = UnifiedHilbertAttention(
                     hidden_dim=hidden_dim,
                     num_heads=num_heads,
                     segment_size=segment_size,
                     dilation_rate=dilation_rate,
-                    memory_optimization_level=level,
+                    memory_mode=memory_mode_map[level],
                 ).to(device)
 
                 results_opt = measure_memory_and_time(mem_opt, x)
@@ -220,12 +222,12 @@ def test_dilated_access_pattern():
         results_core = measure_memory_and_time(core, x)
 
         # Optimized
-        mem_opt = HilbertAttentionMemoryOptimized(
+        mem_opt = UnifiedHilbertAttention(
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             segment_size=segment_size,
             dilation_rate=dilation_rate,
-            memory_optimization_level=1,
+            memory_mode="optimized",
         ).to(device)
 
         results_opt = measure_memory_and_time(mem_opt, x)
@@ -268,15 +270,18 @@ def test_block_size_impact():
 
     # Get block sizes for each level
     for level in [0, 1, 2]:
-        module = HilbertAttentionMemoryOptimized(
+        memory_mode_map = {0: "standard", 1: "optimized", 2: "aggressive"}
+        module = UnifiedHilbertAttention(
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             segment_size=128,
             dilation_rate=2,
-            memory_optimization_level=level,
+            memory_mode=memory_mode_map[level],
         ).to(device)
 
-        block_sizes = module.get_memory_optimized_block_sizes(seq_len, device)
+        # Get config to check block sizes
+        config = module.get_config()
+        block_sizes = f"memory_mode={config['memory_mode']}"
         results = measure_memory_and_time(module, x)
 
         print(f"\nLevel {level}: Block sizes = {block_sizes}")

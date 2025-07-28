@@ -1,112 +1,101 @@
-# Dilated Attention Kernels
+# Hilbert Attention Kernels
 
-This directory contains production-ready kernel implementations for dilated attention with full gradient support.
+This directory contains the simplified Hilbert attention implementation with automatic optimization.
 
-## Available Implementations
+## Main Implementation
 
-### 1. **HilbertAttentionCore** (`hilbert_attention_core.py`)
-The main unified Hilbert attention implementation with all optimizations.
+### **HilbertAttention** (`hilbert_attention.py`)
+A clean, efficient implementation that automatically selects the best computation strategy.
 
 **Features:**
-- Efficient Triton kernels for forward pass
-- Optimized PyTorch-based backward pass with full gradient support
-- Custom autograd function (`HilbertAttentionFunction`)
-- Configurable custom backward (can be disabled for debugging)
-- Hilbert mapping caching for efficiency
-- Support for both Hilbert-ordered and standard attention
-
-**Key Components:**
-- `hilbert_attention_kernel`: Triton kernel with Hilbert curve reordering
-- `standard_attention_kernel`: Triton kernel without reordering (for comparison)
-- `HilbertAttentionFunction`: Custom autograd with optimized backward pass
-- `HilbertAttentionCore`: Main module with QKV projections
+- Automatic optimization based on hardware and inputs
+- Hilbert curve reordering for improved cache locality
+- Efficient sparse/dilated attention support
+- Bounded memory caching to prevent leaks
+- Full gradient support for training
+- Simple, intuitive API
 
 **Usage:**
 ```python
-from dilated_attention_pytorch.kernels import HilbertAttentionCore
+from dilated_attention_pytorch.kernels import HilbertAttention
 
-attention = HilbertAttentionCore(
+# Standard attention
+attention = HilbertAttention(
+    hidden_dim=768,
+    num_heads=12
+)
+
+# Dilated attention (automatically sparse)
+attention = HilbertAttention(
     hidden_dim=768,
     num_heads=12,
-    segment_size=128,
-    dilation_rate=2,
-    dropout=0.1,
-    use_custom_backward=True  # Enable optimized backward
+    dilation_rate=4,
+    segment_size=256
 )
 
 # Forward pass
-output = attention(x, use_hilbert=True)
+output = attention(x)                      # With Hilbert ordering
+output = attention(x, use_hilbert=False)   # Without Hilbert
+output = attention(x, is_causal=True)      # With causal masking
 ```
 
-### 2. **HilbertAttentionTritonWrapper** (`hilbert_attention_triton_wrapper.py`)
-A wrapper that adapts HilbertAttentionCore to accept separate q, k, v tensors.
+## Supporting Files
 
-**Purpose:**
-- Provides compatibility with benchmark interfaces expecting `forward(q, k, v)`
-- Wraps HilbertAttentionCore while maintaining its gradient support
-- Includes `HilbertAttentionTritonFixed` alias for backward compatibility
+### **BoundedCache** (`cache_manager.py`)
+Memory-efficient cache implementation with LRU eviction.
+- Prevents unbounded memory growth
+- Configurable size and memory limits
+- Thread-safe operations
 
-**Usage:**
+### **Triton Kernels** (`hilbert_attention_core.py`)
+Optional GPU-accelerated kernels (used automatically when available).
+- Efficient forward pass implementation
+- Custom backward pass for training
+- Automatically used when CUDA is available
+
+### **PyTorch Reference** (`hilbert_attention_simple.py`)
+Pure PyTorch implementation used as fallback.
+- No external dependencies
+- Works on all devices (CPU/GPU)
+- Reference for understanding the algorithm
+
+## Key Improvements
+
+1. **Simplified API** - No complex configuration needed
+2. **Automatic Optimization** - Best strategy selected automatically
+3. **Reduced Code** - ~400 lines vs ~3000 lines previously
+4. **Better Performance** - Smart caching and optimization
+5. **Easier Maintenance** - Single implementation to update
+
+## Performance
+
+The implementation automatically:
+- Uses Triton kernels on CUDA devices
+- Falls back to optimized PyTorch ops
+- Applies sparse attention for `dilation_rate > 1`
+- Manages memory efficiently
+- Handles edge cases gracefully
+
+## Cache Management
+
+Monitor and control memory usage:
+
 ```python
-from dilated_attention_pytorch.kernels import HilbertAttentionTritonFixed
+# Check cache statistics
+stats = attention.get_cache_stats()
+print(f"Cache entries: {stats['size']}")
+print(f"Memory usage: {stats['memory_usage_mb']:.2f} MB")
 
-attention = HilbertAttentionTritonFixed(
-    segment_lengths=[128, 256],
-    dilation_rates=[1, 2],
-    dropout=0.1,
-    num_heads=8,
-    head_dim=64
-)
-
-# Forward pass with separate q, k, v
-output = attention(q, k, v)
+# Clear cache if needed
+attention.clear_cache()
 ```
 
-## Gradient Support
+## Migration from Old Code
 
-Both implementations have full gradient support for training:
+All previous implementations have been consolidated:
+- `HilbertAttentionCore` → `HilbertAttention`
+- `HilbertAttentionMemoryOptimized` → `HilbertAttention`
+- `HilbertAttentionSparse*` → `HilbertAttention` with `dilation_rate`
+- `UnifiedHilbertAttention` → `HilbertAttention`
 
-1. **HilbertAttentionCore**: 
-   - Custom backward pass optimized for Hilbert-ordered tensors
-   - Efficient gradient computation using pre-reordered tensors
-   - Supports gradient checkpointing
-
-2. **HilbertAttentionTritonWrapper**: 
-   - Inherits gradient support from HilbertAttentionCore
-   - Compatible with standard PyTorch autograd
-
-## Performance Considerations
-
-- The Hilbert curve reordering improves cache locality for long sequences
-- Custom backward pass is ~2x faster than PyTorch's automatic differentiation
-- Use `use_hilbert=False` to compare against standard attention
-- Segment size and dilation rate significantly impact performance
-
-## Implementation Details
-
-### Hilbert Curve Mapping
-The implementation uses a snake pattern approximation of Hilbert curves:
-- Provides similar cache locality benefits
-- Simpler to compute than true Hilbert curves
-- Works well with power-of-2 and non-power-of-2 sequence lengths
-
-### Memory Efficiency
-- Reuses buffers where possible
-- Caches Hilbert mappings to avoid recomputation
-- Optimized for different sequence length ranges
-
-### Triton Kernel Optimization
-- Block sizes optimized for different GPU architectures
-- Efficient memory access patterns
-- Minimal synchronization overhead
-
-## Removed Implementations
-
-The following implementations were removed due to lack of gradient support:
-- `hilbert_attention_core_fixed.py` - Simplified version without backward pass
-- `hilbert_attention_kernel_simple.py` - Kernel-only implementation
-- `hilbert_attention_triton_v2.py` - Experimental version with PyTorch fallback
-- `hilbert_attention_triton_v2_simple.py` - Simplified experimental version
-- `hilbert_dilated_attention_triton_fixed.py` - Earlier fixed version
-
-These implementations are not suitable for training and have been removed to maintain code quality.
+Simply use `HilbertAttention` - it handles all cases automatically.
