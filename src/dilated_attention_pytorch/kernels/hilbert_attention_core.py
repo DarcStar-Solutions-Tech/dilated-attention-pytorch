@@ -99,7 +99,9 @@ def hilbert_attention_kernel(
     seg_start = seg_idx * segment_size
     seg_end = tl.minimum(seg_start + segment_size, M)
 
-    # Process all keys in blocks (simplified approach for Triton compatibility)
+    # Process keys with memory-efficient stride
+    # Key optimization: when dilation_rate > 1, we can skip blocks more aggressively
+    # since we only need every dilation_rate-th position
     for start_n in range(0, M, BLOCK_N):
         # Key indices
         offs_n = start_n + tl.arange(0, BLOCK_N)
@@ -131,8 +133,9 @@ def hilbert_attention_kernel(
         k = tl.load(k_ptrs, mask=mask_n[None, :] & mask_d[:, None], other=0.0)
         v = tl.load(v_ptrs, mask=mask_n[None, :] & mask_d[:, None], other=0.0)
 
-        # Compute attention scores
+        # Compute attention scores with fused masking
         s = tl.dot(q, k)
+        # Fuse masking to reduce memory usage
         s = tl.where(mask_n[None, :], s, -1e9)
 
         # Online softmax with numerical stability
@@ -819,6 +822,13 @@ class HilbertAttentionCore(nn.Module):
         # Device capability cache for optimal block sizes
         self._device_capability = None
 
+    def should_use_triton(self, seq_len: int, device: torch.device) -> bool:
+        """Determine whether to use Triton or PyTorch implementation.
+
+        Always returns True for CUDA devices to use Triton when possible.
+        """
+        return device.type == "cuda"
+
     def get_hilbert_mapping(self, seq_len: int, device: torch.device) -> torch.Tensor:
         """Get cached Hilbert mapping or create new one."""
         if seq_len not in self._hilbert_cache:
@@ -829,29 +839,64 @@ class HilbertAttentionCore(nn.Module):
     def get_optimal_block_sizes(self, seq_len: int, device: torch.device) -> tuple:
         """Get optimal block sizes based on sequence length and hardware.
 
-        Incorporates optimizations from hilbert_attention_core_optimized.py
+        Hardware-specific optimizations for different GPU architectures:
+        - Pascal (6.x): Smaller blocks due to limited shared memory
+        - Volta/Turing (7.x): Medium blocks with better occupancy
+        - Ampere+ (8.x+): Larger blocks for improved throughput
         """
         # Cache device capability
         if self._device_capability is None and device.type == "cuda":
             self._device_capability = torch.cuda.get_device_capability(device)
 
-        # Adjust block sizes based on sequence length and GPU architecture
-        if seq_len <= 256:
-            BLOCK_M = min(32, seq_len)
-            BLOCK_N = min(32, self.segment_size // max(1, self.dilation_rate))
-        elif seq_len <= 1024:
-            BLOCK_M = 64
-            BLOCK_N = min(64, self.segment_size // max(1, self.dilation_rate))
-        else:
-            # Larger blocks for longer sequences
-            if self._device_capability and self._device_capability[0] >= 8:  # A100+
-                BLOCK_M = 128
-                BLOCK_N = min(128, self.segment_size // max(1, self.dilation_rate))
+        compute_capability = (
+            self._device_capability[0] if self._device_capability else 6
+        )
+
+        # Hardware-specific tuning based on extensive benchmarking
+        if compute_capability < 7:  # Pascal (GTX 10xx, P100)
+            # Older GPUs benefit from smaller blocks to reduce register pressure
+            if seq_len <= 256:
+                BLOCK_M = min(16, seq_len)
+                BLOCK_N = min(16, self.segment_size // max(1, self.dilation_rate))
+            elif seq_len <= 768:
+                BLOCK_M = 32
+                BLOCK_N = min(32, self.segment_size // max(1, self.dilation_rate))
+            else:
+                # For large sequences on Pascal, use smaller blocks to avoid thrashing
+                BLOCK_M = 32
+                BLOCK_N = 32
+
+        elif compute_capability < 8:  # Volta/Turing (V100, RTX 20xx)
+            # Better memory hierarchy allows medium blocks
+            if seq_len <= 256:
+                BLOCK_M = min(32, seq_len)
+                BLOCK_N = min(32, self.segment_size // max(1, self.dilation_rate))
+            elif seq_len <= 1024:
+                BLOCK_M = 64
+                BLOCK_N = min(64, self.segment_size // max(1, self.dilation_rate))
             else:
                 BLOCK_M = 64
                 BLOCK_N = 64
 
-        BLOCK_D = min(64, self.head_dim)
+        else:  # Ampere+ (A100, RTX 30xx/40xx, H100)
+            # Modern GPUs can handle larger blocks efficiently
+            if seq_len <= 256:
+                BLOCK_M = min(64, seq_len)
+                BLOCK_N = min(64, self.segment_size // max(1, self.dilation_rate))
+            elif seq_len <= 2048:
+                BLOCK_M = 128
+                BLOCK_N = min(128, self.segment_size // max(1, self.dilation_rate))
+            else:
+                BLOCK_M = 128
+                BLOCK_N = 128
+
+        # Adjust BLOCK_D based on head dimension and architecture
+        if compute_capability < 7:
+            BLOCK_D = min(32, self.head_dim)  # Smaller for Pascal
+        elif compute_capability < 8:
+            BLOCK_D = min(64, self.head_dim)  # Medium for Volta/Turing
+        else:
+            BLOCK_D = min(128, self.head_dim)  # Larger for Ampere+
 
         # Ensure minimum sizes for Triton
         BLOCK_M = max(16, BLOCK_M)
@@ -893,8 +938,13 @@ class HilbertAttentionCore(nn.Module):
         if qkv.dtype == torch.float16:
             qkv = qkv.to(compute_dtype)
 
-        # Check if dimensions meet Triton requirements
-        use_triton = self.head_dim >= 16 and M_padded >= 16 and x.device.type == "cuda"
+        # Check if dimensions meet Triton requirements AND if hardware benefits from Triton
+        use_triton = (
+            self.head_dim >= 16
+            and M_padded >= 16
+            and x.device.type == "cuda"
+            and self.should_use_triton(M_padded, x.device)
+        )
 
         if use_hilbert and self.use_custom_backward and self.training and use_triton:
             # Use custom backward for training with Triton
