@@ -1,0 +1,105 @@
+[2025-07-08 13:30:46,151] [INFO] [real_accelerator.py:254:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-07-08 13:30:47,668] [INFO] [logging.py:107:log_dist] [Rank -1] [TorchCheckpointEngine] Initialized with serialization = False
+
+================================================================================
+Hilbert Attention Hardware Limit Benchmark - 2025-07-08 13:30:48.108880
+================================================================================
+
+GPU: NVIDIA GeForce GTX 1080
+Memory: 0.0GB used, 8.5GB free, 8.5GB total
+Safety limits: 90% max usage, 1.0GB min free
+
+--- Phase 1: Finding Maximum Sequence Lengths ---
+
+Finding max sequence length for batch_size=1, heads=8
+  Testing seq_len=262,144... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=129,024... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=63,488... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=30,720... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=14,336... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=6,144... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=2,048... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Max for b1_h8: 1,024 tokens
+
+Finding max sequence length for batch_size=2, heads=8
+  Testing seq_len=131,072... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=63,488... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=30,720... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=14,336... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=6,144... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=2,048... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Max for b2_h8: 1,024 tokens
+
+Finding max sequence length for batch_size=4, heads=8
+  Testing seq_len=65,536... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=30,720... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=14,336... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=6,144... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=2,048... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Max for b4_h8: 1,024 tokens
+
+Finding max sequence length for batch_size=1, heads=16
+  Testing seq_len=131,072... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=63,488... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=30,720... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=14,336... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=6,144... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=2,048... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Max for b1_h16: 1,024 tokens
+
+Finding max sequence length for batch_size=1, heads=32
+  Testing seq_len=131,072... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=63,488... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=30,720... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=14,336... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=6,144... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Testing seq_len=2,048... ✗ (expected mat1 and mat2 to have the same dtype, but got: c10::Half != float)
+  Max for b1_h32: 1,024 tokens
+
+--- Phase 2: Hilbert vs Non-Hilbert Comparison ---
+
+Comparing at seq_len=1,024, batch=1
+
+Comparing at seq_len=1,024, batch=2
+
+Comparing at seq_len=1,024, batch=4
+
+--- Phase 3: Extreme Sequence Length Test ---
+Pushing to absolute memory limits...
+Testing with size 1024...
+Success at size 1024, continuing...
+Testing with size 2048...
+Success at size 2048, continuing...
+Testing with size 4096...
+Success at size 4096, continuing...
+Testing with size 8192...
+Success at size 8192, continuing...
+Testing with size 16384...
+Success at size 16384, continuing...
+Testing with size 32768...
+Success at size 32768, continuing...
+Testing with size 65536...
+Success at size 65536, continuing...
+Testing with size 131072...
+Success at size 131072, continuing...
+Testing with size 262144...
+Successfully completed target size 262144
+
+================================================================================
+BENCHMARK REPORT - Fixed Hilbert Implementation
+================================================================================
+
+Generated: 2025-07-08 13:30:51.777882
+
+GPU: NVIDIA GeForce GTX 1080
+GPU Memory: 8.5GB total
+
+## Maximum Sequence Lengths
+----------------------------------------
+  b1_h8: 1,024 tokens
+  b2_h8: 1,024 tokens
+  b4_h8: 1,024 tokens
+  b1_h16: 1,024 tokens
+  b1_h32: 1,024 tokens
+
+Report saved to: /home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/benchmarks/hilbert-fixed-limits-2025-07-08-1330-UTC.txt

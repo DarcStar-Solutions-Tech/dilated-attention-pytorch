@@ -1,6 +1,10 @@
 .vscode
 .idea
 
+# Hatch specific
+.hatch/
+hatch-build.*.pyz
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -150,6 +154,12 @@ benchmark.prof
 benchmark_*_output.txt
 test_*_output.txt
 *_output_fixed.txt
+
+# Data directory for benchmark/test outputs
+# NOTE: Currently tracking data for historical preservation
+# TODO: Implement proper data archival solution
+# data/
+# !data/.gitkeep
 
 
 # OS specific

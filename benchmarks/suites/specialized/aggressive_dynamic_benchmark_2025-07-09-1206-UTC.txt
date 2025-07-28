@@ -1,0 +1,139 @@
+Aggressive Dynamic Segment Sizing Benchmark Results
+================================================================================
+
+Conservative - Small sequence:
+  Segments: [1024, 4096]
+  Time: 6.84ms
+  Throughput: 1.20 M tokens/sec
+  Peak memory: 0.07GB
+
+Conservative - Medium sequence:
+  Segments: [2048, 2048, 2048, 2048]
+  Time: 31.38ms
+  Throughput: 1.04 M tokens/sec
+  Peak memory: 0.27GB
+
+Conservative - Long sequence:
+  Segments: [512]
+  Time: 24.90ms
+  Throughput: 1.32 M tokens/sec
+  Peak memory: 0.27GB
+
+Conservative - Very long sequence:
+  Segments: [512]
+  Time: 23.30ms
+  Throughput: 1.41 M tokens/sec
+  Peak memory: 0.27GB
+
+Conservative - Extreme sequence:
+  Segments: [512]
+  Time: 87.90ms
+  Throughput: 0.75 M tokens/sec
+  Peak memory: 0.54GB
+
+Conservative - Large batch:
+  Segments: [512]
+  Time: 56.87ms
+  Throughput: 1.15 M tokens/sec
+  Peak memory: 0.54GB
+
+Conservative - Very large batch:
+  Segments: [1024, 1024, 1024, 1024]
+  Time: 224.40ms
+  Throughput: 0.29 M tokens/sec
+  Peak memory: 0.54GB
+
+Balanced-Aggressive - Small sequence:
+  Segments: [1024, 4096]
+  Time: 7.93ms
+  Throughput: 1.03 M tokens/sec
+  Peak memory: 0.07GB
+
+Balanced-Aggressive - Medium sequence:
+  Segments: [2048, 2048, 2048, 2048]
+  Time: 75.79ms
+  Throughput: 0.43 M tokens/sec
+  Peak memory: 0.27GB
+
+Balanced-Aggressive - Long sequence:
+  Segments: [4096, 4096, 4096, 4096]
+  Time: 42.23ms
+  Throughput: 0.78 M tokens/sec
+  Peak memory: 0.27GB
+
+Balanced-Aggressive - Very long sequence:
+  Segments: [512]
+  Time: 21.25ms
+  Throughput: 1.54 M tokens/sec
+  Peak memory: 0.27GB
+
+Balanced-Aggressive - Extreme sequence:
+  Segments: [512]
+  Time: 68.70ms
+  Throughput: 0.95 M tokens/sec
+  Peak memory: 0.54GB
+
+Balanced-Aggressive - Large batch:
+  Segments: [2048, 2048, 2048, 2048]
+  Time: 293.10ms
+  Throughput: 0.22 M tokens/sec
+  Peak memory: 0.54GB
+
+Balanced-Aggressive - Very large batch:
+  Segments: [1024, 1024, 1024, 1024]
+  Time: 82.68ms
+  Throughput: 0.79 M tokens/sec
+  Peak memory: 0.54GB
+
+Very-Aggressive - Small sequence:
+  Segments: [1024, 4096]
+  Time: 108.31ms
+  Throughput: 0.08 M tokens/sec
+  Peak memory: 0.07GB
+
+Very-Aggressive - Medium sequence:
+  Segments: [2048, 2048, 2048, 2048]
+  Time: 32.86ms
+  Throughput: 1.00 M tokens/sec
+  Peak memory: 0.27GB
+
+Very-Aggressive - Long sequence:
+  Segments: [4096, 4096, 4096, 4096]
+  Time: 110.92ms
+  Throughput: 0.30 M tokens/sec
+  Peak memory: 0.27GB
+
+Very-Aggressive - Very long sequence:
+  Segments: [512]
+  Time: 22.47ms
+  Throughput: 1.46 M tokens/sec
+  Peak memory: 0.27GB
+
+Very-Aggressive - Extreme sequence:
+  Segments: [512]
+  Time: 197.06ms
+  Throughput: 0.33 M tokens/sec
+  Peak memory: 0.54GB
+
+Very-Aggressive - Large batch:
+  Segments: [2048, 2048, 2048, 2048]
+  Time: 294.78ms
+  Throughput: 0.22 M tokens/sec
+  Peak memory: 0.54GB
+
+Very-Aggressive - Very large batch:
+  Segments: [1024, 1024, 1024, 1024]
+  Time: 76.64ms
+  Throughput: 0.86 M tokens/sec
+  Peak memory: 0.54GB
+
+Fixed-Aggressive - Very long sequence:
+  Segments: [4096, 8192, 16384, 32768]
+  Time: 229.40ms
+  Throughput: 0.14 M tokens/sec
+
+Fixed-Aggressive - Extreme sequence:
+  Segments: [4096, 8192, 16384, 32768]
+  Time: 67.53ms
+  Throughput: 0.97 M tokens/sec
+

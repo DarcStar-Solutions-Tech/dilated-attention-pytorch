@@ -1,0 +1,150 @@
+[
+  {
+    "time_per_iter": 0.007443857192993164,
+    "throughput": 550252.3616191251,
+    "peak_memory_mb": 70.13720703125,
+    "memory_used_mb": 46.00390625,
+    "memory_per_token_kb": 11.5009765625,
+    "effective_seq_per_gpu": 1024,
+    "output_shape": [
+      2,
+      1024,
+      512
+    ],
+    "sequence_length": 2048,
+    "world_size": 2,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      512,
+      1024
+    ],
+    "dilation_rates": [
+      1,
+      2
+    ],
+    "embed_dim": 512,
+    "num_heads": 8,
+    "sparsity": 0.25
+  },
+  {
+    "time_per_iter": 0.015219879150390626,
+    "throughput": 538243.4327535215,
+    "peak_memory_mb": 139.01220703125,
+    "memory_used_mb": 102.87890625,
+    "memory_per_token_kb": 12.85986328125,
+    "effective_seq_per_gpu": 2048,
+    "output_shape": [
+      2,
+      2048,
+      512
+    ],
+    "sequence_length": 4096,
+    "world_size": 2,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      512,
+      1024,
+      2048
+    ],
+    "dilation_rates": [
+      1,
+      2,
+      4
+    ],
+    "embed_dim": 512,
+    "num_heads": 8,
+    "sparsity": 0.375
+  },
+  {
+    "time_per_iter": 0.035683488845825194,
+    "throughput": 459147.9289143795,
+    "peak_memory_mb": 265.01611328125,
+    "memory_used_mb": 204.8828125,
+    "memory_per_token_kb": 12.80517578125,
+    "effective_seq_per_gpu": 4096,
+    "output_shape": [
+      2,
+      4096,
+      512
+    ],
+    "sequence_length": 8192,
+    "world_size": 2,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      1024,
+      2048,
+      4096
+    ],
+    "dilation_rates": [
+      1,
+      2,
+      4
+    ],
+    "embed_dim": 512,
+    "num_heads": 8,
+    "sparsity": 0.375
+  },
+  {
+    "time_per_iter": 0.40774168968200686,
+    "throughput": 80364.60540877092,
+    "peak_memory_mb": 517.02392578125,
+    "memory_used_mb": 408.890625,
+    "memory_per_token_kb": 12.77783203125,
+    "effective_seq_per_gpu": 8192,
+    "output_shape": [
+      2,
+      8192,
+      512
+    ],
+    "sequence_length": 16384,
+    "world_size": 2,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      2048,
+      4096,
+      8192
+    ],
+    "dilation_rates": [
+      1,
+      2,
+      4
+    ],
+    "embed_dim": 512,
+    "num_heads": 8,
+    "sparsity": 0.375
+  },
+  {
+    "time_per_iter": 1.7033490180969237,
+    "throughput": 38474.792484525846,
+    "peak_memory_mb": 1020.16455078125,
+    "memory_used_mb": 816.03125,
+    "memory_per_token_kb": 12.75048828125,
+    "effective_seq_per_gpu": 16384,
+    "output_shape": [
+      2,
+      16384,
+      512
+    ],
+    "sequence_length": 32768,
+    "world_size": 2,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      4096,
+      8192,
+      16384
+    ],
+    "dilation_rates": [
+      1,
+      2,
+      4
+    ],
+    "embed_dim": 512,
+    "num_heads": 8,
+    "sparsity": 0.375
+  }
+]

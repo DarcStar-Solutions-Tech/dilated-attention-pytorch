@@ -7,7 +7,106 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (January 2025)
+- **Standardized Ring Attention**: Consolidated 12+ ring variants into 4 high-quality implementations
+  - `StandardRingAttention`: Base ring attention with true O(n/k) memory scaling
+  - `DistributedRingAttention`: Multi-GPU with DeepSpeed ZeRO integration
+  - `HilbertRingAttention`: Cache-optimized with Hilbert space-filling curves
+  - `BlockSparseRingAttention`: Combines ring communication with block sparsity
+  - All use efficient isend/irecv (no all_gather operations)
+  - Factory pattern support via `create_ring_attention()`
+  - Type-safe `RingAttentionConfig` for configuration
+  - Top-level exports for easy access
+
+### Changed (January 2025)  
+- **Renamed Misleading Classes**:
+  - `RingDistributedDilatedAttention` → `EnterpriseDistributedDilatedAttention`
+  - Class doesn't implement ring attention, uses O(n) memory per GPU
+  - Old name still available with deprecation warning
+
+### Removed (January 2025)
+- **Redundant Ring Implementations** (all used problematic all_gather):
+  - `ring_dilated_attention_v2_collective.py`
+  - `ring_dilated_attention_refactored.py`
+  - `ring_hilbert_dilated_attention.py`
+  - `ring_dilated_attention_fixed.py`
+  - `improved_distributed_dilated_attention.py`
+  - `block_sparse_ring_dilated_attention_original.py`
+  - `head_parallel_dilated_attention.py`
+  - `improved_distributed_dilated_attention.py`
+  - `ring_multihead_dilated_attention.py`
+
+### Removed
+- **RingDilatedAttentionProduction**: Not actually ring attention (July 2025)
+  - Despite its name, it computed full O(n²) attention matrices
+  - Failed at 16K sequence length when true ring attention handles 1M+
+  - See `docs/reports/ring-production-not-ring-attention-2025-07-08-0327-UTC.md`
+  - Use `RingDistributedDilatedAttention` for true distributed ring attention
+
 ### Added
+- **Block-Sparse Consolidation**: Merged redundant implementations
+  - Enhanced `BlockSparseRingDilatedAttention` with optimizations from `block_sparse_optimized.py`
+  - Added `PersistentPatternCache` for device-aware pattern caching with LRU eviction
+  - Added batched block operations for efficiency (threshold: 32 blocks)
+  - Added smart buffer reuse strategies
+  - All block-sparse implementations now extend the enhanced base class
+
+### Removed
+- **BlockSparseOptimized**: Merged into `BlockSparseRingDilatedAttention`
+  - All optimizations preserved in base implementation
+  - Use `BlockSparseRingDilatedAttention` directly
+- **BlockSparseTorchSparse**: Removed as it provided no benefits
+  - Did not actually use PyTorch sparse tensors
+  - Sequential processing made it slower than base implementation
+  - Use `BlockSparseRingDilatedAttention` instead
+
+### Changed
+- **Block-Sparse Class Hierarchy**: Updated inheritance
+  - `BlockSparseHierarchical` now extends `BlockSparseRingDilatedAttention`
+  - `BlockSparseAdaptive` now extends `BlockSparseRingDilatedAttention`
+  - All specialized implementations now inherit optimizations from base
+
+### Added
+- **Hilbert Curve Integration**: Added optimized Hilbert curve ordering for improved cache locality
+  - `RingDilatedAttentionHilbertOptimized`: Production-ready implementation with Hilbert curve reordering
+  - `utils/hilbert_curve.py`: Fast Hilbert curve computation utilities
+  - Comprehensive benchmarks showing 15-30% performance improvement
+- **Benchmark Suite Refactoring**: Eliminated ~60% code duplication
+  - Created shared utilities in `benchmarks/core/`
+  - `base_benchmark.py`: Base classes for consistent benchmarking
+  - `utils/distributed.py`: Distributed computing utilities
+  - `utils/memory.py`: Memory management and profiling
+  - `utils/timing.py`: CUDA-aware timing utilities
+  - `utils/data.py`: Standard data generation
+
+### Removed
+- **Deprecated all_gather Implementations**: Removed poorly performing classes
+  - `head_parallel_dilated_attention.py` - Used inefficient all_gather
+  - `improved_distributed_dilated_attention.py` - Poor scalability with all_gather
+  - `ring_dilated_attention_v2_collective.py` - O(n²) communication complexity
+  - `ring_hilbert_dilated_attention.py` - Replaced with optimized version
+  - `ring_multihead_dilated_attention.py` - Depended on deprecated V2Collective
+  - Use `RingDilatedAttentionProduction` or `RingDistributedDilatedAttention` instead
+- **Redundant Benchmark Files**: Removed 140+ duplicate benchmark scripts
+  - Consolidated into organized test suites
+  - `test_improved_suite.py`: All improved implementation tests
+  - `test_distributed_suite.py`: All distributed tests
+  - `verify_all.py`: Comprehensive verification
+
+### Changed
+- **Documentation Updates**: Updated all guides to reference non-deprecated classes
+  - `CLAUDE.md`: Removed deprecated class references, added benchmark info
+  - `README.md`: Added benchmark infrastructure documentation
+  - `docs/guides/ring-attention-migration.md`: Complete rewrite for new implementations
+  - `docs/guides/optimization-guide.md`: Updated class references
+  - `docs/guides/hardware-compatibility-guide.md`: Updated examples
+  - `docs/guides/horovod-integration-guide.md`: Updated integration examples
+
+### Added
+- **RingMultiheadDilatedAttention**: Proper multihead wrapper for Ring Attention
+  - Drop-in replacement for nn.MultiheadAttention with O(n) memory scaling
+  - Supports MAGNETO LayerNorm and all Ring Attention optimizations
+  - Compatible with factory pattern
 - **Pattern Caching**: Global pattern cache for Ring Attention implementations
   - 2x speedup for repeated forward passes
   - 23% memory reduction through CPU storage
@@ -42,6 +141,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - AttentionBufferManager added 3.5x overhead vs direct allocation
   - Users should use ImprovedDilatedAttention instead
   - Removed related test files and buffer manager module
+- **RingDilatedAttentionV2**: Removed deprecated implementation
+  - Had distributed communication issues with isend/irecv
+  - Users should use RingDilatedAttention (alias for V2Collective) instead
+- **Educational Implementations**: Moved to examples directory
+  - TrueRingDilatedAttention → examples/ring_attention/reference_implementation.py
+  - SimulatedRingDilatedAttention → examples/ring_attention/single_gpu_simulation.py
 
 ### Changed
 - **Ring Attention V2 Optimizations**:
@@ -77,7 +182,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Pascal GPU Performance**: FP16 operations now automatically use FP32
   - Fixes 8x performance regression on GTX 10-series GPUs
-  - Inheritance issue resolved in RingDilatedAttentionV2Flash
+  - Inheritance issue resolved in RingDilatedAttentionV2Collective
 - **Memory Issues**: OOM errors reduced through optimized memory pooling
 - **Import Errors**: Fixed distributed testing module imports
 

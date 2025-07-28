@@ -1,0 +1,64 @@
+{
+  "metadata": {
+    "timestamp": "2025-07-07-1517-UTC",
+    "device": "NVIDIA GeForce GTX 1080"
+  },
+  "results": [
+    {
+      "implementation": "standard",
+      "sequence_length": 1024,
+      "forward_time_ms": 7.226494699716568,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": null
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 2048,
+      "forward_time_ms": 15.764291770756243,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": null
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 4096,
+      "forward_time_ms": 30.86166586726904,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": null
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 8192,
+      "forward_time_ms": 63.56049748137593,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": null
+    },
+    {
+      "implementation": "standard",
+      "sequence_length": 16384,
+      "forward_time_ms": 137.99278447404504,
+      "memory_mb": 0.0,
+      "preprocessing_time_ms": null
+    },
+    {
+      "implementation": "hilbert_v2",
+      "sequence_length": 1024,
+      "forward_time_ms": 45.77039489522576,
+      "memory_mb": 0.0078125,
+      "preprocessing_time_ms": 67.58148688822985
+    },
+    {
+      "implementation": "hilbert_v2",
+      "sequence_length": 2048,
+      "forward_time_ms": 192.2561035491526,
+      "memory_mb": 0.015625,
+      "preprocessing_time_ms": 52.67401225864887
+    },
+    {
+      "implementation": "hilbert_v2",
+      "sequence_length": 4096,
+      "forward_time_ms": 791.7579757981002,
+      "memory_mb": 0.03125,
+      "preprocessing_time_ms": 101.85348708182573
+    }
+  ]
+}

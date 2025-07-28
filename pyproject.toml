@@ -33,7 +33,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
@@ -89,22 +89,33 @@ Issues = "https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch/i
 Changelog = "https://github.com/DarcStar-Solutions-Tech/dilated-attention-pytorch/releases"
 
 [tool.hatch.version]
-path = "dilated_attention_pytorch/__init__.py"
+path = "src/dilated_attention_pytorch/__init__.py"
+
+[tool.hatch.build]
+sources = ["src"]
+reproducible = true
+exclude = [
+    "*.pyc",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+]
 
 [tool.hatch.build.targets.wheel]
-packages = ["dilated_attention_pytorch"]
+packages = ["src/dilated_attention_pytorch"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "/dilated_attention_pytorch",
+    "/src",
     "/tests",
     "/README.md",
     "/LICENSE",
-    "/CLAUDE.md",
+    "/CHANGELOG.md",
+    "/pyproject.toml",
 ]
 
 [tool.hatch.envs.default]
-python = "3.13"
+python = "3.12"
 dependencies = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
@@ -113,23 +124,48 @@ dependencies = [
 ]
 
 [tool.hatch.envs.default.scripts]
+# Testing
 test = "pytest {args:tests}"
-test-cov = "pytest --cov=dilated_attention_pytorch --cov-report=term-missing --cov-report=xml --cov-report=html {args:tests}"
+test-cov = "pytest --cov=src/dilated_attention_pytorch --cov-report=term-missing --cov-report=xml --cov-report=html {args:tests}"
 test-fast = "pytest -x {args:tests}"
+test-debug = "pytest -xvs {args:tests}"
+
+# Code quality
 lint = "ruff check {args:.}"
 format = "ruff format {args:.}"
 format-check = "ruff format --check {args:.}"
-fix = "ruff check --fix {args:.}"
-typecheck = "mypy {args:dilated_attention_pytorch}"
-all = [
-    "format",
-    "lint", 
-    "typecheck",
-    "test-cov",
+fix = ["ruff format {args:.}", "ruff check --fix {args:.}"]
+typecheck = "mypy {args:src/dilated_attention_pytorch}"
+
+# Development workflow
+dev = "python -m pytest -xvs {args}"
+cov = "pytest --cov=src/dilated_attention_pytorch {args}"
+all = ["format", "lint", "typecheck", "test-cov"]
+
+# Build and release
+build = "hatch build"
+clean = "hatch clean"
+publish = "hatch publish"
+version = "hatch version {args}"
+
+# Matrix testing for different Python versions
+[[tool.hatch.envs.test.matrix]]
+python = ["3.10", "3.11", "3.12", "3.13"]
+
+[tool.hatch.envs.test]
+dependencies = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-xdist>=3.0.0",
 ]
 
+[tool.hatch.envs.test.scripts]
+run = "pytest {args:tests}"
+parallel = "pytest -n auto {args:tests}"
+cov = "pytest --cov=src/dilated_attention_pytorch --cov-report=html {args:tests}"
+
 [tool.hatch.envs.benchmark]
-python = "3.13"
+python = "3.12"
 extra-dependencies = [
     "plotly>=5.16.0",
     "kaleido>=0.2.1",
@@ -142,7 +178,7 @@ run = "python benchmark.py {args}"
 profile = "python -m cProfile -o benchmark.prof benchmark.py {args}"
 
 [tool.hatch.envs.distributed]
-python = "3.13"
+python = "3.12"
 extra-dependencies = [
     "deepspeed>=0.15.0",
     "fairscale>=0.4.0",
@@ -154,7 +190,7 @@ test-distributed = "pytest tests/ -k distributed {args}"
 
 # Tool configurations
 [tool.ruff]
-target-version = "py313"
+target-version = "py312"
 line-length = 100
 extend-include = ["*.pyx"]
 
@@ -252,7 +288,7 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["dilated_attention_pytorch"]
+source = ["src/dilated_attention_pytorch"]
 omit = [
     "*/tests/*",
     "*/test_*.py",

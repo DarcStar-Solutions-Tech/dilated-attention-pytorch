@@ -58,25 +58,40 @@ The advanced distributed implementation provides:
 ### Basic Distributed Training
 
 ```python
-from dilated_attention_pytorch.improved_distributed_dilated_attention import (
-    DistributedImprovedMultiheadDilatedAttention,
-    create_distributed_model
+from dilated_attention_pytorch import (
+    BlockSparseRingDistributedDilatedAttention,
+    RingDistributedDilatedAttention
+)
+from dilated_attention_pytorch.distributed_dilated_attention import (
+    DistributedMultiheadDilatedAttention
 )
 
-# Create distributed model
-model = create_distributed_model(
+# Option 1: Ring Distributed Attention (for very long sequences)
+model = RingDistributedDilatedAttention(
     embed_dim=768,
     num_heads=12,
-    num_layers=12,
     segment_lengths=[2048, 4096, 8192],
-    dilation_rates=[1, 2, 4],
-    vocab_size=50000,
-    max_seq_len=16384,
-    use_deepspeed=True,
-    use_gradient_checkpointing=True
+    dilation_rates=[1, 2, 4]
 )
 
-# The model is automatically optimized for distributed training
+# Option 2: Block-Sparse Distributed (for efficiency)
+model = BlockSparseRingDistributedDilatedAttention(
+    embed_dim=768,
+    num_heads=12,
+    segment_lengths=[2048, 4096, 8192],
+    dilation_rates=[1, 2, 4],
+    sparsity_ratio=0.1
+)
+
+# Option 3: Standard Distributed (PyTorch Lightning based)
+model = DistributedMultiheadDilatedAttention(
+    embed_dim=768,
+    num_heads=12,
+    segment_lengths=[2048, 4096, 8192],
+    dilation_rates=[1, 2, 4]
+)
+
+# All models are automatically optimized for distributed training
 ```
 
 ### Launch Commands

@@ -1,0 +1,257 @@
+[
+  {
+    "implementation": "RingDilatedAttentionSDPA",
+    "description": "Ring attention with PyTorch SDPA",
+    "time_per_iter": 0.0057824452718098955,
+    "throughput": 708350.8459593183,
+    "peak_memory_mb": 115.015625,
+    "memory_used_mb": 86.0078125,
+    "memory_per_token_kb": 21.501953125,
+    "output_shape": [
+      2,
+      2048,
+      512
+    ],
+    "success": true,
+    "sequence_length": 2048,
+    "world_size": 1,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      512,
+      1024
+    ],
+    "dilation_rates": [
+      1,
+      2
+    ]
+  },
+  {
+    "implementation": "RingDilatedAttentionCorrect",
+    "description": "Reference correct implementation",
+    "time_per_iter": 0.007896343866984049,
+    "throughput": 518721.0776275929,
+    "peak_memory_mb": 151.30859375,
+    "memory_used_mb": 122.2890625,
+    "memory_per_token_kb": 30.572265625,
+    "output_shape": [
+      2,
+      2048,
+      512
+    ],
+    "success": true,
+    "sequence_length": 2048,
+    "world_size": 1,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      512,
+      1024
+    ],
+    "dilation_rates": [
+      1,
+      2
+    ]
+  },
+  {
+    "implementation": "RingDilatedAttentionHilbertGPUOptimized",
+    "description": "GPU-optimized Hilbert ring attention",
+    "time_per_iter": 0.00560609499613444,
+    "throughput": 730633.355807261,
+    "peak_memory_mb": 151.0234375,
+    "memory_used_mb": 122.00390625,
+    "memory_per_token_kb": 30.5009765625,
+    "output_shape": [
+      2,
+      2048,
+      512
+    ],
+    "success": true,
+    "sequence_length": 2048,
+    "world_size": 1,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      512,
+      1024
+    ],
+    "dilation_rates": [
+      1,
+      2
+    ]
+  },
+  {
+    "implementation": "RingDilatedAttentionSDPA",
+    "description": "Ring attention with PyTorch SDPA",
+    "time_per_iter": 0.010260979334513346,
+    "throughput": 798364.3405698885,
+    "peak_memory_mb": 235.015625,
+    "memory_used_mb": 190.0078125,
+    "memory_per_token_kb": 23.7509765625,
+    "output_shape": [
+      2,
+      4096,
+      512
+    ],
+    "success": true,
+    "sequence_length": 4096,
+    "world_size": 1,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      512,
+      1024,
+      2048
+    ],
+    "dilation_rates": [
+      1,
+      2,
+      4
+    ]
+  },
+  {
+    "implementation": "RingDilatedAttentionCorrect",
+    "description": "Reference correct implementation",
+    "time_per_iter": 0.017137765884399414,
+    "throughput": 478008.6304864985,
+    "peak_memory_mb": 217.57421875,
+    "memory_used_mb": 172.5390625,
+    "memory_per_token_kb": 21.5673828125,
+    "output_shape": [
+      2,
+      4096,
+      512
+    ],
+    "success": true,
+    "sequence_length": 4096,
+    "world_size": 1,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      512,
+      1024,
+      2048
+    ],
+    "dilation_rates": [
+      1,
+      2,
+      4
+    ]
+  },
+  {
+    "implementation": "RingDilatedAttentionHilbertGPUOptimized",
+    "description": "GPU-optimized Hilbert ring attention",
+    "time_per_iter": 0.011090437571207682,
+    "throughput": 738654.3540236475,
+    "peak_memory_mb": 217.0390625,
+    "memory_used_mb": 172.00390625,
+    "memory_per_token_kb": 21.50048828125,
+    "output_shape": [
+      2,
+      4096,
+      512
+    ],
+    "success": true,
+    "sequence_length": 4096,
+    "world_size": 1,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      512,
+      1024,
+      2048
+    ],
+    "dilation_rates": [
+      1,
+      2,
+      4
+    ]
+  },
+  {
+    "implementation": "RingDilatedAttentionSDPA",
+    "description": "Ring attention with PyTorch SDPA",
+    "time_per_iter": 0.023389736811319988,
+    "throughput": 700478.1683593205,
+    "peak_memory_mb": 457.0234375,
+    "memory_used_mb": 380.015625,
+    "memory_per_token_kb": 23.7509765625,
+    "output_shape": [
+      2,
+      8192,
+      512
+    ],
+    "success": true,
+    "sequence_length": 8192,
+    "world_size": 1,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      1024,
+      2048,
+      4096
+    ],
+    "dilation_rates": [
+      1,
+      2,
+      4
+    ]
+  },
+  {
+    "implementation": "RingDilatedAttentionCorrect",
+    "description": "Reference correct implementation",
+    "time_per_iter": 0.1559922695159912,
+    "throughput": 105030.84576457443,
+    "peak_memory_mb": 550.140625,
+    "memory_used_mb": 473.078125,
+    "memory_per_token_kb": 29.5673828125,
+    "output_shape": [
+      2,
+      8192,
+      512
+    ],
+    "success": true,
+    "sequence_length": 8192,
+    "world_size": 1,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      1024,
+      2048,
+      4096
+    ],
+    "dilation_rates": [
+      1,
+      2,
+      4
+    ]
+  },
+  {
+    "implementation": "RingDilatedAttentionHilbertGPUOptimized",
+    "description": "GPU-optimized Hilbert ring attention",
+    "time_per_iter": 0.02957320213317871,
+    "throughput": 554015.0818371641,
+    "peak_memory_mb": 549.0703125,
+    "memory_used_mb": 472.0078125,
+    "memory_per_token_kb": 29.50048828125,
+    "output_shape": [
+      2,
+      8192,
+      512
+    ],
+    "success": true,
+    "sequence_length": 8192,
+    "world_size": 1,
+    "rank": 0,
+    "batch_size": 2,
+    "segment_lengths": [
+      1024,
+      2048,
+      4096
+    ],
+    "dilation_rates": [
+      1,
+      2,
+      4
+    ]
+  }
+]

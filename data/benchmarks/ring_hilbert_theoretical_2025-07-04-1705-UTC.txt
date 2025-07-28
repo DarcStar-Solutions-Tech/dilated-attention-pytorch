@@ -1,0 +1,7 @@
+Ring Hilbert Attention Theoretical Analysis
+Generated: 2025-07-04-1705-UTC
+
+Summary:
+  Average speedup: 1.00x
+  Average cache improvement: -65.3%
+  Best configuration: L=8192

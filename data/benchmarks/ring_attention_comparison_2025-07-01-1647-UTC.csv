@@ -1,0 +1,13 @@
+Implementation,Sequence Length,Time (ms),Memory (MB),World Size
+V2 Simple,2048,6.194543838500977,146.125,1
+V2 Collective,2048,inf,inf,1
+Production,2048,inf,inf,1
+V2 Simple,4096,203.01880836486816,548.125,1
+V2 Collective,4096,41.655611991882324,29.2578125,1
+Production,4096,inf,inf,1
+V2 Simple,8192,553.8065195083618,2144.125,1
+V2 Collective,8192,109.13031101226807,49.5078125,1
+Production,8192,inf,inf,1
+V2 Simple,16384,inf,inf,1
+V2 Collective,16384,197.00093269348145,91.0078125,1
+Production,16384,inf,inf,1

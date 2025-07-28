@@ -1,0 +1,38 @@
+{
+  "config": {
+    "batch_size": 2,
+    "seq_lengths": [
+      8192,
+      16384
+    ],
+    "embed_dim": 768,
+    "num_heads": 12,
+    "segment_lengths": [
+      2048,
+      4096,
+      8192
+    ],
+    "dilation_rates": [
+      1,
+      2,
+      4
+    ],
+    "ring_sizes": [
+      1,
+      2,
+      4,
+      8
+    ],
+    "warmup_runs": 1,
+    "benchmark_runs": 3,
+    "use_flash_attention": true,
+    "dtype": "torch.float16",
+    "device": "cuda",
+    "profile_enabled": false,
+    "save_results": true,
+    "output_dir": "benchmark_results/ring_v2_collective"
+  },
+  "world_size": 1,
+  "timestamp": "20250701_121544",
+  "results": []
+}

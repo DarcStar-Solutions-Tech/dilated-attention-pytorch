@@ -8,7 +8,7 @@ import time
 import numpy as np
 from typing import Dict
 
-from dilated_attention_pytorch import RingDilatedAttentionV2Flash
+from dilated_attention_pytorch import RingDilatedAttentionV2Collective
 from dilated_attention_pytorch.utils import flash_attention_forward
 
 
@@ -113,7 +113,7 @@ def main():
                     speedup = standard_time / stats["mean_ms"]
                     print(f"  {backend:10s}: {speedup:.2f}x")
 
-    # Test with RingDilatedAttentionV2Flash
+    # Test with RingDilatedAttentionV2Collective
     print("\n\n" + "=" * 80)
     print("Ring Dilated Attention Benchmark")
     print("=" * 80)
@@ -122,7 +122,7 @@ def main():
     dilation_rates = [1, 2]
 
     # Create model
-    model = RingDilatedAttentionV2Flash(
+    model = RingDilatedAttentionV2Collective(
         segment_lengths=segment_lengths,
         dilation_rates=dilation_rates,
         device=device,

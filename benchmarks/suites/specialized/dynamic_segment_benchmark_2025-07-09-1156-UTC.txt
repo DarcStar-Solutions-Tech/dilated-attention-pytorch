@@ -1,0 +1,81 @@
+Dynamic Segment Sizing Benchmark Results
+================================================================================
+
+Medium sequence - Dynamic:
+  Segments: [1024, 4096]
+  Time: 6.96ms (±1.29ms)
+  Memory: 0.00GB
+  Throughput: 1.18 M tokens/sec
+
+Medium sequence - Fixed-Conservative:
+  Segments: [1024, 2048, 4096]
+  Time: 7.23ms (±0.95ms)
+  Memory: 0.00GB
+  Throughput: 1.13 M tokens/sec
+
+Long sequence - Dynamic:
+  Segments: [4096, 4096, 4096, 4096]
+  Time: 105.58ms (±116.78ms)
+  Memory: 0.00GB
+  Throughput: 0.31 M tokens/sec
+
+Long sequence - Fixed-Conservative:
+  Segments: [1024, 2048, 4096]
+  Time: 34.19ms (±2.40ms)
+  Memory: 0.00GB
+  Throughput: 0.96 M tokens/sec
+
+Long sequence - Fixed-Standard:
+  Segments: [2048, 4096, 8192]
+  Time: 113.60ms (±94.62ms)
+  Memory: 0.00GB
+  Throughput: 0.29 M tokens/sec
+
+Long sequence - Fixed-Aggressive:
+  Segments: [4096, 8192, 16384]
+  Time: 39.13ms (±7.90ms)
+  Memory: 0.00GB
+  Throughput: 0.84 M tokens/sec
+
+Large batch - Dynamic:
+  Segments: [2048, 2048, 2048, 2048]
+  Time: 111.48ms (±83.86ms)
+  Memory: 0.00GB
+  Throughput: 0.29 M tokens/sec
+
+Large batch - Fixed-Conservative:
+  Segments: [1024, 2048, 4096]
+  Time: 118.39ms (±139.79ms)
+  Memory: 0.00GB
+  Throughput: 0.28 M tokens/sec
+
+Large batch - Fixed-Standard:
+  Segments: [2048, 4096, 8192]
+  Time: 137.11ms (±184.87ms)
+  Memory: 0.00GB
+  Throughput: 0.24 M tokens/sec
+
+Very long sequence - Dynamic:
+  Segments: [512]
+  Time: 121.08ms (±139.38ms)
+  Memory: 0.00GB
+  Throughput: 0.27 M tokens/sec
+
+Very long sequence - Fixed-Conservative:
+  Segments: [1024, 2048, 4096]
+  Time: 94.28ms (±131.81ms)
+  Memory: 0.00GB
+  Throughput: 0.35 M tokens/sec
+
+Very long sequence - Fixed-Standard:
+  Segments: [2048, 4096, 8192]
+  Time: 33.54ms (±4.80ms)
+  Memory: 0.00GB
+  Throughput: 0.98 M tokens/sec
+
+Very long sequence - Fixed-Aggressive:
+  Segments: [4096, 8192, 16384]
+  Time: 157.89ms (±203.36ms)
+  Memory: 0.00GB
+  Throughput: 0.21 M tokens/sec
+

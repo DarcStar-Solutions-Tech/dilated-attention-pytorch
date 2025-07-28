@@ -26,7 +26,7 @@ def validate_error_recovery():
 
     # Check RingDilatedAttention has cleanup method
     if check_method_exists(
-        "dilated_attention_pytorch/ring_dilated_attention.py",
+        "src/dilated_attention_pytorch/ring_dilated_attention.py",
         "RingDilatedAttention",
         "_cleanup_ring_communication",
     ):
@@ -36,7 +36,7 @@ def validate_error_recovery():
 
     # Check RingDistributedDilatedAttention has emergency cleanup
     if check_method_exists(
-        "dilated_attention_pytorch/ring_distributed_dilated_attention.py",
+        "src/dilated_attention_pytorch/ring_distributed_dilated_attention.py",
         "RingDistributedDilatedAttention",
         "_emergency_cleanup",
     ):
@@ -46,7 +46,7 @@ def validate_error_recovery():
 
     # Check BlockSparseRingDistributedDilatedAttention has cleanup
     if check_method_exists(
-        "dilated_attention_pytorch/block_sparse_ring_distributed_dilated_attention.py",
+        "src/dilated_attention_pytorch/block_sparse_ring_distributed_dilated_attention.py",
         "BlockSparseRingDistributedDilatedAttention",
         "_cleanup_resources",
     ):
@@ -64,7 +64,7 @@ def validate_memory_limits():
     print("\nValidating memory pool limits...")
 
     # Check RingAttentionMemoryPool has max_pool_size parameter
-    with open("dilated_attention_pytorch/ring_dilated_attention.py") as f:
+    with open("src/dilated_attention_pytorch/ring_dilated_attention.py") as f:
         content = f.read()
         if "max_pool_size: int = 100" in content:
             print("✓ RingAttentionMemoryPool has max_pool_size parameter")
@@ -82,7 +82,7 @@ def validate_input_validation():
     print("\nValidating input validation...")
 
     # Check DilatedAttention validation
-    with open("dilated_attention_pytorch/dilated_attention.py") as f:
+    with open("src/dilated_attention_pytorch/dilated_attention.py") as f:
         content = f.read()
         if "segment_lengths cannot be empty" in content:
             print("✓ DilatedAttention validates empty segment_lengths")

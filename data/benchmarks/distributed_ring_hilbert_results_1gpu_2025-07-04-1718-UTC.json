@@ -1,0 +1,55 @@
+{
+  "timestamp": "2025-07-04-1718-UTC",
+  "world_size": 1,
+  "results": [
+    {
+      "config": {
+        "hidden_dim": 512,
+        "num_heads": 8,
+        "segment_lengths": [
+          512
+        ],
+        "dilation_rates": [
+          1
+        ],
+        "batch_size": 2,
+        "total_seq_len": 2048,
+        "world_size": 1
+      },
+      "metrics": {
+        "standard_time_ms": 104.92327231913805,
+        "hilbert_time_ms": 177.3067527450621,
+        "speedup": 0.5917612876820344,
+        "chunk_size": 2048,
+        "world_size": 1
+      }
+    },
+    {
+      "config": {
+        "hidden_dim": 512,
+        "num_heads": 8,
+        "segment_lengths": [
+          512
+        ],
+        "dilation_rates": [
+          2
+        ],
+        "batch_size": 2,
+        "total_seq_len": 2048,
+        "world_size": 1
+      },
+      "metrics": {
+        "standard_time_ms": 135.31756969168782,
+        "hilbert_time_ms": 222.70386638119817,
+        "speedup": 0.6076121258715248,
+        "chunk_size": 2048,
+        "world_size": 1
+      }
+    }
+  ],
+  "summary": {
+    "avg_speedup": 0.5996867067767796,
+    "max_speedup": 0.6076121258715248,
+    "min_speedup": 0.5917612876820344
+  }
+}

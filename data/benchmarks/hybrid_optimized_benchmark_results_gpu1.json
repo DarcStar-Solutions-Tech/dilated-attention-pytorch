@@ -1,0 +1,152 @@
+{
+  "world_size": 1,
+  "backend_info": {
+    "flash_attn": true,
+    "sdpa": true,
+    "xformers": true,
+    "backends_available": 3
+  },
+  "performance_results": [
+    {
+      "seq_len": 1024,
+      "batch_size": 2,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 4.774641990661621,
+      "throughput_mtokens": 3.43146146497356,
+      "memory_mb": 160.25,
+      "backend_info": {
+        "flash_attn": true,
+        "sdpa": true,
+        "xformers": true,
+        "backends_available": 3
+      },
+      "model_info": {
+        "can_use_flash": true,
+        "flash_backend": "xformers",
+        "has_optimized_lse": true
+      }
+    },
+    {
+      "seq_len": 2048,
+      "batch_size": 2,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 41.554808616638184,
+      "throughput_mtokens": 0.7885489331042179,
+      "memory_mb": 568.375,
+      "backend_info": {
+        "flash_attn": true,
+        "sdpa": true,
+        "xformers": true,
+        "backends_available": 3
+      },
+      "model_info": {
+        "can_use_flash": true,
+        "flash_backend": "xformers",
+        "has_optimized_lse": true
+      }
+    },
+    {
+      "seq_len": 4096,
+      "batch_size": 2,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 175.35994052886963,
+      "throughput_mtokens": 0.3737227544805808,
+      "memory_mb": 624.5,
+      "backend_info": {
+        "flash_attn": true,
+        "sdpa": true,
+        "xformers": true,
+        "backends_available": 3
+      },
+      "model_info": {
+        "can_use_flash": true,
+        "flash_backend": "xformers",
+        "has_optimized_lse": true
+      }
+    },
+    {
+      "seq_len": 8192,
+      "batch_size": 2,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 551.8818140029907,
+      "throughput_mtokens": 0.2375001253425787,
+      "memory_mb": 720.5,
+      "backend_info": {
+        "flash_attn": true,
+        "sdpa": true,
+        "xformers": true,
+        "backends_available": 3
+      },
+      "model_info": {
+        "can_use_flash": true,
+        "flash_backend": "xformers",
+        "has_optimized_lse": true
+      }
+    },
+    {
+      "seq_len": 16384,
+      "batch_size": 2,
+      "num_heads": 8,
+      "head_dim": 64,
+      "time_ms": 1047.8839635849,
+      "throughput_mtokens": 0.25016510330321606,
+      "memory_mb": 912.5,
+      "backend_info": {
+        "flash_attn": true,
+        "sdpa": true,
+        "xformers": true,
+        "backends_available": 3
+      },
+      "model_info": {
+        "can_use_flash": true,
+        "flash_backend": "xformers",
+        "has_optimized_lse": true
+      }
+    }
+  ],
+  "comparison_results": [
+    {
+      "seq_len": 1024,
+      "optimized_ms": 5.160021781921387,
+      "standard_ms": 4.932546615600586,
+      "speedup": 0.9559158515342354,
+      "max_diff": 0.0,
+      "backend_used": {
+        "flash_attn": true,
+        "sdpa": true,
+        "xformers": true,
+        "backends_available": 3
+      }
+    },
+    {
+      "seq_len": 2048,
+      "optimized_ms": 139.6268129348755,
+      "standard_ms": 36.48860454559326,
+      "speedup": 0.26132949523536153,
+      "max_diff": 0.0,
+      "backend_used": {
+        "flash_attn": true,
+        "sdpa": true,
+        "xformers": true,
+        "backends_available": 3
+      }
+    },
+    {
+      "seq_len": 4096,
+      "optimized_ms": 220.0237274169922,
+      "standard_ms": 177.290940284729,
+      "speedup": 0.8057810053764093,
+      "max_diff": 0.0,
+      "backend_used": {
+        "flash_attn": true,
+        "sdpa": true,
+        "xformers": true,
+        "backends_available": 3
+      }
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "timestamp": "2025-07-07-0114-UTC",
+    "device": "cuda",
+    "gpu_name": "NVIDIA GeForce GTX 1080",
+    "dtype": "float32",
+    "pytorch_version": "2.7.1+cu126",
+    "description": "Benchmarks after Hybrid removal - standardized API implementations only"
+  },
+  "summary": {
+    "total_configs": 7,
+    "implementations_tested": 5,
+    "best_overall": "RingDilatedAttentionHilbert-Fixed",
+    "observations": {
+      "hilbert_performance": "Consistently fastest across most sequence lengths",
+      "production_performance": "Solid performance, good stability",
+      "block_sparse_performance": "Lower throughput but significant memory savings",
+      "factory_overhead": "Some overhead compared to direct instantiation"
+    }
+  },
+  "key_results": {
+    "small_sequences_1024": {
+      "hilbert": "1,213,016 tokens/sec",
+      "production": "1,037,855 tokens/sec",
+      "block_sparse": "203,272 tokens/sec"
+    },
+    "medium_sequences_4096": {
+      "hilbert": "231,946 tokens/sec",
+      "production": "123,868 tokens/sec",
+      "block_sparse": "152,856 tokens/sec"
+    },
+    "large_sequences_8192": {
+      "hilbert": "329,185 tokens/sec",
+      "production": "175,835 tokens/sec",
+      "block_sparse": "64,371 tokens/sec"
+    }
+  },
+  "conclusion": "Hybrid removal successful. Hilbert implementation shows best performance across all sequence lengths."
+}

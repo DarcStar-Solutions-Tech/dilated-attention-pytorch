@@ -1,0 +1,13 @@
+{
+  "metadata": {
+    "timestamp": "2025-07-07-0059-UTC",
+    "device": "cuda",
+    "description": "Fixed local dilation implementation"
+  },
+  "summary": {
+    "total_tests": 42,
+    "passed": 42,
+    "failed": 0,
+    "success_rate": "100%"
+  }
+}

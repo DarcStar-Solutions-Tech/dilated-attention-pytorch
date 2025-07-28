@@ -8,16 +8,18 @@ This is an unofficial PyTorch implementation of DilatedAttention from the LongNe
 
 ## Core Architecture
 
+The project contains **21 active dilated attention implementations** organized into several categories.
+
 ### Main Components
 
-- **DilatedAttention** (`dilated_attention_pytorch/dilated_attention.py`): Core dilated attention mechanism that supports variable segment lengths and dilation rates
-- **MultiheadDilatedAttention** (`dilated_attention_pytorch/multihead_dilated_attention.py`): Drop-in replacement for nn.MultiheadAttention with dilated attention and MAGNETO improvements
-- **ImprovedDilatedAttention** (`dilated_attention_pytorch/improved_dilated_attention.py`): Enhanced version with additional optimizations
-- **ImprovedMultiheadDilatedAttention** (`dilated_attention_pytorch/improved_multihead_dilated_attention.py`): Enhanced multihead version with further optimizations
-- **DistributedImprovedDilatedAttention** (`dilated_attention_pytorch/improved_distributed_dilated_attention.py`): Enhanced distributed/multi-GPU implementation
-- **DistributedImprovedMultiheadDilatedAttention** (`dilated_attention_pytorch/improved_distributed_dilated_attention.py`): Enhanced distributed multihead version
-- **LongNet** (`dilated_attention_pytorch/long_net.py`): Full transformer architecture for language modeling
-- **Transformer** (`dilated_attention_pytorch/transformer.py`): General transformer with dilated attention
+- **DilatedAttention** (`dilated_attention_pytorch/base/dilated_attention.py`): Core dilated attention mechanism that supports variable segment lengths and dilation rates
+- **MultiheadDilatedAttention** (`dilated_attention_pytorch/base/multihead_dilated_attention.py`): Drop-in replacement for nn.MultiheadAttention with dilated attention and MAGNETO improvements
+- **ImprovedDilatedAttention** (`dilated_attention_pytorch/base/improved_dilated_attention.py`): Enhanced version with additional optimizations
+- **ImprovedMultiheadDilatedAttention** (`dilated_attention_pytorch/base/improved_multihead_dilated_attention.py`): Enhanced multihead version with further optimizations
+- **RingDilatedAttentionProduction** (`dilated_attention_pytorch/ring/hilbert/ring_dilated_attention_hilbert_gpu_optimized.py`): Production-ready ring attention with O(n) memory complexity and advanced error recovery
+- **RingDistributedDilatedAttention** (`dilated_attention_pytorch/ring/distributed/ring_distributed_dilated_attention.py`): Enterprise-grade distributed implementation with DeepSpeed integration
+- **LongNet** (`dilated_attention_pytorch/models/long_net.py`): Full transformer architecture for language modeling
+- **Transformer** (`dilated_attention_pytorch/models/transformer.py`): General transformer with dilated attention
 
 ### Key Parameters
 
@@ -28,85 +30,151 @@ All dilated attention modules require:
 
 ## Development Commands
 
-### Testing
+### Testing and Verification
 ```bash
-# Run all tests
-pytest tests/
+# Single GPU tests
+hatch run test                         # Run all tests with coverage
+pytest tests/test_dilated_attention.py # Run specific test file
+pytest tests/ -v                       # Verbose output
 
-# Run specific test files
-pytest tests/test_dilated_attention.py
-pytest tests/test_long_net.py
+# Multi-GPU tests (MUST use torchrun)
+torchrun --nproc_per_node=2 tests/test_ring_attention.py
+torchrun --nproc_per_node=4 tests/test_distributed_ring_attention.py
 
-# Run tests with specific parameters
-pytest tests/test_dilated_attention.py -v
+# Quick verification scripts
+python scripts/test_comprehensive.py   # Quick comprehensive test
+python verify_all_components.py        # Component verification
+
+# Coverage reporting
+pytest tests/ --cov=dilated_attention_pytorch --cov-report=html
 ```
 
-### Dependencies Management
-This project uses modern Python packaging with `pyproject.toml` and supports multiple tools:
+### Project Tooling
+
+This project uses a modern Python toolchain:
+- **Hatch**: Environment management and task runner
+- **uv**: Fast dependency installation (replaces pip)
+- **torchrun**: Required for multi-GPU execution
+
+### Environment Management with Hatch
 
 ```bash
-# Recommended: Using uv (fastest Python package manager)
+# Enter the development environment
+hatch shell
+
+# Create/recreate environments
+hatch env create                       # Create default environment
+hatch env create test                  # Create test environment
+hatch env create benchmark             # Create benchmark environment
+
+# Run commands in specific environments
+hatch run test                         # Run tests with coverage
+hatch run lint                         # Run linting (ruff)
+hatch run format                       # Format code (ruff)
+hatch run typecheck                    # Type checking (mypy)
+hatch run all                          # Run all checks
+
+# Benchmark environment commands
+hatch run benchmark:run                # Run benchmarks
+hatch run benchmark:profile            # Run with profiling
+```
+
+### Dependency Management with uv
+
+```bash
+# ALWAYS use uv for installing dependencies (not pip)
 uv pip install -e .                    # Install package
 uv pip install -e .[dev]               # Install with dev dependencies
 uv pip install -e .[test]              # Install with test dependencies
 uv pip install -e .[benchmark]         # Install with benchmark dependencies
 uv pip install -e .[distributed]       # Install with distributed training dependencies
-uv pip install -e .[all]               # Install with all optional dependencies
+uv pip install -e .[all]               # Install all optional dependencies
 
-# Alternative: Using Poetry (modern dependency management)
-poetry install                         # Install dependencies from poetry.lock
-poetry install --with dev              # Install with dev dependencies
-poetry install --all-extras            # Install with all optional dependencies
-poetry add <package>                   # Add new dependency
-poetry lock                            # Update lock file
+# Add new dependencies
+uv pip install <package>               # Install a new package
 
-# Alternative: Using Hatch (project management)
-hatch shell                            # Enter development environment
-hatch env create                       # Create development environment
-hatch build                            # Build the package
-
-# Legacy: Using pip
-pip install -e .                       # Install package
-pip install -e .[all]                  # Install with all dependencies
+# Why uv?
+# - 10-100x faster than pip
+# - Better resolver for complex dependencies
+# - Automatic cleanup of unused packages
 ```
 
-### Code Quality
-The project is configured with modern Python tooling via Hatch:
+### Multi-GPU Execution with torchrun
+
+When running any script that uses multiple GPUs, you MUST use `torchrun`:
 
 ```bash
-# Using Hatch (recommended)
-hatch run test                         # Run tests with coverage
-hatch run test-fast                    # Run tests (exit on first failure)
-hatch run lint                         # Run all linting (ruff)
-hatch run format                       # Format code (ruff)
-hatch run typecheck                    # Type checking (mypy)
-hatch run all                          # Run all checks (format, lint, typecheck, test)
+# Single node, multiple GPUs
+torchrun --nproc_per_node=2 benchmarks/test_ring_attention.py
+torchrun --nproc_per_node=4 scripts/train_model.py
 
-# Using uv + direct tools
-uv run pytest tests/                   # Run tests
-uv run ruff format .                   # Format code
-uv run ruff check .                    # Lint code (includes import sorting)
-uv run mypy dilated_attention_pytorch  # Type check
+# Multi-node execution
+torchrun --nproc_per_node=8 --nnodes=2 --node_rank=0 --master_addr=192.168.1.1 --master_port=29500 train.py
 
-# Legacy approach
-ruff format .
-ruff check .
-mypy .
-pytest tests/
+# Common torchrun options:
+# --nproc_per_node: Number of GPUs per node
+# --nnodes: Total number of nodes
+# --node_rank: Rank of this node (0-based)
+# --master_addr: IP address of rank 0 node
+# --master_port: Port for communication
+
+# Environment variables set by torchrun:
+# RANK: Global rank of the process
+# LOCAL_RANK: Local rank on the node
+# WORLD_SIZE: Total number of processes
+# MASTER_ADDR: Address of the master node
+# MASTER_PORT: Port of the master node
 ```
+
+### Common Workflows
+
+```bash
+# Development setup
+hatch shell                            # Enter dev environment
+uv pip install -e .[all]              # Install all dependencies
+
+# Run tests
+hatch run test                         # Single GPU tests
+torchrun --nproc_per_node=2 tests/test_ring_attention.py  # Multi-GPU tests
+
+# Benchmarking
+hatch run benchmark:run                # Single GPU benchmarks
+torchrun --nproc_per_node=4 benchmarks/test_distributed_suite.py  # Multi-GPU benchmarks
+
+# Code quality
+hatch run all                          # Format, lint, typecheck, and test
+```
+
 
 ### Benchmarking
+
+The project includes a comprehensive benchmarking suite with shared utilities to reduce code duplication:
+
 ```bash
-# Using Hatch environments (recommended)
+# Core benchmark utilities (NEW)
+benchmarks/core/
+    ├── base_benchmark.py        # Base classes for all benchmarks
+    ├── utils/
+│       ├── distributed.py      # Distributed computing utilities
+│       ├── memory.py          # Memory management utilities
+│       ├── timing.py          # Timing utilities with CUDA events
+│       └── data.py            # Data generation utilities
+
+# Single GPU benchmarks
 hatch run benchmark:run                # Run benchmarks with default settings
 hatch run benchmark:run --batch_size 2 --total_tokens 26 --heads 8  # Custom parameters
 hatch run benchmark:profile            # Run with profiling
 
-# Direct execution
-python benchmark.py                    # Run benchmarks with default settings
-python benchmark.py --batch_size 2 --total_tokens 26 --heads 8      # Custom parameters
+# Multi-GPU benchmarks (MUST use torchrun)
+torchrun --nproc_per_node=2 benchmarks/test_distributed_suite.py
+torchrun --nproc_per_node=4 benchmarks/test_ring_attention.py
+torchrun --nproc_per_node=8 benchmarks/benchmark_ring_billion_tokens.py
 
-# Using uv
+# Direct execution (single GPU only)
+python benchmarks/test_improved_suite.py      # Test all improved implementations
+python benchmarks/verify_all.py               # Comprehensive verification
+
+# Using uv for direct execution
 uv run --extra benchmark python benchmark.py  # Run with benchmark dependencies
 ```
 
@@ -151,9 +219,11 @@ Tests use pytest with parameterized testing:
 
 The project includes advanced Ring Attention implementations that provide O(n) memory complexity for arbitrarily long sequences:
 
-- **RingDilatedAttention** (`dilated_attention_pytorch/ring_dilated_attention.py`): Core ring attention with dilated patterns and memory pool optimization
-- **RingMultiheadDilatedAttention** (`dilated_attention_pytorch/ring_multihead_dilated_attention.py`): Multi-head wrapper with fused QKV projections and buffer reuse
+- **RingDilatedAttention**: Alias for RingDilatedAttentionProduction (recommended for general use)
+- **RingDilatedAttentionProduction** (`dilated_attention_pytorch/ring_dilated_attention_production.py`): Production-ready implementation with advanced error recovery and monitoring
+- **RingDilatedAttentionProductionFixed** (`dilated_attention_pytorch/ring_dilated_attention_production_fixed.py`): Fixed version with standardized API wrapper
 - **RingDistributedDilatedAttention** (`dilated_attention_pytorch/ring_distributed_dilated_attention.py`): Enterprise-grade distributed implementation with DeepSpeed integration
+- **RingDilatedAttentionHilbertOptimizedFixed** (`dilated_attention_pytorch/ring_dilated_attention_hilbert_optimized_fixed.py`): Ring attention with Hilbert optimization and standardized API
 
 ## Block-Sparse Attention Implementation
 
@@ -162,8 +232,12 @@ The project includes advanced Ring Attention implementations that provide O(n) m
 The project includes revolutionary Block-Sparse Attention implementations that combine O(n) memory complexity with 5-50x additional speedup:
 
 - **BlockSparseRingDilatedAttention** (`dilated_attention_pytorch/block_sparse_ring_dilated_attention.py`): Core block-sparse ring attention with multiple pattern types
+- **BlockSparseRingDilatedAttentionFixed** (`dilated_attention_pytorch/block_sparse_ring_dilated_attention_fixed.py`): Fixed version with standardized API wrapper
 - **BlockSparseRingMultiheadDilatedAttention** (`dilated_attention_pytorch/block_sparse_ring_multihead_dilated_attention.py`): Drop-in replacement for nn.MultiheadAttention with block-sparse optimization
 - **BlockSparseRingDistributedDilatedAttention** (`dilated_attention_pytorch/block_sparse_ring_distributed_dilated_attention.py`): Enterprise distributed implementation with hierarchical sparsity
+- **BlockSparseAdaptive** (`dilated_attention_pytorch/block_sparse_adaptive.py`): Content-adaptive sparsity patterns that learn optimal attention
+- **BlockSparseAdaptiveFixed** (`dilated_attention_pytorch/block_sparse_adaptive_fixed.py`): Fixed API wrapper for BlockSparseAdaptive
+- **BlockSparseRingDilatedAttentionHilbertPostPattern** (`dilated_attention_pytorch/block_sparse_ring_dilated_attention_hilbert_post_pattern.py`): Hilbert curve optimization for block processing order (up to 2.53x speedup)
 
 ### Sparse Pattern Types
 
@@ -280,9 +354,9 @@ The codebase has been successfully refactored to reduce duplication and improve 
 2. ✅ MultiheadDilatedAttention  
 3. ✅ ImprovedDilatedAttention
 4. ✅ ImprovedMultiheadDilatedAttention
-5. ✅ DistributedImprovedDilatedAttention
-6. ✅ DistributedImprovedMultiheadDilatedAttention
-7. ✅ RingDilatedAttention (partially - uses base classes)
+5. ✅ RingDilatedAttentionHybrid (uses base classes)
+6. ✅ DistributedMultiheadDilatedAttention
+7. ✅ Various block-sparse implementations
 
 **Not Refactored (by design):**
 8. ⚡ BlockSparseRingDilatedAttention - Preserved for performance optimization
@@ -324,6 +398,17 @@ The codebase has been successfully refactored to reduce duplication and improve 
   )
   ```
 
+### Recent Changes (July 2025)
+
+#### **Removed Implementations**
+The following implementations were removed during cleanup:
+- `ring_dilated_attention_v2_collective.py` - Superseded by Production version
+- `ring_dilated_attention_refactored.py` - Merged into Production version
+- `ring_hilbert_dilated_attention.py` - Functionality in HilbertOptimizedFixed
+- `ring_dilated_attention_fixed.py` - Replaced by ProductionFixed
+- `improved_distributed_dilated_attention.py` - Use distributed_dilated_attention.py
+- `block_sparse_ring_dilated_attention_original.py` - Used deprecated APIs
+
 ### Recent Fixes and Optimizations (Latest Update - December 2024)
 
 #### **Test Suite Improvements**
@@ -333,7 +418,28 @@ The codebase has been successfully refactored to reduce duplication and improve 
 - Improved validation and error messages
 - Added thread-safe operations for concurrent execution
 
-### Recent Optimizations (December 2024)
+### Recent Changes (July 2025)
+
+### Deprecated Class Removal
+
+Removed all implementations that used the poorly-performing `all_gather` operation:
+- ~~`head_parallel_dilated_attention.py`~~ - Used all_gather with poor scalability
+- ~~`improved_distributed_dilated_attention.py`~~ - Used all_gather 
+- ~~`ring_dilated_attention_v2_collective.py`~~ - Used all_gather
+- ~~`ring_hilbert_dilated_attention.py`~~ - Used all_gather
+- ~~`ring_multihead_dilated_attention.py`~~ - Depended on deprecated V2Collective
+
+Use `RingDilatedAttentionProduction` or `RingDistributedDilatedAttention` instead, which use efficient isend/irecv operations.
+
+### Benchmark Suite Refactoring
+
+Consolidated and refactored the benchmark suite to eliminate ~60% code duplication:
+- Created shared utilities in `benchmarks/core/` for consistent benchmarking
+- Consolidated redundant benchmark files into organized test suites
+- Removed 17 redundant files while maintaining all testing capabilities
+- Net reduction of ~500 lines of code with improved maintainability
+
+## Recent Optimizations (December 2024)
 
 #### **Block Sparse Ring Distributed Attention Optimizations**
 
@@ -414,86 +520,154 @@ All performance optimizations from Ring Distributed Attention have been successf
 ## File Organization
 
 ```
-dilated_attention_pytorch/
-├── __init__.py              # Package init with exports
-├── core/                    # Core refactored components (NEW)
-│   ├── __init__.py         # Core module exports
-│   ├── base.py             # Base classes for all implementations
-│   ├── config.py           # Configuration dataclasses
-│   ├── constants.py        # Feature detection and constants
-│   ├── memory_pool.py      # Unified memory pool
-│   └── factory.py          # Factory pattern for module creation
-├── utils/                   # Utility modules
-│   ├── __init__.py         # Utils module exports
-│   ├── validation.py       # Validation utilities
-│   ├── attention_utils.py  # Common attention utilities
-│   └── sparse_pattern_utils.py # Sparse pattern generation and optimization
-├── dilated_attention.py     # Core dilated attention
-├── multihead_dilated_attention.py  # Multi-head wrapper
-├── improved_dilated_attention.py   # Enhanced version
-├── improved_multihead_dilated_attention.py # Enhanced multihead version
-├── distributed_dilated_attention.py # Multi-GPU support
-├── improved_distributed_dilated_attention.py # Enhanced distributed version
-├── ring_dilated_attention.py       # Ring attention core (O(n) memory)
-├── ring_multihead_dilated_attention.py # Ring multi-head wrapper
-├── ring_distributed_dilated_attention.py # Enterprise ring attention
-├── block_sparse_ring_dilated_attention.py # Block-sparse ring attention
-├── block_sparse_ring_multihead_dilated_attention.py # Block-sparse multihead
-├── block_sparse_ring_distributed_dilated_attention.py # Distributed block-sparse
-├── transformer.py           # Transformer with dilated attention
-└── long_net.py             # Full LongNet architecture
+src/
+    └── dilated_attention_pytorch/
+        ├── __init__.py              # Package init with exports
+        ├── base/                    # Core implementations
+        │   ├── __init__.py         # Base module exports
+        │   ├── dilated_attention.py # Core dilated attention
+        │   ├── multihead_dilated_attention.py  # Multi-head wrapper
+        │   ├── improved_dilated_attention.py   # Enhanced version
+        │   ├── improved_multihead_dilated_attention.py # Enhanced multihead
+        │   ├── distributed_dilated_attention.py # Multi-GPU support
+        │   └── head_parallel_dilated_attention_optimized.py # Head-parallel
+        ├── ring/                    # Ring attention variants
+        │   ├── __init__.py         # Ring module exports
+        │   ├── base/               # Base ring implementations
+        │   │   ├── ring_dilated_attention_correct.py
+        │   │   ├── ring_dilated_attention_fixed_simple.py
+        │   │   ├── ring_dilated_attention_memory_efficient.py
+        │   │   ├── ring_dilated_attention_sdpa.py
+        │   │   └── ring_dilated_attention_v3.py
+        │   ├── distributed/        # Distributed ring attention
+        │   │   └── ring_distributed_dilated_attention.py
+        │   ├── hilbert/            # Hilbert-optimized ring attention
+        │   │   ├── ring_dilated_attention_hilbert_core.py
+        │   │   ├── ring_dilated_attention_hilbert_gpu_optimized.py
+        │   │   ├── ring_dilated_attention_hilbert_optimized_fixed.py
+        │   │   └── ring_dilated_attention_hilbert_proper.py
+        │   └── utils/              # Ring attention utilities
+        │       ├── ring_attention_autograd.py
+        │       ├── ring_attention_lse.py
+        │       └── ring_attention_utils.py
+        ├── sparse/                  # Block-sparse implementations
+        │   ├── __init__.py         # Sparse module exports
+        │   ├── block_sparse_ring_dilated_attention.py
+        │   ├── block_sparse_ring_dilated_attention_fixed.py
+        │   ├── block_sparse_ring_dilated_attention_hilbert_post_pattern.py
+        │   ├── block_sparse_ring_multihead_dilated_attention.py
+        │   ├── block_sparse_ring_distributed_dilated_attention.py
+        │   ├── block_sparse_adaptive.py
+        │   ├── block_sparse_adaptive_fixed.py
+        │   ├── block_sparse_factory.py
+        │   └── sparse_pattern_generator.py
+        ├── models/                  # Full models
+        │   ├── __init__.py
+        │   ├── transformer.py      # Transformer with dilated attention
+        │   └── long_net.py         # Full LongNet architecture
+        ├── core/                    # Core refactored components
+        │   ├── __init__.py         # Core module exports
+        │   ├── base.py             # Base classes for all implementations
+        │   ├── config.py           # Configuration dataclasses
+        │   ├── constants.py        # Feature detection and constants
+        │   ├── memory_pool.py      # Unified memory pool
+        │   ├── factory.py          # Factory pattern for module creation
+        │   └── standardized_api.py # Standardized API wrappers
+        ├── utils/                   # Utility modules
+        │   ├── __init__.py         # Utils module exports
+        │   ├── validation.py       # Validation utilities
+        │   ├── attention_utils.py  # Common attention utilities
+        │   ├── sparse_pattern_utils.py # Sparse pattern generation
+        │   ├── hilbert_curve.py    # Hilbert curve utilities
+        │   └── dynamic_segment_selector.py # Dynamic segment sizing
+        ├── kernels/                 # CUDA/Triton kernels (experimental)
+        │   ├── __init__.py
+        │   ├── hilbert_attention_core.py
+        │   └── hilbert_attention_triton_wrapper.py
+        └── dynamic_dilated_attention.py # Dynamic segment sizing wrapper
 
 tests/
-├── __init__.py               # Tests package init
-├── test_dilated_attention.py # Core attention tests  
-├── test_long_net.py          # LongNet architecture tests
-├── test_improved_multihead.py # Improved multihead attention tests
-├── test_memory_optimizations.py # Memory optimization tests
-├── test_ring_attention.py   # Ring attention tests
-├── test_distributed_ring_attention.py # Distributed ring attention tests
-├── test_block_sparse_attention.py # Block-sparse attention tests
-├── test_edge_cases_validation.py # Edge case validation tests
-├── test_thread_safety.py    # Thread safety tests
-├── test_flash_attention_3.py # Flash Attention 3 integration tests
-├── test_core_refactoring.py # Core module tests (NEW)
-├── compare_implementations.py # Implementation comparison benchmarks
-├── detailed_memory_analysis.py # Detailed memory profiling
-├── memory_estimation.py     # Memory usage estimation utilities
-├── multihead_memory_analysis.py # Multihead memory analysis
-└── simple_comparison.py     # Simple performance comparisons
+    ├── __init__.py               # Tests package init
+    ├── base/                     # Base implementation tests
+    │   ├── test_dilated_attention.py
+    │   ├── test_multihead_dilated_attention.py
+    │   ├── test_improved_dilated_attention.py
+    │   └── test_improved_multihead.py
+    ├── ring/                     # Ring attention tests
+    │   ├── test_ring_attention.py
+    │   ├── test_distributed_ring_attention.py
+    │   └── hilbert/             # Hilbert-specific tests
+    │       ├── test_hilbert_gradient_comparison.py
+    │       ├── test_multigpu_hilbert_ring.py
+    │       └── test_per_segment_hilbert.py
+    ├── sparse/                   # Block-sparse tests
+    │   ├── test_block_sparse_attention.py
+    │   ├── test_block_sparse_adaptive.py
+    │   └── test_block_sparse_ring_multihead.py
+    ├── models/                   # Model tests
+    │   ├── test_long_net.py
+    │   └── test_transformer.py
+    ├── core/                     # Core infrastructure tests
+    │   ├── test_factory.py
+    │   ├── test_memory_pool.py
+    │   └── test_core_refactoring.py
+    ├── utils/                    # Utility tests
+    │   ├── test_validation.py
+    │   └── test_dynamic_segment_selection.py
+    ├── misc/                     # Miscellaneous tests
+    │   ├── test_edge_cases_validation.py
+    │   ├── test_thread_safety.py
+    │   ├── test_flash_attention_3.py
+    │   └── test_memory_pool_consolidated.py
+    └── TEST_REDUNDANCY_ANALYSIS.md # Test cleanup documentation
 
 docs/                       # Extensive documentation
-├── README.md               # Documentation overview
-├── guides/                 # User guides (permanent names)
-│   ├── ring-attention-guide.md
-│   ├── block-sparse-attention-guide.md
-│   ├── distributed-training-guide.md
-│   ├── practical-usage-guide.md
-│   └── factory-pattern-guide.md
-├── benchmarks/             # Benchmark results (timestamped)
-│   └── benchmark-results-YYYY-MM-DD-HHMM-UTC.md
-├── feasibility/            # Feasibility studies (timestamped)
-│   └── feasibility-study-YYYY-MM-DD-HHMM-UTC.md
-├── reports/                # Technical reports (mixed naming)
-│   └── defect-analysis-YYYY-MM-DD-HHMM-UTC.md
-└── archive/                # Historical/obsolete documentation
+    ├── README.md               # Documentation overview
+    ├── guides/                 # User guides (permanent names)
+│       ├── ring-attention-guide.md
+│       ├── block-sparse-attention-guide.md
+│       ├── distributed-training-guide.md
+│       ├── practical-usage-guide.md
+│       └── factory-pattern-guide.md
+    ├── benchmarks/             # Benchmark results (timestamped)
+│       └── benchmark-results-YYYY-MM-DD-HHMM-UTC.md
+    ├── feasibility/            # Feasibility studies (timestamped)
+│       └── feasibility-study-YYYY-MM-DD-HHMM-UTC.md
+    ├── reports/                # Technical reports (mixed naming)
+│       └── defect-analysis-YYYY-MM-DD-HHMM-UTC.md
+    └── archive/                # Historical/obsolete documentation
 
 examples/                   # Example scripts
-└── distributed_training_example.py # Distributed training example
+    ├── distributed_training_example.py # Distributed training example
+    ├── basic_dilated_attention.py # Basic usage examples
+    ├── distributed_ring_attention.py # Ring attention distributed example
+    ├── factory_pattern_example.py # Factory pattern usage examples
+    ├── simple_usage.py         # Simple usage examples
+    └── ring_attention/         # Ring Attention educational implementations
 
 scripts/                    # Utility scripts
-└── launch_distributed_training.py # Launch distributed training
+    └── launch_distributed_training.py # Launch distributed training
 
 benchmarks/                 # Performance benchmarking
-├── benchmark.py            # Main benchmark script
-├── benchmark_all.py        # Comprehensive benchmarks
-├── benchmark_ring_billion_tokens.py # Billion-token tests
-└── benchmark_sequence_limits.py # Sequence limit testing
+    ├── core/                   # Shared benchmark utilities (NEW)
+│       ├── base_benchmark.py   # Base classes for benchmarks
+│       └── utils/             # Utility modules
+│           ├── distributed.py # Distributed utilities
+│           ├── memory.py      # Memory utilities
+│           ├── timing.py      # Timing utilities
+│           └── data.py        # Data generation
+    ├── test_improved_suite.py  # Consolidated improved tests
+    ├── test_distributed_suite.py # Consolidated distributed tests
+    ├── verify_all.py           # Comprehensive verification
+    ├── benchmark.py            # Main benchmark script
+    ├── benchmark_all.py        # Comprehensive benchmarks
+    ├── benchmark_ring_billion_tokens.py # Billion-token tests
+    └── benchmark_sequence_limits.py # Sequence limit testing
 
 analysis/                   # Analysis scripts
-├── billion_token_analysis.py # Billion-token scaling
-├── ring_attention_analysis.py # Ring attention analysis
-└── ring_performance_analysis.py # Performance analysis
+    ├── billion_token_analysis.py # Billion-token scaling
+    ├── ring_attention_analysis.py # Ring attention analysis
+    └── ring_performance_analysis.py # Performance analysis
 
 README.md                  # Project documentation
 CLAUDE.md                  # This file - AI instructions
@@ -537,9 +711,12 @@ When creating new files, ALWAYS place them in the correct directory:
    - Example: `scripts/debug/debug_new_feature.py`, NOT `debug_new_feature.py`
 
 6. **Source Code**:
-   - Core implementations → `dilated_attention_pytorch/`
+   - Base implementations → `dilated_attention_pytorch/base/`
+   - Ring attention → `dilated_attention_pytorch/ring/`
+   - Block-sparse → `dilated_attention_pytorch/sparse/`
+   - Full models → `dilated_attention_pytorch/models/`
    - Utilities → `dilated_attention_pytorch/utils/`
-   - Core components → `dilated_attention_pytorch/core/`
+   - Core infrastructure → `dilated_attention_pytorch/core/`
 
 ### File Creation Rules:
 - ALWAYS check if an appropriate directory exists before creating a file
@@ -609,6 +786,146 @@ These documents have stable content and use descriptive names without timestamps
 - Include the document type in the name
 - For timestamped files, timestamp goes at the end before extension
 - Extensions: `.md` for markdown, `.png`/`.jpg` for images, `.json` for data
+
+## Ring Attention Implementation Guidelines
+
+### CRITICAL: Avoid Common Implementation Errors
+
+#### 1. **Process Local Sequences Only**
+The most critical error in ring attention is processing the full sequence before splitting:
+
+```python
+# WRONG - Defeats O(n/k) memory benefit!
+qkv = self.qkv_proj(x)  # x is [batch, seq_len, embed_dim]
+# Then splits AFTER projection - too late!
+
+# CORRECT - Split first, then project
+if self.world_size > 1 and not already_split:
+    x_local = x[:, start:end, :].contiguous()
+qkv = self.qkv_proj(x_local)  # Process local chunk only
+```
+
+#### 2. **Never Use all_gather**
+- `all_gather` creates O(n²) communication and defeats the purpose
+- Always use `isend/irecv` for ring communication pattern
+- Removed implementations that used `all_gather` due to poor performance
+
+#### 3. **Ring Communication Pattern**
+```python
+def ring_pass_forward(tensor):
+    src = (rank - 1) % world_size
+    dst = (rank + 1) % world_size
+    
+    recv_buffer = torch.empty_like(tensor)
+    send_op = dist.isend(tensor.contiguous(), dst)
+    recv_op = dist.irecv(recv_buffer, src)
+    
+    send_op.wait()
+    recv_op.wait()
+    return recv_buffer
+```
+
+#### 4. **Memory Management**
+- Always ensure tensors are contiguous before communication
+- Use aggressive memory cleanup for long sequences:
+  ```python
+  gc.collect()
+  torch.cuda.empty_cache()
+  torch.cuda.synchronize()
+  ```
+- Pre-allocate communication buffers to reduce allocation overhead
+
+#### 5. **Backend Selection for Ring Attention**
+When using ring attention, select backend based on LOCAL sequence length:
+```python
+seq_len_hint = max(segment_lengths)
+if memory_efficient and dist.is_initialized():
+    seq_len_hint = seq_len_hint // dist.get_world_size()
+```
+
+### Benchmarking Guidelines
+
+#### 1. **Multi-GPU Benchmarking Setup**
+- Always verify `dist.is_initialized()` before using distributed features
+- Use proper barriers for synchronization: `dist.barrier()`
+- Profile with CUDA events for accurate timing
+
+#### 2. **Memory Profiling**
+- Monitor peak memory per GPU, not total
+- Account for communication buffers in memory estimates
+- Use `torch.cuda.max_memory_allocated()` for accurate measurements
+
+#### 3. **Scaling Validation**
+Verified scaling up to 1 billion tokens:
+- Linear memory scaling: O(n/k) where k = world_size
+- Constant memory per token regardless of total sequence length
+- Example: 204,800 tokens with 4 GPUs = 459.2 MB per GPU
+
+### GPU Architecture Considerations
+
+#### 1. **Data Type Selection**
+- Use float16/bfloat16 on Ampere+ GPUs (compute capability >= 8.0)
+- Fall back to float32 for older GPUs (Pascal and earlier)
+- Automatic detection based on `torch.cuda.get_device_capability()`
+
+#### 2. **Flash Attention Backend**
+- FA3 supported on H100/H200 GPUs (1.5-2x speedup)
+- FA2 for A100/A10/RTX 30xx/40xx
+- Automatic backend selection based on hardware
+
+#### 3. **NCCL Optimization**
+Environment variables for network optimization:
+- `NCCL_SOCKET_IFNAME`: Specify network interface
+- `NCCL_IB_DISABLE`: Disable InfiniBand if not available
+- `NCCL_P2P_DISABLE`: Disable P2P for compatibility
+
+### Hilbert Curve Optimization
+
+When implementing Hilbert optimization:
+1. Apply per-segment for cache efficiency
+2. Use GPU-aware backend selection
+3. Preserve numerical stability with proper LSE accumulation
+4. Benchmark against standard ordering for your use case
+
+### Multi-GPU Ring Attention Fixes (Critical - July 2025)
+
+When implementing or debugging multi-GPU ring attention, **always apply these fixes from lucidrains**:
+
+1. **Ensure tensor contiguity** before any P2P communication:
+   ```python
+   send_tensor = send_tensor.contiguous()
+   receive_buffer = receive_buffer.contiguous()
+   ```
+
+2. **Use batch P2P operations**:
+   ```python
+   ops = []
+   ops.append(dist.P2POp(dist.isend, send_tensor, send_to_rank))
+   ops.append(dist.P2POp(dist.irecv, receive_buffer, receive_from_rank))
+   reqs = dist.batch_isend_irecv(ops)
+   ```
+
+3. **Always synchronize after communication**:
+   ```python
+   for req in reqs:
+       req.wait()
+   dist.barrier()  # Critical for preventing race conditions
+   ```
+
+Without these fixes, you will encounter:
+- CUDA illegal memory access errors
+- Non-contiguous tensor warnings
+- Process hangs during ring communication
+
+See `docs/guides/ring-attention-multi-gpu-fixes.md` for complete details and working examples.
+
+### Performance Expectations
+
+Based on extensive benchmarking:
+- **Single GPU**: Standard attention up to ~32K tokens
+- **Multi-GPU Ring**: Linear scaling to billions of tokens
+- **Memory per token**: ~0.009 MB (constant with ring attention)
+- **Communication overhead**: ~10-15% with proper implementation
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.

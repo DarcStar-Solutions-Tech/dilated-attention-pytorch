@@ -1,0 +1,70 @@
+{
+  "timestamp": "2025-07-04-1529-UTC",
+  "world_size": 1,
+  "args": {
+    "max_seq_len": 65536,
+    "start_seq_len": 32768,
+    "batch_size": 1,
+    "hidden_dim": 512,
+    "num_heads": 8,
+    "warmup": 2,
+    "iterations": 5,
+    "compare": false
+  },
+  "results": [
+    {
+      "model": "Hybrid Hilbert",
+      "seq_len": 32768,
+      "world_size": 1,
+      "batch_size": 1,
+      "hidden_dim": 512,
+      "num_heads": 8,
+      "segment_lengths": [
+        4096
+      ],
+      "dilation_rates": [
+        1
+      ],
+      "avg_time_ms": 6.269431300461292,
+      "total_time_s": 0.03134715650230646,
+      "iterations": 5,
+      "tokens_per_second": 5226630.363999522,
+      "memory": {
+        "allocated_gb": 0.32049560546875,
+        "reserved_gb": 0.537109375,
+        "total_gb": 8.0,
+        "used_gb": 4.3701171875,
+        "free_gb": 3.5146484375,
+        "gpu_name": "NVIDIA GeForce GTX 1080"
+      },
+      "success": true
+    },
+    {
+      "model": "Hybrid Hilbert",
+      "seq_len": 65536,
+      "world_size": 1,
+      "batch_size": 1,
+      "hidden_dim": 512,
+      "num_heads": 8,
+      "segment_lengths": [
+        4096
+      ],
+      "dilation_rates": [
+        1
+      ],
+      "avg_time_ms": 10.392120480537415,
+      "total_time_s": 0.05196060240268707,
+      "iterations": 5,
+      "tokens_per_second": 6306316.417591311,
+      "memory": {
+        "allocated_gb": 0.63299560546875,
+        "reserved_gb": 1.052734375,
+        "total_gb": 8.0,
+        "used_gb": 4.88671875,
+        "free_gb": 2.9990234375,
+        "gpu_name": "NVIDIA GeForce GTX 1080"
+      },
+      "success": true
+    }
+  ]
+}

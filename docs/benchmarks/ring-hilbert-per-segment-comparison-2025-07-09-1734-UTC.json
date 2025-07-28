@@ -1,0 +1,80 @@
+[
+  {
+    "module_name": "Ring (No Hilbert)",
+    "batch_size": 1,
+    "seq_len": 2048,
+    "num_heads": 8,
+    "head_dim": 96,
+    "forward_time_ms": 3.922602653503418,
+    "forward_std_ms": 0.6509677999238312,
+    "memory_mb": 137.6328125,
+    "memory_std_mb": 0.0,
+    "throughput_tps": 522102.3338091248,
+    "memory_per_token_kb": 68.81640625
+  },
+  {
+    "module_name": "Ring (Hilbert)",
+    "batch_size": 1,
+    "seq_len": 2048,
+    "num_heads": 8,
+    "head_dim": 96,
+    "forward_time_ms": 3.4013866583506265,
+    "forward_std_ms": 0.053759736293044376,
+    "memory_mb": 144.6640625,
+    "memory_std_mb": 0.0,
+    "throughput_tps": 602107.3772874443,
+    "memory_per_token_kb": 72.33203125
+  },
+  {
+    "module_name": "Ring (No Hilbert)",
+    "batch_size": 1,
+    "seq_len": 4096,
+    "num_heads": 8,
+    "head_dim": 96,
+    "forward_time_ms": 10.203477223714193,
+    "forward_std_ms": 0.44502117594040097,
+    "memory_mb": 266.1640625,
+    "memory_std_mb": 0.0,
+    "throughput_tps": 401431.77763756545,
+    "memory_per_token_kb": 66.541015625
+  },
+  {
+    "module_name": "Ring (Hilbert)",
+    "batch_size": 1,
+    "seq_len": 4096,
+    "num_heads": 8,
+    "head_dim": 96,
+    "forward_time_ms": 10.673845291137695,
+    "forward_std_ms": 0.23049220328304704,
+    "memory_mb": 278.7265625,
+    "memory_std_mb": 0.0,
+    "throughput_tps": 383741.7433247638,
+    "memory_per_token_kb": 69.681640625
+  },
+  {
+    "module_name": "Ring (No Hilbert)",
+    "batch_size": 1,
+    "seq_len": 8192,
+    "num_heads": 8,
+    "head_dim": 96,
+    "forward_time_ms": 101.3029670715332,
+    "forward_std_ms": 109.2851035343123,
+    "memory_mb": 519.734375,
+    "memory_std_mb": 0.0,
+    "throughput_tps": 80866.33824076813,
+    "memory_per_token_kb": 64.966796875
+  },
+  {
+    "module_name": "Ring (Hilbert)",
+    "batch_size": 1,
+    "seq_len": 8192,
+    "num_heads": 8,
+    "head_dim": 96,
+    "forward_time_ms": 39.00892766316732,
+    "forward_std_ms": 19.713649302518405,
+    "memory_mb": 540.859375,
+    "memory_std_mb": 0.0,
+    "throughput_tps": 210003.20928419114,
+    "memory_per_token_kb": 67.607421875
+  }
+]

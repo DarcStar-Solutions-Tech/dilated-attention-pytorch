@@ -1,0 +1,18 @@
+[
+  {
+    "sequence_length": 1024,
+    "implementation": "standard",
+    "world_size": 2,
+    "rank": 1,
+    "success": false,
+    "error": "segment_lengths cannot be empty"
+  },
+  {
+    "sequence_length": 1024,
+    "implementation": "hilbert",
+    "world_size": 2,
+    "rank": 1,
+    "success": false,
+    "error": "segment_lengths cannot be empty"
+  }
+]

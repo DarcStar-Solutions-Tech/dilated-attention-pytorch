@@ -1,0 +1,536 @@
+{
+  "metadata": {
+    "timestamp": "2025-07-07-0014-UTC",
+    "device": "cuda",
+    "gpu_name": "NVIDIA GeForce GTX 1080",
+    "dtype": "float32",
+    "pytorch_version": "2.7.1+cu126",
+    "implementation_groups": [
+      "Ring Attention",
+      "Hilbert Ring Attention",
+      "Block-Sparse Attention"
+    ]
+  },
+  "benchmarks": [
+    {
+      "config": {
+        "batch_size": 2,
+        "seq_len": 1024,
+        "num_heads": 8,
+        "head_dim": 64,
+        "embed_dim": 512
+      },
+      "results": {
+        "RingDilatedAttentionHilbertOptimized": {
+          "error": "No module named 'src.dilated_attention_pytorch.ring_dilated_attention_hybrid_optimized_v2'",
+          "name": "RingDilatedAttentionHilbertOptimized"
+        },
+        "BlockSparseRingDilated": {
+          "implementation": "BlockSparseRingDilated",
+          "batch_size": 2,
+          "seq_len": 1024,
+          "num_heads": 8,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 9.776546340435743,
+            "std_ms": 1.3695531029362829,
+            "min_ms": 7.979337126016617,
+            "max_ms": 12.593674473464489,
+            "median_ms": 9.34580946341157
+          },
+          "memory": {
+            "start_mb": 16.01171875,
+            "peak_mb": 36.6376953125,
+            "final_mb": 28.13671875,
+            "delta_mb": 20.6259765625
+          },
+          "throughput": {
+            "tokens_per_second": 209480,
+            "sequences_per_second": 102.28560937352748
+          }
+        },
+        "BlockSparseRingMultihead": {
+          "implementation": "BlockSparseRingMultihead",
+          "batch_size": 2,
+          "seq_len": 1024,
+          "num_heads": 8,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 11.736029386520386,
+            "std_ms": 1.2397971734110118,
+            "min_ms": 9.958007372915745,
+            "max_ms": 14.069118537008762,
+            "median_ms": 11.134638451039791
+          },
+          "memory": {
+            "start_mb": 16.13671875,
+            "peak_mb": 41.13671875,
+            "final_mb": 20.13671875,
+            "delta_mb": 25.0
+          },
+          "throughput": {
+            "tokens_per_second": 174505,
+            "sequences_per_second": 85.20769393680685
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "batch_size": 2,
+        "seq_len": 2048,
+        "num_heads": 8,
+        "head_dim": 64,
+        "embed_dim": 512
+      },
+      "results": {
+        "RingDilatedAttentionHilbertOptimized": {
+          "error": "No module named 'src.dilated_attention_pytorch.ring_dilated_attention_hybrid_optimized_v2'",
+          "name": "RingDilatedAttentionHilbertOptimized"
+        },
+        "BlockSparseRingDilated": {
+          "implementation": "BlockSparseRingDilated",
+          "batch_size": 2,
+          "seq_len": 2048,
+          "num_heads": 8,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 20.826328452676535,
+            "std_ms": 1.68424473349954,
+            "min_ms": 18.522009253501892,
+            "max_ms": 24.090384133160114,
+            "median_ms": 20.180807448923588
+          },
+          "memory": {
+            "start_mb": 36.140625,
+            "peak_mb": 56.642578125,
+            "final_mb": 44.140625,
+            "delta_mb": 20.501953125
+          },
+          "throughput": {
+            "tokens_per_second": 196674,
+            "sequences_per_second": 48.01614467342577
+          }
+        },
+        "BlockSparseRingMultihead": {
+          "implementation": "BlockSparseRingMultihead",
+          "batch_size": 2,
+          "seq_len": 2048,
+          "num_heads": 8,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 24.357084278017282,
+            "std_ms": 2.570305314954507,
+            "min_ms": 21.00915275514126,
+            "max_ms": 28.64374779164791,
+            "median_ms": 24.21923726797104
+          },
+          "memory": {
+            "start_mb": 20.140625,
+            "peak_mb": 69.140625,
+            "final_mb": 28.140625,
+            "delta_mb": 49.0
+          },
+          "throughput": {
+            "tokens_per_second": 168164,
+            "sequences_per_second": 41.05581721464578
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "batch_size": 2,
+        "seq_len": 4096,
+        "num_heads": 8,
+        "head_dim": 64,
+        "embed_dim": 512
+      },
+      "results": {
+        "RingDilatedAttentionHilbertOptimized": {
+          "error": "No module named 'src.dilated_attention_pytorch.ring_dilated_attention_hybrid_optimized_v2'",
+          "name": "RingDilatedAttentionHilbertOptimized"
+        },
+        "BlockSparseRingDilated": {
+          "implementation": "BlockSparseRingDilated",
+          "batch_size": 2,
+          "seq_len": 4096,
+          "num_heads": 8,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 40.55213509127498,
+            "std_ms": 3.03678994583042,
+            "min_ms": 37.114436738193035,
+            "max_ms": 46.26378323882818,
+            "median_ms": 39.13502022624016
+          },
+          "memory": {
+            "start_mb": 60.1484375,
+            "peak_mb": 96.6513671875,
+            "final_mb": 76.1484375,
+            "delta_mb": 36.5029296875
+          },
+          "throughput": {
+            "tokens_per_second": 202011,
+            "sequences_per_second": 24.659614043729
+          }
+        },
+        "BlockSparseRingMultihead": {
+          "implementation": "BlockSparseRingMultihead",
+          "batch_size": 2,
+          "seq_len": 4096,
+          "num_heads": 8,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 57.23937479779124,
+            "std_ms": 7.824685096416946,
+            "min_ms": 45.0198482722044,
+            "max_ms": 74.51041042804718,
+            "median_ms": 57.41280876100063
+          },
+          "memory": {
+            "start_mb": 28.1484375,
+            "peak_mb": 125.1484375,
+            "final_mb": 44.1484375,
+            "delta_mb": 97.0
+          },
+          "throughput": {
+            "tokens_per_second": 143118,
+            "sequences_per_second": 17.470491310093557
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "batch_size": 1,
+        "seq_len": 8192,
+        "num_heads": 8,
+        "head_dim": 64,
+        "embed_dim": 512
+      },
+      "results": {
+        "RingDilatedAttentionHilbertOptimized": {
+          "error": "No module named 'src.dilated_attention_pytorch.ring_dilated_attention_hybrid_optimized_v2'",
+          "name": "RingDilatedAttentionHilbertOptimized"
+        },
+        "BlockSparseRingDilated": {
+          "implementation": "BlockSparseRingDilated",
+          "batch_size": 1,
+          "seq_len": 8192,
+          "num_heads": 8,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 77.00132671743631,
+            "std_ms": 5.7206210721311335,
+            "min_ms": 67.78511311858892,
+            "max_ms": 86.77356969565153,
+            "median_ms": 75.52745472639799
+          },
+          "memory": {
+            "start_mb": 60.1484375,
+            "peak_mb": 94.4033203125,
+            "final_mb": 76.1484375,
+            "delta_mb": 34.2548828125
+          },
+          "throughput": {
+            "tokens_per_second": 106387,
+            "sequences_per_second": 12.986789223380462
+          }
+        },
+        "BlockSparseRingMultihead": {
+          "implementation": "BlockSparseRingMultihead",
+          "batch_size": 1,
+          "seq_len": 8192,
+          "num_heads": 8,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 82.68577428534627,
+            "std_ms": 12.966566576491019,
+            "min_ms": 69.9706356972456,
+            "max_ms": 109.22383610159159,
+            "median_ms": 77.99918344244361
+          },
+          "memory": {
+            "start_mb": 28.1484375,
+            "peak_mb": 125.1484375,
+            "final_mb": 44.1484375,
+            "delta_mb": 97.0
+          },
+          "throughput": {
+            "tokens_per_second": 99073,
+            "sequences_per_second": 12.093978784658027
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "batch_size": 1,
+        "seq_len": 16384,
+        "num_heads": 8,
+        "head_dim": 64,
+        "embed_dim": 512
+      },
+      "results": {
+        "RingDilatedAttentionHilbertOptimized": {
+          "error": "No module named 'src.dilated_attention_pytorch.ring_dilated_attention_hybrid_optimized_v2'",
+          "name": "RingDilatedAttentionHilbertOptimized"
+        },
+        "BlockSparseRingDilated": {
+          "implementation": "BlockSparseRingDilated",
+          "batch_size": 1,
+          "seq_len": 16384,
+          "num_heads": 8,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 156.61437269300222,
+            "std_ms": 14.353459297911002,
+            "min_ms": 133.4378384053707,
+            "max_ms": 181.65919836610556,
+            "median_ms": 156.88267070800066
+          },
+          "memory": {
+            "start_mb": 108.2265625,
+            "peak_mb": 174.486328125,
+            "final_mb": 140.2265625,
+            "delta_mb": 66.259765625
+          },
+          "throughput": {
+            "tokens_per_second": 104613,
+            "sequences_per_second": 6.385110017713473
+          }
+        },
+        "BlockSparseRingMultihead": {
+          "implementation": "BlockSparseRingMultihead",
+          "batch_size": 1,
+          "seq_len": 16384,
+          "num_heads": 8,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 202.4650896899402,
+            "std_ms": 81.65512433685817,
+            "min_ms": 150.39861388504505,
+            "max_ms": 418.66134479641914,
+            "median_ms": 164.07631058245897
+          },
+          "memory": {
+            "start_mb": 44.2265625,
+            "peak_mb": 237.2265625,
+            "final_mb": 76.2265625,
+            "delta_mb": 193.0
+          },
+          "throughput": {
+            "tokens_per_second": 80922,
+            "sequences_per_second": 4.9391230929313465
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "batch_size": 2,
+        "seq_len": 4096,
+        "num_heads": 4,
+        "head_dim": 64,
+        "embed_dim": 256
+      },
+      "results": {
+        "RingDilatedAttentionHilbertOptimized": {
+          "error": "No module named 'src.dilated_attention_pytorch.ring_dilated_attention_hybrid_optimized_v2'",
+          "name": "RingDilatedAttentionHilbertOptimized"
+        },
+        "BlockSparseRingDilated": {
+          "implementation": "BlockSparseRingDilated",
+          "batch_size": 2,
+          "seq_len": 4096,
+          "num_heads": 4,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 44.89644141867757,
+            "std_ms": 4.322107936376642,
+            "min_ms": 37.49536629766226,
+            "max_ms": 52.38777119666338,
+            "median_ms": 44.03226589784026
+          },
+          "memory": {
+            "start_mb": 33.14453125,
+            "peak_mb": 51.3974609375,
+            "final_mb": 41.14453125,
+            "delta_mb": 18.2529296875
+          },
+          "throughput": {
+            "tokens_per_second": 182464,
+            "sequences_per_second": 22.27348022251014
+          }
+        },
+        "BlockSparseRingMultihead": {
+          "implementation": "BlockSparseRingMultihead",
+          "batch_size": 2,
+          "seq_len": 4096,
+          "num_heads": 4,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 43.074063677340746,
+            "std_ms": 3.4835485870742473,
+            "min_ms": 36.987919360399246,
+            "max_ms": 48.85410238057375,
+            "median_ms": 42.89500415325165
+          },
+          "memory": {
+            "start_mb": 17.14453125,
+            "peak_mb": 66.14453125,
+            "final_mb": 25.14453125,
+            "delta_mb": 49.0
+          },
+          "throughput": {
+            "tokens_per_second": 190184,
+            "sequences_per_second": 23.215826755766564
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "batch_size": 2,
+        "seq_len": 4096,
+        "num_heads": 16,
+        "head_dim": 64,
+        "embed_dim": 1024
+      },
+      "results": {
+        "RingDilatedAttentionHilbertOptimized": {
+          "error": "No module named 'src.dilated_attention_pytorch.ring_dilated_attention_hybrid_optimized_v2'",
+          "name": "RingDilatedAttentionHilbertOptimized"
+        },
+        "BlockSparseRingDilated": {
+          "implementation": "BlockSparseRingDilated",
+          "batch_size": 2,
+          "seq_len": 4096,
+          "num_heads": 16,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 53.78583054989576,
+            "std_ms": 10.822987791285147,
+            "min_ms": 46.092648059129715,
+            "max_ms": 84.00192391127348,
+            "median_ms": 49.5986551977694
+          },
+          "memory": {
+            "start_mb": 120.15625,
+            "peak_mb": 193.1591796875,
+            "final_mb": 152.15625,
+            "delta_mb": 73.0029296875
+          },
+          "throughput": {
+            "tokens_per_second": 152307,
+            "sequences_per_second": 18.592257287397004
+          }
+        },
+        "BlockSparseRingMultihead": {
+          "implementation": "BlockSparseRingMultihead",
+          "batch_size": 2,
+          "seq_len": 4096,
+          "num_heads": 16,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 120.25412525981665,
+            "std_ms": 23.736359056819552,
+            "min_ms": 78.21925636380911,
+            "max_ms": 150.971214286983,
+            "median_ms": 125.4244465380907
+          },
+          "memory": {
+            "start_mb": 56.15625,
+            "peak_mb": 249.15625,
+            "final_mb": 88.15625,
+            "delta_mb": 193.0
+          },
+          "throughput": {
+            "tokens_per_second": 68122,
+            "sequences_per_second": 8.315723039350514
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "batch_size": 1,
+        "seq_len": 4096,
+        "num_heads": 12,
+        "head_dim": 64,
+        "embed_dim": 768
+      },
+      "results": {
+        "RingDilatedAttentionHilbertOptimized": {
+          "error": "No module named 'src.dilated_attention_pytorch.ring_dilated_attention_hybrid_optimized_v2'",
+          "name": "RingDilatedAttentionHilbertOptimized"
+        },
+        "BlockSparseRingDilated": {
+          "implementation": "BlockSparseRingDilated",
+          "batch_size": 1,
+          "seq_len": 4096,
+          "num_heads": 12,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 35.58560675010085,
+            "std_ms": 3.1131113531923744,
+            "min_ms": 31.49409219622612,
+            "max_ms": 41.144498623907566,
+            "median_ms": 34.65037001296878
+          },
+          "memory": {
+            "start_mb": 53.15234375,
+            "peak_mb": 80.5302734375,
+            "final_mb": 65.15234375,
+            "delta_mb": 27.3779296875
+          },
+          "throughput": {
+            "tokens_per_second": 115102,
+            "sequences_per_second": 28.10124910957619
+          }
+        },
+        "BlockSparseRingMultihead": {
+          "implementation": "BlockSparseRingMultihead",
+          "batch_size": 1,
+          "seq_len": 4096,
+          "num_heads": 12,
+          "head_dim": 64,
+          "dtype": "float32",
+          "timing": {
+            "mean_ms": 45.94504861161113,
+            "std_ms": 7.795958037228069,
+            "min_ms": 38.41709531843662,
+            "max_ms": 59.566110372543335,
+            "median_ms": 41.552120354026556
+          },
+          "memory": {
+            "start_mb": 29.15234375,
+            "peak_mb": 102.15234375,
+            "final_mb": 41.15234375,
+            "delta_mb": 73.0
+          },
+          "throughput": {
+            "tokens_per_second": 89149,
+            "sequences_per_second": 21.76513096010268
+          }
+        }
+      }
+    }
+  ]
+}
