@@ -255,7 +255,7 @@ def test_edge_cases():
 
         x = torch.randn(1, 63, 128, device="cuda")  # 63 not divisible by 16
         with torch.no_grad():
-            out = module(x)
+            _ = module(x)
         print("✓ Handles non-divisible sequence length (padding applied)")
     except Exception as e:
         print(f"✗ Failed with non-divisible sequence length: {e}")
