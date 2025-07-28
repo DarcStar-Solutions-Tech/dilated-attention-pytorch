@@ -29,9 +29,12 @@ class TestHilbertAttentionTritonWrapper:
 
     @pytest.fixture
     def device(self):
-        """Get test device (CPU for wrapper tests)."""
-        # Use CPU to avoid Triton kernel issues
-        return torch.device("cpu")
+        """Get test device."""
+        # Triton kernels require CUDA
+        if torch.cuda.is_available():
+            return torch.device("cuda")
+        else:
+            pytest.skip("CUDA required for Triton kernels")
 
     def test_initialization(self, device):
         """Test wrapper initialization with various parameters."""
@@ -86,18 +89,22 @@ class TestHilbertAttentionTritonWrapper:
 
     def test_gradient_flow(self, device):
         """Test that gradients flow through the wrapper."""
+        # Use dimensions that meet Triton requirements
+        head_dim = 16 if device.type == "cuda" else 8
+        num_heads = 4 if device.type == "cuda" else 2
+
         wrapper = HilbertAttentionTritonWrapper(
             segment_lengths=[16],
             dilation_rates=[1],
             dropout=0.0,
-            num_heads=2,
-            head_dim=8,
+            num_heads=num_heads,
+            head_dim=head_dim,
         ).to(device)
 
-        # Small inputs for CPU testing
-        q = torch.randn(1, 16, 2, 8, device=device, requires_grad=True)
-        k = torch.randn(1, 16, 2, 8, device=device, requires_grad=True)
-        v = torch.randn(1, 16, 2, 8, device=device, requires_grad=True)
+        # Create tensors with appropriate dimensions
+        q = torch.randn(1, 16, num_heads, head_dim, device=device, requires_grad=True)
+        k = torch.randn(1, 16, num_heads, head_dim, device=device, requires_grad=True)
+        v = torch.randn(1, 16, num_heads, head_dim, device=device, requires_grad=True)
 
         # Forward pass
         output = wrapper(q, k, v)
@@ -212,18 +219,22 @@ class TestHilbertAttentionTritonWrapper:
     @pytest.mark.parametrize("seq_len", [16, 32, 64])
     def test_batch_and_sequence_dimensions(self, device, batch_size, seq_len):
         """Test wrapper with different batch sizes and sequence lengths."""
+        # Use dimensions that meet Triton requirements when on CUDA
+        head_dim = 16 if device.type == "cuda" else 8
+        num_heads = 4 if device.type == "cuda" else 2
+
         wrapper = HilbertAttentionTritonWrapper(
-            segment_lengths=[16],  # Small segment for CPU
+            segment_lengths=[16],
             dilation_rates=[1],
-            num_heads=2,
-            head_dim=8,
+            num_heads=num_heads,
+            head_dim=head_dim,
         ).to(device)
 
-        q = torch.randn(batch_size, seq_len, 2, 8, device=device)
-        k = torch.randn(batch_size, seq_len, 2, 8, device=device)
-        v = torch.randn(batch_size, seq_len, 2, 8, device=device)
+        q = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
+        k = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
+        v = torch.randn(batch_size, seq_len, num_heads, head_dim, device=device)
 
         with torch.no_grad():
             output = wrapper(q, k, v)
 
-        assert output.shape == (batch_size, seq_len, 2, 8)
+        assert output.shape == (batch_size, seq_len, num_heads, head_dim)
