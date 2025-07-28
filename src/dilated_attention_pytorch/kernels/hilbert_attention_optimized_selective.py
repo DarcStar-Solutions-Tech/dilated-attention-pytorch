@@ -9,6 +9,8 @@ import torch.nn.functional as F
 import triton
 import triton.language as tl
 
+from .cache_manager import BoundedCache
+
 
 @triton.jit
 def hilbert_attention_selective_kernel(
@@ -222,7 +224,12 @@ class HilbertAttentionSelectiveOptimized(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         # Cache for segment-level Hilbert patterns
-        self._segment_hilbert_cache = {}
+        # Initialize bounded cache for segment patterns
+        self._segment_hilbert_cache = BoundedCache(
+            max_size=32,
+            max_memory_mb=50.0,
+            name=f"{self.__class__.__name__}_segment_hilbert",
+        )
 
     def get_segment_hilbert_pattern(
         self, effective_size: int, device: torch.device
@@ -231,7 +238,10 @@ class HilbertAttentionSelectiveOptimized(nn.Module):
         Get Hilbert pattern for sparse positions within a segment.
         Much smaller than full sequence Hilbert map.
         """
-        if effective_size not in self._segment_hilbert_cache:
+        # Try to get from cache
+        pattern = self._segment_hilbert_cache.get(effective_size)
+
+        if pattern is None or pattern.device != device:
             # Create Hilbert ordering for effective_size positions
             if effective_size <= 16:
                 # Simple pattern for small sizes
@@ -241,9 +251,10 @@ class HilbertAttentionSelectiveOptimized(nn.Module):
                 pattern = self._compute_hilbert_pattern(effective_size)
                 pattern = pattern.to(device)
 
-            self._segment_hilbert_cache[effective_size] = pattern
+            # Store in cache (will handle LRU eviction if needed)
+            self._segment_hilbert_cache.put(effective_size, pattern)
 
-        return self._segment_hilbert_cache[effective_size]
+        return pattern
 
     def _compute_hilbert_pattern(self, size: int) -> torch.Tensor:
         """Compute Hilbert pattern for given size."""

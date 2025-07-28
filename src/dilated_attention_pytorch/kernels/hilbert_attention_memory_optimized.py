@@ -16,6 +16,8 @@ import triton
 import triton.language as tl
 from typing import Tuple
 
+from .cache_manager import BoundedCache
+
 
 @triton.jit
 def hilbert_attention_memory_optimized_kernel(
@@ -273,7 +275,12 @@ class HilbertAttentionMemoryOptimized(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         # Cache for Hilbert mappings
-        self._hilbert_cache = {}
+        # Initialize bounded cache with lower limits for memory-optimized version
+        self._hilbert_cache = BoundedCache(
+            max_size=16,  # Smaller cache for memory-constrained environments
+            max_memory_mb=50.0,
+            name=f"{self.__class__.__name__}_hilbert",
+        )
         self._device_capability = None
 
     def get_memory_optimized_block_sizes(
@@ -399,9 +406,15 @@ class HilbertAttentionMemoryOptimized(nn.Module):
 
     def get_hilbert_mapping(self, seq_len: int, device: torch.device) -> torch.Tensor:
         """Get cached Hilbert mapping."""
-        if seq_len not in self._hilbert_cache:
+        # Try to get from cache
+        mapping = self._hilbert_cache.get(seq_len)
+
+        if mapping is None or mapping.device != device:
             from .hilbert_attention_core import create_hilbert_mapping
 
-            mapping = create_hilbert_mapping(seq_len)
-            self._hilbert_cache[seq_len] = mapping.to(device)
-        return self._hilbert_cache[seq_len]
+            # Create new mapping
+            mapping = create_hilbert_mapping(seq_len).to(device)
+            # Store in cache (will handle LRU eviction if needed)
+            self._hilbert_cache.put(seq_len, mapping)
+
+        return mapping

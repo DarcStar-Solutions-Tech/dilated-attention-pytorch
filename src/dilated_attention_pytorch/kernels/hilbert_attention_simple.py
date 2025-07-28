@@ -10,7 +10,8 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict
+
+from .cache_manager import BoundedCache
 
 
 def create_hilbert_curve_2d(n: int) -> torch.Tensor:
@@ -143,14 +144,23 @@ class HilbertAttentionSimple(nn.Module):
         self.dropout_layer = nn.Dropout(dropout)
 
         # Cache for Hilbert mappings
-        self._hilbert_cache: Dict[int, torch.Tensor] = {}
+        # Initialize bounded cache with reasonable limits
+        self._hilbert_cache = BoundedCache(
+            max_size=32, max_memory_mb=100.0, name=f"{self.__class__.__name__}_hilbert"
+        )
 
     def get_hilbert_mapping(self, seq_len: int, device: torch.device) -> torch.Tensor:
         """Get cached Hilbert mapping or create new one."""
-        if seq_len not in self._hilbert_cache:
-            mapping = create_hilbert_mapping(seq_len)
-            self._hilbert_cache[seq_len] = mapping.to(device)
-        return self._hilbert_cache[seq_len]
+        # Try to get from cache
+        mapping = self._hilbert_cache.get(seq_len)
+
+        if mapping is None or mapping.device != device:
+            # Create new mapping
+            mapping = create_hilbert_mapping(seq_len).to(device)
+            # Store in cache (will handle LRU eviction if needed)
+            self._hilbert_cache.put(seq_len, mapping)
+
+        return mapping
 
     def forward(self, x: torch.Tensor, is_causal: bool = False) -> torch.Tensor:
         """

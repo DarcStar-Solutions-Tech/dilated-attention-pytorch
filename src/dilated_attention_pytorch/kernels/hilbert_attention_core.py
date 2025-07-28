@@ -15,6 +15,8 @@ import triton
 import triton.language as tl
 import math
 
+from .cache_manager import BoundedCache
+
 
 @triton.jit
 def hilbert_attention_kernel(
@@ -817,7 +819,12 @@ class HilbertAttentionCore(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         # Cache for Hilbert mappings
-        self._hilbert_cache = {}
+        # Initialize bounded cache with reasonable limits
+        self._hilbert_cache = BoundedCache(
+            max_size=32,  # Support up to 32 different sequence lengths
+            max_memory_mb=100.0,  # Limit to 100MB for Hilbert mappings
+            name=f"{self.__class__.__name__}_hilbert",
+        )
 
         # Device capability cache for optimal block sizes
         self._device_capability = None
@@ -831,10 +838,16 @@ class HilbertAttentionCore(nn.Module):
 
     def get_hilbert_mapping(self, seq_len: int, device: torch.device) -> torch.Tensor:
         """Get cached Hilbert mapping or create new one."""
-        if seq_len not in self._hilbert_cache:
-            mapping = create_hilbert_mapping(seq_len)
-            self._hilbert_cache[seq_len] = mapping.to(device)
-        return self._hilbert_cache[seq_len]
+        # Try to get from cache
+        mapping = self._hilbert_cache.get(seq_len)
+
+        if mapping is None or mapping.device != device:
+            # Create new mapping
+            mapping = create_hilbert_mapping(seq_len).to(device)
+            # Store in cache (will handle LRU eviction if needed)
+            self._hilbert_cache.put(seq_len, mapping)
+
+        return mapping
 
     def get_optimal_block_sizes(self, seq_len: int, device: torch.device) -> tuple:
         """Get optimal block sizes based on sequence length and hardware.
@@ -1090,3 +1103,11 @@ class HilbertAttentionCore(nn.Module):
         out = self.dropout(out)
 
         return out
+
+    def clear_cache(self) -> None:
+        """Clear the Hilbert mapping cache to free memory."""
+        self._hilbert_cache.clear()
+
+    def get_cache_stats(self) -> dict:
+        """Get cache statistics for monitoring."""
+        return self._hilbert_cache.get_stats()

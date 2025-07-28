@@ -10,6 +10,8 @@ import torch.nn.functional as F
 import time
 from typing import Dict
 
+from .cache_manager import BoundedCache
+
 
 class HilbertAttentionSparseSimple(nn.Module):
     """
@@ -44,7 +46,12 @@ class HilbertAttentionSparseSimple(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         # Cache for sparse Hilbert patterns
-        self._sparse_pattern_cache = {}
+        # Initialize bounded cache for sparse patterns
+        self._sparse_pattern_cache = BoundedCache(
+            max_size=32,
+            max_memory_mb=50.0,  # Sparse patterns are smaller
+            name=f"{self.__class__.__name__}_sparse_pattern",
+        )
 
     def create_sparse_hilbert_pattern(self, num_positions: int) -> torch.Tensor:
         """
@@ -117,11 +124,16 @@ class HilbertAttentionSparseSimple(nn.Module):
 
             # Key optimization: Create pattern only for sparse positions
             if use_hilbert and num_sparse > 1:
-                if num_sparse not in self._sparse_pattern_cache:
-                    self._sparse_pattern_cache[num_sparse] = (
-                        self.create_sparse_hilbert_pattern(num_sparse).to(device)
+                # Try to get from cache
+                sparse_pattern = self._sparse_pattern_cache.get(num_sparse)
+
+                if sparse_pattern is None or sparse_pattern.device != device:
+                    # Create new pattern
+                    sparse_pattern = self.create_sparse_hilbert_pattern(num_sparse).to(
+                        device
                     )
-                sparse_pattern = self._sparse_pattern_cache[num_sparse]
+                    # Store in cache (will handle LRU eviction if needed)
+                    self._sparse_pattern_cache.put(num_sparse, sparse_pattern)
             else:
                 sparse_pattern = torch.arange(num_sparse, device=device)
 
@@ -158,6 +170,14 @@ class HilbertAttentionSparseSimple(nn.Module):
             out = out[:, :M, :]
 
         return out
+
+    def clear_cache(self) -> None:
+        """Clear the sparse pattern cache to free memory."""
+        self._sparse_pattern_cache.clear()
+
+    def get_cache_stats(self) -> dict:
+        """Get cache statistics for monitoring."""
+        return self._sparse_pattern_cache.get_stats()
 
     def compare_memory_usage(self, seq_len: int) -> Dict[str, any]:
         """Compare memory usage with original approach."""

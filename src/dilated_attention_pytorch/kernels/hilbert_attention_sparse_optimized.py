@@ -11,6 +11,8 @@ import triton
 import triton.language as tl
 from typing import Dict, Tuple
 
+from .cache_manager import BoundedCache
+
 
 @triton.jit
 def hilbert_sparse_attention_kernel(
@@ -228,7 +230,12 @@ class HilbertAttentionSparseOptimized(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         # Cache for sparse Hilbert patterns (much smaller than full sequence)
-        self._sparse_hilbert_cache: Dict[int, torch.Tensor] = {}
+        # Initialize bounded cache for sparse patterns
+        self._sparse_hilbert_cache = BoundedCache(
+            max_size=32,
+            max_memory_mb=50.0,
+            name=f"{self.__class__.__name__}_sparse_hilbert",
+        )
 
     def create_sparse_hilbert_pattern(self, num_sparse_positions: int) -> torch.Tensor:
         """
@@ -281,14 +288,16 @@ class HilbertAttentionSparseOptimized(nn.Module):
         self, num_sparse_positions: int, device: torch.device
     ) -> torch.Tensor:
         """Get cached sparse Hilbert pattern."""
-        if num_sparse_positions not in self._sparse_hilbert_cache:
-            pattern = self.create_sparse_hilbert_pattern(num_sparse_positions)
-            self._sparse_hilbert_cache[num_sparse_positions] = pattern
+        # Try to get from cache
+        pattern = self._sparse_hilbert_cache.get(num_sparse_positions)
 
-        pattern = self._sparse_hilbert_cache[num_sparse_positions]
-        if pattern.device != device:
-            pattern = pattern.to(device)
-            self._sparse_hilbert_cache[num_sparse_positions] = pattern
+        if pattern is None or pattern.device != device:
+            # Create new pattern
+            pattern = self.create_sparse_hilbert_pattern(num_sparse_positions).to(
+                device
+            )
+            # Store in cache (will handle LRU eviction if needed)
+            self._sparse_hilbert_cache.put(num_sparse_positions, pattern)
 
         return pattern
 
