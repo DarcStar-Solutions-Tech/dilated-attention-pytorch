@@ -784,8 +784,9 @@ class HilbertAttentionCore(nn.Module):
         qkv = qkv.permute(2, 0, 3, 1, 4).contiguous()
 
         # For float16, we need to ensure computations are done in float32
-        compute_dtype = torch.float32 if x.dtype == torch.float16 else x.dtype
-        if x.dtype == torch.float16:
+        compute_dtype = torch.float32 if qkv.dtype == torch.float16 else qkv.dtype
+        original_dtype = qkv.dtype
+        if qkv.dtype == torch.float16:
             qkv = qkv.to(compute_dtype)
 
         # Check if dimensions meet Triton requirements
@@ -923,8 +924,8 @@ class HilbertAttentionCore(nn.Module):
         out = out.transpose(1, 2).reshape(B, M_padded, D)
 
         # Convert back to original dtype if needed
-        if x.dtype == torch.float16:
-            out = out.to(x.dtype)
+        if original_dtype == torch.float16:
+            out = out.to(original_dtype)
 
         # Remove padding if applied
         if M_padded > M:
