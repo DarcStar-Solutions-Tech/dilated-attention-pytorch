@@ -54,14 +54,14 @@ def hilbert_attention_kernel(
     BLOCK_M: tl.constexpr,
     BLOCK_D: tl.constexpr,
 ):
-    """Unified Hilbert attention forward kernel."""
+    """Simplified Hilbert attention forward kernel - process in original space."""
     # Program ID
     pid_m = tl.program_id(0)
     pid_bh = tl.program_id(1)
     pid_b = pid_bh // H
     pid_h = pid_bh % H
 
-    # Query indices for this block
+    # Query indices for this block (in original space)
     offs_m = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
     offs_d = tl.arange(0, BLOCK_D)
 
@@ -69,79 +69,73 @@ def hilbert_attention_kernel(
     mask_m = offs_m < M
     mask_d = offs_d < D
 
-    # Get Hilbert positions for queries in this block
-    hilbert_pos_q = tl.load(hilbert_map + offs_m, mask=mask_m, other=0)
-
-    # Load queries using Hilbert positions
+    # Load queries directly (no Hilbert reordering for queries)
     q_ptrs = (
         Q
         + pid_b * stride_qb
         + pid_h * stride_qh
-        + hilbert_pos_q[:, None] * stride_qm
+        + offs_m[:, None] * stride_qm
         + offs_d[None, :] * stride_qd
     )
     q = tl.load(q_ptrs, mask=mask_m[:, None] & mask_d[None, :], other=0.0)
-
-    # Scale queries
     q = q * scale
 
     # Initialize accumulators
     acc = tl.zeros([BLOCK_M, BLOCK_D], dtype=tl.float32)
-    norm = tl.zeros([BLOCK_M], dtype=tl.float32) + 1e-10
+    _ = tl.zeros([BLOCK_M], dtype=tl.float32)
 
-    # For each query position, compute its segment
-    seg_idx = offs_m // segment_size
-    seg_start = seg_idx * segment_size
-    seg_end = seg_start + segment_size
+    # For each query, determine its segment
+    # Process all queries in parallel
+    for m_idx in range(BLOCK_M):
+        if offs_m[m_idx] < M:
+            # Determine segment for this query
+            seg_idx = offs_m[m_idx] // segment_size
+            seg_start = seg_idx * segment_size
+            seg_end = tl.minimum(seg_start + segment_size, M)
 
-    # Process keys in the segment with dilation
-    for offset in range(0, segment_size, dilation_rate):
-        key_pos = seg_start + offset
+            # Initialize per-query accumulator
+            q_vec = q[m_idx, :]
+            acc_local = tl.zeros([BLOCK_D], dtype=tl.float32)
+            norm_local = 0.0
 
-        # Check if key position is valid
-        mask_k = (key_pos < M) & (key_pos < seg_end)
+            # Process keys in the segment with dilation
+            for k_idx in range(seg_start, seg_end, dilation_rate):
+                if k_idx < M:
+                    # Get Hilbert-reordered position for this key
+                    k_hilbert = tl.load(hilbert_map + k_idx)
 
-        if tl.sum(mask_k) > 0:
-            # Get Hilbert position for this key
-            key_hilbert = tl.load(hilbert_map + key_pos, mask=mask_k, other=0)
+                    # Load key and value
+                    k_ptr = (
+                        K
+                        + pid_b * stride_kb
+                        + pid_h * stride_kh
+                        + k_hilbert * stride_kn
+                    )
+                    v_ptr = (
+                        V
+                        + pid_b * stride_vb
+                        + pid_h * stride_vh
+                        + k_hilbert * stride_vn
+                    )
 
-            # Load key and value using Hilbert position
-            k_ptrs = (
-                K
-                + pid_b * stride_kb
-                + pid_h * stride_kh
-                + key_hilbert * stride_kn
-                + offs_d * stride_kd
-            )
-            v_ptrs = (
-                V
-                + pid_b * stride_vb
-                + pid_h * stride_vh
-                + key_hilbert * stride_vn
-                + offs_d * stride_vd
-            )
+                    k_vec = tl.load(k_ptr + offs_d * stride_kd, mask=mask_d, other=0.0)
+                    v_vec = tl.load(v_ptr + offs_d * stride_vd, mask=mask_d, other=0.0)
 
-            k = tl.load(k_ptrs, mask=mask_k & mask_d, other=0.0)
-            v = tl.load(v_ptrs, mask=mask_k & mask_d, other=0.0)
+                    # Compute attention score
+                    score = tl.sum(q_vec * k_vec)
+                    score_exp = tl.exp(score)
 
-            # Compute attention scores for all queries against this key
-            scores = tl.sum(q * k[None, :], axis=1)
+                    # Accumulate
+                    acc_local += score_exp * v_vec
+                    norm_local += score_exp
 
-            # Mask invalid scores
-            scores = tl.where(mask_k & mask_m, scores, -1e9)
+            # Store results
+            if norm_local > 0:
+                acc[m_idx, :] = acc_local / norm_local
+            else:
+                acc[m_idx, :] = 0.0
 
-            # Stable softmax accumulation
-            scores_max = tl.max(scores, axis=0)
-            scores_exp = tl.exp(scores - scores_max)
-
-            # Update accumulator
-            acc += scores_exp[:, None] * v[None, :]
-            norm += scores_exp
-
-    # Normalize
-    out = acc / norm[:, None]
-
-    # Store output back to original positions
+    # Store output
     out_ptrs = (
         Out
         + pid_b * stride_ob
@@ -149,7 +143,7 @@ def hilbert_attention_kernel(
         + offs_m[:, None] * stride_om
         + offs_d[None, :] * stride_od
     )
-    tl.store(out_ptrs, out, mask=mask_m[:, None] & mask_d[None, :])
+    tl.store(out_ptrs, acc, mask=mask_m[:, None] & mask_d[None, :])
 
 
 @triton.jit

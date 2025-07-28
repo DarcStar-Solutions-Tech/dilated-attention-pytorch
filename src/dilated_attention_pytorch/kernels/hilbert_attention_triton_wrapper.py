@@ -4,7 +4,12 @@ Wrapper for HilbertAttentionCore to match the standard q,k,v interface.
 
 import torch
 import torch.nn as nn
-from .hilbert_attention_core import HilbertAttentionCore
+
+# Try to import Triton version, fall back to simple version
+try:
+    from .hilbert_attention_core import HilbertAttentionCore
+except (ImportError, RuntimeError):
+    from .hilbert_attention_simple import HilbertAttentionSimple as HilbertAttentionCore
 
 
 class HilbertAttentionTritonWrapper(nn.Module):
