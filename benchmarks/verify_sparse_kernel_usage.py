@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def verify_kernel_usage():
@@ -18,7 +18,7 @@ def verify_kernel_usage():
     print("=" * 60)
 
     # Test with dilation_rate > 1
-    module = HilbertAttention(
+    module = UnifiedHilbertAttention(
         hidden_dim=768,
         num_heads=12,
         segment_size=128,
@@ -39,7 +39,7 @@ def verify_kernel_usage():
     print(f"Should use sparse kernel: dilation_rate={module.dilation_rate} > 1")
 
     # Let's also check what happens with dilation_rate=1
-    module2 = HilbertAttention(
+    module2 = UnifiedHilbertAttention(
         hidden_dim=768,
         num_heads=12,
         segment_size=128,

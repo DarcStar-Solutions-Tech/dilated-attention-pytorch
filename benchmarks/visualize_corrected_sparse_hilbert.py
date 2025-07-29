@@ -68,7 +68,7 @@ def visualize_comparison():
     ax = axes[0, 1]
 
     # Create module with corrected implementation
-    module = HilbertAttention(
+    module = UnifiedHilbertAttention(
         hidden_dim=768,
         num_heads=12,
         segment_size=segment_size,

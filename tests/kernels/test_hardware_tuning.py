@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Import the kernels
-from dilated_attention_pytorch.kernels import HilbertAttentionCore
-from dilated_attention_pytorch.kernels import HilbertAttentionSimple
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def get_gpu_info():
@@ -111,7 +111,7 @@ def test_sequence_scaling():
     sequence_lengths = [128, 256, 512, 768, 1024, 1536, 2048]
 
     # Create modules
-    core_module = HilbertAttentionCore(
+    core_module = UnifiedHilbertAttention(
         hidden_dim=hidden_dim,
         num_heads=num_heads,
         segment_size=segment_size,
@@ -119,7 +119,7 @@ def test_sequence_scaling():
         use_custom_backward=False,  # For fair comparison
     )
 
-    simple_module = HilbertAttentionSimple(
+    simple_module = UnifiedHilbertAttention(
         hidden_dim=hidden_dim,
         num_heads=num_heads,
         segment_size=segment_size,
@@ -219,9 +219,9 @@ def plot_results(
     speedups = [s / c for c, s in zip(core_times, simple_times)]
 
     # Performance plot
-    ax1.plot(seq_lengths, core_times, "b-o", label="HilbertAttentionCore", linewidth=2)
+    ax1.plot(seq_lengths, core_times, "b-o", label="UnifiedHilbertAttention", linewidth=2)
     ax1.plot(
-        seq_lengths, simple_times, "r-s", label="HilbertAttentionSimple", linewidth=2
+        seq_lengths, simple_times, "r-s", label="UnifiedHilbertAttention", linewidth=2
     )
     ax1.set_xlabel("Sequence Length")
     ax1.set_ylabel("Forward Pass Time (ms)")
@@ -269,7 +269,7 @@ def test_block_size_impact():
     num_heads = 12
 
     # Create a module to get its block size selection
-    module = HilbertAttentionCore(
+    module = UnifiedHilbertAttention(
         hidden_dim=hidden_dim, num_heads=num_heads, segment_size=128, dilation_rate=2
     )
 

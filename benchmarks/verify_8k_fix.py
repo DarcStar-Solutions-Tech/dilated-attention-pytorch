@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def benchmark_sequence(seq_len, batch_size=1, num_runs=5, warmup=3):
@@ -20,7 +20,7 @@ def benchmark_sequence(seq_len, batch_size=1, num_runs=5, warmup=3):
         return {}
 
     # Create module
-    module = HilbertAttention(
+    module = UnifiedHilbertAttention(
         hidden_dim=768,
         num_heads=12,
         segment_size=128,

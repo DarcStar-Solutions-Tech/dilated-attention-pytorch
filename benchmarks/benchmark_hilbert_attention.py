@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Comprehensive benchmark for unified HilbertAttention implementation.
+Comprehensive benchmark for unified UnifiedHilbertAttention implementation.
 
-This benchmark tests the new consolidated HilbertAttention module which
+This benchmark tests the new consolidated UnifiedHilbertAttention module which
 automatically selects optimizations based on input parameters and hardware.
 
 Tests:
@@ -30,7 +30,7 @@ import sys
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 @dataclass
@@ -150,7 +150,7 @@ def run_benchmark_suite(
         )
 
         # Create module
-        module = HilbertAttention(
+        module = UnifiedHilbertAttention(
             hidden_dim=config["hidden_dim"],
             num_heads=config["num_heads"],
             segment_size=config["segment_size"],

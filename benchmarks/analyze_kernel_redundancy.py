@@ -25,7 +25,7 @@ kernel_performance = {
     },
     "hilbert_attention_simple.py": {
         "time_1k": 1.40,
-        "class": "HilbertAttentionCore",  # Note: has 2 classes
+        "class": "UnifiedHilbertAttention",  # Note: has 2 classes
         "features": ["simple", "basic"],
         "wins": 0,
     },
@@ -37,13 +37,13 @@ kernel_performance = {
     },
     "hilbert_attention_enhanced.py": {
         "time_1k": 2.44,
-        "class": "HilbertAttentionEnhanced",
+        "class": "UnifiedHilbertAttentionOptimizedEnhanced",
         "features": ["enhanced"],
         "wins": 0,
     },
     "hilbert_attention.py": {
         "time_1k": 2.55,
-        "class": "HilbertAttention",
+        "class": "UnifiedHilbertAttention",
         "features": ["basic"],
         "wins": 0,
     },
@@ -55,7 +55,7 @@ kernel_performance = {
     },
     "hilbert_attention_core.py": {
         "time_1k": 3.49,
-        "class": "HilbertAttentionCore",
+        "class": "UnifiedHilbertAttention",
         "features": ["core", "autograd"],
         "wins": 0,
     },

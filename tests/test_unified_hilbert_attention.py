@@ -10,8 +10,8 @@ from dilated_attention_pytorch.kernels import (
     UnifiedHilbertAttention,
     create_hilbert_attention,
     migrate_to_unified,
-    HilbertAttentionCore,
-    HilbertAttentionSimple,
+    UnifiedHilbertAttention,
+    UnifiedHilbertAttention,
 )
 
 
@@ -34,7 +34,7 @@ class TestUnifiedHilbertAttention:
         ]
 
     def test_standard_mode(self, device, test_configs):
-        """Test standard mode matches HilbertAttentionCore."""
+        """Test standard mode matches UnifiedHilbertAttention."""
         for B, N, D, H, seg_size, dil_rate in test_configs:
             # Skip if incompatible
             if N % seg_size != 0:
@@ -51,7 +51,7 @@ class TestUnifiedHilbertAttention:
                 access_mode="standard",
             ).to(device)
 
-            reference = HilbertAttentionCore(
+            reference = UnifiedHilbertAttention(
                 hidden_dim=D,
                 num_heads=H,
                 segment_size=seg_size,
@@ -312,7 +312,7 @@ class TestMigration:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Create old implementation
-        old_module = HilbertAttentionSimple(
+        old_module = UnifiedHilbertAttention(
             hidden_dim=768,
             num_heads=12,
             segment_size=128,
@@ -346,11 +346,11 @@ class TestMigration:
         assert out.shape == x.shape
 
     def test_explicit_implementations(self):
-        """Test using HilbertAttentionCore and HilbertAttentionSimple directly."""
+        """Test using UnifiedHilbertAttention and UnifiedHilbertAttention directly."""
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        # Test HilbertAttentionSimple
-        simple_module = HilbertAttentionSimple(
+        # Test UnifiedHilbertAttention
+        simple_module = UnifiedHilbertAttention(
             hidden_dim=768,
             num_heads=12,
             segment_size=128,
@@ -360,9 +360,9 @@ class TestMigration:
         out = simple_module(x)
         assert out.shape == x.shape
 
-        # Test HilbertAttentionCore if available
-        if HilbertAttentionCore is not None:
-            core_module = HilbertAttentionCore(
+        # Test UnifiedHilbertAttention if available
+        if UnifiedHilbertAttention is not None:
+            core_module = UnifiedHilbertAttention(
                 hidden_dim=768,
                 num_heads=12,
                 segment_size=128,

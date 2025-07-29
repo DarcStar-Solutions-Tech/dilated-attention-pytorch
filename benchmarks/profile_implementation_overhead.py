@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def profile_step_by_step():
@@ -25,7 +25,7 @@ def profile_step_by_step():
     print("=" * 80)
 
     # Create module and input
-    module = HilbertAttention(
+    module = UnifiedHilbertAttention(
         hidden_dim=hidden_dim,
         num_heads=num_heads,
         segment_size=128,

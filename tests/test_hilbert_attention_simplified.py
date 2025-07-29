@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test the simplified HilbertAttention implementation.
+Test the simplified UnifiedHilbertAttention implementation.
 """
 
 import torch
@@ -34,7 +34,7 @@ def test_basic_functionality():
         )
 
         # Create module
-        attn = HilbertAttention(
+        attn = UnifiedHilbertAttention(
             hidden_dim=D,
             num_heads=H,
             segment_size=seg_size,
@@ -81,7 +81,7 @@ def test_cache_management():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Create module with small cache
-    attn = HilbertAttention(
+    attn = UnifiedHilbertAttention(
         hidden_dim=256,
         num_heads=8,
         cache_size=4,  # Small cache for testing
@@ -125,7 +125,7 @@ def test_sparse_attention():
     for dil_rate in dilation_rates:
         print(f"\nTesting dilation_rate={dil_rate}")
 
-        attn = HilbertAttention(
+        attn = UnifiedHilbertAttention(
             hidden_dim=512,
             num_heads=8,
             segment_size=128,
@@ -142,7 +142,7 @@ def test_sparse_attention():
 
         # Check that output is different for different dilation rates
         if dil_rate > 1:
-            attn_standard = HilbertAttention(
+            attn_standard = UnifiedHilbertAttention(
                 hidden_dim=512,
                 num_heads=8,
                 segment_size=128,
@@ -167,7 +167,7 @@ def test_edge_cases():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Test non-divisible sequence lengths
-    attn = HilbertAttention(
+    attn = UnifiedHilbertAttention(
         hidden_dim=256,
         num_heads=8,
         segment_size=64,
@@ -202,7 +202,7 @@ def test_hilbert_mapping():
     seq_lengths = [16, 32, 64, 128, 256, 512, 1024]
 
     for seq_len in seq_lengths:
-        mapping = HilbertAttention._create_hilbert_mapping(seq_len)
+        mapping = UnifiedHilbertAttention._create_hilbert_mapping(seq_len)
 
         # Check properties
         assert mapping.shape == (seq_len,)
@@ -232,7 +232,7 @@ def compare_performance():
     num_heads = 12
 
     # Create module
-    attn = HilbertAttention(
+    attn = UnifiedHilbertAttention(
         hidden_dim=hidden_dim,
         num_heads=num_heads,
         segment_size=256,
@@ -263,7 +263,7 @@ def compare_performance():
 
 
 if __name__ == "__main__":
-    print("Testing Simplified HilbertAttention Implementation")
+    print("Testing Simplified UnifiedHilbertAttention Implementation")
     print("=" * 60)
 
     test_basic_functionality()

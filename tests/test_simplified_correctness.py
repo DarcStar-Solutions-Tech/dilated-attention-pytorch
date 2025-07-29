@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Comprehensive correctness verification for the simplified HilbertAttention.
+Comprehensive correctness verification for the simplified UnifiedHilbertAttention.
 
 This test verifies that the simplified implementation produces correct results
 compared to the original implementations and maintains all expected behavior.
@@ -16,7 +16,7 @@ sys.path.insert(
     0, "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/src"
 )
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def test_attention_correctness():
@@ -34,7 +34,7 @@ def test_attention_correctness():
     head_dim = hidden_dim // num_heads
 
     # Create module
-    attn = HilbertAttention(
+    attn = UnifiedHilbertAttention(
         hidden_dim=hidden_dim,
         num_heads=num_heads,
         segment_size=32,
@@ -102,7 +102,7 @@ def test_dilated_attention_correctness():
     segment_size = 32
     seq_len = 128
 
-    attn = HilbertAttention(
+    attn = UnifiedHilbertAttention(
         hidden_dim=256,
         num_heads=8,
         segment_size=segment_size,
@@ -122,7 +122,7 @@ def test_dilated_attention_correctness():
     # This means the effective attention window is reduced by factor of dilation_rate
 
     # Compare with full attention
-    attn_full = HilbertAttention(
+    attn_full = UnifiedHilbertAttention(
         hidden_dim=256,
         num_heads=8,
         segment_size=segment_size,
@@ -148,7 +148,7 @@ def test_causal_masking():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch.manual_seed(42)
 
-    attn = HilbertAttention(
+    attn = UnifiedHilbertAttention(
         hidden_dim=256,
         num_heads=8,
         dropout=0.0,
@@ -189,7 +189,7 @@ def test_gradient_flow():
     ]
 
     for config in configs:
-        attn = HilbertAttention(hidden_dim=256, num_heads=8, **config).to(device)
+        attn = UnifiedHilbertAttention(hidden_dim=256, num_heads=8, **config).to(device)
 
         # Input with gradients
         x = torch.randn(2, 128, 256, device=device, requires_grad=True)
@@ -226,7 +226,7 @@ def test_numerical_stability():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    attn = HilbertAttention(
+    attn = UnifiedHilbertAttention(
         hidden_dim=256,
         num_heads=8,
         dropout=0.0,
@@ -267,14 +267,14 @@ def test_consistency_across_devices():
     torch.manual_seed(42)
 
     # Create identical modules
-    attn_cpu = HilbertAttention(
+    attn_cpu = UnifiedHilbertAttention(
         hidden_dim=256,
         num_heads=8,
         dilation_rate=2,
         dropout=0.0,
     )
 
-    attn_gpu = HilbertAttention(
+    attn_gpu = UnifiedHilbertAttention(
         hidden_dim=256,
         num_heads=8,
         dilation_rate=2,
@@ -319,7 +319,7 @@ def test_batch_consistency():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch.manual_seed(42)
 
-    attn = HilbertAttention(
+    attn = UnifiedHilbertAttention(
         hidden_dim=256,
         num_heads=8,
         dilation_rate=2,
@@ -356,7 +356,7 @@ def test_hilbert_mapping_properties():
 
     # Test different sequence lengths
     for seq_len in [32, 64, 128, 256, 512, 1000]:
-        mapping = HilbertAttention._create_hilbert_mapping(seq_len)
+        mapping = UnifiedHilbertAttention._create_hilbert_mapping(seq_len)
 
         # Check it's a permutation
         assert mapping.shape == (seq_len,)
@@ -395,7 +395,7 @@ def compare_with_standard_attention():
     torch.manual_seed(42)
 
     # Create our implementation
-    attn = HilbertAttention(
+    attn = UnifiedHilbertAttention(
         hidden_dim=512,
         num_heads=8,
         dropout=0.0,

@@ -7,14 +7,14 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def main():
     """Test with seq_len > 64 to see actual Hilbert mapping."""
 
     # Create mapping for 256
-    mapping = HilbertAttention._create_hilbert_mapping(256)
+    mapping = UnifiedHilbertAttention._create_hilbert_mapping(256)
 
     print("Hilbert mapping for seq_len=256:")
     print("First 32 mappings:")

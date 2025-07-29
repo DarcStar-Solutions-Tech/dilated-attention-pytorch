@@ -10,7 +10,7 @@ sys.path.insert(
     0, "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/src"
 )
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def test_triton_hilbert():
@@ -23,7 +23,7 @@ def test_triton_hilbert():
     device = torch.device("cuda")
 
     # Create attention module
-    attn = HilbertAttention(
+    attn = UnifiedHilbertAttention(
         hidden_dim=256,
         num_heads=8,
         segment_size=64,

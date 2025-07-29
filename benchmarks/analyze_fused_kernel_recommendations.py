@@ -9,7 +9,7 @@ import sys
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def benchmark_implementation(seq_len, batch_size=1, num_runs=10, warmup=3):
@@ -17,7 +17,7 @@ def benchmark_implementation(seq_len, batch_size=1, num_runs=10, warmup=3):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Create module
-    module = HilbertAttention(
+    module = UnifiedHilbertAttention(
         hidden_dim=768,
         num_heads=12,
         segment_size=128,
@@ -202,7 +202,7 @@ def main():
    - Optimal block sizes configured
 
 2. Extension to 8K-16K: RECOMMENDED
-   - Modify the range check in HilbertAttention.forward()
+   - Modify the range check in UnifiedHilbertAttention.forward()
    - Update fused kernel configurations for larger sequences
    - Expected benefit: 1.5-2x speedup
 

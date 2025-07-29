@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Benchmark comparing HilbertAttentionEnhanced vs UnifiedHilbertAttention vs UnifiedHilbertAttentionOptimized.
+Benchmark comparing UnifiedHilbertAttentionOptimizedEnhanced vs UnifiedHilbertAttention vs UnifiedHilbertAttentionOptimized.
 """
 
 import torch
@@ -12,8 +12,8 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dilated_attention_pytorch.kernels import (
-    HilbertAttention,
-    HilbertAttentionEnhanced,
+    UnifiedHilbertAttention,
+    UnifiedHilbertAttentionOptimizedEnhanced,
     UnifiedHilbertAttention,
     UnifiedHilbertAttentionOptimized,
 )
@@ -59,9 +59,9 @@ def create_models(hidden_dim, num_heads, segment_size, dilation_rate, device, dt
     """Create all model variants with same configuration."""
     models = {}
 
-    # Original HilbertAttention for reference
+    # Original UnifiedHilbertAttention for reference
     models["Original"] = (
-        HilbertAttention(
+        UnifiedHilbertAttention(
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             segment_size=segment_size,
@@ -103,7 +103,7 @@ def create_models(hidden_dim, num_heads, segment_size, dilation_rate, device, dt
 
     # Enhanced implementation
     models["Enhanced"] = (
-        HilbertAttentionEnhanced(
+        UnifiedHilbertAttentionOptimizedEnhanced(
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             segment_size=segment_size,

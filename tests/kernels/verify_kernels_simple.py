@@ -73,8 +73,8 @@ def main():
         return
 
     from dilated_attention_pytorch.kernels import (
-        HilbertAttentionCore,
-        HilbertAttentionSimple,
+        UnifiedHilbertAttention,
+        UnifiedHilbertAttention,
         HilbertAttentionTritonWrapper,
     )
 
@@ -94,10 +94,10 @@ def main():
         batch_size = 2
         x = torch.randn(batch_size, seq_len, hidden_dim, device="cuda")
 
-        # Test HilbertAttentionCore
+        # Test UnifiedHilbertAttention
         try:
             core = (
-                HilbertAttentionCore(
+                UnifiedHilbertAttention(
                     hidden_dim=hidden_dim,
                     num_heads=num_heads,
                     segment_size=segment_size,
@@ -111,7 +111,7 @@ def main():
             core_results = benchmark_kernel(core, x)
             results[f"{name}_Core"] = core_results
 
-            print("HilbertAttentionCore:")
+            print("UnifiedHilbertAttention:")
             print(
                 f"  Forward: {core_results['forward_ms']:.2f} ± {core_results['forward_std']:.2f} ms"
             )
@@ -120,12 +120,12 @@ def main():
             )
             print(f"  Memory: {core_results['memory_mb']:.1f} MB")
         except Exception as e:
-            print(f"HilbertAttentionCore failed: {e}")
+            print(f"UnifiedHilbertAttention failed: {e}")
 
-        # Test HilbertAttentionSimple
+        # Test UnifiedHilbertAttention
         try:
             simple = (
-                HilbertAttentionSimple(
+                UnifiedHilbertAttention(
                     hidden_dim=hidden_dim,
                     num_heads=num_heads,
                     segment_size=segment_size,
@@ -138,7 +138,7 @@ def main():
             simple_results = benchmark_kernel(simple, x)
             results[f"{name}_Simple"] = simple_results
 
-            print("\nHilbertAttentionSimple:")
+            print("\nUnifiedHilbertAttention:")
             print(
                 f"  Forward: {simple_results['forward_ms']:.2f} ± {simple_results['forward_std']:.2f} ms"
             )
@@ -157,7 +157,7 @@ def main():
                 print(f"  Forward: {speedup_fwd:.2f}x")
                 print(f"  Backward: {speedup_bwd:.2f}x")
         except Exception as e:
-            print(f"HilbertAttentionSimple failed: {e}")
+            print(f"UnifiedHilbertAttention failed: {e}")
 
         # Test HilbertAttentionTritonWrapper
         try:
@@ -207,7 +207,7 @@ def main():
     # Very small sequence
     try:
         x_small = torch.randn(1, 32, 128, device="cuda")
-        core_small = HilbertAttentionCore(128, 4, 16, 1).cuda()
+        core_small = UnifiedHilbertAttention(128, 4, 16, 1).cuda()
         _ = core_small(x_small)
         print("✓ Very small sequence (32 tokens): PASS")
     except Exception as e:
@@ -216,7 +216,7 @@ def main():
     # Non-divisible sequence length
     try:
         x_odd = torch.randn(1, 97, 256, device="cuda")  # Prime number
-        core_odd = HilbertAttentionCore(256, 8, 32, 1).cuda()
+        core_odd = UnifiedHilbertAttention(256, 8, 32, 1).cuda()
         _ = core_odd(x_odd)
         print("✓ Non-divisible sequence length (97 tokens): PASS")
     except Exception as e:
@@ -225,7 +225,7 @@ def main():
     # Float16 support
     try:
         x_fp16 = torch.randn(1, 128, 256, device="cuda", dtype=torch.float16)
-        core_fp16 = HilbertAttentionCore(256, 8, 64, 1).cuda().half()
+        core_fp16 = UnifiedHilbertAttention(256, 8, 64, 1).cuda().half()
         _ = core_fp16(x_fp16)
         print("✓ Float16 support: PASS")
     except Exception as e:
@@ -233,8 +233,8 @@ def main():
 
     print("\n=== Summary ===")
     print("All kernel implementations have been verified and benchmarked.")
-    print("HilbertAttentionCore provides best performance when Triton is available.")
-    print("HilbertAttentionSimple is a reliable fallback for all scenarios.")
+    print("UnifiedHilbertAttention provides best performance when Triton is available.")
+    print("UnifiedHilbertAttention is a reliable fallback for all scenarios.")
     print("HilbertAttentionTritonWrapper provides Q,K,V interface compatibility.")
 
 

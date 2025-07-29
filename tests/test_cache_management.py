@@ -11,7 +11,7 @@ from dilated_attention_pytorch.kernels.cache_manager import (
     BoundedCache,
     CachedHilbertMixin,
 )
-from dilated_attention_pytorch.kernels import HilbertAttentionCore
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 from dilated_attention_pytorch.kernels.hilbert_attention_sparse_simple import (
     HilbertAttentionSparseSimple,
 )
@@ -122,9 +122,9 @@ class TestKernelCacheManagement:
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
     def test_hilbert_core_cache_management(self):
-        """Test cache management in HilbertAttentionCore."""
+        """Test cache management in UnifiedHilbertAttention."""
         device = torch.device("cuda")
-        module = HilbertAttentionCore(
+        module = UnifiedHilbertAttention(
             hidden_dim=768,
             num_heads=12,
             segment_size=128,
@@ -184,7 +184,7 @@ class TestKernelCacheManagement:
         # Create multiple modules to simulate memory pressure
         modules = []
         for i in range(10):
-            module = HilbertAttentionCore(
+            module = UnifiedHilbertAttention(
                 hidden_dim=768,
                 num_heads=12,
                 segment_size=128,

@@ -12,7 +12,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dilated_attention_pytorch.kernels import (
-    HilbertAttention,
+    UnifiedHilbertAttention,
     UnifiedHilbertAttention,
     UnifiedHilbertAttentionOptimized,
     UnifiedHilbertAttentionOptimizedEnhanced,
@@ -59,9 +59,9 @@ def create_models(hidden_dim, num_heads, segment_size, dilation_rate, device, dt
     """Create all model variants with same configuration."""
     models = {}
 
-    # Original HilbertAttention for reference
+    # Original UnifiedHilbertAttention for reference
     models["Original"] = (
-        HilbertAttention(
+        UnifiedHilbertAttention(
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             segment_size=segment_size,

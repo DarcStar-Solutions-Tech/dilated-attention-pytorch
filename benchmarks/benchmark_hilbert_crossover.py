@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def benchmark_sequence_length(module, seq_len, batch_size=1, num_iterations=3):
@@ -63,7 +63,7 @@ def find_crossover_point():
         )
         print("-" * 70)
 
-        module = HilbertAttention(
+        module = UnifiedHilbertAttention(
             hidden_dim=768,
             num_heads=12,
             segment_size=config["segment_size"],

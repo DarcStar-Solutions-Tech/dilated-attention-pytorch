@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def analyze_kernel_overhead():
@@ -123,7 +123,7 @@ def benchmark_actual_performance():
     # Test what we can with available memory
     for seq_len in [2048, 4096, 8192]:
         try:
-            module = HilbertAttention(
+            module = UnifiedHilbertAttention(
                 hidden_dim=768,
                 num_heads=12,
                 segment_size=128,

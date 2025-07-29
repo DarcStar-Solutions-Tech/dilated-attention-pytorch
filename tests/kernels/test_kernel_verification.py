@@ -3,8 +3,8 @@
 Comprehensive verification tests for kernel implementations.
 
 This module tests:
-1. HilbertAttentionCore - Main Triton implementation
-2. HilbertAttentionSimple - PyTorch fallback
+1. UnifiedHilbertAttention - Main Triton implementation
+2. UnifiedHilbertAttention - PyTorch fallback
 3. HilbertAttentionTritonWrapper - Q,K,V interface wrapper
 
 Tests cover:
@@ -21,8 +21,8 @@ import torch
 # Import all kernel implementations
 try:
     from dilated_attention_pytorch.kernels import (
-        HilbertAttentionCore,
-        HilbertAttentionSimple,
+        UnifiedHilbertAttention,
+        UnifiedHilbertAttention,
         HilbertAttentionTritonWrapper,
         HilbertAttentionTritonFixed,
         TRITON_AVAILABLE,
@@ -35,8 +35,8 @@ except ImportError:
 
     sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
     from dilated_attention_pytorch.kernels import (
-        HilbertAttentionCore,
-        HilbertAttentionSimple,
+        UnifiedHilbertAttention,
+        UnifiedHilbertAttention,
         HilbertAttentionTritonWrapper,
         HilbertAttentionTritonFixed,
         TRITON_AVAILABLE,
@@ -93,7 +93,7 @@ class TestHilbertMapping:
             assert len(set(mapping.tolist())) == seq_len  # All unique
 
 
-class TestHilbertAttentionSimple:
+class TestUnifiedHilbertAttention:
     """Test PyTorch-based Hilbert attention implementation."""
 
     @pytest.fixture
@@ -113,7 +113,7 @@ class TestHilbertAttentionSimple:
         batch_size = 2
 
         for hidden_dim, num_heads, segment_size, dilation_rate in model_configs:
-            model = HilbertAttentionSimple(
+            model = UnifiedHilbertAttention(
                 hidden_dim=hidden_dim,
                 num_heads=num_heads,
                 segment_size=segment_size,
@@ -143,7 +143,7 @@ class TestHilbertAttentionSimple:
         for hidden_dim, num_heads, segment_size, dilation_rate in model_configs[
             :2
         ]:  # Test subset
-            model = HilbertAttentionSimple(
+            model = UnifiedHilbertAttention(
                 hidden_dim=hidden_dim,
                 num_heads=num_heads,
                 segment_size=segment_size,
@@ -182,7 +182,7 @@ class TestHilbertAttentionSimple:
         segment_size, dilation_rate = 64, 1
         batch_size, seq_len = 2, 128
 
-        model = HilbertAttentionSimple(
+        model = UnifiedHilbertAttention(
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             segment_size=segment_size,
@@ -207,7 +207,7 @@ class TestHilbertAttentionSimple:
         """Test causal attention mode."""
         device = get_device()
 
-        model = HilbertAttentionSimple(
+        model = UnifiedHilbertAttention(
             hidden_dim=256,
             num_heads=8,
             segment_size=64,
@@ -231,7 +231,7 @@ class TestHilbertAttentionSimple:
 
 
 @pytest.mark.skipif(not TRITON_AVAILABLE, reason="Triton not available")
-class TestHilbertAttentionCore:
+class TestUnifiedHilbertAttention:
     """Test Triton-based Hilbert attention implementation."""
 
     @pytest.fixture
@@ -254,7 +254,7 @@ class TestHilbertAttentionCore:
         batch_size = 2
 
         for hidden_dim, num_heads, segment_size, dilation_rate in model_configs:
-            model = HilbertAttentionCore(
+            model = UnifiedHilbertAttention(
                 hidden_dim=hidden_dim,
                 num_heads=num_heads,
                 segment_size=segment_size,
@@ -281,7 +281,7 @@ class TestHilbertAttentionCore:
         batch_size = 2
 
         for hidden_dim, num_heads, segment_size, dilation_rate in model_configs[:2]:
-            model = HilbertAttentionCore(
+            model = UnifiedHilbertAttention(
                 hidden_dim=hidden_dim,
                 num_heads=num_heads,
                 segment_size=segment_size,
@@ -319,7 +319,7 @@ class TestHilbertAttentionCore:
         batch_size, seq_len = 2, 128
 
         # Model with custom backward
-        model_custom = HilbertAttentionCore(
+        model_custom = UnifiedHilbertAttention(
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             segment_size=segment_size,
@@ -328,7 +328,7 @@ class TestHilbertAttentionCore:
         ).to(device)
 
         # Model without custom backward (uses PyTorch autograd)
-        model_pytorch = HilbertAttentionCore(
+        model_pytorch = UnifiedHilbertAttention(
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             segment_size=segment_size,
@@ -366,7 +366,7 @@ class TestHilbertAttentionCore:
         if device.type != "cuda":
             pytest.skip("Triton requires CUDA")
 
-        model = HilbertAttentionCore(
+        model = UnifiedHilbertAttention(
             hidden_dim=256,
             num_heads=8,
             segment_size=64,
@@ -497,7 +497,7 @@ class TestMemoryEfficiency:
         torch.cuda.empty_cache()
         torch.cuda.reset_peak_memory_stats()
 
-        model_simple = HilbertAttentionSimple(
+        model_simple = UnifiedHilbertAttention(
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             segment_size=segment_size,
@@ -516,7 +516,7 @@ class TestMemoryEfficiency:
             torch.cuda.empty_cache()
             torch.cuda.reset_peak_memory_stats()
 
-            model_core = HilbertAttentionCore(
+            model_core = UnifiedHilbertAttention(
                 hidden_dim=hidden_dim,
                 num_heads=num_heads,
                 segment_size=segment_size,
@@ -549,7 +549,7 @@ class TestEdgeCases:
 
         # Hidden dim not divisible by num_heads
         with pytest.raises(ValueError):
-            HilbertAttentionCore(
+            UnifiedHilbertAttention(
                 hidden_dim=257,  # Not divisible by 8
                 num_heads=8,
                 segment_size=64,
@@ -559,7 +559,7 @@ class TestEdgeCases:
         """Test handling of empty tensors."""
         device = get_device()
 
-        model = HilbertAttentionSimple(
+        model = UnifiedHilbertAttention(
             hidden_dim=256,
             num_heads=8,
             segment_size=64,
@@ -583,7 +583,7 @@ class TestEdgeCases:
         if device.type == "mps":
             pytest.skip("MPS may not support very long sequences")
 
-        model = HilbertAttentionSimple(
+        model = UnifiedHilbertAttention(
             hidden_dim=128,  # Smaller for memory
             num_heads=4,
             segment_size=256,

@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def analyze_kernel_access_pattern():
@@ -19,7 +19,7 @@ def analyze_kernel_access_pattern():
     dilation_rate = 2
 
     # Create Hilbert mapping
-    hilbert_map = HilbertAttention._create_hilbert_mapping(seq_len)
+    hilbert_map = UnifiedHilbertAttention._create_hilbert_mapping(seq_len)
     print(f"Hilbert mapping for seq_len={seq_len}:")
     print(f"  {hilbert_map.tolist()}")
 
@@ -60,7 +60,7 @@ def analyze_kernel_access_pattern():
     # For sparse, we should first get sparse positions, then apply Hilbert
     sparse_positions = [0, 2, 4, 6, 8, 10, 12, 14]  # Every 2nd position
     # Create Hilbert for just these positions
-    sparse_hilbert = HilbertAttention._create_hilbert_mapping(len(sparse_positions))
+    sparse_hilbert = UnifiedHilbertAttention._create_hilbert_mapping(len(sparse_positions))
     ideal_access = []
     for i in range(len(sparse_positions)):
         ideal_access.append(sparse_positions[sparse_hilbert[i].item()])
@@ -80,7 +80,7 @@ def test_small_example():
     dilation_rate = 4
 
     # Create module
-    module = HilbertAttention(
+    module = UnifiedHilbertAttention(
         hidden_dim=hidden_dim,
         num_heads=num_heads,
         segment_size=segment_size,

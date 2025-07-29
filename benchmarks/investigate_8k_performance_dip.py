@@ -8,14 +8,14 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def detailed_benchmark(seq_len, num_runs=10):
     """Detailed benchmark with profiling information."""
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    module = HilbertAttention(
+    module = UnifiedHilbertAttention(
         hidden_dim=768,
         num_heads=12,
         segment_size=128,
@@ -159,7 +159,7 @@ def test_different_configurations():
         print(f"\nBatch={batch_size}, Heads={num_heads}:")
 
         device = "cuda"
-        module = HilbertAttention(
+        module = UnifiedHilbertAttention(
             hidden_dim=768,
             num_heads=num_heads,
             segment_size=128,

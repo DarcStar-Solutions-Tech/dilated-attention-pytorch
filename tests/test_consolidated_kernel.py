@@ -10,7 +10,7 @@ import pytest
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
 def test_consolidated_kernel():
     """Test that the consolidated kernel works correctly."""
-    from dilated_attention_pytorch.kernels import HilbertAttentionCore
+    from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
     # Test various configurations
     configs = [
@@ -27,7 +27,7 @@ def test_consolidated_kernel():
 
     for seq_len, hidden_dim, num_heads, segment_size, dilation_rate in configs:
         # Create module
-        module = HilbertAttentionCore(
+        module = UnifiedHilbertAttention(
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             segment_size=segment_size,
@@ -54,9 +54,9 @@ def test_consolidated_kernel():
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
 def test_optimal_block_sizes():
     """Test the optimal block size selection."""
-    from dilated_attention_pytorch.kernels import HilbertAttentionCore
+    from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
-    module = HilbertAttentionCore(
+    module = UnifiedHilbertAttention(
         hidden_dim=256,
         num_heads=8,
         segment_size=128,
@@ -121,9 +121,9 @@ def test_hilbert_mapping():
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
 def test_gradient_flow():
     """Test gradient flow through the consolidated kernel."""
-    from dilated_attention_pytorch.kernels import HilbertAttentionCore
+    from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
-    module = HilbertAttentionCore(
+    module = UnifiedHilbertAttention(
         hidden_dim=128,
         num_heads=4,
         segment_size=64,

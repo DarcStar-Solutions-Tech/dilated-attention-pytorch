@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tests for HilbertAttentionSimple - the PyTorch-based implementation.
+Tests for UnifiedHilbertAttention - the PyTorch-based implementation.
 
 This implementation doesn't rely on Triton kernels and should work on all platforms.
 """
@@ -9,7 +9,7 @@ import pytest
 import torch
 
 from dilated_attention_pytorch.kernels.hilbert_attention_simple import (
-    HilbertAttentionSimple,
+    UnifiedHilbertAttention,
     create_hilbert_mapping,
     create_hilbert_curve_2d,
 )
@@ -60,8 +60,8 @@ class TestHilbertMapping:
             assert mapping.max() < seq_len
 
 
-class TestHilbertAttentionSimple:
-    """Test HilbertAttentionSimple module."""
+class TestUnifiedHilbertAttention:
+    """Test UnifiedHilbertAttention module."""
 
     @pytest.fixture
     def device(self):
@@ -71,7 +71,7 @@ class TestHilbertAttentionSimple:
     @pytest.fixture
     def attention_module(self, device):
         """Create test attention module."""
-        return HilbertAttentionSimple(
+        return UnifiedHilbertAttention(
             hidden_dim=256,
             num_heads=8,
             segment_size=64,
@@ -82,7 +82,7 @@ class TestHilbertAttentionSimple:
 
     def test_initialization(self, device):
         """Test module initialization."""
-        attn = HilbertAttentionSimple(
+        attn = UnifiedHilbertAttention(
             hidden_dim=512,
             num_heads=8,
             segment_size=128,
@@ -147,7 +147,7 @@ class TestHilbertAttentionSimple:
 
     def test_causal_masking(self, device):
         """Test causal masking behavior."""
-        attn = HilbertAttentionSimple(
+        attn = UnifiedHilbertAttention(
             hidden_dim=64,
             num_heads=1,
             segment_size=8,
@@ -172,7 +172,7 @@ class TestHilbertAttentionSimple:
     def test_dilation_behavior(self, device):
         """Test attention with different dilation rates."""
         for dilation_rate in [1, 2, 4]:
-            attn = HilbertAttentionSimple(
+            attn = UnifiedHilbertAttention(
                 hidden_dim=256,
                 num_heads=8,
                 segment_size=64,
@@ -227,7 +227,7 @@ class TestHilbertAttentionSimple:
             pytest.skip("CPU doesn't support float16 well")
 
         attn = (
-            HilbertAttentionSimple(
+            UnifiedHilbertAttention(
                 hidden_dim=128, num_heads=4, segment_size=32, use_hilbert=True
             )
             .to(device)
@@ -243,7 +243,7 @@ class TestHilbertAttentionSimple:
     def test_hilbert_vs_standard_attention(self, device):
         """Test that Hilbert reordering produces valid attention output."""
         # Create two identical modules
-        attn_hilbert = HilbertAttentionSimple(
+        attn_hilbert = UnifiedHilbertAttention(
             hidden_dim=128,
             num_heads=4,
             segment_size=32,
@@ -252,7 +252,7 @@ class TestHilbertAttentionSimple:
             use_hilbert=True,
         ).to(device)
 
-        attn_standard = HilbertAttentionSimple(
+        attn_standard = UnifiedHilbertAttention(
             hidden_dim=128,
             num_heads=4,
             segment_size=32,

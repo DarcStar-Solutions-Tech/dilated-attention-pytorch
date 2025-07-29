@@ -16,7 +16,7 @@ def test_corrected_implementation():
     print("=" * 80)
 
     # Create module with sparse pattern
-    module = HilbertAttention(
+    module = UnifiedHilbertAttention(
         hidden_dim=768,
         num_heads=12,
         segment_size=64,

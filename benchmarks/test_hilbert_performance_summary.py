@@ -67,7 +67,7 @@ def main():
     for seq_len, batch_size, segment_size, dilation_rate in configs:
         # Create model
         model = (
-            HilbertAttention(
+            UnifiedHilbertAttention(
                 hidden_dim=768,
                 num_heads=12,
                 segment_size=segment_size,
@@ -125,7 +125,7 @@ def main():
         segment_size = 128
 
         model = (
-            HilbertAttention(
+            UnifiedHilbertAttention(
                 hidden_dim=768,
                 num_heads=12,
                 segment_size=segment_size,

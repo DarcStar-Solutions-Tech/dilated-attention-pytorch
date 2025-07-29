@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def sparse_hilbert_ordering(seq_len, segment_size, dilation_rate):
@@ -65,7 +65,7 @@ def test_sparse_optimized_ordering():
     x = torch.randn(batch_size, seq_len, hidden_dim, device=device)
 
     # Create module
-    module = HilbertAttention(
+    module = UnifiedHilbertAttention(
         hidden_dim=hidden_dim,
         num_heads=num_heads,
         segment_size=segment_size,

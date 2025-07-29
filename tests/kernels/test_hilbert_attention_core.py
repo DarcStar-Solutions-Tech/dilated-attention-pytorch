@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Comprehensive tests for HilbertAttentionCore kernel implementation.
+Comprehensive tests for UnifiedHilbertAttention kernel implementation.
 
 Tests include:
 - Forward pass correctness
@@ -35,7 +35,7 @@ if HAS_TRITON and torch.cuda.is_available():
 if HAS_TRITON:
     try:
         from dilated_attention_pytorch.kernels.hilbert_attention_core import (
-            HilbertAttentionCore,
+            UnifiedHilbertAttention,
             create_hilbert_mapping,
             HilbertAttentionFunction,
         )
@@ -45,8 +45,8 @@ if HAS_TRITON:
 
 
 @pytest.mark.skipif(not HAS_TRITON, reason="Triton not available")
-class TestHilbertAttentionCore:
-    """Test suite for HilbertAttentionCore."""
+class TestUnifiedHilbertAttention:
+    """Test suite for UnifiedHilbertAttention."""
 
     @pytest.fixture
     def device(self):
@@ -56,7 +56,7 @@ class TestHilbertAttentionCore:
     @pytest.fixture
     def attention_module(self, device):
         """Create a test attention module."""
-        return HilbertAttentionCore(
+        return UnifiedHilbertAttention(
             hidden_dim=256,
             num_heads=8,
             segment_size=64,
@@ -68,7 +68,7 @@ class TestHilbertAttentionCore:
     def test_initialization(self, device):
         """Test module initialization with various parameters."""
         # Test basic initialization
-        attn = HilbertAttentionCore(
+        attn = UnifiedHilbertAttention(
             hidden_dim=512, num_heads=8, segment_size=128, dilation_rate=2, dropout=0.1
         ).to(device)
 
@@ -152,7 +152,7 @@ class TestHilbertAttentionCore:
         torch.manual_seed(42)
 
         # Create module with custom backward
-        attn_custom = HilbertAttentionCore(
+        attn_custom = UnifiedHilbertAttention(
             hidden_dim=128,
             num_heads=4,
             segment_size=32,
@@ -162,7 +162,7 @@ class TestHilbertAttentionCore:
         ).to(device)
 
         # Create module without custom backward for comparison
-        attn_pytorch = HilbertAttentionCore(
+        attn_pytorch = UnifiedHilbertAttention(
             hidden_dim=128,
             num_heads=4,
             segment_size=32,
@@ -197,7 +197,7 @@ class TestHilbertAttentionCore:
     def test_dilation_rate_behavior(self, device):
         """Test attention with different dilation rates."""
         for dilation_rate in [1, 2, 4]:
-            attn = HilbertAttentionCore(
+            attn = UnifiedHilbertAttention(
                 hidden_dim=256,
                 num_heads=8,
                 segment_size=64,
@@ -213,7 +213,7 @@ class TestHilbertAttentionCore:
     def test_attention_pattern_correctness(self, device):
         """Test that attention pattern follows expected behavior."""
         # Simple test: attention should focus on similar tokens
-        attn = HilbertAttentionCore(
+        attn = UnifiedHilbertAttention(
             hidden_dim=64, num_heads=1, segment_size=8, dilation_rate=1, dropout=0.0
         ).to(device)
 
@@ -235,7 +235,7 @@ class TestHilbertAttentionCore:
         if device.type == "cuda":
             torch.cuda.reset_peak_memory_stats()
 
-            attn = HilbertAttentionCore(
+            attn = UnifiedHilbertAttention(
                 hidden_dim=512, num_heads=8, segment_size=128, dilation_rate=1
             ).to(device)
 
@@ -286,7 +286,7 @@ class TestHilbertAttentionCore:
             pytest.skip("CPU doesn't support float16 well")
 
         attn = (
-            HilbertAttentionCore(hidden_dim=128, num_heads=4, segment_size=32)
+            UnifiedHilbertAttention(hidden_dim=128, num_heads=4, segment_size=32)
             .to(device)
             .to(dtype)
         )
@@ -299,7 +299,7 @@ class TestHilbertAttentionCore:
 
     def test_error_handling(self, device):
         """Test error handling for invalid inputs."""
-        attn = HilbertAttentionCore(hidden_dim=256, num_heads=8).to(device)
+        attn = UnifiedHilbertAttention(hidden_dim=256, num_heads=8).to(device)
 
         # Test with wrong hidden dimension
         with pytest.raises(RuntimeError):
@@ -308,7 +308,7 @@ class TestHilbertAttentionCore:
 
         # Test with invalid dimensions
         with pytest.raises(ValueError):
-            HilbertAttentionCore(
+            UnifiedHilbertAttention(
                 hidden_dim=256,
                 num_heads=7,  # Not a divisor of hidden_dim
             )

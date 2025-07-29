@@ -5,18 +5,12 @@ This module provides optimized implementations of Hilbert-ordered attention
 with support for dilated/sparse patterns.
 """
 
-# Import the simplified implementation
-from .hilbert_attention_unified import HilbertAttention
-
 # Import unified implementations
 from .hilbert_attention_unified import UnifiedHilbertAttention
 from .hilbert_attention_unified_optimized import UnifiedHilbertAttentionOptimized
 from .hilbert_attention_unified_optimized_enhanced import (
     UnifiedHilbertAttentionOptimizedEnhanced,
 )
-
-# Import enhanced implementation with all optimizations
-from .hilbert_attention_unified_optimized_enhanced import HilbertAttentionEnhanced
 
 # Import utilities
 from .cache_manager import BoundedCache
@@ -30,15 +24,12 @@ except (ImportError, RuntimeError):
     TRITON_AVAILABLE = False
     HilbertAttentionFunction = None
 
-# Import the simple PyTorch fallback
-from .hilbert_attention_unified import create_hilbert_mapping
+# Import the Hilbert mapping creation function
+# Note: The function is a static method, so we need to access it from the class
+create_hilbert_mapping = UnifiedHilbertAttention._create_hilbert_mapping
 
 __all__ = [
-    # Main implementation
-    "HilbertAttention",
-    # Enhanced implementation with all optimizations
-    "HilbertAttentionEnhanced",
-    # Unified implementations
+    # Unified implementations (in order of increasing optimization)
     "UnifiedHilbertAttention",
     "UnifiedHilbertAttentionOptimized",
     "UnifiedHilbertAttentionOptimizedEnhanced",

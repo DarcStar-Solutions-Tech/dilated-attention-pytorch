@@ -66,7 +66,7 @@ def main():
     for seq_len, batch_size in configs:
         # Original implementation
         model_orig = (
-            HilbertAttention(
+            UnifiedHilbertAttention(
                 hidden_dim=768,
                 num_heads=12,
                 segment_size=128,

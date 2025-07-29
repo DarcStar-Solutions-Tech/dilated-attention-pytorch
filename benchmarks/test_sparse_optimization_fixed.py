@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def test_sparse_optimization():
@@ -31,7 +31,7 @@ def test_sparse_optimization():
 
         try:
             # Create module
-            module = HilbertAttention(
+            module = UnifiedHilbertAttention(
                 hidden_dim=768,
                 num_heads=12,
                 segment_size=segment_size,

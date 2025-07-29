@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def analyze_access_patterns():
@@ -19,7 +19,7 @@ def analyze_access_patterns():
     dilation_rate = 4
 
     # Create module
-    module = HilbertAttention(
+    module = UnifiedHilbertAttention(
         hidden_dim=768,
         num_heads=12,
         segment_size=segment_size,
@@ -83,14 +83,14 @@ def test_per_segment_hilbert():
     print("=" * 50)
 
     # Global Hilbert
-    global_map = HilbertAttention._create_hilbert_mapping(256)
+    global_map = UnifiedHilbertAttention._create_hilbert_mapping(256)
     sparse_indices = torch.arange(0, segment_size, dilation_rate)
     global_positions = global_map[sparse_indices]
 
     print(f"Global Hilbert positions: {global_positions.tolist()}")
 
     # Per-segment Hilbert
-    segment_map = HilbertAttention._create_hilbert_mapping(segment_size)
+    segment_map = UnifiedHilbertAttention._create_hilbert_mapping(segment_size)
     segment_positions = segment_map[sparse_indices]
 
     print(f"Per-segment Hilbert positions: {segment_positions.tolist()}")

@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def test_triton_configurations():
@@ -42,8 +42,8 @@ def test_triton_configurations():
         print(f"   Time: {pytorch_time:.2f}ms")
 
     # Test our implementation
-    print("\n2. Our HilbertAttention Module:")
-    module = HilbertAttention(
+    print("\n2. Our UnifiedHilbertAttention Module:")
+    module = UnifiedHilbertAttention(
         hidden_dim=768,
         num_heads=12,
         segment_size=128,

@@ -48,7 +48,7 @@ def main():
     for seq_len in seq_lengths:
         # Create model
         model = (
-            HilbertAttention(
+            UnifiedHilbertAttention(
                 hidden_dim=768,
                 num_heads=12,
                 segment_size=128,
@@ -94,7 +94,7 @@ def main():
 
     for dilation in [1, 2, 4]:
         model = (
-            HilbertAttention(
+            UnifiedHilbertAttention(
                 hidden_dim=768,
                 num_heads=12,
                 segment_size=128,

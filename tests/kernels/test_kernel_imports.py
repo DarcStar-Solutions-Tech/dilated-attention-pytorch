@@ -18,7 +18,7 @@ class TestKernelImports:
             from dilated_attention_pytorch.kernels import hilbert_attention_core
 
             # Check expected classes/functions exist
-            assert hasattr(hilbert_attention_core, "HilbertAttentionCore")
+            assert hasattr(hilbert_attention_core, "UnifiedHilbertAttention")
             assert hasattr(hilbert_attention_core, "create_hilbert_mapping")
             assert hasattr(hilbert_attention_core, "HilbertAttentionFunction")
 
@@ -69,15 +69,15 @@ class TestKernelImports:
 
     @pytest.mark.xfail(reason="Triton kernel compilation issues on some GPUs")
     def test_hilbert_attention_core_instantiation(self):
-        """Test that HilbertAttentionCore can be instantiated."""
+        """Test that UnifiedHilbertAttention can be instantiated."""
         try:
             from dilated_attention_pytorch.kernels.hilbert_attention_core import (
-                HilbertAttentionCore,
+                UnifiedHilbertAttention,
             )
             import torch
 
             # Try to create an instance
-            model = HilbertAttentionCore(
+            model = UnifiedHilbertAttention(
                 hidden_dim=256,
                 num_heads=8,
                 segment_size=64,
@@ -105,7 +105,7 @@ class TestKernelImports:
                     raise
 
         except ImportError:
-            pytest.skip("Cannot import HilbertAttentionCore")
+            pytest.skip("Cannot import UnifiedHilbertAttention")
 
 
 class TestKernelDocumentation:
@@ -120,7 +120,7 @@ class TestKernelDocumentation:
             assert hilbert_attention_core.__doc__ is not None
 
             # Check class docstrings
-            assert hilbert_attention_core.HilbertAttentionCore.__doc__ is not None
+            assert hilbert_attention_core.UnifiedHilbertAttention.__doc__ is not None
 
         except ImportError:
             pytest.skip("Cannot import kernel modules")

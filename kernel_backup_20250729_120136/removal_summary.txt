@@ -1,0 +1,23 @@
+Hilbert Kernel Cleanup Summary
+Date: 2025-07-29T12:01:36.030140
+=================================
+
+Files Removed:
+  - hilbert_attention_simple.py
+  - hilbert_attention_enhanced.py
+  - hilbert_attention.py
+  - hilbert_attention_core.py
+
+Files Kept:
+  - hilbert_attention_unified_optimized_enhanced.py
+  - hilbert_attention_unified_optimized.py
+  - hilbert_attention_unified.py
+
+Total removed: 4
+
+Rationale:
+Based on comprehensive performance benchmarking:
+1. hilbert_attention_simple.py - No performance advantage
+2. hilbert_attention_enhanced.py - Features integrated into unified_optimized_enhanced
+3. hilbert_attention.py - Basic implementation superseded by optimized versions
+4. hilbert_attention_core.py - Slowest performance, no unique benefits

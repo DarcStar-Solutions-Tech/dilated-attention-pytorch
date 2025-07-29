@@ -12,7 +12,7 @@ from typing import Dict
 
 # Import kernels
 from dilated_attention_pytorch.kernels import (
-    HilbertAttentionCore,
+    UnifiedHilbertAttention,
     UnifiedHilbertAttention,
 )
 
@@ -116,8 +116,8 @@ def test_memory_optimizations():
 
         # Test original kernel
         try:
-            print("\n1. Original HilbertAttentionCore:")
-            core = HilbertAttentionCore(
+            print("\n1. Original UnifiedHilbertAttention:")
+            core = UnifiedHilbertAttention(
                 hidden_dim=hidden_dim,
                 num_heads=num_heads,
                 segment_size=segment_size,
@@ -211,7 +211,7 @@ def test_dilated_access_pattern():
         x = torch.randn(batch_size, seq_len, hidden_dim, device=device)
 
         # Original
-        core = HilbertAttentionCore(
+        core = UnifiedHilbertAttention(
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             segment_size=segment_size,

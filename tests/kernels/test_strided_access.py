@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from typing import Dict
 
 # Import kernels
-from dilated_attention_pytorch.kernels import HilbertAttentionCore
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 from dilated_attention_pytorch.kernels.hilbert_attention_strided_simple import (
     HilbertAttentionStridedSimple,
 )
@@ -102,7 +102,7 @@ def test_dilation_rates():
 
     for dilation_rate in dilation_rates:
         # Create modules
-        original = HilbertAttentionCore(
+        original = UnifiedHilbertAttention(
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             segment_size=segment_size,
@@ -204,7 +204,7 @@ def test_sequence_lengths():
             continue
 
         # Create modules
-        original = HilbertAttentionCore(
+        original = UnifiedHilbertAttention(
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             segment_size=segment_size,

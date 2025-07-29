@@ -13,13 +13,13 @@ sys.path.insert(
 )
 
 from dilated_attention_pytorch.kernels.hilbert_attention_enhanced import (
-    HilbertAttentionEnhanced,
+    UnifiedHilbertAttentionOptimizedEnhanced,
 )
 
 
 def test_enhanced_initialization():
     """Test enhanced implementation can be initialized."""
-    model = HilbertAttentionEnhanced(
+    model = UnifiedHilbertAttentionOptimizedEnhanced(
         hidden_dim=768,
         num_heads=12,
         segment_size=128,
@@ -35,7 +35,7 @@ def test_enhanced_initialization():
 
 def test_config_selection():
     """Test optimal configuration selection."""
-    model = HilbertAttentionEnhanced(
+    model = UnifiedHilbertAttentionOptimizedEnhanced(
         hidden_dim=768,
         num_heads=12,
     )
@@ -69,7 +69,7 @@ def test_forward_pass_basic():
     """Test basic forward pass."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = HilbertAttentionEnhanced(
+    model = UnifiedHilbertAttentionOptimizedEnhanced(
         hidden_dim=256,
         num_heads=8,
         segment_size=64,
@@ -96,7 +96,7 @@ def test_sparse_attention():
 
     # Test with different dilation rates
     for dilation_rate in [2, 4, 8]:
-        model = HilbertAttentionEnhanced(
+        model = UnifiedHilbertAttentionOptimizedEnhanced(
             hidden_dim=256,
             num_heads=8,
             segment_size=64,
@@ -119,7 +119,7 @@ def test_8k_optimization():
 
     device = torch.device("cuda")
 
-    model = HilbertAttentionEnhanced(
+    model = UnifiedHilbertAttentionOptimizedEnhanced(
         hidden_dim=768,
         num_heads=12,
         enable_8k_optimization=True,
@@ -152,7 +152,7 @@ def test_compatibility_with_original():
     hidden_dim = 256
     num_heads = 8
 
-    model_orig = HilbertAttention(
+    model_orig = UnifiedHilbertAttention(
         hidden_dim=hidden_dim,
         num_heads=num_heads,
         segment_size=64,
@@ -160,7 +160,7 @@ def test_compatibility_with_original():
         dropout=0.0,
     ).to(device)
 
-    model_enhanced = HilbertAttentionEnhanced(
+    model_enhanced = UnifiedHilbertAttentionOptimizedEnhanced(
         hidden_dim=hidden_dim,
         num_heads=num_heads,
         segment_size=64,
@@ -190,7 +190,7 @@ def test_various_configurations(seq_len, dilation_rate):
     """Test various sequence lengths and dilation rates."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = HilbertAttentionEnhanced(
+    model = UnifiedHilbertAttentionOptimizedEnhanced(
         hidden_dim=256,
         num_heads=8,
         segment_size=128,

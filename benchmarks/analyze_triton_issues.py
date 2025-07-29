@@ -29,11 +29,11 @@ def main():
     # Issue 3: get_optimal_block_sizes is too conservative
     print("\n3. Block Size Selection:")
     from dilated_attention_pytorch.kernels.hilbert_attention_core import (
-        HilbertAttentionCore,
+        UnifiedHilbertAttention,
     )
 
     # Check what block sizes are selected
-    core = HilbertAttentionCore(hidden_dim=768, num_heads=12)
+    core = UnifiedHilbertAttention(hidden_dim=768, num_heads=12)
 
     # Simulate different GPUs
     print("\n   Block sizes by GPU and sequence length:")

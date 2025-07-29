@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def profile_attention():
@@ -16,7 +16,7 @@ def profile_attention():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Create module
-    module = HilbertAttention(
+    module = UnifiedHilbertAttention(
         hidden_dim=768, num_heads=12, segment_size=128, dilation_rate=1, dropout=0.0
     ).to(device)
 

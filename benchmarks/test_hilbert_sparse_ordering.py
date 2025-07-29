@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels import HilbertAttention
+from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def test_hilbert_sparse_ordering():
@@ -15,7 +15,7 @@ def test_hilbert_sparse_ordering():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Create module with dilation
-    module = HilbertAttention(
+    module = UnifiedHilbertAttention(
         hidden_dim=768,
         num_heads=12,
         segment_size=128,

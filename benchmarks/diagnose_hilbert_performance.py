@@ -74,11 +74,11 @@ def test_hilbert_benefit_threshold():
     print("\nTesting Hilbert benefit at different sequence lengths:")
     print("=" * 60)
 
-    from dilated_attention_pytorch.kernels import HilbertAttention
+    from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
     for seq_len in [256, 512, 1024, 2048, 4096, 8192]:
         # Create module
-        module = HilbertAttention(
+        module = UnifiedHilbertAttention(
             hidden_dim=768,
             num_heads=12,
             segment_size=128,

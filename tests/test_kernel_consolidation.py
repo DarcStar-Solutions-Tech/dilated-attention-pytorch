@@ -20,8 +20,8 @@ sys.path.insert(
 from dilated_attention_pytorch.kernels import (
     UnifiedHilbertAttention,
     create_hilbert_attention,
-    HilbertAttentionCore,
-    HilbertAttentionSimple,
+    UnifiedHilbertAttention,
+    UnifiedHilbertAttention,
 )
 
 
@@ -31,21 +31,21 @@ def test_consolidation_completeness():
 
     # Original implementations that should be consolidated
     original_implementations = [
-        "HilbertAttentionCore",
+        "UnifiedHilbertAttention",
         "HilbertAttentionMemoryOptimized",
         "HilbertAttentionOptimizedSelective",
         "HilbertAttentionSparseOptimized",
         "HilbertAttentionSparseSimple",
         "HilbertAttentionStrided",
         "HilbertAttentionStridedSimple",
-        "HilbertAttentionSimple",
+        "UnifiedHilbertAttention",
         "HilbertAttentionV2",
         "HilbertAttentionTester",
     ]
 
     # Map to unified configurations
     implementation_configs = {
-        "HilbertAttentionCore": {},
+        "UnifiedHilbertAttention": {},
         "HilbertAttentionMemoryOptimized": {"memory_mode": "aggressive"},
         "HilbertAttentionOptimizedSelective": {"sparse_mode": "selective"},
         "HilbertAttentionSparseOptimized": {"sparse_mode": "direct"},
@@ -55,7 +55,7 @@ def test_consolidation_completeness():
             "access_mode": "strided",
             "backend": "pytorch",
         },
-        "HilbertAttentionSimple": {"backend": "pytorch"},
+        "UnifiedHilbertAttention": {"backend": "pytorch"},
         "HilbertAttentionV2": {"memory_mode": "optimized"},
         "HilbertAttentionTester": {"backend": "pytorch"},
     }
@@ -74,24 +74,24 @@ def test_direct_usage():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Test HilbertAttentionCore (if available)
-    if HilbertAttentionCore is not None:
-        module = HilbertAttentionCore(
+    # Test UnifiedHilbertAttention (if available)
+    if UnifiedHilbertAttention is not None:
+        module = UnifiedHilbertAttention(
             hidden_dim=768, num_heads=12, segment_size=128
         ).to(device)
         x = torch.randn(2, 256, 768, device=device)
         out = module(x)
         assert out.shape == x.shape
-        print("✓ HilbertAttentionCore works directly")
+        print("✓ UnifiedHilbertAttention works directly")
 
-    # Test HilbertAttentionSimple
-    module = HilbertAttentionSimple(hidden_dim=768, num_heads=12, segment_size=128).to(
+    # Test UnifiedHilbertAttention
+    module = UnifiedHilbertAttention(hidden_dim=768, num_heads=12, segment_size=128).to(
         device
     )
     x = torch.randn(2, 256, 768, device=device)
     out = module(x)
     assert out.shape == x.shape
-    print("✓ HilbertAttentionSimple works directly")
+    print("✓ UnifiedHilbertAttention works directly")
 
 
 def test_memory_cache_bounds():
@@ -189,7 +189,7 @@ def test_unified_replaces_old():
         num_heads=12,
         segment_size=256,
         dilation_rate=2,
-        backend="pytorch",  # Similar to old HilbertAttentionSimple
+        backend="pytorch",  # Similar to old UnifiedHilbertAttention
     ).to(device)
 
     # Verify it works
