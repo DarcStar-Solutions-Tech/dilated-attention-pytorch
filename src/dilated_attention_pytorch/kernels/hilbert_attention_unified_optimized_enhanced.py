@@ -292,6 +292,7 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
         hilbert_threshold: int = 1024,
         enable_multi_row: bool = True,
         enable_8k_optimization: bool = True,
+        enable_4k_optimization: bool = True,
     ):
         super().__init__()
 
@@ -307,6 +308,7 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
         self.hilbert_threshold = hilbert_threshold
         self.enable_multi_row = enable_multi_row
         self.enable_8k_optimization = enable_8k_optimization
+        self.enable_4k_optimization = enable_4k_optimization
         self.mask_value = -1e9
 
         # Projections
@@ -350,7 +352,23 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
             # Calculate effective sequence length after dilation
             effective_len = seq_len // self.dilation_rate
 
-            if effective_len <= 512:
+            # Special optimization for 4K sequences
+            if seq_len == 4096 and self.enable_4k_optimization:
+                if effective_len == 1024:  # 4K d=4
+                    # Use small blocks without fused softmax for best performance
+                    config["block_m"] = 32
+                    config["block_n"] = 32
+                    config["block_d"] = min(32, self.head_dim)
+                    config["num_warps"] = 2
+                    config["use_fused_softmax"] = False
+                elif effective_len == 2048:  # 4K d=2
+                    # Keep standard config but disable Hilbert (done in forward)
+                    config["block_m"] = 64
+                    config["block_n"] = 64
+                    config["block_d"] = min(64, self.head_dim)
+                    config["num_warps"] = 4
+                    config["use_fused_softmax"] = True
+            elif effective_len <= 512:
                 # Very sparse - use small blocks like Unified
                 config["block_m"] = 32
                 config["block_n"] = 32
@@ -547,7 +565,11 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         # Only use Hilbert if sequence length exceeds threshold
-        use_hilbert = use_hilbert and M_padded > self.hilbert_threshold
+        # Special case: disable Hilbert for 4K sequences when optimization is enabled
+        if M_padded == 4096 and self.enable_4k_optimization:
+            use_hilbert = False
+        else:
+            use_hilbert = use_hilbert and M_padded > self.hilbert_threshold
 
         # Get optimal configuration
         config = self._get_optimal_config(M_padded)
