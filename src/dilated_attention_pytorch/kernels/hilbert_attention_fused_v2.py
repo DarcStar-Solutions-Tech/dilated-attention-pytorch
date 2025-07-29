@@ -141,27 +141,39 @@ def launch_fused_kernel(q, k, v, scale, hilbert_map=None):
 
     # Optimized config based on GPU and sequence length
     if compute_capability < 7:  # Pascal and older (limited shared memory)
-        if M == 4096:
-            BLOCK_M = 64  # Small blocks for Pascal
-            BLOCK_N = 64
-            num_warps = 4
-        else:
+        if M <= 2048:
             BLOCK_M = 32
             BLOCK_N = 32
             num_warps = 2
-        BLOCK_D = min(32, D)
-    else:  # Volta and newer
-        if M == 4096:
-            BLOCK_M = 128
-            BLOCK_N = 128
-            num_warps = 4
-        elif M <= 2048:
+        elif M <= 4096:
             BLOCK_M = 64
             BLOCK_N = 64
             num_warps = 4
-        else:
-            BLOCK_M = 128
+        elif M <= 8192:
+            BLOCK_M = 64
             BLOCK_N = 64
+            num_warps = 4
+        else:  # 8K-16K - keep small for Pascal's limited shared memory
+            BLOCK_M = 64
+            BLOCK_N = 64
+            num_warps = 4
+        BLOCK_D = min(32, D)
+    else:  # Volta and newer
+        if M <= 2048:
+            BLOCK_M = 64
+            BLOCK_N = 64
+            num_warps = 4
+        elif M <= 4096:
+            BLOCK_M = 128
+            BLOCK_N = 128
+            num_warps = 4
+        elif M <= 8192:
+            BLOCK_M = 128
+            BLOCK_N = 128
+            num_warps = 4
+        else:  # 8K-16K - moderate tiles to avoid shared memory limits
+            BLOCK_M = 128
+            BLOCK_N = 128
             num_warps = 4
         BLOCK_D = min(64, D)
 

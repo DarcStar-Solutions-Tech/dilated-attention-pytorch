@@ -141,11 +141,11 @@ class HilbertAttention(nn.Module):
         use_hilbert = use_hilbert and M_padded > self.hilbert_threshold
 
         # Check if we should use fused kernels for medium sequences
-        # Based on benchmarks, fused kernels are optimal for 2K-4K sequences
+        # Based on benchmarks, fused kernels are optimal for 2K-16K sequences
         use_fused_kernel = (
             self._triton_available
             and device.type == "cuda"
-            and 2048 <= M_padded <= 4096  # Optimal range based on benchmarks
+            and 2048 <= M_padded <= 16384  # Extended range for better performance
             and hasattr(self, "_fused_kernels_available")
             and self._fused_kernels_available
         )
