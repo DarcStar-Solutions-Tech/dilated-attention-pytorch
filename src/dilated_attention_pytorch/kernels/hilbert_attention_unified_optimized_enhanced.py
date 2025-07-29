@@ -565,11 +565,7 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         # Only use Hilbert if sequence length exceeds threshold
-        # Special case: disable Hilbert for 4K sequences when optimization is enabled
-        if M_padded == 4096 and self.enable_4k_optimization:
-            use_hilbert = False
-        else:
-            use_hilbert = use_hilbert and M_padded > self.hilbert_threshold
+        use_hilbert = use_hilbert and M_padded > self.hilbert_threshold
 
         # Get optimal configuration
         config = self._get_optimal_config(M_padded)
