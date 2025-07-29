@@ -162,21 +162,14 @@ def unified_hilbert_attention_kernel_enhanced(
 
             # Update statistics
             alpha = tl.exp(m_i - m_i_new)
-            l_i_new = alpha * l_i + l_ij
+            l_i = alpha * l_i + l_ij
 
-            # OPTIMIZATION 5: Minimize redundant computation
-            acc = acc * alpha[:, None]
-            # Prefetching is not available in current Triton version
-            # if ENABLE_PREFETCH:
-            #     # Prefetch next block's data
-            #     tl.prefetch(k_ptrs + BLOCK_N * stride_kn, eviction_policy="evict_last")
-            #     tl.prefetch(v_ptrs + BLOCK_N * stride_vn, eviction_policy="evict_last")
+            # Update accumulator - simplified for sparse patterns
+            acc = acc * alpha[:, None] + tl.dot(p, v)
 
-            # Update accumulator
-            acc += tl.dot(p.to(v.dtype), v)
+            # No prefetching for sparse patterns (correctly disabled)
 
             # Update for next iteration
-            l_i = l_i_new
             m_i = m_i_new
     else:
         # Dense attention path with optimizations
@@ -352,16 +345,41 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
         # Check if we're on Pascal or newer GPU
         is_pascal = self.compute_capability < 7
 
-        # For sparse patterns, use smaller block sizes like Unified
+        # For sparse patterns, use adaptive configuration based on effective sequence length
         if self.dilation_rate > 1:
-            config["block_m"] = 64
-            config["block_n"] = 64
-            config["block_d"] = min(32, self.head_dim)
-            config["num_warps"] = 4
-            config["rows_per_block"] = 1
-            config["fused_block_n"] = 64
-            config["use_fused_softmax"] = True
-            config["enable_prefetch"] = False
+            # Calculate effective sequence length after dilation
+            effective_len = seq_len // self.dilation_rate
+
+            if effective_len <= 512:
+                # Very sparse - use small blocks like Unified
+                config["block_m"] = 32
+                config["block_n"] = 32
+                config["block_d"] = min(32, self.head_dim)
+                config["num_warps"] = 2
+                config["use_fused_softmax"] = (
+                    False  # Simple softmax for small active sets
+                )
+            elif effective_len <= 2048:
+                # Moderately sparse - balanced configuration
+                config["block_m"] = 64
+                config["block_n"] = 64
+                config["block_d"] = min(64, self.head_dim)
+                config["num_warps"] = 4
+                config["use_fused_softmax"] = True
+            else:
+                # Large sparse sequences - can use bigger blocks
+                config["block_m"] = 64 if is_pascal else 128
+                config["block_n"] = 64 if is_pascal else 128
+                config["block_d"] = (
+                    min(64, self.head_dim) if is_pascal else self.head_dim
+                )
+                config["num_warps"] = 4 if is_pascal else 8
+                config["use_fused_softmax"] = True
+
+            # Common sparse settings
+            config["rows_per_block"] = 1  # No multi-row for sparse
+            config["fused_block_n"] = config["block_n"]
+            config["enable_prefetch"] = False  # No prefetch for sparse
             return config
 
         if is_pascal:
