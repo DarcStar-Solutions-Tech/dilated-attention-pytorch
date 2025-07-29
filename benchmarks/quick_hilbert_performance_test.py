@@ -10,8 +10,6 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dilated_attention_pytorch.kernels.hilbert_attention import HilbertAttention
-
 
 def quick_benchmark(model, x, use_hilbert, iterations=5):
     """Quick benchmark."""

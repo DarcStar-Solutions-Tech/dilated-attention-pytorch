@@ -10,8 +10,6 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dilated_attention_pytorch.kernels.hilbert_attention import HilbertAttention
-
 
 def benchmark_forward(model, x, use_hilbert, iterations=10):
     """Benchmark forward pass only."""

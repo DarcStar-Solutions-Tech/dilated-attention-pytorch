@@ -205,8 +205,6 @@ def test_implementation_approach():
     print("\n\nTESTING CURRENT IMPLEMENTATION")
     print("=" * 80)
 
-    from dilated_attention_pytorch.kernels.hilbert_attention import HilbertAttention
-
     # Create module with sparse pattern
     module = HilbertAttention(
         hidden_dim=768,

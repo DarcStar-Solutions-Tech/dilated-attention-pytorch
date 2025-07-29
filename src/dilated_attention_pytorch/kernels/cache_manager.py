@@ -156,7 +156,7 @@ class CachedHilbertMixin:
             return mapping
 
         # Create new mapping
-        from .hilbert_attention_core import create_hilbert_mapping
+        from .hilbert_attention_unified import create_hilbert_mapping
 
         mapping = create_hilbert_mapping(seq_len).to(device)
 

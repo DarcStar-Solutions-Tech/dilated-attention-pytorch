@@ -252,8 +252,6 @@ def analyze_sparse_pattern_hilbert():
     print("\n\nSPARSE PATTERN HILBERT ANALYSIS")
     print("=" * 80)
 
-    from dilated_attention_pytorch.kernels.hilbert_attention import HilbertAttention
-
     # Create module with sparse pattern
     module = HilbertAttention(
         hidden_dim=768,

@@ -11,8 +11,6 @@ sys.path.insert(
     0, "/home/mharris/Projects/DarcStar-Technologies/dilated-attention-pytorch/src"
 )
 
-from dilated_attention_pytorch.kernels.hilbert_attention import HilbertAttention
-
 
 def test_basic_functionality():
     """Test basic forward pass functionality."""

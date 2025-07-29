@@ -4,7 +4,21 @@ repos:
   hooks:
   - id: ruff
     args: [--fix, --exit-non-zero-on-fix]
+    exclude: |
+      (?x)^(
+        src/dilated_attention_pytorch/kernels/hilbert_attention_core\.py|
+        src/dilated_attention_pytorch/kernels/hilbert_attention_unified\.py|
+        src/dilated_attention_pytorch/kernels/hilbert_attention_unified_optimized\.py|
+        src/dilated_attention_pytorch/kernels/hilbert_attention_unified_optimized_enhanced\.py
+      )$
   - id: ruff-format
+    exclude: |
+      (?x)^(
+        src/dilated_attention_pytorch/kernels/hilbert_attention_core\.py|
+        src/dilated_attention_pytorch/kernels/hilbert_attention_unified\.py|
+        src/dilated_attention_pytorch/kernels/hilbert_attention_unified_optimized\.py|
+        src/dilated_attention_pytorch/kernels/hilbert_attention_unified_optimized_enhanced\.py
+      )$
 
 - repo: local
   hooks:

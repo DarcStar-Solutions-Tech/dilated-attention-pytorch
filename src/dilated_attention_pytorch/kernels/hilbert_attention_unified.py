@@ -85,14 +85,13 @@ def unified_hilbert_attention_kernel(
     mask_d = offs_d < D
 
     # Load queries - ensure proper dtype
-    # fmt: off
     q_ptrs = (
-        Q + pid_b * stride_qb
+        Q
+        + pid_b * stride_qb
         + pid_h * stride_qh
         + offs_m[:, None] * stride_qm
         + offs_d[None, :] * stride_qd
     )
-    # fmt: on
     q = tl.load(q_ptrs, mask=mask_m[:, None] & mask_d[None, :], other=0.0).to(
         tl.float32
     )
@@ -129,21 +128,20 @@ def unified_hilbert_attention_kernel(
                 h_idx = actual_n
 
             # Load K and V with proper dtype handling
-            # fmt: off
             k_ptrs = (
-                K + pid_b * stride_kb
+                K
+                + pid_b * stride_kb
                 + pid_h * stride_kh
                 + h_idx[:, None] * stride_kn
                 + offs_d[None, :] * stride_kd
             )
             v_ptrs = (
-                V + pid_b * stride_vb
+                V
+                + pid_b * stride_vb
                 + pid_h * stride_vh
                 + h_idx[:, None] * stride_vn
                 + offs_d[None, :] * stride_vd
             )
-            # fmt: on
-
             k = tl.load(k_ptrs, mask=mask_n[:, None] & mask_d[None, :], other=0.0).to(
                 tl.float32
             )
@@ -204,8 +202,6 @@ def unified_hilbert_attention_kernel(
                 + h_idx[:, None] * stride_vn
                 + offs_d[None, :] * stride_vd
             )
-            # fmt: on
-
             k = tl.load(k_ptrs, mask=mask_n[:, None] & mask_d[None, :], other=0.0).to(
                 tl.float32
             )
@@ -242,14 +238,13 @@ def unified_hilbert_attention_kernel(
         acc = acc / tl.maximum(l_i[:, None], 1e-10)
 
     # Store output
-    # fmt: off
     out_ptrs = (
-        Out + pid_b * stride_ob
+        Out
+        + pid_b * stride_ob
         + pid_h * stride_oh
         + offs_m[:, None] * stride_om
         + offs_d[None, :] * stride_od
     )
-    # fmt: on
     tl.store(out_ptrs, acc, mask=mask_m[:, None] & mask_d[None, :])
 
 

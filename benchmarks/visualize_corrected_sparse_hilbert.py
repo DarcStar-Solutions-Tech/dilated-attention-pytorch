@@ -8,7 +8,6 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels.hilbert_attention import HilbertAttention
 from dilated_attention_pytorch.kernels.hilbert_attention_core import (
     create_hilbert_mapping,
 )

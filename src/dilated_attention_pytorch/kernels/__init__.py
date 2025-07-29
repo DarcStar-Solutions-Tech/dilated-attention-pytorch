@@ -6,7 +6,7 @@ with support for dilated/sparse patterns.
 """
 
 # Import the simplified implementation
-from .hilbert_attention import HilbertAttention
+from .hilbert_attention_unified import HilbertAttention
 
 # Import unified implementations
 from .hilbert_attention_unified import UnifiedHilbertAttention
@@ -16,14 +16,14 @@ from .hilbert_attention_unified_optimized_enhanced import (
 )
 
 # Import enhanced implementation with all optimizations
-from .hilbert_attention_enhanced import HilbertAttentionEnhanced
+from .hilbert_attention_unified_optimized_enhanced import HilbertAttentionEnhanced
 
 # Import utilities
 from .cache_manager import BoundedCache
 
 # Try to import Triton-based implementations for backward compatibility
 try:
-    from .hilbert_attention_core import HilbertAttentionFunction
+    from .hilbert_attention_unified import HilbertAttentionFunction
 
     TRITON_AVAILABLE = True
 except (ImportError, RuntimeError):
@@ -31,7 +31,7 @@ except (ImportError, RuntimeError):
     HilbertAttentionFunction = None
 
 # Import the simple PyTorch fallback
-from .hilbert_attention_simple import create_hilbert_mapping
+from .hilbert_attention_unified import create_hilbert_mapping
 
 __all__ = [
     # Main implementation

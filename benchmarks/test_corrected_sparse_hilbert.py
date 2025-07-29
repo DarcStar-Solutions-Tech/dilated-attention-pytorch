@@ -8,8 +8,6 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from dilated_attention_pytorch.kernels.hilbert_attention import HilbertAttention
-
 
 def test_corrected_implementation():
     """Test that the corrected implementation maintains sparse pattern locality."""
