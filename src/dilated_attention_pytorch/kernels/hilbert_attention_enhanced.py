@@ -89,16 +89,10 @@ class HilbertAttentionEnhanced(nn.Module):
         except (ImportError, RuntimeError):
             pass
 
-        # Try to import fused kernels
+        # Fused kernels have been removed after integration
+        # The optimizations are now part of this enhanced implementation
         self._fused_kernels_available = False
         self._fused_forward_fn = None
-        try:
-            from .hilbert_attention_fused_v2 import launch_fused_kernel
-
-            self._fused_kernels_available = True
-            self._fused_forward_fn = launch_fused_kernel
-        except (ImportError, RuntimeError):
-            pass
 
     def _get_optimal_config(self, seq_len: int) -> Dict[str, any]:
         """
