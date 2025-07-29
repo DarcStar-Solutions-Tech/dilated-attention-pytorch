@@ -98,7 +98,8 @@ def unified_hilbert_attention_kernel_enhanced(
 
     # Load queries - ensure proper dtype
     q_ptrs = (
-        Q + pid_b * stride_qb
+        Q
+        + pid_b * stride_qb
         + pid_h * stride_qh
         + offs_m[:, None] * stride_qm
         + offs_d[None, :] * stride_qd
@@ -260,7 +261,8 @@ def unified_hilbert_attention_kernel_enhanced(
 
     # Store output
     out_ptrs = (
-        Out + pid_b * stride_ob
+        Out
+        + pid_b * stride_ob
         + pid_h * stride_oh
         + offs_m[:, None] * stride_om
         + offs_d[None, :] * stride_od
@@ -349,7 +351,7 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
 
         # Check if we're on Pascal or newer GPU
         is_pascal = self.compute_capability < 7
-        
+
         # For sparse patterns, use smaller block sizes like Unified
         if self.dilation_rate > 1:
             config["block_m"] = 64

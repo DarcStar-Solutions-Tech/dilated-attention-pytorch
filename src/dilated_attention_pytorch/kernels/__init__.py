@@ -7,7 +7,6 @@ with support for dilated/sparse patterns.
 
 # Import unified implementations
 from .hilbert_attention_unified import UnifiedHilbertAttention
-from .hilbert_attention_unified_optimized import UnifiedHilbertAttentionOptimized
 from .hilbert_attention_unified_optimized_enhanced import (
     UnifiedHilbertAttentionOptimizedEnhanced,
 )
@@ -31,7 +30,6 @@ create_hilbert_mapping = UnifiedHilbertAttention._create_hilbert_mapping
 __all__ = [
     # Unified implementations (in order of increasing optimization)
     "UnifiedHilbertAttention",
-    "UnifiedHilbertAttentionOptimized",
     "UnifiedHilbertAttentionOptimizedEnhanced",
     # Utilities
     "BoundedCache",
