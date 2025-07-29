@@ -93,6 +93,17 @@ class HilbertAttention(nn.Module):
         except (ImportError, RuntimeError):
             pass
 
+        # Try to import fused kernels
+        self._fused_kernels_available = False
+        self._fused_forward_fn = None
+        try:
+            from .hilbert_attention_fused_v2 import launch_fused_kernel
+
+            self._fused_kernels_available = True
+            self._fused_forward_fn = launch_fused_kernel
+        except (ImportError, RuntimeError):
+            pass
+
     def forward(
         self,
         x: torch.Tensor,
@@ -129,15 +140,26 @@ class HilbertAttention(nn.Module):
         # Only use Hilbert if sequence length exceeds threshold
         use_hilbert = use_hilbert and M_padded > self.hilbert_threshold
 
+        # Check if we should use fused kernels for medium sequences
+        # Based on benchmarks, fused kernels are optimal for 2K-4K sequences
+        use_fused_kernel = (
+            self._triton_available
+            and device.type == "cuda"
+            and 2048 <= M_padded <= 4096  # Optimal range based on benchmarks
+            and hasattr(self, "_fused_kernels_available")
+            and self._fused_kernels_available
+        )
+
         # Select computation method
-        use_triton = (
+        if use_fused_kernel:
+            # Use fused kernel for better performance at medium sequence lengths
+            out = self._fused_forward(qkv, M_padded, M, B, use_hilbert, is_causal)
+        elif (
             self._triton_available
             and device.type == "cuda"
             and use_hilbert
             and not is_causal  # Triton kernel doesn't support causal masking yet
-        )
-
-        if use_triton:
+        ):
             # Triton kernel handles Hilbert reordering internally
             out = self._triton_forward_wrapper(q, k, v, M_padded, M, B, use_hilbert)
         else:
@@ -259,6 +281,42 @@ class HilbertAttention(nn.Module):
 
         return out
 
+    def _fused_forward(
+        self,
+        qkv: torch.Tensor,
+        M_padded: int,
+        M_orig: int,
+        B: int,
+        use_hilbert: bool,
+        is_causal: bool,
+    ) -> torch.Tensor:
+        """Forward pass using fused kernels for better performance."""
+        # Extract Q, K, V from stacked tensor
+        q, k, v = qkv[0], qkv[1], qkv[2]
+
+        # Get Hilbert mapping if needed
+        if use_hilbert:
+            hilbert_map = self._get_hilbert_mapping(M_padded, qkv.device)
+        else:
+            hilbert_map = None
+
+        # For now, fused kernel doesn't support sparse attention
+        if self.dilation_rate > 1:
+            # Fall back to regular sparse attention
+            if use_hilbert and hilbert_map is not None:
+                k = k[:, :, hilbert_map]
+                v = v[:, :, hilbert_map]
+            return self._sparse_attention(q, k, v, is_causal)
+
+        # Call fused kernel
+        return self._fused_forward_fn(
+            q,
+            k,
+            v,
+            self.scale,
+            hilbert_map,
+        )
+
     def _triton_forward_wrapper(
         self,
         q: torch.Tensor,
@@ -323,7 +381,7 @@ class HilbertAttention(nn.Module):
         Create Hilbert mapping optimized for sparse patterns.
 
         For sparse patterns, we apply Hilbert ordering within each segment's
-        sparse positions to maintain locality.
+        sparse positions to maintain locality while preserving the sparse access pattern.
         """
         # Start with identity mapping
         mapping = torch.arange(seq_len, dtype=torch.int32)
@@ -337,27 +395,50 @@ class HilbertAttention(nn.Module):
             seg_len = seg_end - seg_start
 
             # Get sparse positions in this segment
-            num_sparse = (seg_len + dilation_rate - 1) // dilation_rate
             sparse_positions = []
-            for i in range(num_sparse):
-                pos = seg_start + i * dilation_rate
+            for i in range(0, seg_len, dilation_rate):
+                pos = seg_start + i
                 if pos < seg_end:
                     sparse_positions.append(pos)
 
             # Apply Hilbert ordering to sparse positions within segment
-            if len(sparse_positions) > 1:
-                # Create Hilbert curve for the number of sparse positions
-                sparse_hilbert = self._create_hilbert_mapping(len(sparse_positions))
+            if (
+                len(sparse_positions) > 4
+            ):  # Only apply Hilbert if we have enough positions
+                # Create Hilbert curve for the sparse positions
+                n_sparse = len(sparse_positions)
 
-                # Create reordered positions
-                reordered_positions = [
-                    sparse_positions[sparse_hilbert[i].item()]
-                    for i in range(len(sparse_positions))
+                # For small numbers of positions, use simple optimized patterns
+                if n_sparse <= 16:
+                    # Simple 2D snake pattern for small sets
+                    grid_size = int(math.ceil(math.sqrt(n_sparse)))
+                    hilbert_indices = []
+
+                    for row in range(grid_size):
+                        row_indices = []
+                        for col in range(grid_size):
+                            idx = row * grid_size + col
+                            if idx < n_sparse:
+                                row_indices.append(idx)
+
+                        # Reverse even rows for snake pattern
+                        if row % 2 == 1:
+                            row_indices.reverse()
+                        hilbert_indices.extend(row_indices)
+                else:
+                    # Use actual Hilbert curve for larger sets
+                    hilbert_perm = self._create_hilbert_mapping(n_sparse)
+                    hilbert_indices = [hilbert_perm[i].item() for i in range(n_sparse)]
+
+                # Apply the reordering to maintain sparse structure
+                # Map sparse position index to actual position
+                reordered_sparse = [
+                    sparse_positions[hidx] for hidx in hilbert_indices[:n_sparse]
                 ]
 
-                # Update mapping
-                for i, orig_pos in enumerate(sparse_positions):
-                    mapping[orig_pos] = reordered_positions[i]
+                # Update the mapping to preserve sparse pattern
+                for new_idx, old_pos in enumerate(sparse_positions):
+                    mapping[old_pos] = reordered_sparse[new_idx]
 
         return mapping
 
