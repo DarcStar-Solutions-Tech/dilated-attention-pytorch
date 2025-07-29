@@ -81,9 +81,13 @@ def hilbert_attention_kernel(
     mask_d = offs_d < D
 
     # Load queries
-    # fmt: off
-    q_ptrs = (Q + pid_b * stride_qb + pid_h * stride_qh + offs_m[:, None] * stride_qm + offs_d[None, :] * stride_qd)
-    # fmt: on
+    q_ptrs = (
+        Q
+        + pid_b * stride_qb
+        + pid_h * stride_qh
+        + offs_m[:, None] * stride_qm
+        + offs_d[None, :] * stride_qd
+    )
     q = tl.load(q_ptrs, mask=mask_m[:, None] & mask_d[None, :], other=0.0)
     q = q * scale
 
@@ -111,10 +115,20 @@ def hilbert_attention_kernel(
         h_idx = tl.load(hilbert_map + offs_n, mask=mask_n, other=0)
 
         # Load keys and values using Hilbert reordering
-        # fmt: off
-        k_ptrs = (K + pid_b * stride_kb + pid_h * stride_kh + h_idx[None, :] * stride_kn + offs_d[:, None] * stride_kd)
-        v_ptrs = (V + pid_b * stride_vb + pid_h * stride_vh + h_idx[None, :] * stride_vn + offs_d[:, None] * stride_vd)
-        # fmt: on
+        k_ptrs = (
+            K
+            + pid_b * stride_kb
+            + pid_h * stride_kh
+            + h_idx[None, :] * stride_kn
+            + offs_d[:, None] * stride_kd
+        )
+        v_ptrs = (
+            V
+            + pid_b * stride_vb
+            + pid_h * stride_vh
+            + h_idx[None, :] * stride_vn
+            + offs_d[:, None] * stride_vd
+        )
 
         k = tl.load(k_ptrs, mask=mask_n[None, :] & mask_d[:, None], other=0.0)
         v = tl.load(v_ptrs, mask=mask_n[None, :] & mask_d[:, None], other=0.0)
@@ -147,9 +161,13 @@ def hilbert_attention_kernel(
     acc = acc / tl.maximum(l_i[:, None], 1e-10)
 
     # Store output
-    # fmt: off
-    out_ptrs = (Out + pid_b * stride_ob + pid_h * stride_oh + offs_m[:, None] * stride_om + offs_d[None, :] * stride_od)
-    # fmt: on
+    out_ptrs = (
+        Out
+        + pid_b * stride_ob
+        + pid_h * stride_oh
+        + offs_m[:, None] * stride_om
+        + offs_d[None, :] * stride_od
+    )
     tl.store(out_ptrs, acc, mask=mask_m[:, None] & mask_d[None, :])
 
 
@@ -231,9 +249,13 @@ def hilbert_attention_bwd_kernel(
     mask_d = offs_d < D
 
     # Load queries and output gradients
-    # fmt: off
-    q_ptrs = (Q + pid_b * stride_qb + pid_h * stride_qh + offs_m[:, None] * stride_qm + offs_d[None, :] * stride_qd)
-    # fmt: on
+    q_ptrs = (
+        Q
+        + pid_b * stride_qb
+        + pid_h * stride_qh
+        + offs_m[:, None] * stride_qm
+        + offs_d[None, :] * stride_qd
+    )
     q = tl.load(q_ptrs, mask=mask_m[:, None] & mask_d[None, :], other=0.0)
     q = q * scale
 
@@ -267,10 +289,20 @@ def hilbert_attention_bwd_kernel(
         h_idx = tl.load(hilbert_map + offs_n, mask=mask_n, other=0)
 
         # Load keys and values using Hilbert reordering
-        # fmt: off
-        k_ptrs = (K + pid_b * stride_kb + pid_h * stride_kh + h_idx[None, :] * stride_kn + offs_d[:, None] * stride_kd)
-        v_ptrs = (V + pid_b * stride_vb + pid_h * stride_vh + h_idx[None, :] * stride_vn + offs_d[:, None] * stride_vd)
-        # fmt: on
+        k_ptrs = (
+            K
+            + pid_b * stride_kb
+            + pid_h * stride_kh
+            + h_idx[None, :] * stride_kn
+            + offs_d[:, None] * stride_kd
+        )
+        v_ptrs = (
+            V
+            + pid_b * stride_vb
+            + pid_h * stride_vh
+            + h_idx[None, :] * stride_vn
+            + offs_d[:, None] * stride_vd
+        )
 
         k = tl.load(k_ptrs, mask=mask_n[None, :] & mask_d[:, None], other=0.0)
         v = tl.load(v_ptrs, mask=mask_n[None, :] & mask_d[:, None], other=0.0)
@@ -379,9 +411,13 @@ def hilbert_attention_kernel_sparse_optimized(
     mask_d = offs_d < D
 
     # Load queries
-    # fmt: off
-    q_ptrs = (Q + pid_b * stride_qb + pid_h * stride_qh + offs_m[:, None] * stride_qm + offs_d[None, :] * stride_qd)
-    # fmt: on
+    q_ptrs = (
+        Q
+        + pid_b * stride_qb
+        + pid_h * stride_qh
+        + offs_m[:, None] * stride_qm
+        + offs_d[None, :] * stride_qd
+    )
     q = tl.load(q_ptrs, mask=mask_m[:, None] & mask_d[None, :], other=0.0)
     q = q * scale
 
@@ -414,10 +450,20 @@ def hilbert_attention_kernel_sparse_optimized(
         h_idx = tl.load(hilbert_map + offs_n, mask=mask_n, other=0)
 
         # Load keys and values
-        # fmt: off
-        k_ptrs = (K + pid_b * stride_kb + pid_h * stride_kh + h_idx[None, :] * stride_kn + offs_d[:, None] * stride_kd)
-        v_ptrs = (V + pid_b * stride_vb + pid_h * stride_vh + h_idx[None, :] * stride_vn + offs_d[:, None] * stride_vd)
-        # fmt: on
+        k_ptrs = (
+            K
+            + pid_b * stride_kb
+            + pid_h * stride_kh
+            + h_idx[None, :] * stride_kn
+            + offs_d[:, None] * stride_kd
+        )
+        v_ptrs = (
+            V
+            + pid_b * stride_vb
+            + pid_h * stride_vh
+            + h_idx[None, :] * stride_vn
+            + offs_d[:, None] * stride_vd
+        )
 
         k = tl.load(k_ptrs, mask=mask_n[None, :] & mask_d[:, None], other=0.0)
         v = tl.load(v_ptrs, mask=mask_n[None, :] & mask_d[:, None], other=0.0)
@@ -455,9 +501,13 @@ def hilbert_attention_kernel_sparse_optimized(
     acc = acc / tl.maximum(l_i[:, None], 1e-10)
 
     # Store output
-    # fmt: off
-    out_ptrs = (Out + pid_b * stride_ob + pid_h * stride_oh + offs_m[:, None] * stride_om + offs_d[None, :] * stride_od)
-    # fmt: on
+    out_ptrs = (
+        Out
+        + pid_b * stride_ob
+        + pid_h * stride_oh
+        + offs_m[:, None] * stride_om
+        + offs_d[None, :] * stride_od
+    )
     tl.store(out_ptrs, acc, mask=mask_m[:, None] & mask_d[None, :])
 
 
@@ -517,9 +567,13 @@ def standard_attention_kernel(
     mask_d = offs_d < D
 
     # Load queries
-    # fmt: off
-    q_ptrs = (Q + pid_b * stride_qb + pid_h * stride_qh + offs_m[:, None] * stride_qm + offs_d[None, :] * stride_qd)
-    # fmt: on
+    q_ptrs = (
+        Q
+        + pid_b * stride_qb
+        + pid_h * stride_qh
+        + offs_m[:, None] * stride_qm
+        + offs_d[None, :] * stride_qd
+    )
     q = tl.load(q_ptrs, mask=mask_m[:, None] & mask_d[None, :], other=0.0)
     q = q * scale
 
@@ -544,20 +598,20 @@ def standard_attention_kernel(
         mask_n = (offs_n < M) & in_segment & dilation_mask
 
         # Load keys and values directly (no Hilbert reordering)
-        # fmt: off
         k_ptrs = (
-            K + pid_b * stride_kb
+            K
+            + pid_b * stride_kb
             + pid_h * stride_kh
             + offs_n[None, :] * stride_kn
             + offs_d[:, None] * stride_kd
         )
         v_ptrs = (
-            V + pid_b * stride_vb
+            V
+            + pid_b * stride_vb
             + pid_h * stride_vh
             + offs_n[None, :] * stride_vn
             + offs_d[:, None] * stride_vd
         )
-        # fmt: on
 
         k = tl.load(k_ptrs, mask=mask_n[None, :] & mask_d[:, None], other=0.0)
         v = tl.load(v_ptrs, mask=mask_n[None, :] & mask_d[:, None], other=0.0)
@@ -589,9 +643,13 @@ def standard_attention_kernel(
     acc = acc / (l_i[:, None] + 1e-10)
 
     # Store output
-    # fmt: off
-    out_ptrs = (Out + pid_b * stride_ob + pid_h * stride_oh + offs_m[:, None] * stride_om + offs_d[None, :] * stride_od)
-    # fmt: on
+    out_ptrs = (
+        Out
+        + pid_b * stride_ob
+        + pid_h * stride_oh
+        + offs_m[:, None] * stride_om
+        + offs_d[None, :] * stride_od
+    )
     tl.store(out_ptrs, acc, mask=mask_m[:, None] & mask_d[None, :])
 
 
