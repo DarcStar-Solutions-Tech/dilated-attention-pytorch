@@ -390,19 +390,20 @@ class HilbertAttentionEnhanced(nn.Module):
 
         # Call Triton kernel with proper arguments
         # HilbertAttentionFunction.apply expects:
-        # qkv, hidden_dim, num_heads, head_dim, segment_size, dilation_rate,
-        # dropout, scale, seq_len, hilbert_map
+        # qkv, scale, hilbert_map, segment_size, dilation_rate,
+        # M_padded, M_orig, B, H, D
+        B, H, _, D = q.shape
         return self._triton_forward(
             qkv,
-            self.hidden_dim,
-            self.num_heads,
-            self.head_dim,
+            self.scale,
+            hilbert_map,
             self.segment_size,
             self.dilation_rate,
-            self.dropout if self.training else 0.0,
-            self.scale,
             M_padded,
-            hilbert_map,
+            M_padded,  # M_orig = M_padded since we already padded
+            B,
+            H,
+            D,
         )
 
     def _get_hilbert_mapping(self, seq_len: int, device: torch.device) -> torch.Tensor:
