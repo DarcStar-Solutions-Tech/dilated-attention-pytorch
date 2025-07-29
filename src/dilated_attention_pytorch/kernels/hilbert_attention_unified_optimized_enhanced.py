@@ -368,31 +368,41 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
                     config["block_d"] = min(64, self.head_dim)
                     config["num_warps"] = 4
                     config["use_fused_softmax"] = True
-            elif effective_len <= 512:
-                # Very sparse - use small blocks like Unified
-                config["block_m"] = 32
-                config["block_n"] = 32
-                config["block_d"] = min(32, self.head_dim)
-                config["num_warps"] = 2
-                config["use_fused_softmax"] = (
-                    False  # Simple softmax for small active sets
-                )
-            elif effective_len <= 2048:
-                # Moderately sparse - balanced configuration
-                config["block_m"] = 64
-                config["block_n"] = 64
-                config["block_d"] = min(64, self.head_dim)
-                config["num_warps"] = 4
-                config["use_fused_softmax"] = True
-            else:
-                # Large sparse sequences - can use bigger blocks
-                config["block_m"] = 64 if is_pascal else 128
-                config["block_n"] = 64 if is_pascal else 128
-                config["block_d"] = (
-                    min(64, self.head_dim) if is_pascal else self.head_dim
-                )
-                config["num_warps"] = 4 if is_pascal else 8
-                config["use_fused_softmax"] = True
+                else:
+                    # For other 4K sparse patterns (d=8, etc), fall through to standard logic
+                    pass
+
+            if (
+                seq_len != 4096
+                or not self.enable_4k_optimization
+                or effective_len not in [1024, 2048]
+            ):
+                # Standard sparse configuration logic
+                if effective_len <= 512:
+                    # Very sparse - use small blocks like Unified
+                    config["block_m"] = 32
+                    config["block_n"] = 32
+                    config["block_d"] = min(32, self.head_dim)
+                    config["num_warps"] = 2
+                    config["use_fused_softmax"] = (
+                        False  # Simple softmax for small active sets
+                    )
+                elif effective_len <= 2048:
+                    # Moderately sparse - balanced configuration
+                    config["block_m"] = 64
+                    config["block_n"] = 64
+                    config["block_d"] = min(64, self.head_dim)
+                    config["num_warps"] = 4
+                    config["use_fused_softmax"] = True
+                else:
+                    # Large sparse sequences - can use bigger blocks
+                    config["block_m"] = 64 if is_pascal else 128
+                    config["block_n"] = 64 if is_pascal else 128
+                    config["block_d"] = (
+                        min(64, self.head_dim) if is_pascal else self.head_dim
+                    )
+                    config["num_warps"] = 4 if is_pascal else 8
+                    config["use_fused_softmax"] = True
 
             # Common sparse settings
             config["rows_per_block"] = 1  # No multi-row for sparse
