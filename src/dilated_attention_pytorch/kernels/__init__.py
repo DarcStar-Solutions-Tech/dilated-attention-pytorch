@@ -11,6 +11,9 @@ from .hilbert_attention import HilbertAttention
 # Import unified implementations
 from .hilbert_attention_unified import UnifiedHilbertAttention
 from .hilbert_attention_unified_optimized import UnifiedHilbertAttentionOptimized
+from .hilbert_attention_unified_optimized_enhanced import (
+    UnifiedHilbertAttentionOptimizedEnhanced,
+)
 
 # Import enhanced implementation with all optimizations
 from .hilbert_attention_enhanced import HilbertAttentionEnhanced
@@ -38,6 +41,7 @@ __all__ = [
     # Unified implementations
     "UnifiedHilbertAttention",
     "UnifiedHilbertAttentionOptimized",
+    "UnifiedHilbertAttentionOptimizedEnhanced",
     # Utilities
     "BoundedCache",
     "create_hilbert_mapping",
