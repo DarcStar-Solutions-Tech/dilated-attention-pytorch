@@ -142,12 +142,18 @@ class HilbertAttention(nn.Module):
 
         # Check if we should use fused kernels for medium sequences
         # Based on benchmarks, fused kernels are optimal for 2K-16K sequences
+        # But avoid dimension mismatch issues on Pascal GPUs
+        compute_capability = (
+            torch.cuda.get_device_capability(device)[0] if device.type == "cuda" else 0
+        )
         use_fused_kernel = (
             self._triton_available
             and device.type == "cuda"
             and 2048 <= M_padded <= 16384  # Extended range for better performance
             and hasattr(self, "_fused_kernels_available")
             and self._fused_kernels_available
+            # Avoid fused kernels on Pascal when BLOCK_D < head_dim
+            and not (compute_capability < 7 and self.head_dim > 32)
         )
 
         # Select computation method

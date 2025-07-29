@@ -85,22 +85,25 @@ def fused_attention_4096(
             K
             + pid_b * stride_kb
             + pid_h * stride_kh
-            + h_idx[None, :] * stride_kn
-            + offs_d[:, None] * stride_kd
+            + h_idx[:, None] * stride_kn
+            + offs_d[None, :] * stride_kd
         )
         v_ptrs = (
             V
             + pid_b * stride_vb
             + pid_h * stride_vh
-            + h_idx[None, :] * stride_vn
-            + offs_d[:, None] * stride_vd
+            + h_idx[:, None] * stride_vn
+            + offs_d[None, :] * stride_vd
         )
 
-        k = tl.load(k_ptrs, mask=mask_n[None, :] & mask_d[:, None], other=0.0)
-        v = tl.load(v_ptrs, mask=mask_n[None, :] & mask_d[:, None], other=0.0)
+        # Load K and V with shape [BLOCK_N, BLOCK_D]
+        k = tl.load(k_ptrs, mask=mask_n[:, None] & mask_d[None, :], other=0.0)
+        v = tl.load(v_ptrs, mask=mask_n[:, None] & mask_d[None, :], other=0.0)
 
         # Compute attention
-        s = tl.dot(q, k)
+        # q is [BLOCK_M, BLOCK_D], k is [BLOCK_N, BLOCK_D]
+        # Need k transposed to [BLOCK_D, BLOCK_N] for matmul
+        s = tl.dot(q, tl.trans(k))
         s = tl.where(mask_n[None, :], s, -1e9)
 
         # Online softmax
@@ -149,14 +152,21 @@ def launch_fused_kernel(q, k, v, scale, hilbert_map=None):
             BLOCK_M = 64
             BLOCK_N = 64
             num_warps = 4
-        elif M <= 8192:
+        elif M == 8192:
+            # Special case for 8K - optimize grid alignment
             BLOCK_M = 64
             BLOCK_N = 64
             num_warps = 4
-        else:  # 8K-16K - keep small for Pascal's limited shared memory
+        elif M <= 10240:
+            # 8K-10K range
             BLOCK_M = 64
             BLOCK_N = 64
             num_warps = 4
+        else:  # 10K-16K
+            BLOCK_M = 64
+            BLOCK_N = 64
+            num_warps = 4
+        # Critical: Keep BLOCK_D small for Pascal's 48KB shared memory
         BLOCK_D = min(32, D)
     else:  # Volta and newer
         if M <= 2048:
@@ -167,11 +177,17 @@ def launch_fused_kernel(q, k, v, scale, hilbert_map=None):
             BLOCK_M = 128
             BLOCK_N = 128
             num_warps = 4
-        elif M <= 8192:
-            BLOCK_M = 128
+        elif M == 8192:
+            # Special case for 8K - better grid alignment
+            BLOCK_M = 64
             BLOCK_N = 128
             num_warps = 4
-        else:  # 8K-16K - moderate tiles to avoid shared memory limits
+        elif M <= 10240:
+            # 8K-10K range optimization
+            BLOCK_M = 96
+            BLOCK_N = 96
+            num_warps = 4
+        else:  # 10K-16K
             BLOCK_M = 128
             BLOCK_N = 128
             num_warps = 4
