@@ -8,6 +8,10 @@ with support for dilated/sparse patterns.
 # Import the simplified implementation
 from .hilbert_attention import HilbertAttention
 
+# Import unified implementations
+from .hilbert_attention_unified import UnifiedHilbertAttention
+from .hilbert_attention_unified_optimized import UnifiedHilbertAttentionOptimized
+
 # Import utilities
 from .cache_manager import BoundedCache
 
@@ -26,6 +30,9 @@ from .hilbert_attention_simple import create_hilbert_mapping
 __all__ = [
     # Main implementation
     "HilbertAttention",
+    # Unified implementations
+    "UnifiedHilbertAttention",
+    "UnifiedHilbertAttentionOptimized",
     # Utilities
     "BoundedCache",
     "create_hilbert_mapping",
