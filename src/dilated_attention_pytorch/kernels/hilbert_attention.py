@@ -52,6 +52,7 @@ class HilbertAttention(nn.Module):
         dropout: float = 0.0,
         cache_size: int = 32,
         cache_memory_mb: float = 100.0,
+        hilbert_threshold: int = 1024,
     ):
         super().__init__()
 
@@ -64,6 +65,7 @@ class HilbertAttention(nn.Module):
         self.dilation_rate = dilation_rate
         self.dropout = dropout
         self.scale = self.head_dim**-0.5
+        self.hilbert_threshold = hilbert_threshold
 
         # Projections
         self.qkv_proj = nn.Linear(hidden_dim, 3 * hidden_dim, bias=False)
@@ -124,6 +126,9 @@ class HilbertAttention(nn.Module):
         qkv = qkv.permute(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]
 
+        # Only use Hilbert if sequence length exceeds threshold
+        use_hilbert = use_hilbert and M_padded > self.hilbert_threshold
+
         # Select computation method
         use_triton = (
             self._triton_available
@@ -133,11 +138,12 @@ class HilbertAttention(nn.Module):
         )
 
         if use_triton:
-            out = self._triton_forward_wrapper(q, k, v, M_padded, M, B)
+            # Triton kernel handles Hilbert reordering internally
+            out = self._triton_forward_wrapper(q, k, v, M_padded, M, B, use_hilbert)
         else:
             # PyTorch implementation
-            if use_hilbert and self.dilation_rate == 1:
-                # Apply Hilbert reordering for standard attention
+            if use_hilbert:
+                # Apply Hilbert reordering to k and v for all attention types
                 hilbert_map = self._get_hilbert_mapping(M_padded, device)
                 k = k[:, :, hilbert_map]
                 v = v[:, :, hilbert_map]
@@ -229,6 +235,7 @@ class HilbertAttention(nn.Module):
             )
 
             # Get keys and values at sparse positions
+            # Note: k and v are already Hilbert-reordered if use_hilbert was True
             k_sparse = k[:, :, sparse_indices, :]
             v_sparse = v[:, :, sparse_indices, :]
 
@@ -260,10 +267,15 @@ class HilbertAttention(nn.Module):
         M_padded: int,
         M_orig: int,
         B: int,
+        use_hilbert: bool,
     ) -> torch.Tensor:
         """Wrapper for Triton kernel forward pass."""
-        # Get Hilbert mapping
-        hilbert_map = self._get_hilbert_mapping(M_padded, q.device)
+        # Get Hilbert mapping if needed
+        if use_hilbert:
+            hilbert_map = self._get_hilbert_mapping(M_padded, q.device)
+        else:
+            # Identity mapping for standard attention
+            hilbert_map = torch.arange(M_padded, device=q.device, dtype=torch.int32)
 
         # Stack QKV for Triton kernel
         qkv = torch.stack([q, k, v], dim=0)
@@ -284,20 +296,76 @@ class HilbertAttention(nn.Module):
 
     def _get_hilbert_mapping(self, seq_len: int, device: torch.device) -> torch.Tensor:
         """Get cached Hilbert mapping or create new one."""
-        mapping = self._hilbert_cache.get(seq_len)
+        # Create cache key that includes dilation rate for sparse patterns
+        cache_key = (seq_len, self.segment_size, self.dilation_rate)
+        mapping = self._hilbert_cache.get(cache_key)
 
         if mapping is None or mapping.device != device:
-            mapping = self._create_hilbert_mapping(seq_len).to(device)
-            self._hilbert_cache.put(seq_len, mapping)
+            if seq_len <= self.hilbert_threshold:
+                # Use identity mapping for sequences below threshold
+                mapping = torch.arange(seq_len, dtype=torch.int32).to(device)
+            elif self.dilation_rate > 1:
+                # For sparse patterns, create segment-local Hilbert mapping
+                mapping = self._create_segment_local_hilbert_mapping(
+                    seq_len, self.segment_size, self.dilation_rate
+                ).to(device)
+            else:
+                # For dense patterns, use global Hilbert mapping
+                mapping = self._create_hilbert_mapping(seq_len).to(device)
+            self._hilbert_cache.put(cache_key, mapping)
+
+        return mapping
+
+    def _create_segment_local_hilbert_mapping(
+        self, seq_len: int, segment_size: int, dilation_rate: int
+    ) -> torch.Tensor:
+        """
+        Create Hilbert mapping optimized for sparse patterns.
+
+        For sparse patterns, we apply Hilbert ordering within each segment's
+        sparse positions to maintain locality.
+        """
+        # Start with identity mapping
+        mapping = torch.arange(seq_len, dtype=torch.int32)
+
+        # Process each segment
+        num_segments = (seq_len + segment_size - 1) // segment_size
+
+        for seg_idx in range(num_segments):
+            seg_start = seg_idx * segment_size
+            seg_end = min(seg_start + segment_size, seq_len)
+            seg_len = seg_end - seg_start
+
+            # Get sparse positions in this segment
+            num_sparse = (seg_len + dilation_rate - 1) // dilation_rate
+            sparse_positions = []
+            for i in range(num_sparse):
+                pos = seg_start + i * dilation_rate
+                if pos < seg_end:
+                    sparse_positions.append(pos)
+
+            # Apply Hilbert ordering to sparse positions within segment
+            if len(sparse_positions) > 1:
+                # Create Hilbert curve for the number of sparse positions
+                sparse_hilbert = self._create_hilbert_mapping(len(sparse_positions))
+
+                # Create reordered positions
+                reordered_positions = [
+                    sparse_positions[sparse_hilbert[i].item()]
+                    for i in range(len(sparse_positions))
+                ]
+
+                # Update mapping
+                for i, orig_pos in enumerate(sparse_positions):
+                    mapping[orig_pos] = reordered_positions[i]
 
         return mapping
 
     @staticmethod
     def _create_hilbert_mapping(seq_len: int) -> torch.Tensor:
         """Create Hilbert curve mapping for sequence."""
-        if seq_len <= 64:
-            # Identity mapping for small sequences
-            return torch.arange(seq_len, dtype=torch.int32)
+        # Note: threshold check is done in _get_hilbert_mapping
+        # This method assumes we want actual Hilbert mapping
 
         # Find grid size
         grid_size = 1 << math.ceil(math.log2(math.sqrt(seq_len)) + 0.5)
@@ -329,9 +397,13 @@ class HilbertAttention(nn.Module):
 
         # Sort by Hilbert index
         positions.sort(key=lambda p: p[0])
-        mapping = torch.tensor([p[1] for p in positions], dtype=torch.int32)
 
-        return mapping
+        # Create inverse mapping: original_pos -> hilbert_pos
+        inverse_mapping = torch.zeros(seq_len, dtype=torch.int32)
+        for hilbert_pos, (_, orig_pos) in enumerate(positions):
+            inverse_mapping[orig_pos] = hilbert_pos
+
+        return inverse_mapping
 
     def clear_cache(self) -> None:
         """Clear the Hilbert mapping cache."""

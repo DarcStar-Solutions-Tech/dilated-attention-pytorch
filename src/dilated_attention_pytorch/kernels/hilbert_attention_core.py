@@ -96,14 +96,12 @@ def hilbert_attention_kernel(
     l_i = tl.zeros([BLOCK_M], dtype=tl.float32)
     m_i = tl.zeros([BLOCK_M], dtype=tl.float32) - 1e9  # Standardized large negative
 
-    # Determine segment boundaries for queries (simplified from optimized version)
+    # Determine segment boundaries for queries
     seg_idx = offs_m // segment_size
     seg_start = seg_idx * segment_size
     seg_end = tl.minimum(seg_start + segment_size, M)
 
     # Process keys with memory-efficient stride
-    # Key optimization: when dilation_rate > 1, we can skip blocks more aggressively
-    # since we only need every dilation_rate-th position
     for start_n in range(0, M, BLOCK_N):
         # Key indices
         offs_n = start_n + tl.arange(0, BLOCK_N)
@@ -363,6 +361,157 @@ def hilbert_attention_bwd_kernel(
 
 
 @triton.jit
+def hilbert_attention_kernel_sparse_optimized(
+    # Same signature as hilbert_attention_kernel
+    Q,
+    K,
+    V,
+    Out,
+    hilbert_map,
+    stride_qb,
+    stride_qh,
+    stride_qm,
+    stride_qd,
+    stride_kb,
+    stride_kh,
+    stride_kn,
+    stride_kd,
+    stride_vb,
+    stride_vh,
+    stride_vn,
+    stride_vd,
+    stride_ob,
+    stride_oh,
+    stride_om,
+    stride_od,
+    B,
+    H,
+    M,
+    D,
+    scale,
+    segment_size: tl.constexpr,
+    dilation_rate: tl.constexpr,
+    BLOCK_M: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+    BLOCK_D: tl.constexpr,
+):
+    """Optimized kernel for sparse attention patterns."""
+    # Get program IDs
+    pid = tl.program_id(0)
+    num_blocks_m = tl.cdiv(M, BLOCK_M)
+    pid_m = pid % num_blocks_m
+    pid_bh = pid // num_blocks_m
+    pid_b = pid_bh // H
+    pid_h = pid_bh % H
+
+    # Compute query block boundaries
+    offs_m = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
+    offs_d = tl.arange(0, BLOCK_D)
+    mask_m = offs_m < M
+    mask_d = offs_d < D
+
+    # Load queries
+    q_ptrs = (
+        Q
+        + pid_b * stride_qb
+        + pid_h * stride_qh
+        + offs_m[:, None] * stride_qm
+        + offs_d[None, :] * stride_qd
+    )
+    q = tl.load(q_ptrs, mask=mask_m[:, None] & mask_d[None, :], other=0.0)
+    q = q * scale
+
+    # Initialize output
+    acc = tl.zeros([BLOCK_M, BLOCK_D], dtype=tl.float32)
+    l_i = tl.zeros([BLOCK_M], dtype=tl.float32)
+    m_i = tl.zeros([BLOCK_M], dtype=tl.float32) - 1e9
+
+    # Determine segment boundaries
+    seg_idx = offs_m // segment_size
+    seg_start = seg_idx * segment_size
+    seg_end = tl.minimum(seg_start + segment_size, M)
+
+    # Process keys with stride optimization for sparse patterns
+    # Key insight: for dilation_rate=4, we only need every 4th position
+    # So we can process positions 0,4,8,12... then 1,5,9,13... etc
+    for start_n in range(0, M, BLOCK_N):
+        offs_n = start_n + tl.arange(0, BLOCK_N)
+
+        # Check if keys are in the same segment as queries and apply dilation
+        in_segment = (offs_n >= seg_start) & (offs_n < seg_end)
+        dilation_mask = ((offs_n - seg_start) % dilation_rate) == 0
+        mask_n = (offs_n < M) & in_segment & dilation_mask
+
+        # Only process if there are valid positions
+        # Use a mask-based approach instead of control flow
+        has_valid = tl.max(mask_n.to(tl.int32)) > 0
+
+        # Load Hilbert indices
+        h_idx = tl.load(hilbert_map + offs_n, mask=mask_n, other=0)
+
+        # Load keys and values
+        k_ptrs = (
+            K
+            + pid_b * stride_kb
+            + pid_h * stride_kh
+            + h_idx[None, :] * stride_kn
+            + offs_d[:, None] * stride_kd
+        )
+        v_ptrs = (
+            V
+            + pid_b * stride_vb
+            + pid_h * stride_vh
+            + h_idx[None, :] * stride_vn
+            + offs_d[:, None] * stride_vd
+        )
+
+        k = tl.load(k_ptrs, mask=mask_n[None, :] & mask_d[:, None], other=0.0)
+        v = tl.load(v_ptrs, mask=mask_n[None, :] & mask_d[:, None], other=0.0)
+
+        # Compute attention scores
+        s = tl.dot(q, k)
+
+        # Apply mask - use a very negative value for masked positions
+        s = tl.where(mask_n[None, :], s, -1e9)
+
+        # Online softmax with numerical stability
+        m_ij = tl.max(s, axis=1)
+
+        # Only update if we have valid values
+        m_i_new = tl.where(has_valid, tl.maximum(m_i, m_ij), m_i)
+
+        # Compute exponentials
+        p = tl.exp(s - m_i_new[:, None])
+        l_ij = tl.sum(p, axis=1)
+
+        # Update statistics
+        alpha = tl.exp(m_i - m_i_new)
+        l_i_new = tl.where(has_valid, alpha * l_i + l_ij, l_i)
+
+        # Update accumulator
+        acc = acc * alpha[:, None]
+        v_t = tl.trans(v)
+        acc += tl.dot(p, v_t)
+
+        # Update for next iteration
+        l_i = l_i_new
+        m_i = m_i_new
+
+    # Final normalization
+    acc = acc / tl.maximum(l_i[:, None], 1e-10)
+
+    # Store output
+    out_ptrs = (
+        Out
+        + pid_b * stride_ob
+        + pid_h * stride_oh
+        + offs_m[:, None] * stride_om
+        + offs_d[None, :] * stride_od
+    )
+    tl.store(out_ptrs, acc, mask=mask_m[:, None] & mask_d[None, :])
+
+
+@triton.jit
 def standard_attention_kernel(
     # Same signature as hilbert kernel but without hilbert_map
     Q,
@@ -528,34 +677,87 @@ class HilbertAttentionFunction(torch.autograd.Function):
         # Allocate output
         out = torch.zeros_like(q)
 
-        # Configure grid
-        BLOCK_M = min(64, M_padded)
-        BLOCK_N = min(64, M_padded)
-        BLOCK_D = min(64, D)
+        # Configure grid with hardware-optimized block sizes
+        # Get compute capability
+        device = q.device
+        compute_capability = (
+            torch.cuda.get_device_capability(device)[0] if device.type == "cuda" else 6
+        )
+
+        # Hardware-specific block sizes
+        if compute_capability < 7:  # Pascal
+            if M_padded <= 1024:
+                BLOCK_M = min(32, M_padded)
+                BLOCK_N = min(32, M_padded)
+            else:
+                BLOCK_M = min(64, M_padded)
+                BLOCK_N = min(64, M_padded)
+            BLOCK_D = min(32, D)
+        elif compute_capability < 8:  # Volta/Turing
+            BLOCK_M = min(64, M_padded)
+            BLOCK_N = min(64, M_padded)
+            BLOCK_D = min(64, D)
+        else:  # Ampere+
+            if M_padded <= 2048:
+                BLOCK_M = min(64, M_padded)
+                BLOCK_N = min(64, M_padded)
+            else:
+                BLOCK_M = min(128, M_padded)
+                BLOCK_N = min(128, M_padded)
+            BLOCK_D = min(64, D)
+
+        # Ensure minimum sizes
+        BLOCK_M = max(16, BLOCK_M)
+        BLOCK_N = max(16, BLOCK_N)
+        BLOCK_D = max(16, BLOCK_D)
+
         grid = (triton.cdiv(M_padded, BLOCK_M) * B * H,)
 
-        # Launch forward kernel
-        hilbert_attention_kernel[grid](
-            q,
-            k,
-            v,
-            out,
-            hilbert_map,
-            *q.stride(),
-            *k.stride(),
-            *v.stride(),
-            *out.stride(),
-            B,
-            H,
-            M_padded,
-            D,
-            scale,
-            segment_size,
-            dilation_rate,
-            BLOCK_M,
-            BLOCK_N,
-            BLOCK_D,
-        )
+        # Launch forward kernel - use optimized version for sparse patterns
+        if dilation_rate > 1:
+            hilbert_attention_kernel_sparse_optimized[grid](
+                q,
+                k,
+                v,
+                out,
+                hilbert_map,
+                *q.stride(),
+                *k.stride(),
+                *v.stride(),
+                *out.stride(),
+                B,
+                H,
+                M_padded,
+                D,
+                scale,
+                segment_size,
+                dilation_rate,
+                BLOCK_M,
+                BLOCK_N,
+                BLOCK_D,
+            )
+        else:
+            hilbert_attention_kernel[grid](
+                q,
+                k,
+                v,
+                out,
+                hilbert_map,
+                *q.stride(),
+                *k.stride(),
+                *v.stride(),
+                *out.stride(),
+                B,
+                H,
+                M_padded,
+                D,
+                scale,
+                segment_size,
+                dilation_rate,
+                BLOCK_M,
+                BLOCK_N,
+                BLOCK_D,
+            )
 
         # Save reordered tensors for efficient backward
         # Create inverse mapping
@@ -1027,27 +1229,51 @@ class HilbertAttentionCore(nn.Module):
 
                 if use_hilbert:
                     hilbert_map = self.get_hilbert_mapping(M_padded, x.device)
-                    hilbert_attention_kernel[grid](
-                        q,
-                        k,
-                        v,
-                        out,
-                        hilbert_map,
-                        *q.stride(),
-                        *k.stride(),
-                        *v.stride(),
-                        *out.stride(),
-                        B,
-                        H,
-                        M_padded,
-                        self.head_dim,
-                        self.scale,
-                        self.segment_size,
-                        self.dilation_rate,
-                        BLOCK_M,
-                        BLOCK_N,
-                        BLOCK_D,
-                    )
+                    # Use optimized kernel for sparse patterns
+                    if self.dilation_rate > 1:
+                        hilbert_attention_kernel_sparse_optimized[grid](
+                            q,
+                            k,
+                            v,
+                            out,
+                            hilbert_map,
+                            *q.stride(),
+                            *k.stride(),
+                            *v.stride(),
+                            *out.stride(),
+                            B,
+                            H,
+                            M_padded,
+                            self.head_dim,
+                            self.scale,
+                            self.segment_size,
+                            self.dilation_rate,
+                            BLOCK_M,
+                            BLOCK_N,
+                            BLOCK_D,
+                        )
+                    else:
+                        hilbert_attention_kernel[grid](
+                            q,
+                            k,
+                            v,
+                            out,
+                            hilbert_map,
+                            *q.stride(),
+                            *k.stride(),
+                            *v.stride(),
+                            *out.stride(),
+                            B,
+                            H,
+                            M_padded,
+                            self.head_dim,
+                            self.scale,
+                            self.segment_size,
+                            self.dilation_rate,
+                            BLOCK_M,
+                            BLOCK_N,
+                            BLOCK_D,
+                        )
                 else:
                     standard_attention_kernel[grid](
                         q,

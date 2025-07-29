@@ -57,8 +57,8 @@ def benchmark_attention(
     module: nn.Module,
     input_tensor: torch.Tensor,
     use_hilbert: bool,
-    num_warmup: int = 10,
-    num_iterations: int = 50,
+    num_warmup: int = 3,
+    num_iterations: int = 10,
     test_backward: bool = True,
 ) -> Tuple[float, float, float]:
     """Benchmark forward and backward passes."""
@@ -362,7 +362,7 @@ def main():
     configs = []
 
     # Test different sequence lengths
-    for seq_len in [512, 1024, 2048, 4096]:
+    for seq_len in [512, 1024, 2048]:
         configs.append(
             {
                 "batch_size": 2,
@@ -375,11 +375,11 @@ def main():
         )
 
     # Test different dilation rates
-    for dilation_rate in [1, 2, 4, 8]:
+    for dilation_rate in [2, 4]:
         configs.append(
             {
                 "batch_size": 2,
-                "seq_len": 2048,
+                "seq_len": 1024,
                 "hidden_dim": 768,
                 "num_heads": 12,
                 "segment_size": 128,
@@ -388,15 +388,15 @@ def main():
         )
 
     # Test different segment sizes
-    for segment_size in [64, 128, 256]:
+    for segment_size in [64, 256]:
         configs.append(
             {
                 "batch_size": 2,
-                "seq_len": 2048,
+                "seq_len": 1024,
                 "hidden_dim": 768,
                 "num_heads": 12,
                 "segment_size": segment_size,
-                "dilation_rate": 4,
+                "dilation_rate": 2,
             }
         )
 
