@@ -293,6 +293,7 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
         enable_multi_row: bool = True,
         enable_8k_optimization: bool = True,
         enable_4k_optimization: bool = True,
+        enable_sparse_optimization: bool = True,
     ):
         super().__init__()
 
@@ -309,6 +310,7 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
         self.enable_multi_row = enable_multi_row
         self.enable_8k_optimization = enable_8k_optimization
         self.enable_4k_optimization = enable_4k_optimization
+        self.enable_sparse_optimization = enable_sparse_optimization
         self.mask_value = -1e9
 
         # Projections
@@ -351,6 +353,7 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
         if self.dilation_rate > 1:
             # Calculate effective sequence length after dilation
             effective_len = seq_len // self.dilation_rate
+            sparsity = 1.0 - (1.0 / self.dilation_rate)
 
             # Special optimization for 4K sequences
             if seq_len == 4096 and self.enable_4k_optimization:
@@ -378,31 +381,67 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
                 or effective_len not in [1024, 2048]
             ):
                 # Standard sparse configuration logic
-                if effective_len <= 512:
-                    # Very sparse - use small blocks like Unified
-                    config["block_m"] = 32
-                    config["block_n"] = 32
-                    config["block_d"] = min(32, self.head_dim)
-                    config["num_warps"] = 2
-                    config["use_fused_softmax"] = (
-                        False  # Simple softmax for small active sets
-                    )
-                elif effective_len <= 2048:
-                    # Moderately sparse - balanced configuration
-                    config["block_m"] = 64
-                    config["block_n"] = 64
-                    config["block_d"] = min(64, self.head_dim)
-                    config["num_warps"] = 4
-                    config["use_fused_softmax"] = True
+                if not self.enable_sparse_optimization:
+                    # Use original configuration if sparse optimization disabled
+                    if effective_len <= 512:
+                        config["block_m"] = 32
+                        config["block_n"] = 32
+                        config["block_d"] = min(32, self.head_dim)
+                        config["num_warps"] = 2
+                        config["use_fused_softmax"] = False
+                    elif effective_len <= 2048:
+                        config["block_m"] = 64
+                        config["block_n"] = 64
+                        config["block_d"] = min(64, self.head_dim)
+                        config["num_warps"] = 4
+                        config["use_fused_softmax"] = True
+                    else:
+                        config["block_m"] = 64 if is_pascal else 128
+                        config["block_n"] = 64 if is_pascal else 128
+                        config["block_d"] = (
+                            min(64, self.head_dim) if is_pascal else self.head_dim
+                        )
+                        config["num_warps"] = 4 if is_pascal else 8
+                        config["use_fused_softmax"] = True
                 else:
-                    # Large sparse sequences - can use bigger blocks
-                    config["block_m"] = 64 if is_pascal else 128
-                    config["block_n"] = 64 if is_pascal else 128
-                    config["block_d"] = (
-                        min(64, self.head_dim) if is_pascal else self.head_dim
-                    )
-                    config["num_warps"] = 4 if is_pascal else 8
-                    config["use_fused_softmax"] = True
+                    # New sparse-optimized configuration
+                    if effective_len <= 512:
+                        # Very sparse - use small blocks like Unified
+                        config["block_m"] = 32
+                        config["block_n"] = 32
+                        config["block_d"] = min(32, self.head_dim)
+                        config["num_warps"] = 2
+                        config["use_fused_softmax"] = (
+                            False  # Simple softmax for small active sets
+                        )
+                    elif effective_len <= 2048:
+                        # Moderately sparse - use smaller blocks for better efficiency
+                        if sparsity >= 0.75:  # Very sparse (d >= 4)
+                            config["block_m"] = 32
+                            config["block_n"] = 32
+                            config["block_d"] = min(32, self.head_dim)
+                            config["num_warps"] = 2
+                            config["use_fused_softmax"] = False
+                        else:  # Moderately sparse (d = 2)
+                            config["block_m"] = 64
+                            config["block_n"] = 32  # Asymmetric for better efficiency
+                            config["block_d"] = min(32, self.head_dim)
+                            config["num_warps"] = 4
+                            config["use_fused_softmax"] = False
+                    else:
+                        # Large sparse sequences
+                        if sparsity >= 0.75:  # Very sparse
+                            config["block_m"] = 64
+                            config["block_n"] = 32
+                            config["block_d"] = min(32, self.head_dim)
+                            config["num_warps"] = 4
+                            config["use_fused_softmax"] = False
+                        else:  # Moderately sparse
+                            config["block_m"] = 64 if is_pascal else 96
+                            config["block_n"] = 64 if is_pascal else 64
+                            config["block_d"] = min(64, self.head_dim)
+                            config["num_warps"] = 4 if is_pascal else 6
+                            config["use_fused_softmax"] = False
 
             # Common sparse settings
             config["rows_per_block"] = 1  # No multi-row for sparse
