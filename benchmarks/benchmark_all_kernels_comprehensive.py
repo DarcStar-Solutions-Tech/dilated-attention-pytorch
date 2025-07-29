@@ -89,7 +89,7 @@ def test_kernel_file(kernel_path: Path) -> Dict[str, any]:
                     with torch.no_grad():
                         try:
                             # Warmup
-                            out = instance(x)
+                            _ = instance(x)
                             torch.cuda.synchronize()
 
                             # Time it

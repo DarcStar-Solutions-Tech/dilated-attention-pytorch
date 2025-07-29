@@ -18,9 +18,7 @@ sys.path.insert(
 )
 
 from dilated_attention_pytorch.kernels import (
-    UnifiedHilbertAttention,
     create_hilbert_attention,
-    UnifiedHilbertAttention,
     UnifiedHilbertAttention,
 )
 

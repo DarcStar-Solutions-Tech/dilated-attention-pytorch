@@ -98,8 +98,7 @@ def unified_hilbert_attention_kernel_enhanced(
 
     # Load queries - ensure proper dtype
     q_ptrs = (
-        Q
-        + pid_b * stride_qb
+        Q + pid_b * stride_qb
         + pid_h * stride_qh
         + offs_m[:, None] * stride_qm
         + offs_d[None, :] * stride_qd
@@ -149,10 +148,10 @@ def unified_hilbert_attention_kernel_enhanced(
             )
 
             # Compute attention scores
-            s = tl.dot(q, k.trans(1, 0))
+            s = tl.dot(q, tl.trans(k))
 
             # Apply sparse mask
-            s = tl.where(mask_n[None, :], s, -1e9)
+            s = tl.where(mask_n[None, :], s, mask_value)
 
             # Online softmax with fused operations
             m_ij = tl.max(s, axis=1)
@@ -211,7 +210,7 @@ def unified_hilbert_attention_kernel_enhanced(
             )
 
             # Compute attention scores
-            s = tl.dot(q, k.trans(1, 0))
+            s = tl.dot(q, tl.trans(k))
 
             # Apply mask
             s = tl.where(mask_n[None, :], s, -1e9)
@@ -261,8 +260,7 @@ def unified_hilbert_attention_kernel_enhanced(
 
     # Store output
     out_ptrs = (
-        Out
-        + pid_b * stride_ob
+        Out + pid_b * stride_ob
         + pid_h * stride_oh
         + offs_m[:, None] * stride_om
         + offs_d[None, :] * stride_od
@@ -351,6 +349,18 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
 
         # Check if we're on Pascal or newer GPU
         is_pascal = self.compute_capability < 7
+        
+        # For sparse patterns, use smaller block sizes like Unified
+        if self.dilation_rate > 1:
+            config["block_m"] = 64
+            config["block_n"] = 64
+            config["block_d"] = min(32, self.head_dim)
+            config["num_warps"] = 4
+            config["rows_per_block"] = 1
+            config["fused_block_n"] = 64
+            config["use_fused_softmax"] = True
+            config["enable_prefetch"] = False
+            return config
 
         if is_pascal:
             # Pascal GPU (limited shared memory - 48KB)
@@ -406,7 +416,8 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
                 config["num_warps"] = 8
 
         # Multi-row processing for medium sequences
-        if seq_len >= 4096 and self.enable_multi_row:
+        # Disable for sparse patterns as it hurts performance
+        if seq_len >= 4096 and self.enable_multi_row and self.dilation_rate == 1:
             config["rows_per_block"] = 2
             config["fused_block_n"] = config["block_n"] * 2
         else:
@@ -521,11 +532,8 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
         # Get optimal configuration
         config = self._get_optimal_config(M_padded)
 
-        # For sparse patterns with dilation > 1, use strided sparse attention
-        if self.dilation_rate > 1:
-            out = self._strided_sparse_attention(q, k, v, is_causal)
         # For very short sequences or causal masking, use PyTorch
-        elif M_padded <= 512 or is_causal or not self._triton_available:
+        if M_padded <= 512 or is_causal or not self._triton_available:
             # Use PyTorch implementation
             if use_hilbert:
                 hilbert_map = self._get_hilbert_mapping(M_padded, device)
@@ -542,7 +550,8 @@ class UnifiedHilbertAttentionOptimizedEnhanced(nn.Module):
                 scale=self.scale,
             )
         else:
-            # Use enhanced unified Triton kernel
+            # Use enhanced unified Triton kernel for all patterns including sparse
+            # The kernel already has efficient sparse handling in the Triton code
             out = self._triton_forward(q, k, v, M_padded, use_hilbert, config)
 
         # Reshape and project output

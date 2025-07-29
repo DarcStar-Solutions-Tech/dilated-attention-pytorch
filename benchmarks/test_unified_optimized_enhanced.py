@@ -13,7 +13,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dilated_attention_pytorch.kernels import (
     UnifiedHilbertAttention,
-    UnifiedHilbertAttention,
     UnifiedHilbertAttentionOptimized,
     UnifiedHilbertAttentionOptimizedEnhanced,
 )

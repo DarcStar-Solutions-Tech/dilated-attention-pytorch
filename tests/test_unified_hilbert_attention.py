@@ -7,10 +7,8 @@ import pytest
 import torch
 
 from dilated_attention_pytorch.kernels import (
-    UnifiedHilbertAttention,
     create_hilbert_attention,
     migrate_to_unified,
-    UnifiedHilbertAttention,
     UnifiedHilbertAttention,
 )
 

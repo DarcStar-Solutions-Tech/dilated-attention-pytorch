@@ -93,9 +93,15 @@ def main():
         f.write("\nRationale:\n")
         f.write("Based on comprehensive performance benchmarking:\n")
         f.write("1. hilbert_attention_simple.py - No performance advantage\n")
-        f.write("2. hilbert_attention_enhanced.py - Features integrated into unified_optimized_enhanced\n")
-        f.write("3. hilbert_attention.py - Basic implementation superseded by optimized versions\n")
-        f.write("4. hilbert_attention_core.py - Slowest performance, no unique benefits\n")
+        f.write(
+            "2. hilbert_attention_enhanced.py - Features integrated into unified_optimized_enhanced\n"
+        )
+        f.write(
+            "3. hilbert_attention.py - Basic implementation superseded by optimized versions\n"
+        )
+        f.write(
+            "4. hilbert_attention_core.py - Slowest performance, no unique benefits\n"
+        )
 
     print(f"\nSummary written to: {summary_path}")
     print(f"\n✓ Successfully removed {removed_count} redundant kernels")

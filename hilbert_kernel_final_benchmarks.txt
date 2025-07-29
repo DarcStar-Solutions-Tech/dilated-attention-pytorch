@@ -1,0 +1,41 @@
+=== Detailed Benchmark Results ===
+
+
+Unified:
+  Dense 512: 0.87ms, 27.0MB
+  Dense 1K: 3.45ms, 49.0MB
+  Dense 2K: 7.37ms, 85.0MB
+  Dense 4K: 33.64ms, 157.0MB
+  Dense 8K: 177.73ms, 301.0MB
+  Dense 16K: 1084.76ms, 589.1MB
+  Sparse 2K (d=2): 2.34ms, 85.0MB
+  Sparse 4K (d=2): 7.94ms, 157.0MB
+  Sparse 8K (d=2): 97.50ms, 301.0MB
+  Sparse 4K (d=4): 7.50ms, 157.0MB
+  Sparse 8K (d=4): 36.81ms, 301.0MB
+
+UnifiedOptimized:
+  Dense 512: 24.47ms, 27.0MB
+  Dense 1K: 37.66ms, 49.0MB
+  Dense 2K: 24.69ms, 85.0MB
+  Dense 4K: 13.34ms, 157.0MB
+  Dense 8K: 161.09ms, 301.0MB
+  Dense 16K: 112.13ms, 589.1MB
+  Sparse 2K (d=2): 70.96ms, 85.0MB
+  Sparse 4K (d=2): 37.76ms, 157.0MB
+  Sparse 8K (d=2): 23.18ms, 301.0MB
+  Sparse 4K (d=4): 121.49ms, 157.0MB
+  Sparse 8K (d=4): 48.75ms, 301.0MB
+
+UnifiedOptimizedEnhanced:
+  Dense 512: 2.09ms, 27.0MB
+  Dense 1K: 2.07ms, 41.0MB
+  Dense 2K: 2.77ms, 69.0MB
+  Dense 4K: 96.82ms, 125.0MB
+  Dense 8K: 58.66ms, 237.0MB
+  Dense 16K: 90.93ms, 461.1MB
+  Sparse 2K (d=2): 76.02ms, 69.0MB
+  Sparse 4K (d=2): 35.14ms, 125.0MB
+  Sparse 8K (d=2): 28.32ms, 237.0MB
+  Sparse 4K (d=4): 90.15ms, 125.0MB
+  Sparse 8K (d=4): 54.32ms, 237.0MB

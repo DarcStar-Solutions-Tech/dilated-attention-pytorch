@@ -60,7 +60,9 @@ def analyze_kernel_access_pattern():
     # For sparse, we should first get sparse positions, then apply Hilbert
     sparse_positions = [0, 2, 4, 6, 8, 10, 12, 14]  # Every 2nd position
     # Create Hilbert for just these positions
-    sparse_hilbert = UnifiedHilbertAttention._create_hilbert_mapping(len(sparse_positions))
+    sparse_hilbert = UnifiedHilbertAttention._create_hilbert_mapping(
+        len(sparse_positions)
+    )
     ideal_access = []
     for i in range(len(sparse_positions)):
         ideal_access.append(sparse_positions[sparse_hilbert[i].item()])

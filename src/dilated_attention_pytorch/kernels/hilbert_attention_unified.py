@@ -86,8 +86,7 @@ def unified_hilbert_attention_kernel(
 
     # Load queries - ensure proper dtype
     q_ptrs = (
-        Q
-        + pid_b * stride_qb
+        Q + pid_b * stride_qb
         + pid_h * stride_qh
         + offs_m[:, None] * stride_qm
         + offs_d[None, :] * stride_qd
@@ -129,15 +128,13 @@ def unified_hilbert_attention_kernel(
 
             # Load K and V with proper dtype handling
             k_ptrs = (
-                K
-                + pid_b * stride_kb
+                K + pid_b * stride_kb
                 + pid_h * stride_kh
                 + h_idx[:, None] * stride_kn
                 + offs_d[None, :] * stride_kd
             )
             v_ptrs = (
-                V
-                + pid_b * stride_vb
+                V + pid_b * stride_vb
                 + pid_h * stride_vh
                 + h_idx[:, None] * stride_vn
                 + offs_d[None, :] * stride_vd
@@ -189,15 +186,13 @@ def unified_hilbert_attention_kernel(
 
             # Load K and V
             k_ptrs = (
-                K
-                + pid_b * stride_kb
+                K + pid_b * stride_kb
                 + pid_h * stride_kh
                 + h_idx[:, None] * stride_kn
                 + offs_d[None, :] * stride_kd
             )
             v_ptrs = (
-                V
-                + pid_b * stride_vb
+                V + pid_b * stride_vb
                 + pid_h * stride_vh
                 + h_idx[:, None] * stride_vn
                 + offs_d[None, :] * stride_vd
@@ -239,8 +234,7 @@ def unified_hilbert_attention_kernel(
 
     # Store output
     out_ptrs = (
-        Out
-        + pid_b * stride_ob
+        Out + pid_b * stride_ob
         + pid_h * stride_oh
         + offs_m[:, None] * stride_om
         + offs_d[None, :] * stride_od

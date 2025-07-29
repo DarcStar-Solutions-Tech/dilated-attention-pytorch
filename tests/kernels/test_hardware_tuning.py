@@ -14,7 +14,6 @@ import numpy as np
 
 # Import the kernels
 from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
-from dilated_attention_pytorch.kernels import UnifiedHilbertAttention
 
 
 def get_gpu_info():
@@ -219,7 +218,9 @@ def plot_results(
     speedups = [s / c for c, s in zip(core_times, simple_times)]
 
     # Performance plot
-    ax1.plot(seq_lengths, core_times, "b-o", label="UnifiedHilbertAttention", linewidth=2)
+    ax1.plot(
+        seq_lengths, core_times, "b-o", label="UnifiedHilbertAttention", linewidth=2
+    )
     ax1.plot(
         seq_lengths, simple_times, "r-s", label="UnifiedHilbertAttention", linewidth=2
     )

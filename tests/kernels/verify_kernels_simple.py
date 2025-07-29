@@ -74,7 +74,6 @@ def main():
 
     from dilated_attention_pytorch.kernels import (
         UnifiedHilbertAttention,
-        UnifiedHilbertAttention,
         HilbertAttentionTritonWrapper,
     )
 

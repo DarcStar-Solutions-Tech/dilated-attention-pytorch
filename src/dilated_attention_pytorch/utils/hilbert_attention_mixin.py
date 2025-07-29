@@ -60,7 +60,9 @@ class HilbertAttentionMixin:
     def get_hilbert_indices(self, seq_len: int, device: torch.device) -> torch.Tensor:
         """Get cached Hilbert indices for a given sequence length."""
         if seq_len not in self._hilbert_cache:
-            indices = UnifiedHilbertAttention._create_hilbert_mapping(seq_len).to(device)
+            indices = UnifiedHilbertAttention._create_hilbert_mapping(seq_len).to(
+                device
+            )
             self._hilbert_cache[seq_len] = indices
 
             # Also cache inverse mapping

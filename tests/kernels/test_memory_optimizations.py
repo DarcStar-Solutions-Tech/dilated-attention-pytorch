@@ -13,7 +13,6 @@ from typing import Dict
 # Import kernels
 from dilated_attention_pytorch.kernels import (
     UnifiedHilbertAttention,
-    UnifiedHilbertAttention,
 )
 
 

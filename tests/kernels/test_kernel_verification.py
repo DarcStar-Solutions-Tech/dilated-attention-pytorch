@@ -22,7 +22,6 @@ import torch
 try:
     from dilated_attention_pytorch.kernels import (
         UnifiedHilbertAttention,
-        UnifiedHilbertAttention,
         HilbertAttentionTritonWrapper,
         HilbertAttentionTritonFixed,
         TRITON_AVAILABLE,
@@ -35,7 +34,6 @@ except ImportError:
 
     sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
     from dilated_attention_pytorch.kernels import (
-        UnifiedHilbertAttention,
         UnifiedHilbertAttention,
         HilbertAttentionTritonWrapper,
         HilbertAttentionTritonFixed,
