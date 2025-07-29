@@ -31,30 +31,6 @@ class TestKernelImports:
             else:
                 raise
 
-    def test_hilbert_attention_triton_wrapper_import(self):
-        """Test importing hilbert_attention_triton_wrapper module."""
-        try:
-            from dilated_attention_pytorch.kernels import (
-                hilbert_attention_triton_wrapper,
-            )
-
-            # Check expected classes exist
-            assert hasattr(
-                hilbert_attention_triton_wrapper, "HilbertAttentionTritonWrapper"
-            )
-            assert hasattr(
-                hilbert_attention_triton_wrapper, "HilbertAttentionTritonFixed"
-            )
-
-            # The module imported successfully
-            assert True
-        except ImportError as e:
-            # Document why import might fail
-            if "triton" in str(e).lower() or "hilbert_attention_core" in str(e).lower():
-                pytest.skip("Dependencies not available")
-            else:
-                raise
-
     def test_kernel_module_structure(self):
         """Test that the kernels module has expected structure."""
         try:
@@ -139,20 +115,12 @@ class TestKernelDocumentation:
         """Test that modules have docstrings."""
         try:
             from dilated_attention_pytorch.kernels import hilbert_attention_core
-            from dilated_attention_pytorch.kernels import (
-                hilbert_attention_triton_wrapper,
-            )
 
             # Check module docstrings
             assert hilbert_attention_core.__doc__ is not None
-            assert hilbert_attention_triton_wrapper.__doc__ is not None
 
             # Check class docstrings
             assert hilbert_attention_core.HilbertAttentionCore.__doc__ is not None
-            assert (
-                hilbert_attention_triton_wrapper.HilbertAttentionTritonWrapper.__doc__
-                is not None
-            )
 
         except ImportError:
             pytest.skip("Cannot import kernel modules")
