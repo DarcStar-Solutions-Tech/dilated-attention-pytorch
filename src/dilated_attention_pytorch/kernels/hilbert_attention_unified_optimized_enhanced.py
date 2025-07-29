@@ -239,18 +239,24 @@ def unified_hilbert_attention_kernel_enhanced(
                 l_i = l_i_new
                 m_i = m_i_new
             else:
-                # Standard softmax path
-                m_ij = tl.max(s, axis=1, keep_dims=True)
-                p = tl.exp(s - m_ij)
-                l_ij = tl.sum(p, axis=1, keep_dims=True)
-                p = p / l_ij
+                # Standard softmax path - FIXED to track normalization
+                m_ij = tl.max(s, axis=1)
+                m_i_new = tl.maximum(m_i, m_ij)
+                p = tl.exp(s - m_i_new[:, None])
+                l_ij = tl.sum(p, axis=1)
 
-                # Update accumulator
-                acc += tl.dot(p, v)
+                # Update statistics (critical fix)
+                alpha = tl.exp(m_i - m_i_new)
+                l_i = alpha * l_i + l_ij
 
-    # Final normalization
-    if USE_FUSED_SOFTMAX:
-        acc = acc / tl.maximum(l_i[:, None], 1e-10)
+                # Update accumulator with proper scaling
+                acc = acc * alpha[:, None] + tl.dot(p, v)
+
+                # Update for next iteration
+                m_i = m_i_new
+
+    # Final normalization - apply to both paths now
+    acc = acc / tl.maximum(l_i[:, None], 1e-10)
 
     # Store output
     out_ptrs = (
