@@ -1,1 +1,0 @@
-../by-type/memory-pool-stress-test/2025-06-27-1621-UTC/memory-pool-stress-test-2025-06-27-1621-UTC.md
