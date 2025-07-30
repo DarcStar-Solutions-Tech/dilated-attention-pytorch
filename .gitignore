@@ -192,3 +192,26 @@ wandb/
 
 # Flash Attention build artifacts
 flash_attn_build/
+
+# Documentation bloat prevention
+docs/**/*-temp-*
+docs/**/*-debug-*
+docs/**/*-test-*
+docs/**/*.tmp
+docs/**/*.bak
+docs/**/*~
+docs/**/._*
+docs/**/.DS_Store
+
+# Prevent duplicate benchmark organization
+docs/benchmarks/by-date/
+docs/benchmarks/by-type/
+docs/benchmarks/archive/
+docs/benchmarks/exports/
+docs/benchmarks/comparisons/
+
+# Temporary analysis files
+docs/reports/*-draft-*
+docs/reports/*-wip-*
+docs/reports/*-old-*
+docs/reports/*-backup-*
