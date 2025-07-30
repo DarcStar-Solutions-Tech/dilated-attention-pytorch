@@ -25,16 +25,8 @@ from ..core import (
     get_global_pattern_cache,
 )
 
-# Try to import enhanced memory pool
-try:
-    from ..core.enhanced_memory_pool import get_enhanced_memory_pool
-
-    HAS_ENHANCED_MEMORY_POOL = True
-except ImportError:
-    HAS_ENHANCED_MEMORY_POOL = False
-    import warnings
-
-    warnings.warn("Enhanced memory pool not available")
+# Import unified memory pool
+from ..core.unified_memory_pool import get_global_memory_pool, MemoryPoolConfig
 
 
 class DilatedAttention(BaseDilatedAttention):
@@ -95,26 +87,27 @@ class DilatedAttention(BaseDilatedAttention):
         self._pattern_cache = get_global_pattern_cache()
 
         # Enhanced memory pool integration
-        self.enable_memory_pool = enable_memory_pool and HAS_ENHANCED_MEMORY_POOL
+        self.enable_memory_pool = enable_memory_pool
         self.lightweight_pool = lightweight_pool
         self._memory_pool = None
         if self.enable_memory_pool:
             if lightweight_pool:
                 # Use lightweight pool for better performance based on lessons learned
-                self._memory_pool = get_enhanced_memory_pool(
-                    enable_fragment_aware=False,  # Disable for speed
-                    enable_bucketed=True,  # Keep for common sizes
-                    enable_numa=False,  # Disable for speed
+                pool_config = MemoryPoolConfig(
+                    enable_fragmentation_tracking=False,  # Disable for speed
+                    enable_bucketing=True,  # Keep for common sizes
+                    enable_numa_awareness=False,  # Disable for speed
                     enable_profiling=enable_profiling,
                 )
             else:
                 # Full memory pool with all features
-                self._memory_pool = get_enhanced_memory_pool(
-                    enable_fragment_aware=True,
-                    enable_bucketed=True,
-                    enable_numa=True,
+                pool_config = MemoryPoolConfig(
+                    enable_fragmentation_tracking=True,
+                    enable_bucketing=True,
+                    enable_numa_awareness=True,
                     enable_profiling=enable_profiling,
                 )
+            self._memory_pool = get_global_memory_pool(pool_config)
 
         # Cache for einops reshape patterns to avoid repeated parsing
         self._einops_cache = {}

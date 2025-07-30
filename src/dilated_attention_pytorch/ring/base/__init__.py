@@ -10,7 +10,7 @@ from .ring_dilated_attention_sdpa import RingDilatedAttentionSDPA
 
 # New standardized implementations
 from .base_ring_attention import BaseRingAttention, RingAttentionState
-from .ring_communication_mixin import RingCommunicationMixin
+from .ring_communication_mixin import RingCommunicationMixin, AsyncRingCommunicator
 from .ring_config import RingAttentionConfig, create_ring_config, get_preset_config
 
 __all__ = [
@@ -22,6 +22,7 @@ __all__ = [
     "BaseRingAttention",
     "RingAttentionState",
     "RingCommunicationMixin",
+    "AsyncRingCommunicator",
     "RingAttentionConfig",
     "create_ring_config",
     "get_preset_config",

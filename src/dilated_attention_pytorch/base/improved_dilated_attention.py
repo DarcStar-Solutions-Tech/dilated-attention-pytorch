@@ -37,7 +37,7 @@ from ..core import (
     DilatedAttentionConfig,
     get_global_pattern_cache,
 )
-from ..core.enhanced_memory_pool import get_enhanced_memory_pool
+from ..core.unified_memory_pool import get_global_memory_pool, MemoryPoolConfig
 
 
 class ImprovedDilatedAttention(BaseDilatedAttention):
@@ -105,20 +105,21 @@ class ImprovedDilatedAttention(BaseDilatedAttention):
         if enable_memory_pool:
             if lightweight_pool:
                 # Use simpler memory pool configuration for better performance
-                self._memory_pool = get_enhanced_memory_pool(
-                    enable_fragment_aware=False,  # Disable for speed
-                    enable_bucketed=True,  # Keep for common sizes
-                    enable_numa=False,  # Disable for speed
+                pool_config = MemoryPoolConfig(
+                    enable_fragmentation_tracking=False,  # Disable for speed
+                    enable_bucketing=True,  # Keep for common sizes
+                    enable_numa_awareness=False,  # Disable for speed
                     enable_profiling=enable_profiling,
                 )
             else:
                 # Full memory pool with all features
-                self._memory_pool = get_enhanced_memory_pool(
-                    enable_fragment_aware=True,
-                    enable_bucketed=True,
-                    enable_numa=True,
+                pool_config = MemoryPoolConfig(
+                    enable_fragmentation_tracking=True,
+                    enable_bucketing=True,
+                    enable_numa_awareness=True,
                     enable_profiling=enable_profiling,
                 )
+            self._memory_pool = get_global_memory_pool(pool_config)
 
     def _select_sdpa_backend(self):
         """Select optimal SDPA backend based on hardware."""

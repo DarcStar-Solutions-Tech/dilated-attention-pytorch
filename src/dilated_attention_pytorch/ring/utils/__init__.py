@@ -7,8 +7,8 @@ from .ring_attention_autograd import RingAttentionFunction, ring_attention
 from .ring_attention_lse import StableRingAccumulator
 # Removed imports from deleted files
 
-# New standardized utilities
-from .ring_communication_mixin import RingCommunicationMixin, AsyncRingCommunicator
+# Import from base to avoid duplication
+from ..base import RingCommunicationMixin, AsyncRingCommunicator
 
 __all__ = [
     "all_ring_pass",
