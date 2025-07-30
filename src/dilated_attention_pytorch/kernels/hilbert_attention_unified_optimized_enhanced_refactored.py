@@ -69,6 +69,7 @@ def unified_hilbert_attention_kernel_enhanced_v2(
     BLOCK_N: tl.constexpr,
     BLOCK_D: tl.constexpr,
     ROWS_PER_BLOCK: tl.constexpr = 1,
+    USE_FUSED_SOFTMAX: tl.constexpr = False,
 ):
     """
     Enhanced Hilbert attention kernel - refactored version.
@@ -163,21 +164,27 @@ def unified_hilbert_attention_kernel_enhanced_v2(
             s = tl.dot(q, tl.trans(k))
             s = tl.where(mask_n[None, :], s, MASK_VALUE)
 
-            # Online softmax (always used after normalization fix)
-            m_ij = tl.max(s, axis=1)
-            m_i_new = tl.maximum(m_i, m_ij)
-            p = tl.exp(s - m_i_new[:, None])
-            l_ij = tl.sum(p, axis=1)
+            if USE_FUSED_SOFTMAX:
+                # Fused softmax - more efficient for sparse patterns
+                p = tl.softmax(s)
+                # Accumulate without tracking normalization
+                acc += tl.dot(p, v)
+            else:
+                # Online softmax with normalization tracking
+                m_ij = tl.max(s, axis=1)
+                m_i_new = tl.maximum(m_i, m_ij)
+                p = tl.exp(s - m_i_new[:, None])
+                l_ij = tl.sum(p, axis=1)
 
-            # Update statistics
-            alpha = tl.exp(m_i - m_i_new)
-            l_i = alpha * l_i + l_ij
+                # Update statistics
+                alpha = tl.exp(m_i - m_i_new)
+                l_i = alpha * l_i + l_ij
 
-            # Update accumulator
-            acc = acc * alpha[:, None] + tl.dot(p, v)
+                # Update accumulator
+                acc = acc * alpha[:, None] + tl.dot(p, v)
 
-            # Update for next iteration
-            m_i = m_i_new
+                # Update for next iteration
+                m_i = m_i_new
     else:
         # Dense attention path
         for start_n in range(seg_start, seg_end, BLOCK_N):
@@ -208,24 +215,31 @@ def unified_hilbert_attention_kernel_enhanced_v2(
             s = tl.dot(q, tl.trans(k))
             s = tl.where(mask_n[None, :], s, MASK_VALUE)
 
-            # Online softmax (unified implementation)
-            m_ij = tl.max(s, axis=1)
-            m_i_new = tl.maximum(m_i, m_ij)
-            p = tl.exp(s - m_i_new[:, None])
-            l_ij = tl.sum(p, axis=1)
+            if USE_FUSED_SOFTMAX:
+                # Fused softmax for better performance
+                p = tl.softmax(s)
+                # Accumulate without tracking normalization
+                acc += tl.dot(p, v)
+            else:
+                # Online softmax with normalization tracking
+                m_ij = tl.max(s, axis=1)
+                m_i_new = tl.maximum(m_i, m_ij)
+                p = tl.exp(s - m_i_new[:, None])
+                l_ij = tl.sum(p, axis=1)
 
-            # Update statistics
-            alpha = tl.exp(m_i - m_i_new)
-            l_i = alpha * l_i + l_ij
+                # Update statistics
+                alpha = tl.exp(m_i - m_i_new)
+                l_i = alpha * l_i + l_ij
 
-            # Update accumulator
-            acc = acc * alpha[:, None] + tl.dot(p, v)
+                # Update accumulator
+                acc = acc * alpha[:, None] + tl.dot(p, v)
 
-            # Update for next iteration
-            m_i = m_i_new
+                # Update for next iteration
+                m_i = m_i_new
 
-    # Final normalization
-    acc = acc / tl.maximum(l_i[:, None], 1e-10)
+    # Final normalization - only needed for online softmax
+    if not USE_FUSED_SOFTMAX:
+        acc = acc / tl.maximum(l_i[:, None], 1e-10)
 
     # Store output
     out_ptrs = (
@@ -481,6 +495,7 @@ class UnifiedHilbertAttentionOptimizedEnhancedRefactored(nn.Module):
             block_config.block_n,
             block_config.block_d,
             rows_per_block,
+            config.use_fused_softmax,  # Pass fused softmax flag
             num_warps=block_config.num_warps,
         )
 

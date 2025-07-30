@@ -38,7 +38,7 @@ class AttentionConfig:
     use_multi_row: bool = False
     rows_per_block: int = 1
     enable_prefetch: bool = False
-    # Note: use_fused_softmax removed after normalization fix
+    use_fused_softmax: bool = False  # Re-introduced for sparse performance
 
 
 class AttentionConstants:
@@ -222,10 +222,11 @@ class SparseConfigStrategy(ConfigStrategy):
         if effective_len is None or sparsity is None:
             raise ValueError("Sparse config requires effective_len and sparsity")
 
-        # Special 4K optimizations
+        # Special 4K optimizations - enable for BASIC and AGGRESSIVE
+        # These patterns are common enough to optimize by default
         if (
             seq_len == AttentionConstants.SEQ_LARGE
-            and self.optimization_level == OptimizationLevel.AGGRESSIVE
+            and self.optimization_level != OptimizationLevel.NONE
         ):
             config = self._get_4k_sparse_config(effective_len, head_dim)
             if config:
@@ -249,11 +250,12 @@ class SparseConfigStrategy(ConfigStrategy):
                     num_warps=AttentionConstants.WARPS_MIN,
                 )
             else:
-                # Moderately sparse - asymmetric blocks
+                # Moderately sparse - use symmetric blocks for better memory access
+                # This fixes the 4K d=2 regression (was 64x32, now 64x64)
                 block_config = BlockConfig(
                     block_m=AttentionConstants.BLOCK_SIZE_SMALL,
-                    block_n=AttentionConstants.BLOCK_SIZE_TINY,
-                    block_d=min(AttentionConstants.BLOCK_SIZE_TINY, head_dim),
+                    block_n=AttentionConstants.BLOCK_SIZE_SMALL,
+                    block_d=min(AttentionConstants.BLOCK_SIZE_SMALL, head_dim),
                     num_warps=AttentionConstants.WARPS_DEFAULT,
                 )
         else:
@@ -281,12 +283,21 @@ class SparseConfigStrategy(ConfigStrategy):
                         num_warps=AttentionConstants.WARPS_LARGE,
                     )
 
+        # Enable fused softmax for moderate sparse patterns (d=2)
+        # Very sparse patterns (d>=4) may not benefit as much
+        use_fused = (
+            sparsity >= 0.5
+            and sparsity < AttentionConstants.SPARSITY_VERY_HIGH
+            and self.optimization_level != OptimizationLevel.NONE
+        )
+
         # No multi-row or prefetch for sparse
         return AttentionConfig(
             block_config=block_config,
             use_multi_row=False,
             rows_per_block=1,
             enable_prefetch=False,
+            use_fused_softmax=use_fused,
         )
 
     def _get_4k_sparse_config(
@@ -305,6 +316,7 @@ class SparseConfigStrategy(ConfigStrategy):
                 use_multi_row=False,
                 rows_per_block=1,
                 enable_prefetch=False,
+                use_fused_softmax=False,  # Very sparse - online may be better
             )
         elif effective_len == 2048:  # 4K d=2
             return AttentionConfig(
@@ -317,6 +329,7 @@ class SparseConfigStrategy(ConfigStrategy):
                 use_multi_row=False,
                 rows_per_block=1,
                 enable_prefetch=False,
+                use_fused_softmax=True,  # Moderate sparse - fused is better
             )
         return None
 
