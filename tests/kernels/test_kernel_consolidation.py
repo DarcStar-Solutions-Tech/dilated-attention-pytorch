@@ -36,9 +36,9 @@ def test_consolidation_completeness():
         "HilbertAttentionSparseSimple",
         "HilbertAttentionStrided",
         "HilbertAttentionStridedSimple",
-        "UnifiedHilbertAttention",
         "HilbertAttentionV2",
         "HilbertAttentionTester",
+        "HilbertAttentionBase",
     ]
 
     # Map to unified configurations
@@ -53,9 +53,9 @@ def test_consolidation_completeness():
             "access_mode": "strided",
             "backend": "pytorch",
         },
-        "UnifiedHilbertAttention": {"backend": "pytorch"},
         "HilbertAttentionV2": {"memory_mode": "optimized"},
         "HilbertAttentionTester": {"backend": "pytorch"},
+        "HilbertAttentionBase": {"backend": "pytorch"},
     }
 
     # Verify each can be created through unified implementation
