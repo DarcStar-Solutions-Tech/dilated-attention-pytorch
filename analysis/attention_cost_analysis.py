@@ -26,6 +26,10 @@ Examples:
         --d-model 16384 --layers 128 --pattern-budget 65536 --block-size 128 \
         --selection hierarchical --kv-compression 64 --contexts 1073741824
     python analysis/attention_cost_analysis.py --no-comm-pruning   # dense ring, for comparison
+    python analysis/attention_cost_analysis.py --params 500e12 --active-params 1e12 \
+        --d-model 16384 --layers 128 --pattern-budget 65536 --block-size 128 \
+        --selection hierarchical --kv-compression 64 --contexts 1073741824 \
+        --train-tokens 300e12   # full-run wall-clock at a 300T-token budget
 """
 
 from __future__ import annotations
@@ -269,8 +273,41 @@ def train_step_seconds(n: int, c: Config, sparse: bool) -> float:
     return (fwd + bwd) / (c.gpu_peak_flops * c.mfu_dense)
 
 
+# --- full training run (steps x per-sequence cluster step) -----------------
+def cluster_step_seconds(n: int, c: Config) -> dict:
+    """Ideal per-sequence wall-clock on the full cluster, decomposed. Strong-scaling lower bound:
+    the cluster collaborates on one sequence, so compute (fwd+2bwd) spreads over all GPUs;
+    expert-offload disk I/O OVERLAPS compute (max, not sum); exposed sparse-pruned ring comm adds
+    on top. Ignores pipeline bubbles, optimizer/all-reduce, data stalls, and restart overhead."""
+    p = ring_degree(n, c)
+    total_gpus = max(gpus_for_state(c), p)
+    ss = train_step_seconds(n, c, sparse=True)
+    compute = ss / total_gpus
+    io = offload_io_seconds(c, total_gpus) if offloaded_disk_bytes(c) > 0 else 0.0
+    comm = (
+        3.0 * comm_time_hier(n, c, p) if p > 1 else 0.0
+    )  # fwd + 2 bwd, hier sparse-pruned ring
+    return {
+        "total_gpus": total_gpus,
+        "compute": compute,
+        "io": io,
+        "comm": comm,
+        "step": max(compute, io) + comm,
+    }
+
+
+def full_run_seconds(n: int, c: Config, tokens: float) -> dict:
+    """Wall-clock to train on `tokens` total tokens at context length n: (tokens / n) sequences,
+    each one ideal cluster step. Aggregate compute is the classic 6·N_active·D plus sparse
+    attention; the token budget D is the dominant (and least a-priori) assumption."""
+    cs = cluster_step_seconds(n, c)
+    n_steps = tokens / n
+    wall = n_steps * cs["step"]
+    return {**cs, "n_steps": n_steps, "tokens": tokens, "wall_seconds": wall}
+
+
 # --- report ----------------------------------------------------------------
-def report(c: Config, contexts: list[int]) -> None:
+def report(c: Config, contexts: list[int], train_tokens: float = 0.0) -> None:
     print("=" * 112)
     print(
         "Attention cost model (v4 — sharded state + sparse-ring comm pruning; extreme-scale valid)"
@@ -382,6 +419,22 @@ def report(c: Config, contexts: list[int]) -> None:
             f"vs {human_time(step)} compute -> {verdict}"
         )
     print("=" * 112)
+    if train_tokens > 0:
+        fr = full_run_seconds(n, c, train_tokens)
+        yrs = fr["wall_seconds"] / 3.15576e7  # Julian year of seconds
+        print(
+            f"FULL RUN to D={train_tokens:.3g} tokens @ context {n:,}  "
+            f"({fr['n_steps']:,.0f} sequences over {fr['total_gpus']:,} GPUs):"
+        )
+        print(
+            f"  per-seq cluster step = max(compute {human_time(fr['compute'])}, "
+            f"I/O {human_time(fr['io'])}) + comm {human_time(fr['comm'])} = {human_time(fr['step'])}"
+        )
+        print(
+            f"  total wall-clock ≈ {human_time(fr['wall_seconds'])}  (~{yrs:,.2f} years)  "
+            f"[ideal strong-scaling floor; real runs 1.5-3x this from bubbles/stalls/restarts]"
+        )
+        print("=" * 112)
 
 
 def parse_args() -> tuple[Config, list[int]]:
@@ -471,6 +524,12 @@ def parse_args() -> tuple[Config, list[int]]:
         help="offloaded experts trained (2x I/O)",
     )
     p.add_argument("--contexts", type=str, default="8192,32768,131072,1048576")
+    p.add_argument(
+        "--train-tokens",
+        type=float,
+        default=0.0,
+        help="if >0, estimate full-run wall-clock to train on this many total tokens",
+    )
     a = p.parse_args()
     # (bf16 dense FLOP/s, HBM GB, NVLink GB/s, NVLink-domain size); explicit flags override the preset
     presets = {
@@ -516,9 +575,9 @@ def parse_args() -> tuple[Config, list[int]]:
         offload_fetch_frac=a.offload_fetch_frac,
         offload_write_back=a.offload_write_back,
     )
-    return cfg, [int(x) for x in a.contexts.split(",")]
+    return cfg, [int(x) for x in a.contexts.split(",")], a.train_tokens
 
 
 if __name__ == "__main__":
-    cfg, contexts = parse_args()
-    report(cfg, contexts)
+    cfg, contexts, train_tokens = parse_args()
+    report(cfg, contexts, train_tokens)

@@ -231,6 +231,34 @@ hierarchical --kv-compression 64 --contexts 1073741824`.) With attention thus ha
 constraint becomes the weight memory** (the ~37k-GPU state floor) — addressed by the §11 weight-side
 levers, which trade GPU count for wall-clock and keep expert-offload disk I/O hidden behind compute.
 
+### 6.1 Full training run — wall-clock vs. token budget
+
+`--train-tokens D` extends the per-step model to a whole run: `wall = (D / context) × per-seq cluster
+step`, where the per-seq step is the strong-scaling floor (`max(compute, offload-I/O) + exposed comm`).
+For the 500T/1B config the per-seq step is **2.7 min over ~37k B300s** (no offload) or **36 min over
+~2.7k B300s** (offload). The step is *determinable a priori*; the **run is not** — it is governed by
+`D`, the token budget to call 500T params "completely trained," which is a scaling-law / data question,
+not a hardware one. Verified spread (six independent derivations, each adversarially checked):
+
+| D (tokens) | reading | 37k GPUs | 2.7k GPUs |
+|---|---|---|---|
+| 20T | Chinchilla compute-optimal **floor** (~20 tok/active-param) | 34 d | 1.3 yr |
+| **100–500T** | **defensible "completely trained" band** (frontier over-training on *active* params; ~0.3–1.7 epochs of the human-text stock) | **0.5–2.4 yr** | 6–32 yr |
+| 10 quadrillion (1e16) | "fill all 500T params" (Chinchilla-on-*total*) — **infeasible** | 47 yr | 638 yr |
+
+(Ideal floor; real runs ~1.5–3× from pipeline bubbles, optimizer all-reduce, data stalls, restarts.)
+
+Three findings the derivations converged on: (1) **there is no crisp "completely trained" point** —
+loss is a power law `L = E + A/Nᵃ + B/Dᵇ` with irreducible floor `E ≈ 1.8 nats`, never flat, so "done"
+is a budget choice (Kaplan: compute-optimal stops "significantly before convergence"). (2) **You cannot
+fully exercise 500T params on existing data** — Chinchilla-on-total needs ~1e16 tokens ≈ **33× the
+entire ~300T-token stock of human text** (Epoch/Villalobos 2024, CI 100–1000T); top-k routing trains
+only the ~1T active params per token and routing gains saturate (Clark 2022), so the model is
+structurally over-parameterized — the **binding constraint is data, not time or FLOPs**. (3) The
+realistic budget (~100–500T tokens, anchored to DeepSeek-V3 ≈400 / Kimi K2 ≈484 tok/active) sits inside
+the ~4-epoch near-lossless repetition window (Muennighoff 2023), giving **~0.5–2.4 yr on ~37k B300s**
+(×1.5–3 real-world). Offload trades that for ~6–32 yr on ~2.7k GPUs — a capex-vs-wall-clock knob.
+
 ## 7. What is determinable a priori (refined post-research)
 
 - **Compute — exact, minus a now-quantified selection term.** Core attention speedup `= n/W`; the
