@@ -83,6 +83,9 @@ L2  SparsityPolicy         Canonical (block-level) policy = MoBA-style content-a
                            Alternative policies behind one interface: NSA (compression + selection
                              + sliding window, block-level) and DSA (token-level lightning-indexer
                              top-k on MLA — the DeepSeek production path; finer-grained, MLA-coupled).
+                           Routing is HIERARCHICAL-capable: flat top-k for moderate context,
+                             multi-level (super-block -> block, log-depth) at extreme scale to keep
+                             SELECTION itself sub-quadratic (§5.2).
 
 L3  ExecutionStrategy      single-GPU (loop) | HIERARCHICAL RING / sequence-parallel: a
    [BUILD — ours, the      topology-aware multi-level ring — DENSE intra-node ring, SPARSE
@@ -134,10 +137,36 @@ single-device NSA/DSA/FlexAttention. *Caveat: the class that currently consumes 
 `BlockSparseRingDistributedDilatedAttention`, carries audited correctness bugs — the topology
 mapping is reusable, but the consuming path must be rebuilt on the corrected L0/L1.*
 
-For extreme context (≳100M tokens) the same hierarchy must extend to **selection routing**: flat
-top-k scoring is `O(n²/b)` and becomes its own wall, so the indexer must be **multi-level**
-(coarse super-blocks → fine blocks, log-depth). Hierarchical *ring* (communication) and
-hierarchical *routing* (selection) are the two extreme-scale extensions of this design.
+Hierarchical *ring* (communication, §5.1) and hierarchical *routing* (selection, §5.2 below) are
+the two extreme-scale extensions of this design.
+
+### 5.2 Hierarchical selection routing — L2 at scale
+
+Content-adaptive selection must *score* candidates to pick the top-k, and that scoring is not free
+(§6). **Flat** routing — score every (query, key-block) pair — is `O(n²/b)`: fine at ≤1M tokens
+(~6% overhead), but at extreme context it becomes the dominant cost and a *new* quadratic wall (at
+1B tokens our cost model shows selection rivalling the core attention even block-level). So L2's
+routing is **multi-level**, mirroring the hierarchical ring on the selection side:
+
+- **Coarse prefilter:** group blocks into *super-blocks*, score query against super-block centroids,
+  keep the top few super-blocks — `O(n²/b²)` or less.
+- **Fine selection:** run block-level top-k *only within* the surviving super-blocks.
+- Recurse for more levels at higher context → **log-depth** routing, keeping total selection
+  sub-quadratic instead of `O(n²/b)`.
+
+This is a natural extension of mechanisms already in the field: **NSA's coarse token/block
+*compression* branch is itself a one-level coarsening** that a hierarchical router generalizes, and
+the project's **`HierarchicalSparsePatternGenerator`** already expresses multi-level (local / global
+/ inter-node) structure we can reuse for the routing hierarchy as well as the ring. The flat
+MoBA/FlashMoBA router is the **default** (correct and fast through ~1M tokens); the multi-level
+router is the **scale-out path**, exposed behind the same L2 policy interface so it is opt-in by
+context length. *Quality note:* coarsening risks missing a relevant block whose super-block scored
+low — mitigated by training the router end-to-end (and the dense-imitation distillation in §7), and
+bounded by the same dropped-mass certificate.
+
+Symmetry to remember: **hierarchical ring keeps *communication* sub-quadratic; hierarchical routing
+keeps *selection* sub-quadratic.** Both are required to actually reach the extreme-context regime
+the cost model describes; the flat versions are correct and sufficient up to ~1M tokens.
 
 ## 6. Cost model (refined post-research)
 
@@ -198,7 +227,7 @@ Three refinements the research forced (all in the calculator):
 |---|---|---|---|
 | **0. Core** | `AttentionAccumulator` (L0) — promote `_merge_block_attention` to a standalone module | **BUILD** | property tests: associativity, equals-one-joint-softmax, masked-partial safe, fp16/fp32 |
 | **1. Static backend** | Wire L1 static patterns to **FlexAttention** (+ FA3 when available); local/dilated-stride/global skeletons as `BlockMask` builders | **BUY** | parity vs dense masked-softmax ref; FlexAttention fwd+bwd `gradcheck`; MFU floor |
-| **2. Adaptive policy** | **Port FlashMoBA** (mit-han-lab, BSD-3) for block-centroid top-k selection (our canonical L2); expose NSA (fla-org) + DSA-style token-level as alternative policies behind one interface | **PORT** | parity vs the reference kernel; selection skips real fwd+bwd compute; quality parity on a small LM |
+| **2. Adaptive policy** | **Port FlashMoBA** (mit-han-lab, BSD-3) for **flat** block-centroid top-k (canonical L2); expose NSA (fla-org) + DSA token-level as alternative policies behind one interface designed to also admit a **multi-level (hierarchical) router** (§5.2) for the scale-out path | **PORT** (flat) / **BUILD** (hierarchical) | parity vs the reference kernel; selection skips real fwd+bwd compute; quality parity on a small LM |
 | **3. Hierarchical sparse ring (the differentiator)** | L3 **topology-aware** ring via L0: dense intra-node + sparse inter-node levels, prune shards no local query selects, load-balanced block→rank assignment (reuse `HierarchicalSparsePatternGenerator`); global-position causal masking | **BUILD** (reuse prior pattern generator) | multi-GPU (`torchrun`) parity vs single-GPU; measured **inter-node** comm reduction + balanced ring steps |
 | **4. Training recipe** | **Muon** (2D matrices) + AdamW (embeddings/norms/head); add **MuonClip** QK-clip for large-scale stability; **AdEMAMix** + the novel (no-precedent) **Muon×AdEMAMix** as experimental options; **Dion** tracked for sharded-weight ring/FSDP settings | **ADOPT** Muon/MuonClip; **EXPERIMENT** AdEMAMix | loss-curve parity vs AdamW; throughput; QK-logit stability |
 | **5. Consolidation** | Route existing variants through the engine; deprecate the broken bespoke classes | **BUILD** | benchmark-suite parity (tokens/s, peak mem/GPU, loss parity) |
