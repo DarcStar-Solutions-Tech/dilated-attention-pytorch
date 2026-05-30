@@ -1,32 +1,31 @@
 #!/usr/bin/env python3
-"""Attention cost model: a-priori compute/memory bounds for dense vs. sparse attention.
+"""Attention cost model: a-priori compute / memory / communication for dense vs. sparse attention.
 
-The cost model behind ``docs/guides/unified-attention-architecture.md``. It quantifies, before
-any training run, the two quantities that are mathematically determinable a priori, refined by
-the 2026-05-30 prior-art research (NSA / DSA / MoBA-FlashMoBA / FlexAttention / MLA):
+The cost model behind ``docs/guides/unified-attention-architecture.md``. It quantifies, before any
+training run, what is determinable a priori, and now reflects BOTH hierarchical extensions in the
+architecture (§5.1 hierarchical ring, §5.2 hierarchical routing):
 
-  * COMPUTE  -- core attention is O(n^2) dense vs O(n*W) sparse (W = per-query attended-key
-               budget). Content-adaptive selection is NOT free: scoring which blocks/tokens to
-               keep adds a term that is O(n^2 / b) for BLOCK-level routing (MoBA / our lane) but
-               O(n^2) for TOKEN-level routing (DeepSeek DSA lightning indexer). That selection
-               term caps the achievable speedup, and is ~b x cheaper block-level than token-level.
-  * MEMORY   -- non-Flash scores are O(n^2) per layer (Flash removes); the KV working set is O(n),
-               sharded to O(n/p) by ring/sequence parallelism, and can be shrunk further by an
-               MLA-style latent KV compression ratio (a SECOND, multiplicative lever on the term
-               ring shards -- it lowers the ring degree p needed to fit a GPU).
+  * COMPUTE  -- core attention is O(n^2) dense vs O(n*W) sparse. Content-adaptive SELECTION is not
+               free; its cost depends on routing granularity:
+                 token       -> O(n^2)        (DeepSeek DSA lightning indexer)
+                 block        -> O(n^2 / b)    (MoBA / FlashMoBA, flat block-centroid top-k)
+                 hierarchical -> O(n^2/(b*S)) coarse + O(n) fine  (§5.2 multi-level routing)
+               Hierarchical routing keeps SELECTION sub-quadratic at extreme context.
+  * MEMORY   -- non-Flash scores O(n^2)/layer (Flash removes); KV O(n) -> O(n/p) via ring ->
+               O(n/(p*r)) with MLA-style latent compression ratio r.
+  * COMM     -- ring attention rotates ~the whole KV past each device per forward. A FLAT ring pushes
+               that over the slow inter-node link; a HIERARCHICAL (topology-aware) ring keeps the
+               dense rotation on fast intra-node links and sends only the sparse inter-node fraction
+               over slow links (§5.1). At long context COMM, not compute, is the bottleneck.
 
-Realized (not theoretical) speed also depends on MFU, which differs forward vs backward: block-
-dense sparse kernels (FlashMoBA / FlexAttention) keep high forward MFU (~90% of dense) but weaker
-backward MFU (~85%), so a training step (fwd + 2x bwd) is modeled with split MFU.
-
-Quality (the third quantity) is NOT modeled here: it is not predeterminable as a tight a-priori
-number (see the design doc) -- it is empirically frontier-validated (NSA/DSA match dense) and
-gated by loss parity + a runtime dropped-mass certificate, not bounded in advance.
+Quality is NOT modeled (not a tight a-priori number; empirically frontier-validated, gated by loss
+parity + a runtime dropped-mass certificate -- see the design doc).
 
 Examples:
-    python analysis/attention_cost_analysis.py                      # block selection, no KV compression
-    python analysis/attention_cost_analysis.py --selection token    # DeepSeek DSA-style (O(n^2) indexer)
-    python analysis/attention_cost_analysis.py --kv-compression 8    # MLA-style: drops the ring degree p
+    python analysis/attention_cost_analysis.py                       # block routing, flat-vs-hier comm
+    python analysis/attention_cost_analysis.py --selection token     # DSA-style O(n^2) indexer
+    python analysis/attention_cost_analysis.py --selection hierarchical --contexts 1073741824
+    python analysis/attention_cost_analysis.py --kv-compression 8
 """
 
 from __future__ import annotations
@@ -35,9 +34,9 @@ import argparse
 from dataclasses import dataclass
 
 
-# --- units -----------------------------------------------------------------
 def human_flops(x: float) -> str:
     for unit, scale in (
+        ("ZFLOP", 1e21),
         ("EFLOP", 1e18),
         ("PFLOP", 1e15),
         ("TFLOP", 1e12),
@@ -50,6 +49,7 @@ def human_flops(x: float) -> str:
 
 def human_bytes(x: float) -> str:
     for unit, scale in (
+        ("PB", 1024**5),
         ("TB", 1024**4),
         ("GB", 1024**3),
         ("MB", 1024**2),
@@ -60,86 +60,86 @@ def human_bytes(x: float) -> str:
     return f"{x:.0f} B"
 
 
-# --- configuration ---------------------------------------------------------
 @dataclass
 class Config:
     d_model: int = 4096
     n_layers: int = 32
-    n_heads: int = 32  # informational; d_model already captures the head FLOPs
+    n_heads: int = 32
     params: float = 7e9
-    bytes_per_elem: int = 2  # bf16/fp16
+    bytes_per_elem: int = 2
     pattern_budget: int = 4096  # W: attended keys/query in the CORE attention
-    block_size: int = 64  # b: block granularity for content-adaptive selection
-    selection_mode: str = (
-        "block"  # "block" (MoBA / our lane) | "token" (DSA) | "none" (static)
-    )
-    index_dim: int = 128  # dim of centroid / lightning-indexer scoring vectors
+    block_size: int = 64  # b: block granularity for selection
+    selection_mode: str = "block"  # "block" | "token" | "hierarchical" | "none"
+    index_dim: int = 128  # dim of centroid / indexer scoring vectors
+    # hierarchical-routing (§5.2) knobs
+    super_block_blocks: int = 16  # S: blocks per super-block
+    num_super_selected: int = 8  # top super-blocks kept per query in the coarse pass
     kv_compression_ratio: float = 1.0  # MLA-style latent KV compression (1.0 = none)
-    # hardware (defaults ~ one H100, bf16 tensor cores)
+    # hardware
     gpu_peak_flops: float = 989e12
     gpu_mem_bytes: float = 80 * 1024**3
-    mfu_dense: float = 0.50  # dense fwd & bwd
-    mfu_sparse_fwd: float = 0.45  # block-dense kernels ~90% of dense fwd
-    mfu_sparse_bwd: float = (
-        0.38  # backward weaker (FlexAttention ~85%; bwd kernel-limited)
-    )
+    mfu_dense: float = 0.50
+    mfu_sparse_fwd: float = 0.45
+    mfu_sparse_bwd: float = 0.38
+    # communication (§5.1) — per-GPU effective bandwidths and topology
+    node_size: int = 8  # GPUs per node
+    bw_intra_gbps: float = 900.0  # NVLink-class intra-node (GB/s)
+    bw_inter_gbps: float = 100.0  # InfiniBand-class inter-node (GB/s)
+    inter_node_attn_frac: float = 0.05  # sparse cross-node attention fraction (HierarchicalSparsePatternGenerator default)
 
 
 # --- compute (FORWARD FLOPs; backward ~= 2x forward) -----------------------
 def dense_attn_flops(n: int, c: Config) -> float:
-    """QK^T + A.V matmuls, all heads, all layers: 4 * n^2 * d_model * L (forward)."""
     return 4.0 * n * n * c.d_model * c.n_layers
 
 
 def sparse_core_flops(n: int, c: Config) -> float:
-    """Core attention over W selected keys/query: 4 * n * W * d_model * L (forward)."""
     return 4.0 * n * c.pattern_budget * c.d_model * c.n_layers
 
 
 def selection_flops(n: int, c: Config) -> float:
-    """Content-adaptive SELECTION (routing/indexer) cost -- not free.
+    """Content-adaptive SELECTION (routing) cost — depends on granularity (§5.2).
 
-    block: per-query x per-key-block centroid scoring (MoBA / FlashMoBA): O(n^2/b).
-    token: per-query x per-token lightning indexer (DeepSeek DSA): O(n^2), b x more.
-    none:  static precomputed pattern -> 0.
+    token        : per-query x per-token indexer            -> O(n^2)
+    block        : per-query x per-key-block centroid (flat) -> O(n^2 / b)
+    hierarchical : coarse per-query x per-super-block + fine within selected -> O(n^2/(b*S)) + O(n)
+    none         : static pattern -> 0
     """
+    L, d = c.n_layers, c.index_dim
     if c.selection_mode == "none":
         return 0.0
-    if c.selection_mode == "block":
-        n_key_units = max(1, n // c.block_size)
-        return 2.0 * n * n_key_units * c.index_dim * c.n_layers
     if c.selection_mode == "token":
-        return 2.0 * n * n * c.index_dim * c.n_layers
+        return 2.0 * n * n * d * L
+    if c.selection_mode == "block":
+        return 2.0 * n * (n / c.block_size) * d * L
+    if c.selection_mode == "hierarchical":
+        n_super = n / (c.block_size * c.super_block_blocks)  # super-blocks
+        coarse = 2.0 * n * n_super * d * L  # score super-block centroids: O(n^2/(b*S))
+        fine = (
+            2.0 * n * (c.num_super_selected * c.super_block_blocks) * d * L
+        )  # blocks in kept super-blocks: O(n)
+        return coarse + fine
     raise ValueError(f"unknown selection_mode: {c.selection_mode}")
 
 
 def sparse_attn_flops(n: int, c: Config) -> float:
-    """Total sparse attention forward = core attention + selection overhead."""
     return sparse_core_flops(n, c) + selection_flops(n, c)
 
 
 def linear_flops(n: int, c: Config) -> float:
-    """QKVO projections + FFN -- the 2N rule. Grows LINEARLY with context."""
     return 2.0 * c.params * n
 
 
 def crossover_n(c: Config) -> float:
-    """Context where dense attention FLOPs == the entire linear term: n = P / (2 d L)."""
     return c.params / (2.0 * c.d_model * c.n_layers)
 
 
 # --- memory (bytes) --------------------------------------------------------
 def kv_bytes(n: int, c: Config) -> float:
-    """K and V across all layers, after optional MLA-style latent compression.
-
-    2 * n * d_model * bytes * L / compression_ratio. (Block/token SELECTION does NOT shrink this;
-    only representation compression does.)
-    """
     return 2.0 * n * c.d_model * c.bytes_per_elem * c.n_layers / c.kv_compression_ratio
 
 
 def dense_scores_bytes_per_layer(n: int, c: Config) -> float:
-    """The n^2 score matrix per layer that Flash avoids materializing."""
     return float(n) * n * c.n_heads * c.bytes_per_elem
 
 
@@ -148,20 +148,45 @@ def weight_bytes(c: Config) -> float:
 
 
 def ring_p_to_fit(n: int, c: Config) -> int:
-    """Smallest power-of-two ring/sequence-parallel degree p so KV/p + weights fit one GPU."""
     budget = c.gpu_mem_bytes - weight_bytes(c)
     if budget <= 0:
         return -1
     kv = kv_bytes(n, c)
     p = 1
-    while kv / p > budget and p < 4096:
+    while kv / p > budget and p < 1_000_000:
         p *= 2
     return p if kv / p <= budget else -1
 
 
-# --- wall-clock (training step = fwd + 2x bwd, split MFU) ------------------
+# --- communication (ring KV rotation per forward, §5.1) --------------------
+def ring_recv_bytes(n: int, c: Config, p: int) -> float:
+    """Bytes each device receives over a full ring forward ~= (p-1)/p of the whole KV (all layers)."""
+    if p <= 1:
+        return 0.0
+    return kv_bytes(n, c) * (p - 1) / p
+
+
+def comm_time_flat(n: int, c: Config, p: int) -> float:
+    """Flat ring: the whole rotation crosses the slow inter-node link (worst case when ring spans nodes)."""
+    return ring_recv_bytes(n, c, p) / (c.bw_inter_gbps * 1e9)
+
+
+def comm_time_hier(n: int, c: Config, p: int) -> float:
+    """Hierarchical ring: dense rotation on fast intra-node links; only the sparse inter-node
+    fraction crosses slow links. If the ring fits in one node (p <= node_size) it is all intra-node."""
+    b = ring_recv_bytes(n, c, p)
+    if p <= c.node_size:
+        return b / (c.bw_intra_gbps * 1e9)
+    frac = c.inter_node_attn_frac
+    return b * (1 - frac) / (c.bw_intra_gbps * 1e9) + b * frac / (c.bw_inter_gbps * 1e9)
+
+
+def fwd_attn_seconds(n: int, c: Config) -> float:
+    """Forward attention compute time (sparse), for comm-vs-compute comparison."""
+    return sparse_attn_flops(n, c) / (c.gpu_peak_flops * c.mfu_sparse_fwd)
+
+
 def train_step_seconds(n: int, c: Config, sparse: bool) -> float:
-    """Approx wall-clock for one training step (fwd + 2x bwd) of the WHOLE model."""
     fwd = linear_flops(n, c) + (
         sparse_attn_flops(n, c) if sparse else dense_attn_flops(n, c)
     )
@@ -175,30 +200,29 @@ def train_step_seconds(n: int, c: Config, sparse: bool) -> float:
 
 # --- report ----------------------------------------------------------------
 def report(c: Config, contexts: list[int]) -> None:
-    print("=" * 108)
+    print("=" * 110)
     print(
-        "Attention cost model (v2 — selection cost + fwd/bwd MFU + MLA KV compression)"
+        "Attention cost model (v3 — selection granularity + fwd/bwd MFU + MLA + ring communication)"
     )
     print(
-        f"  model: d_model={c.d_model} layers={c.n_layers} heads={c.n_heads} "
-        f"params={c.params:.2g} dtype={c.bytes_per_elem}B"
+        f"  model: d_model={c.d_model} layers={c.n_layers} params={c.params:.2g} dtype={c.bytes_per_elem}B"
     )
     print(
-        f"  sparse: W={c.pattern_budget} keys/query, selection='{c.selection_mode}' "
-        f"(block_size={c.block_size}, index_dim={c.index_dim}), kv_compression={c.kv_compression_ratio:g}x"
+        f"  sparse: W={c.pattern_budget}, selection='{c.selection_mode}' (b={c.block_size}, "
+        f"S={c.super_block_blocks}, index_dim={c.index_dim}), kv_compression={c.kv_compression_ratio:g}x"
     )
     print(
-        f"  hardware: peak={human_flops(c.gpu_peak_flops)}/s mem={human_bytes(c.gpu_mem_bytes)} "
-        f"MFU dense={c.mfu_dense:.0%} sparse_fwd={c.mfu_sparse_fwd:.0%} sparse_bwd={c.mfu_sparse_bwd:.0%}"
+        f"  hw: peak={human_flops(c.gpu_peak_flops)}/s mem={human_bytes(c.gpu_mem_bytes)} "
+        f"MFU d={c.mfu_dense:.0%}/s_fwd={c.mfu_sparse_fwd:.0%}/s_bwd={c.mfu_sparse_bwd:.0%} | "
+        f"BW intra={c.bw_intra_gbps:g}/inter={c.bw_inter_gbps:g} GB/s, node={c.node_size}, inter_frac={c.inter_node_attn_frac:g}"
     )
     print(
-        f"  crossover (dense attn = whole linear term): n ~= {crossover_n(c):,.0f} tokens; "
-        f"weights resident = {human_bytes(weight_bytes(c))}"
+        f"  crossover n ~= {crossover_n(c):,.0f} tokens; weights = {human_bytes(weight_bytes(c))}"
     )
-    print("=" * 108)
+    print("=" * 110)
     hdr = (
-        f"{'context n':>11} | {'dense attn':>11} | {'sparse core':>11} | {'selection':>11} | "
-        f"{'eff attn x':>10} | {'model x':>8} | {'KV(all L)':>10} | {'ring p':>6}"
+        f"{'context n':>13} | {'dense attn':>11} | {'sparse core':>11} | {'selection':>11} | "
+        f"{'eff attn x':>10} | {'KV(all L)':>10} | {'ring p':>7}"
     )
     print(hdr)
     print("-" * len(hdr))
@@ -206,34 +230,41 @@ def report(c: Config, contexts: list[int]) -> None:
         da = dense_attn_flops(n, c)
         core = sparse_core_flops(n, c)
         sel = selection_flops(n, c)
-        lin = linear_flops(n, c)
-        eff_attn_x = da / (core + sel)
-        model_x = (lin + da) / (lin + core + sel)
         p = ring_p_to_fit(n, c)
-        p_str = "OOM" if p < 0 else str(p)
         print(
-            f"{n:>11,} | {human_flops(da):>11} | {human_flops(core):>11} | {human_flops(sel):>11} | "
-            f"{eff_attn_x:>9.0f}x | {model_x:>7.1f}x | {human_bytes(kv_bytes(n, c)):>10} | {p_str:>6}"
+            f"{n:>13,} | {human_flops(da):>11} | {human_flops(core):>11} | {human_flops(sel):>11} | "
+            f"{da / (core + sel):>9.0f}x | {human_bytes(kv_bytes(n, c)):>10} | {('OOM' if p < 0 else str(p)):>7}"
         )
     print("-" * len(hdr))
     print(
-        "  eff attn x = dense / (sparse core + selection) — selection overhead INCLUDED."
-    )
-    print(
-        "  model x = whole-model forward speedup; ring p = min seq-parallel degree to fit one GPU."
+        "  eff attn x = dense / (sparse core + selection); selection cost INCLUDED (§5.2)."
     )
 
     n = max(contexts)
-    print("=" * 108)
-    print(
-        f"Training-step wall-clock (fwd + 2x bwd, whole model) at n={n:,} on the configured GPU:"
-    )
+    p = ring_p_to_fit(n, c)
+    print("=" * 110)
+    print(f"At n={n:,}:")
     ds, ss = train_step_seconds(n, c, False), train_step_seconds(n, c, True)
     print(
-        f"  dense:  {ds:>9.1f} s   sparse: {ss:>9.1f} s   ->  {ds / ss:.0f}x faster per step  "
-        f"(+ dense must shard {human_bytes(kv_bytes(n, c))} KV)"
+        f"  compute: training step (fwd+2bwd) dense {ds:,.0f}s vs sparse {ss:,.0f}s  -> {ds / ss:.0f}x/step"
     )
-    print("=" * 108)
+    if p > 1:
+        recv = ring_recv_bytes(n, c, p)
+        tf, th = comm_time_flat(n, c, p), comm_time_hier(n, c, p)
+        spans = "spans nodes" if p > c.node_size else "fits 1 node"
+        print(
+            f"  ring comm (p={p}, {spans}): {human_bytes(recv)}/GPU/fwd  ->  "
+            f"flat {tf:,.1f}s vs hierarchical {th:,.1f}s  ({tf / th:.0f}x less)"
+        )
+        print(
+            f"  comm vs compute: fwd-attn compute ~{fwd_attn_seconds(n, c):,.1f}s; "
+            f"{'COMM-BOUND' if th > fwd_attn_seconds(n, c) else 'compute-bound'} even with the hierarchical ring"
+            if p > c.node_size
+            else "  (single-node ring: all intra-node bandwidth)"
+        )
+    else:
+        print("  ring comm: p=1 (fits one GPU), no ring communication.")
+    print("=" * 110)
 
 
 def parse_args() -> tuple[Config, list[int]]:
@@ -245,23 +276,26 @@ def parse_args() -> tuple[Config, list[int]]:
     p.add_argument("--heads", type=int, default=32)
     p.add_argument("--params", type=float, default=7e9)
     p.add_argument("--bytes", type=int, default=2, dest="bytes_per_elem")
-    p.add_argument(
-        "--pattern-budget", type=int, default=4096, help="W: attended keys/query"
-    )
+    p.add_argument("--pattern-budget", type=int, default=4096)
     p.add_argument("--block-size", type=int, default=64)
-    p.add_argument("--selection", choices=["block", "token", "none"], default="block")
-    p.add_argument("--index-dim", type=int, default=128)
     p.add_argument(
-        "--kv-compression",
-        type=float,
-        default=1.0,
-        help="MLA latent KV compression ratio",
+        "--selection",
+        choices=["block", "token", "hierarchical", "none"],
+        default="block",
     )
+    p.add_argument("--index-dim", type=int, default=128)
+    p.add_argument("--super-block-blocks", type=int, default=16)
+    p.add_argument("--num-super-selected", type=int, default=8)
+    p.add_argument("--kv-compression", type=float, default=1.0)
     p.add_argument("--gpu-peak-flops", type=float, default=989e12)
     p.add_argument("--gpu-mem-gb", type=float, default=80.0)
     p.add_argument("--mfu-dense", type=float, default=0.50)
     p.add_argument("--mfu-sparse-fwd", type=float, default=0.45)
     p.add_argument("--mfu-sparse-bwd", type=float, default=0.38)
+    p.add_argument("--node-size", type=int, default=8)
+    p.add_argument("--bw-intra", type=float, default=900.0)
+    p.add_argument("--bw-inter", type=float, default=100.0)
+    p.add_argument("--inter-node-frac", type=float, default=0.05)
     p.add_argument("--contexts", type=str, default="8192,32768,131072,1048576")
     a = p.parse_args()
     cfg = Config(
@@ -274,12 +308,18 @@ def parse_args() -> tuple[Config, list[int]]:
         block_size=a.block_size,
         selection_mode=a.selection,
         index_dim=a.index_dim,
+        super_block_blocks=a.super_block_blocks,
+        num_super_selected=a.num_super_selected,
         kv_compression_ratio=a.kv_compression,
         gpu_peak_flops=a.gpu_peak_flops,
         gpu_mem_bytes=a.gpu_mem_gb * 1024**3,
         mfu_dense=a.mfu_dense,
         mfu_sparse_fwd=a.mfu_sparse_fwd,
         mfu_sparse_bwd=a.mfu_sparse_bwd,
+        node_size=a.node_size,
+        bw_intra_gbps=a.bw_intra,
+        bw_inter_gbps=a.bw_inter,
+        inter_node_attn_frac=a.inter_node_frac,
     )
     return cfg, [int(x) for x in a.contexts.split(",")]
 

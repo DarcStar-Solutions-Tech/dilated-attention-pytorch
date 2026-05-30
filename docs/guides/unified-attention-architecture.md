@@ -170,9 +170,10 @@ the cost model describes; the flat versions are correct and sufficient up to ~1M
 
 ## 6. Cost model (refined post-research)
 
-Reproduce with `python analysis/attention_cost_analysis.py` — now models the **selection cost**,
-**split fwd/bwd MFU**, and **MLA KV compression**. 7B-class model (`d_model=4096`, 32 layers, bf16),
-core budget `W=4096`, **block-level** selection (`b=64`), one H100:
+Reproduce with `python analysis/attention_cost_analysis.py` — now models **selection granularity**
+(flat block / token / hierarchical), **split fwd/bwd MFU**, **MLA KV compression**, and **ring
+communication**. 7B-class model (`d_model=4096`, 32 layers, bf16), core budget `W=4096`,
+**block-level** selection (`b=64`), one H100:
 
 ```
    context n |  dense attn | sparse core |  selection | eff attn x | model x | KV(all L) | ring p
@@ -189,6 +190,10 @@ Three refinements the research forced (all in the calculator):
    `O(n²)` — at 1M it *dominates* the core attention and **caps the effective speedup at ~51×**
    (`--selection token`). → a concrete compute argument for staying **block-level**: ~`b`× cheaper
    routing. (DSA keeps its indexer cheap via FP8 + few heads precisely to fight this `O(n²)` term.)
+   At **extreme context, even block-level routing becomes a wall** — and **hierarchical** routing
+   (`O(n²/(b·S)) + O(n)`, §5.2) fixes it: at **1B tokens** it cuts the selection term **~16×**
+   (295 → 18 EFLOP), lifting the effective attention speedup from 10,923× (flat block) to
+   **15,887×** (`--selection hierarchical`).
 2. **MFU splits forward vs backward.** Block-dense kernels (FlashMoBA / FlexAttention) keep ~90% of
    dense forward MFU but weaker (~85%) backward; the calculator uses `mfu_sparse_fwd`/`_bwd` for the
    training step. Net: realized speedup is *closer* to the `n/W` ceiling than the old conservative
@@ -197,19 +202,32 @@ Three refinements the research forced (all in the calculator):
    512 GB → 64 GB at 1M, dropping the ring degree **p = 8 → 1** (fits one GPU), compute unchanged.
    Inference-oriented (deprioritized for training *compute*), but it directly attacks the *memory*
    wall that otherwise forces ring sharding.
+4. **Communication is the real long-context bottleneck — the hierarchical ring attacks it (§5.1).**
+   Ring attention rotates ~the whole KV past each device per forward. A **flat** ring serializes
+   that over the slow inter-node link; a **hierarchical** ring keeps the dense rotation on fast
+   intra-node (NVLink) links and sends only the sparse inter-node fraction over slow links. At
+   7B/1M across nodes (`--node-size 2`): 448 GB/GPU/forward → **flat 4.8 s vs hierarchical 0.7 s
+   (~6× less)**. Still compute-bound at 1M, but comm grows with context until it dominates — the
+   reason L3 is hierarchical, not flat.
 
 - **Crossover ≈ 27K tokens** unchanged: beyond it, dense attention exceeds the whole linear term.
-- **Compute (sparse selection) and memory (ring × KV-compression) are still solved by different
-  levers** — need both for 1M. Externally corroborated: NSA 9×/6× @64k; DSA `O(L²)→O(Lk)` at 1T scale.
+- **Compute (sparse + hierarchical selection), memory (ring × KV-compression), and communication
+  (hierarchical ring) are solved by *different* levers** — you need all three at scale. Externally
+  corroborated: NSA 9×/6× @64k; DSA `O(L²)→O(Lk)` at 1T scale.
 
 ## 7. What is determinable a priori (refined post-research)
 
 - **Compute — exact, minus a now-quantified selection term.** Core attention speedup `= n/W`; the
-  realized ceiling subtracts the selection cost (`O(n²/b)` block-level, `O(n²)` token-level — §6)
-  and is scaled by fwd/bwd MFU. Validated by NSA's measured 9×/6× @64k and DSA's `O(L²)→O(Lk)`.
+  realized ceiling subtracts the selection cost — `O(n²)` token, `O(n²/b)` flat-block, or
+  `O(n²/(b·S))+O(n)` **hierarchical** (sub-quadratic, §5.2) — scaled by fwd/bwd MFU. Validated by
+  NSA's measured 9×/6× @64k and DSA's `O(L²)→O(Lk)`.
 - **Memory — exact, with a second lever.** non-Flash scores `O(n²)` per layer (Flash removes); KV
   `O(n)` → `O(n/p)` via ring → `O(n/(p·r))` with an MLA latent compression ratio `r`. Selection
   does **not** shrink KV; only representation compression does.
+- **Communication — modeled, tiered (§5.1).** Ring rotates ~`O(n)` KV/device per forward; a **flat**
+  ring serializes it on the slow inter-node link, a **hierarchical** ring keeps it mostly on fast
+  intra-node links (only the sparse inter-node fraction crosses slowly, `O(n·frac/BW_inter)`). Comm
+  grows with context and eventually dominates compute — the binding constraint at extreme scale.
 - **Quality — still not a tight a-priori number, but the priors hardened.** Provable: a **connected**
   pattern (our skeleton gives `O(log n)` reach) retains universal approximation — no forced ceiling.
   Per-token error bounded by dropped softmax mass: `‖o−õ‖ ≤ 2·δ·max‖v‖`, useful only *if* mass
