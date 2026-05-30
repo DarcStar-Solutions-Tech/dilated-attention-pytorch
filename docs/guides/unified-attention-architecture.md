@@ -173,14 +173,17 @@ the cost model describes; the flat versions are correct and sufficient up to ~1M
 Reproduce with `python analysis/attention_cost_analysis.py` — now models **selection granularity**
 (flat block / token / hierarchical), **split fwd/bwd MFU**, **MLA KV compression**, and **ring
 communication**. 7B-class model (`d_model=4096`, 32 layers, bf16), core budget `W=4096`,
-**block-level** selection (`b=64`), one H100:
+**block-level** selection (`b=64`), one **NVIDIA B300** ("Blackwell Ultra": 3.5 PFLOP/s bf16 dense,
+288 GB HBM3e, NVLink-5 — the current top part; `--gpu h100`/`--gpu b200` switch presets):
 
 ```
-   context n |  dense attn | sparse core |  selection | eff attn x | model x | KV(all L) | ring p
-     131,072 |  9.01 PFLOP |  281 TFLOP  | 2.20 TFLOP |       32x  |   5.1x  |   64.0 GB |   1
-   1,048,576 | 576.46 PFLOP|  2.25 PFLOP | 140.7 TFLOP|      241x  |  34.6x  |  512.0 GB |   8
+   context n |  dense attn | sparse core |   selection | eff attn x |     KV/seq | ring deg
+     131,072 |  9.01 PFLOP | 281.47 TFLOP |  2.20 TFLOP |        32x |    64.0 GB |        1
+   1,048,576 | 576.46 PFLOP |  2.25 PFLOP | 140.74 TFLOP |       241x |   512.0 GB |        4
 ```
-Training step (fwd + 2·bwd) at 1M: dense **3586 s** vs sparse **129 s** → **~28×/step**.
+Training step (fwd + 2·bwd) at 1M: dense **16.9 min** vs sparse **36.5 s** → **~28×/step**
+(1-GPU-equiv FLOPs/MFU; the B300's 288 GB HBM also drops the KV ring degree **13→4** vs the 80 GB H100).
+Spread over the 4 ring GPUs, the ideal cluster step is **~9 s/seq** (strong-scaling floor).
 
 Three refinements the research forced (all in the calculator):
 
@@ -206,28 +209,27 @@ Three refinements the research forced (all in the calculator):
    Ring attention rotates ~the whole KV past each device per forward. A **flat** ring serializes
    that over the slow inter-node link; a **hierarchical** ring keeps the dense rotation on fast
    intra-node (NVLink) links and sends only the sparse inter-node fraction over slow links. At
-   7B/1M across nodes (`--node-size 2`): 448 GB/GPU/forward → **flat 4.8 s vs hierarchical 0.7 s
-   (~6× less)**. Still compute-bound at 1M, but comm grows with context until it dominates — the
-   reason L3 is hierarchical, not flat.
+   7B/1M forced across nodes (`--node-size 2`): ~410 GB/GPU/forward → **flat 4.1 s vs hierarchical
+   0.42 s (~10× less)** (B300 NVLink-5 widens the intra-node advantage). Still compute-bound at 1M,
+   but comm grows with context until it dominates — the reason L3 is hierarchical, not flat.
 
 - **Crossover ≈ 27K tokens** unchanged: beyond it, dense attention exceeds the whole linear term.
 - **Compute (sparse + hierarchical selection), memory (ring × KV-compression), and communication
   (hierarchical ring + sparse-ring pruning) are solved by *different* levers** — you need all of them
   at scale. Externally corroborated: NSA 9×/6× @64k; DSA `O(L²)→O(Lk)` at 1T scale.
 
-**Extreme-scale sanity check (500T-total / 1T-active MoE, 1B-token context).** The calculator now
-shards weights+optimizer (7.1 PB → ~133k GPUs to hold the state) and models sparse-ring pruning, so
-it is valid here. With hierarchical routing + MLA-64× + sparse-ring pruning: the selection wall is
-gone (18 EFLOP, eff attn 15,887×), and communication — the binding constraint — collapses from
-**dense-ring ~23 min/forward** (flat) → **~3.6 min** (hierarchical) → **~0.01 s** (hierarchical +
-pruning, density `6e-5`), i.e. **compute-bound** at ~47 s/GPU/forward. *Reading:* hierarchical ring
-(~6×) alone leaves you comm-bound; it's **sparse-ring pruning** (only sending selected blocks) that
-actually makes the regime — and the "~90% of optimal" assumption — reachable. (`--params 500e12
---active-params 1e12 --selection hierarchical --kv-compression 64 --contexts 1073741824`.)
-With attention thus handled, the **binding constraint becomes the weight memory** (the ~133k-GPU
-state floor) — addressed by the §11 weight-side levers: hierarchical fidelity (INT4-resident /
-full-on-disk experts) + offload cuts it to **~9.8k GPUs (~13.5×)** (`--expert-frac 0.95
---weight-quant-bits 4 --expert-offload-ratio 0.9`).
+**Extreme-scale sanity check (500T-total / 1T-active MoE, 1B-token context, on B300s).** The
+calculator now shards weights+optimizer (7.1 PB → **~37k B300s** to hold the state) and models
+sparse-ring pruning, so it is valid here. With hierarchical routing + MLA-64× + sparse-ring pruning:
+the selection wall is gone (18 EFLOP, eff attn 15,887×), and communication — the binding constraint —
+collapses from **dense-ring ~23 min/forward** (flat) → **~2.4 min** (hierarchical) → **~0.01 s**
+(hierarchical + pruning, density `6e-5`), i.e. **compute-bound** at ~47 s/GPU/forward (ideal cluster
+step ~2.7 min/seq over the 37k GPUs). *Reading:* hierarchical ring alone leaves you comm-bound; it's
+**sparse-ring pruning** (only sending selected blocks) that actually makes the regime — and the
+"~90% of optimal" assumption — reachable. (`--params 500e12 --active-params 1e12 --selection
+hierarchical --kv-compression 64 --contexts 1073741824`.) With attention thus handled, the **binding
+constraint becomes the weight memory** (the ~37k-GPU state floor) — addressed by the §11 weight-side
+levers, which trade GPU count for wall-clock and keep expert-offload disk I/O hidden behind compute.
 
 ## 7. What is determinable a priori (refined post-research)
 
@@ -340,7 +342,7 @@ audited correctness fixes before reuse.
 Everything above (§2–§9) addresses the **attention map** (which token *pairs* interact) — that
 governs compute, activation memory, and communication. It does **not** touch the **model weights**,
 which at extreme scale are the *binding* memory constraint (a 500T model = 7.1 PB of state →
-~133k GPUs just to hold it). Attention sparsity ≠ weight sparsity; these are independent levers, and
+~37k B300s just to hold it). Attention sparsity ≠ weight sparsity; these are independent levers, and
 the weight side is currently **unexploited** in our design. This section is a research track for it.
 
 **The real weight-side sparsity is *usage*, not zeros.** A 500T model is necessarily **MoE**: for any
@@ -353,7 +355,11 @@ principle to *precision*: keep a **low-precision (e.g. INT4) copy of hot experts
 **full-precision copy on NVMe/disk**, fetched only when a topic needs deep, high-fidelity processing;
 park rarely-used experts entirely on disk. Modeled in the calculator (`expert_frac`,
 `weight_quant_bits`, `expert_offload_ratio`): at 500T with 95%-expert / INT4-resident / 90%-offloaded,
-the GPU state floor drops **7.1 PB → 537 TB → ~133k → ~9.8k GPUs (~13.5×)**, with ~778 TB on disk.
+the GPU state floor drops **7.1 PB → 537 TB resident → ~37k → ~2.7k B300s (~13.6×)**, with ~778 TB on
+disk. The trade is wall-clock for GPU count — the same fixed work now rides ~13.6× fewer GPUs, so the
+ideal cluster step stretches **~2.7 min → ~36 min/seq** — but the **offload disk I/O stays hidden
+behind compute**: ~778 TB fetched/step ÷ 2,726 GPUs @ 6 GB/s ≈ **52 s**, vs ~10.7 min/GPU/forward
+(modeled by `offload_io_seconds`; tune with `--nvme-bw` / `--offload-fetch-frac` / `--offload-write-back`).
 This directly attacks the binding constraint, complementary to MLA (which compresses KV, not weights).
 
 **Lever B — heterogeneous (variable-size) experts.** Nothing fixes a uniform expert size (the "1T" in

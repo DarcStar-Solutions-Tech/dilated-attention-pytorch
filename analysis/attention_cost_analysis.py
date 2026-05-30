@@ -99,8 +99,10 @@ class Config:
     )
     disk_bytes_per_param: float = 2.0  # precision of the full expert copy on disk
     # hardware
-    gpu_peak_flops: float = 989e12
-    gpu_mem_bytes: float = 80 * 1024**3
+    gpu_peak_flops: float = (
+        3.5e15  # NVIDIA B300 (Blackwell Ultra) bf16 dense; H100=989e12, B200=2.25e15
+    )
+    gpu_mem_bytes: float = 288 * 1024**3  # B300 HBM3e (H100=80, B200=192)
     state_bytes_per_param: float = (
         16.0  # Adam mixed (2 wt + 2 grad + 4 master + 4 m + 4 v); Muon ~12
     )
@@ -112,10 +114,18 @@ class Config:
     mfu_sparse_fwd: float = 0.45
     mfu_sparse_bwd: float = 0.38
     # communication
-    node_size: int = 8
-    bw_intra_gbps: float = 900.0
-    bw_inter_gbps: float = 100.0
+    node_size: int = 72  # NVL72 NVLink domain (B300); H100 node = 8
+    bw_intra_gbps: float = 1800.0  # NVLink-5 per GPU (B300); H100 NVLink ~900
+    bw_inter_gbps: float = 100.0  # inter-rack InfiniBand (per GPU)
     inter_node_attn_frac: float = 0.05
+    # expert-offload disk I/O
+    nvme_bw_per_gpu_gbps: float = 6.0  # local NVMe Gen5 effective read BW per GPU
+    offload_fetch_frac: float = (
+        1.0  # frac of offloaded experts fetched/step (~1.0: long ctx touches all)
+    )
+    offload_write_back: bool = (
+        False  # True if offloaded experts are TRAINED (read+write doubles I/O)
+    )
 
     def compute_params(self) -> float:
         return self.active_params if self.active_params > 0 else self.params
@@ -188,6 +198,19 @@ def gpus_for_state(c: Config) -> int:
     return max(
         1, math.ceil(resident_state_bytes(c) / (c.gpu_mem_bytes * c.static_mem_frac))
     )
+
+
+def offload_io_seconds(c: Config, total_gpus: int) -> float:
+    """Per-step disk->HBM time to fetch offloaded experts. Offloaded bytes are sharded across the
+    cluster (parallel local NVMe). At long context the routed-expert union saturates, so ~all
+    offloaded experts are fetched per step (offload_fetch_frac ~ 1.0); write-back doubles it if
+    those experts are trained rather than frozen."""
+    io_bytes = (
+        offloaded_disk_bytes(c)
+        * c.offload_fetch_frac
+        * (2.0 if c.offload_write_back else 1.0)
+    )
+    return (io_bytes / max(1, total_gpus)) / (c.nvme_bw_per_gpu_gbps * 1e9)
 
 
 def kv_bytes(n: int, c: Config) -> float:
@@ -345,6 +368,19 @@ def report(c: Config, contexts: list[int]) -> None:
         )
     else:
         print("  comm: p=1, no ring communication.")
+    if offloaded_disk_bytes(c) > 0:
+        io = offload_io_seconds(c, total_gpus)
+        step = ss / total_gpus
+        verdict = (
+            "hidden behind compute ✓"
+            if io <= step
+            else f"I/O-BOUND (+{human_time(io - step)}/step)"
+        )
+        print(
+            f"  expert-offload I/O: {human_bytes(offloaded_disk_bytes(c) * c.offload_fetch_frac)}/step "
+            f"over {total_gpus:,} GPUs @ {c.nvme_bw_per_gpu_gbps:g} GB/s/GPU -> {human_time(io)}/step "
+            f"vs {human_time(step)} compute -> {verdict}"
+        )
     print("=" * 112)
 
 
@@ -379,8 +415,21 @@ def parse_args() -> tuple[Config, list[int]]:
         action="store_true",
         help="model a dense ring (no sparse-comm pruning)",
     )
-    p.add_argument("--gpu-peak-flops", type=float, default=989e12)
-    p.add_argument("--gpu-mem-gb", type=float, default=80.0)
+    p.add_argument(
+        "--gpu",
+        choices=["h100", "b200", "b300"],
+        default="b300",
+        help="hardware preset",
+    )
+    p.add_argument(
+        "--gpu-peak-flops",
+        type=float,
+        default=None,
+        help="override preset bf16 dense FLOP/s",
+    )
+    p.add_argument(
+        "--gpu-mem-gb", type=float, default=None, help="override preset HBM GB"
+    )
     p.add_argument("--state-bytes-per-param", type=float, default=16.0)
     p.add_argument(
         "--expert-frac",
@@ -404,12 +453,36 @@ def parse_args() -> tuple[Config, list[int]]:
     p.add_argument("--mfu-dense", type=float, default=0.50)
     p.add_argument("--mfu-sparse-fwd", type=float, default=0.45)
     p.add_argument("--mfu-sparse-bwd", type=float, default=0.38)
-    p.add_argument("--node-size", type=int, default=8)
-    p.add_argument("--bw-intra", type=float, default=900.0)
+    p.add_argument(
+        "--node-size", type=int, default=None, help="override preset NVLink-domain size"
+    )
+    p.add_argument(
+        "--bw-intra", type=float, default=None, help="override preset intra-node GB/s"
+    )
     p.add_argument("--bw-inter", type=float, default=100.0)
     p.add_argument("--inter-node-frac", type=float, default=0.05)
+    p.add_argument(
+        "--nvme-bw", type=float, default=6.0, help="local NVMe read GB/s per GPU"
+    )
+    p.add_argument("--offload-fetch-frac", type=float, default=1.0)
+    p.add_argument(
+        "--offload-write-back",
+        action="store_true",
+        help="offloaded experts trained (2x I/O)",
+    )
     p.add_argument("--contexts", type=str, default="8192,32768,131072,1048576")
     a = p.parse_args()
+    # (bf16 dense FLOP/s, HBM GB, NVLink GB/s, NVLink-domain size); explicit flags override the preset
+    presets = {
+        "h100": (989e12, 80.0, 900.0, 8),
+        "b200": (2.25e15, 192.0, 1800.0, 72),
+        "b300": (3.5e15, 288.0, 1800.0, 72),
+    }
+    pk, mem, nvl, node = presets[a.gpu]
+    peak = a.gpu_peak_flops if a.gpu_peak_flops is not None else pk
+    mem_gb = a.gpu_mem_gb if a.gpu_mem_gb is not None else mem
+    bw_intra = a.bw_intra if a.bw_intra is not None else nvl
+    node_size = a.node_size if a.node_size is not None else node
     cfg = Config(
         d_model=a.d_model,
         n_layers=a.layers,
@@ -429,16 +502,19 @@ def parse_args() -> tuple[Config, list[int]]:
         weight_quant_bits=a.weight_quant_bits,
         expert_offload_ratio=a.expert_offload_ratio,
         disk_bytes_per_param=a.disk_bytes_per_param,
-        gpu_peak_flops=a.gpu_peak_flops,
-        gpu_mem_bytes=a.gpu_mem_gb * 1024**3,
+        gpu_peak_flops=peak,
+        gpu_mem_bytes=mem_gb * 1024**3,
         state_bytes_per_param=a.state_bytes_per_param,
         mfu_dense=a.mfu_dense,
         mfu_sparse_fwd=a.mfu_sparse_fwd,
         mfu_sparse_bwd=a.mfu_sparse_bwd,
-        node_size=a.node_size,
-        bw_intra_gbps=a.bw_intra,
+        node_size=node_size,
+        bw_intra_gbps=bw_intra,
         bw_inter_gbps=a.bw_inter,
         inter_node_attn_frac=a.inter_node_frac,
+        nvme_bw_per_gpu_gbps=a.nvme_bw,
+        offload_fetch_frac=a.offload_fetch_frac,
+        offload_write_back=a.offload_write_back,
     )
     return cfg, [int(x) for x in a.contexts.split(",")]
 
