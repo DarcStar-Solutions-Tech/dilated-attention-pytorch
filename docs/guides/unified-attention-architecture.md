@@ -107,36 +107,58 @@ FlexAttention/FA3 backend for static branches and ported NSA kernels for the lea
 branch, and wrap it in our **L3 sparse-ring** strategy for multi-node scale. This is the
 combination no single existing project ships.
 
-## 6. Cost model (unchanged; corroborated by NSA)
+## 6. Cost model (refined post-research)
 
-Reproduce with `python analysis/attention_cost_analysis.py`. For a 7B-class model (`d_model=4096`,
-32 layers, bf16) with a context-independent per-query budget `W=4096` on one H100:
+Reproduce with `python analysis/attention_cost_analysis.py` — now models the **selection cost**,
+**split fwd/bwd MFU**, and **MLA KV compression**. 7B-class model (`d_model=4096`, 32 layers, bf16),
+core budget `W=4096`, **block-level** selection (`b=64`), one H100:
 
 ```
-   context n |  dense attn | sparse attn | attn x | model x | KV (all L) | scores/L | ring p
-       8,192 | 35.18 TFLOP | 17.59 TFLOP |     2x |    1.1x |     4.0 GB |    4.0 GB |     1
-      32,768 |   563 TFLOP | 70.37 TFLOP |     8x |    1.9x |    16.0 GB |   64.0 GB |     1
-     131,072 |  9.01 PFLOP |   281 TFLOP |    32x |    5.1x |    64.0 GB |    1.0 TB |     1
-   1,048,576 |   576 PFLOP |  2.25 PFLOP |   256x |   34.9x |   512.0 GB |   64.0 TB |     8
+   context n |  dense attn | sparse core |  selection | eff attn x | model x | KV(all L) | ring p
+     131,072 |  9.01 PFLOP |  281 TFLOP  | 2.20 TFLOP |       32x  |   5.1x  |   64.0 GB |   1
+   1,048,576 | 576.46 PFLOP|  2.25 PFLOP | 140.7 TFLOP|      241x  |  34.6x  |  512.0 GB |   8
 ```
+Training step (fwd + 2·bwd) at 1M: dense **3586 s** vs sparse **129 s** → **~28×/step**.
 
-- **Crossover ≈ 27K tokens:** beyond it, dense attention exceeds the entire rest of the model.
-- **Compute (sparse) and memory (ring) are solved by different layers** — sparse cuts the `n²`
-  FLOPs, ring shards the `O(n)` KV; Flash is the prerequisite. Need all three for 1M context.
-- **External corroboration:** NSA reports **9.0× fwd / 6.0× bwd / 11.6× decode @64k** — real
-  fwd+bwd compute reduction (not just masking), consistent with our `n/W` model. Recalibrate
-  `W` and MFU floors against NSA's measured numbers during Phase 2.
+Three refinements the research forced (all in the calculator):
 
-## 7. What is determinable a priori (unchanged; condensed)
+1. **Selection is not free, and its granularity decides the ceiling.** Content-adaptive routing
+   must *score* candidates. **Block-level** (MoBA / our lane) adds `O(n²/b)` — only ~6% at 1M, so
+   the effective speedup stays **241×**. **Token-level** (DeepSeek DSA lightning indexer) adds
+   `O(n²)` — at 1M it *dominates* the core attention and **caps the effective speedup at ~51×**
+   (`--selection token`). → a concrete compute argument for staying **block-level**: ~`b`× cheaper
+   routing. (DSA keeps its indexer cheap via FP8 + few heads precisely to fight this `O(n²)` term.)
+2. **MFU splits forward vs backward.** Block-dense kernels (FlashMoBA / FlexAttention) keep ~90% of
+   dense forward MFU but weaker (~85%) backward; the calculator uses `mfu_sparse_fwd`/`_bwd` for the
+   training step. Net: realized speedup is *closer* to the `n/W` ceiling than the old conservative
+   40% guess — but backward, not forward, is the efficiency floor to engineer.
+3. **MLA KV compression is a second, multiplicative memory lever.** `--kv-compression 8` shrinks KV
+   512 GB → 64 GB at 1M, dropping the ring degree **p = 8 → 1** (fits one GPU), compute unchanged.
+   Inference-oriented (deprioritized for training *compute*), but it directly attacks the *memory*
+   wall that otherwise forces ring sharding.
 
-- **Compute — exact.** attention speedup `= n/W`; whole-model folds in the linear (QKVO+FFN) term.
-- **Memory — exact.** non-Flash scores `O(n²)` per layer (Flash removes); KV `O(n)` → `O(n/p)` via ring.
-- **Quality — not a tight a-priori number.** Provable: a **connected** pattern (our skeleton gives
-  `O(log n)` reach) retains universal approximation (no forced ceiling). Per-token error bounded by
-  dropped softmax mass: `‖o−õ‖ ≤ 2·δ·max‖v‖` (boundable only under a concentration assumption, which
-  learned top-k makes hold). End-task loss is empirical → gate with loss parity + a **runtime
-  dropped-mass certificate** (`δ̂` from routing scores). NSA's "+0.032 LongBench over full attention"
-  is empirical evidence that trainable top-k need not degrade quality.
+- **Crossover ≈ 27K tokens** unchanged: beyond it, dense attention exceeds the whole linear term.
+- **Compute (sparse selection) and memory (ring × KV-compression) are still solved by different
+  levers** — need both for 1M. Externally corroborated: NSA 9×/6× @64k; DSA `O(L²)→O(Lk)` at 1T scale.
+
+## 7. What is determinable a priori (refined post-research)
+
+- **Compute — exact, minus a now-quantified selection term.** Core attention speedup `= n/W`; the
+  realized ceiling subtracts the selection cost (`O(n²/b)` block-level, `O(n²)` token-level — §6)
+  and is scaled by fwd/bwd MFU. Validated by NSA's measured 9×/6× @64k and DSA's `O(L²)→O(Lk)`.
+- **Memory — exact, with a second lever.** non-Flash scores `O(n²)` per layer (Flash removes); KV
+  `O(n)` → `O(n/p)` via ring → `O(n/(p·r))` with an MLA latent compression ratio `r`. Selection
+  does **not** shrink KV; only representation compression does.
+- **Quality — still not a tight a-priori number, but the priors hardened.** Provable: a **connected**
+  pattern (our skeleton gives `O(log n)` reach) retains universal approximation — no forced ceiling.
+  Per-token error bounded by dropped softmax mass: `‖o−õ‖ ≤ 2·δ·max‖v‖`, useful only *if* mass
+  concentrates — and **that assumption is now empirically validated**: NSA/DSA/MoBA match-or-beat
+  dense at frontier scale (NSA +0.032 LongBench; DSA ≈-parity at 1T). End-task loss stays **empirical**
+  (the model trains *with* the pattern), gated by loss parity + a **runtime dropped-mass certificate**
+  (`δ̂` from routing scores). New active lever: **train the router/indexer to imitate dense top-k**
+  (DSA's warm-up distillation) — turning `δ` from something we merely *certify* into something we
+  *minimize*. **Native end-to-end training is the key** (post-hoc sparsification degrades; trained-in
+  does not). Block size `b` is a quality↔compute knob (smaller → finer selection, more routing cost).
 
 ## 8. Revised phased build plan (build-vs-buy + gates)
 
