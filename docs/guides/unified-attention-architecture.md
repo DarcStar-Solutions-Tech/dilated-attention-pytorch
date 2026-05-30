@@ -84,10 +84,11 @@ L2  SparsityPolicy         Canonical (block-level) policy = MoBA-style content-a
                              + sliding window, block-level) and DSA (token-level lightning-indexer
                              top-k on MLA — the DeepSeek production path; finer-grained, MLA-coupled).
 
-L3  ExecutionStrategy      single-GPU (loop) | RING / sequence-parallel: rotate KV shards,
-   [BUILD — ours, the      reduce partials via L0; use the block index to SKIP communicating
-    distinct value]        KV shards no local query selects (sparse ring). Global-position
-                           causal masking. This is the unsolved, high-value layer.
+L3  ExecutionStrategy      single-GPU (loop) | HIERARCHICAL RING / sequence-parallel: a
+   [BUILD — ours, the      topology-aware multi-level ring — DENSE intra-node ring, SPARSE
+    distinct value]        inter-node ring — rotate KV shards, reduce partials via L0, SKIP
+                           communicating shards no local query selects, load-balanced
+                           block->rank assignment. Global-position causal masking. (§5.1)
 
 L4  Module API + factory   nn.Module wrappers, MAGNETO init, the existing factory.
    [BUILD — ours]
@@ -104,8 +105,39 @@ canonical content-adaptive policy — it is published, trainable end-to-end, and
 quality ≥ full attention. Optionally union it with a **multi-scale dilated block-stride
 skeleton** (our LongNet heritage) for guaranteed `O(log n)` long-range coverage. Run it on the
 FlexAttention/FA3 backend for static branches and ported NSA kernels for the learned-selection
-branch, and wrap it in our **L3 sparse-ring** strategy for multi-node scale. This is the
-combination no single existing project ships.
+branch, and wrap it in our **L3 hierarchical sparse-ring** strategy for multi-node scale. This is
+the combination no single existing project ships.
+
+### 5.1 The hierarchical (topology-aware) sparse ring — L3 in depth
+
+A flat ring treats every GPU↔GPU hop as equal, but real clusters are tiered: intra-node links
+(NVLink) are ~an order of magnitude faster than inter-node (InfiniBand/Ethernet). At long context
+the ring's **communication**, not its compute, is the bottleneck (the MFU killer at 1M+ tokens), so
+L3 is **hierarchical** — it maps attention density onto the physical communication levels:
+
+- **Intra-node ring (dense):** GPUs within a node exchange KV over fast links → keep these
+  interactions high-density.
+- **Inter-node ring (sparse):** cross-node hops are expensive → attend across nodes only sparsely,
+  so the slow links carry little traffic. The sparse block index does double duty here: it *prunes
+  inter-node communication* to only the shards a node's queries actually select.
+- **Load-balanced block→rank assignment:** sparse/causal patterns are irregular (query blocks attend
+  to differing numbers of key blocks), which would create ring-step stragglers; assign blocks to
+  ranks by measured compute/comm cost to keep steps balanced.
+
+This **reuses the project's existing `HierarchicalSparsePatternGenerator`**
+(`sparse/sparse_pattern_generator.py`; guide: `docs/guides/hierarchical-patterns-guide.md`), which
+already implements the local / global / inter-node levels + load balancing and auto-detects node
+size — we lift its topology mapping into L3 and pair it with the corrected online-softmax reduction
+(L0). It is the direct answer to the two tensions a flat sparse-ring leaves open — **interconnect
+cost** and **load imbalance** — and is the layer that most distinguishes this library from
+single-device NSA/DSA/FlexAttention. *Caveat: the class that currently consumes the generator,
+`BlockSparseRingDistributedDilatedAttention`, carries audited correctness bugs — the topology
+mapping is reusable, but the consuming path must be rebuilt on the corrected L0/L1.*
+
+For extreme context (≳100M tokens) the same hierarchy must extend to **selection routing**: flat
+top-k scoring is `O(n²/b)` and becomes its own wall, so the indexer must be **multi-level**
+(coarse super-blocks → fine blocks, log-depth). Hierarchical *ring* (communication) and
+hierarchical *routing* (selection) are the two extreme-scale extensions of this design.
 
 ## 6. Cost model (refined post-research)
 
@@ -167,7 +199,7 @@ Three refinements the research forced (all in the calculator):
 | **0. Core** | `AttentionAccumulator` (L0) — promote `_merge_block_attention` to a standalone module | **BUILD** | property tests: associativity, equals-one-joint-softmax, masked-partial safe, fp16/fp32 |
 | **1. Static backend** | Wire L1 static patterns to **FlexAttention** (+ FA3 when available); local/dilated-stride/global skeletons as `BlockMask` builders | **BUY** | parity vs dense masked-softmax ref; FlexAttention fwd+bwd `gradcheck`; MFU floor |
 | **2. Adaptive policy** | **Port FlashMoBA** (mit-han-lab, BSD-3) for block-centroid top-k selection (our canonical L2); expose NSA (fla-org) + DSA-style token-level as alternative policies behind one interface | **PORT** | parity vs the reference kernel; selection skips real fwd+bwd compute; quality parity on a small LM |
-| **3. Sparse ring (the differentiator)** | L3 ring/sequence-parallel reduction via L0; **skip communicating KV shards no local query selects**; global-position causal masking | **BUILD** | multi-GPU (`torchrun`) parity vs single-GPU; measured comm-volume reduction + load balance |
+| **3. Hierarchical sparse ring (the differentiator)** | L3 **topology-aware** ring via L0: dense intra-node + sparse inter-node levels, prune shards no local query selects, load-balanced block→rank assignment (reuse `HierarchicalSparsePatternGenerator`); global-position causal masking | **BUILD** (reuse prior pattern generator) | multi-GPU (`torchrun`) parity vs single-GPU; measured **inter-node** comm reduction + balanced ring steps |
 | **4. Training recipe** | **Muon** (2D matrices) + AdamW (embeddings/norms/head); add **MuonClip** QK-clip for large-scale stability; **AdEMAMix** + the novel (no-precedent) **Muon×AdEMAMix** as experimental options; **Dion** tracked for sharded-weight ring/FSDP settings | **ADOPT** Muon/MuonClip; **EXPERIMENT** AdEMAMix | loss-curve parity vs AdamW; throughput; QK-logit stability |
 | **5. Consolidation** | Route existing variants through the engine; deprecate the broken bespoke classes | **BUILD** | benchmark-suite parity (tokens/s, peak mem/GPU, loss parity) |
 
@@ -230,6 +262,12 @@ Muon/Moonlight (2502.16982), FlexAttention (2412.05496), **DeepSeek-V3.2/DSA (25
 fla-org/native-sparse-attention, mit-han-lab/flash-moba, MoonshotAI/{MoBA,Moonlight},
 lucidrains/{native-sparse-attention,ring-attention,local-attention}-pytorch, KellerJordan/Muon,
 Dao-AILab/flash-attention, apple/ml-ademamix.
+
+**Internal prior art (reused by L3, §5.1):** `src/dilated_attention_pytorch/sparse/sparse_pattern_generator.py`
+(`HierarchicalSparsePatternGenerator` — local/global/inter-node levels + load balancing + node-size
+detection) and `docs/guides/hierarchical-patterns-guide.md`. The topology mapping is lifted into the
+hierarchical sparse-ring; the consuming class (`BlockSparseRingDistributedDilatedAttention`) needs the
+audited correctness fixes before reuse.
 
 ---
 
