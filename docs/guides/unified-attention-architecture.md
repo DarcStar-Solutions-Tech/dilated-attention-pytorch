@@ -42,11 +42,12 @@ insight stands. What v2 changes is **who builds each layer.**
 add the genuinely-missing piece — correct **sparse distributed/ring** attention — and ship a
 Muon-based long-context training recipe."* Smaller scope, sharper, more defensible.
 
-> **The one decision-relevant nuance** (◐ pending direct fact-check, §9): the NSA reference
-> impls (fla-org, lucidrains) ship **dedicated Triton top-k *selection* kernels**. That strongly
-> implies FlexAttention alone is **not** efficient for *data-dependent learned* selection — it
-> covers **static** masks well, but the **adaptive** path needs NSA-style custom kernels. So:
-> **FlexAttention for static patterns; ported NSA kernels for learned selection.**
+> **The one decision-relevant nuance — now RESOLVED (§9):** FlexAttention *can* do data-dependent
+> learned selection — `mask_mod` encodes a learned top-k into a `BlockMask` that skips **real
+> fwd+bwd compute** (~2× on 50%-sparse causal). The catch is the **per-step `create_block_mask`
+> rebuild** (the "hardest, non-amortizable" case, ~hundreds of µs/call, ~10× reducible via
+> `_compile`). So: **FlexAttention for static patterns AND as a learned-selection fallback;
+> dedicated kernels (FlashMoBA / NSA) for the learned path when the mask-build cost matters.**
 
 ## 3. Core insight (unchanged)
 
@@ -69,16 +70,19 @@ L0  AttentionAccumulator   online-softmax merge (m, ℓ, O); associative; the ON
                            Seed exists: _merge_block_attention (PR #29).
 
 L1  Flash kernel           STATIC patterns -> DEPEND-ON FlexAttention (+ FA3/FA4 backend).
-   [BUY: FlexAttention]    LEARNED selection -> PORT NSA Triton kernels (fla-org).
-   [PORT: NSA kernels]     Do NOT hand-write a general Flash kernel.
+   [BUY: FlexAttention]    LEARNED block selection -> PORT FlashMoBA (mit-han-lab, BSD-3): a
+   [PORT: FlashMoBA/NSA]     gather-densify-scatter FA2 kernel with real fwd+bwd savings. NSA
+                            (fla-org) is the richer alternative. FlexAttention also works for
+                            learned selection (per-step BlockMask rebuild cost). No hand-rolled kernel.
 
-L2  SparsityPolicy         Canonical policy = NSA's 3 branches:
-   [PORT: NSA + BUILD]       (a) coarse token/block COMPRESSION,
-                             (b) fine-grained learned top-k block SELECTION,
-                             (c) SLIDING WINDOW (local).
-                           Static skeletons (local/dilated-stride/global) -> FlexAttention
-                           BlockMask. Our additions: a clean policy interface + multi-scale
-                           dilated-as-block-stride skeleton unioned with NSA selection.
+L2  SparsityPolicy         Canonical (block-level) policy = MoBA-style content-adaptive routing:
+   [PORT: FlashMoBA          score each KV block by its centroid (q · mean(keys_in_block)), select
+    + BUILD interface]       top-k blocks/query. This is EXACTLY our "block-centroid top-k" idea,
+                             now validated + open (FlashMoBA). Union with a static multi-scale
+                             dilated-stride + local + global skeleton (FlexAttention BlockMask).
+                           Alternative policies behind one interface: NSA (compression + selection
+                             + sliding window, block-level) and DSA (token-level lightning-indexer
+                             top-k on MLA — the DeepSeek production path; finer-grained, MLA-coupled).
 
 L3  ExecutionStrategy      single-GPU (loop) | RING / sequence-parallel: rotate KV shards,
    [BUILD — ours, the      reduce partials via L0; use the block index to SKIP communicating
@@ -140,44 +144,72 @@ Reproduce with `python analysis/attention_cost_analysis.py`. For a 7B-class mode
 |---|---|---|---|
 | **0. Core** | `AttentionAccumulator` (L0) — promote `_merge_block_attention` to a standalone module | **BUILD** | property tests: associativity, equals-one-joint-softmax, masked-partial safe, fp16/fp32 |
 | **1. Static backend** | Wire L1 static patterns to **FlexAttention** (+ FA3 when available); local/dilated-stride/global skeletons as `BlockMask` builders | **BUY** | parity vs dense masked-softmax ref; FlexAttention fwd+bwd `gradcheck`; MFU floor |
-| **2. NSA policy** | **Port** NSA (compression + learned top-k selection + sliding window) from fla-org; expose as an L2 policy with our interface | **PORT** | parity vs the NSA reference; selection actually skips compute (fwd+bwd); quality parity on a small LM |
+| **2. Adaptive policy** | **Port FlashMoBA** (mit-han-lab, BSD-3) for block-centroid top-k selection (our canonical L2); expose NSA (fla-org) + DSA-style token-level as alternative policies behind one interface | **PORT** | parity vs the reference kernel; selection skips real fwd+bwd compute; quality parity on a small LM |
 | **3. Sparse ring (the differentiator)** | L3 ring/sequence-parallel reduction via L0; **skip communicating KV shards no local query selects**; global-position causal masking | **BUILD** | multi-GPU (`torchrun`) parity vs single-GPU; measured comm-volume reduction + load balance |
-| **4. Training recipe** | **Muon** (2D matrices) + AdamW (embeddings/norms/head) split; long-context benchmark harness | **ADOPT** | loss-curve parity vs AdamW baseline; throughput; the audit's no-silent-cap discipline |
+| **4. Training recipe** | **Muon** (2D matrices) + AdamW (embeddings/norms/head); add **MuonClip** QK-clip for large-scale stability; **AdEMAMix** + the novel (no-precedent) **Muon×AdEMAMix** as experimental options; **Dion** tracked for sharded-weight ring/FSDP settings | **ADOPT** Muon/MuonClip; **EXPERIMENT** AdEMAMix | loss-curve parity vs AdamW; throughput; QK-logit stability |
 | **5. Consolidation** | Route existing variants through the engine; deprecate the broken bespoke classes | **BUILD** | benchmark-suite parity (tokens/s, peak mem/GPU, loss parity) |
 
 **Foundation already on `main`:** L0 seed (`_merge_block_attention`, #29), ring K/V-aliasing fix
 (#27), the audit + cost calculator. The old v1 "Phase 3: hand-write a Triton Flash kernel" is
 **deleted** — replaced by Phases 1–2 above (buy + port).
 
-## 9. Confidence ledger & open loose ends
+## 9. Research resolutions & confidence ledger
 
-**✓ Fact-checked (3-vote adversarial, 2 research passes):** FlexAttention mechanism (fused
-score_mod/mask_mod + BlockMask, fwd+bwd); NSA design + 9×/6× + quality; fla-org/lucidrains repos
-(MIT, Triton kernels, port-ready); FA3 (beta) / FA4 (alpha); Muon (adopt; ~52% AdamW FLOPs,
-1T-scale via MuonClip, low integration cost).
+Five deep-research passes (2026-05-30, 3-vote adversarial) resolved every v1/v2 open item:
 
-**◐ Not yet fact-checked — Phase-2 follow-up (in progress):**
-1. **FlexAttention content-adaptive crux** — can `create_block_mask` cheaply support *data-dependent*
-   top-k selection per forward, or only static masks? (Determines L1/L2 boundary.)
-2. **DeepSeek-V3.2 DSA** ("lightning indexer") — the production NSA successor; what it changes.
-3. **DeepSeek V4** — does it improve on V3.2's attention?
-4. **MLA** (low-rank latent KV compression) — training vs inference benefit; composability.
-5. **MoBA** — alternative trainable block-sparse router.
-6. **Muon variants + AdEMAMix** — variant landscape and AdEMAMix (and Muon×AdEMAMix) as optimizer options.
+**FlexAttention adaptive crux — RESOLVED.** It *does* support data-dependent learned selection:
+`mask_mod(b,h,q,kv)` + a `BlockMask` built from learned top-k indices skips **real fwd+bwd compute**
+(~2× on 50% causal; kernel ~90% FA2 fwd / ~85% bwd). Catch: the per-forward `create_block_mask`
+rebuild is the hardest case (~hundreds of µs/call, ~10× reducible via `_compile`). → **ADOPT** for
+static patterns; usable but **PORT-with-care** for learned selection (dedicated kernels are faster).
 
-**Caveats:** Muon's "~2×" is first-party and shrinks at scale (~1.4×→~1.1× at 1.2B independently);
-frontier stability needed MuonClip, not vanilla Muon. NSA headline numbers are first-party (27B),
-not independently reproduced at scale. FA3 beta / FA4 alpha.
+**MoBA + FlashMoBA — the cleanest match to our L2.** MoBA (Moonshot, MIT) is parameter-less top-k
+*block* routing by centroid score — *exactly* our "block-centroid top-k" idea — and **FlashMoBA**
+(mit-han-lab + NVIDIA, BSD-3, arXiv 2511.11571) is an open CUDA kernel with real fwd+bwd savings (up
+to 14.7× vs FA2; 7.4× / 6.1× less memory at 64K vs reference MoBA). → **PORT FlashMoBA** as the
+canonical learned-selection kernel; **LEARN-FROM** MoBA's gating. Block-level, so it composes with our
+sparse-ring L3 — unlike DSA's token-level path.
+
+**DeepSeek line: NSA → DSA → V4 (all verified, primary sources).** DSA (V3.2-Exp, Sept 2025; report
+arXiv 2512.02556) is the production NSA successor: a lightweight "lightning indexer" scores all prior
+tokens → top-k (k=2048) → core attention over selected only, O(L²)→O(Lk), built **on MLA** (token-level;
+the indexer itself stays O(L²) but is cheap). **DeepSeek V4** verifiably exists (preview ~Apr 2026;
+V4-Pro 1.6T/49B, V4-Flash 284B/13B, 1M default context) and layers **token-wise KV compression on top
+of DSA** ("CSA+HCA"). → **TRACK; offer DSA as a token-level policy option.** The field is converging on
+learned selection; we differ by staying **block-level** (hardware- and ring-friendly), DSA as advanced option.
+
+**MLA — deprioritize for *training* cost.** MLA's big win (~57× KV-cache; 14%/4% of MHA) is
+**inference**-side; the training benefit is only modest activation memory (offset by extra matmuls), and
+no source shows it composing with block/sparse. It underpins the DeepSeek serving stack (DSA/V4 sit on
+it) but is misaligned with our training-cost goal. → **LEARN-FROM / IGNORE** unless we also target inference.
+
+**Optimizers.** **MuonClip** (Muon + QK-clip) — the only Muon-stability fix validated at 1T scale
+(Kimi K2, 15.5T tokens, zero loss spikes); QK-clip is a general attention-logit stabilizer (Megatron-Core
+ships it). → **ADOPT** at scale. **Distributed Muon** (ZeRO-1, half AdamW's extra optimizer memory) needs
+the *full* gradient matrix → clashes with sharded/ring weights; **Dion** (MSR, power-iteration, FSDP/TP-
+friendly, ~3B-validated) is the sharded-weight successor → **TRACK**. **AdEMAMix** (Apple, MIT, arXiv
+2409.03137): fast + very-slow (β3=0.9999) EMA mix; ~half the tokens of AdamW at 1.3B; **not** a drop-in
+(4 hyperparams + β3/α warmup; weak under distribution shift). → **EXPERIMENT / adopt-with-care**.
+**Muon×AdEMAMix** (your custom impl): **no published precedent found** → genuinely novel/experimental;
+open question whether AdEMAMix's early-divergence interacts with Muon's stability needs (the reason for
+MuonClip). Support as an experimental optimizer; no precedent to lean on.
+
+**Caveats:** Muon's "~2×/52%" is first-party and shrinks at scale (~1.4×→~1.1× at 1.2B, independent);
+NSA/DSA/V4 efficiency magnitudes are vendor-reported; **V4 is a recent (~1 mo) preview**; FlexAttention
+perf figures are PyTorch's own self-report; AdEMAMix's token-efficiency is unreplicated above 1.3B.
 
 ## 10. Reference materials
 
-Cached in `docs/references/` (papers in `docs/references/papers/`, repo pointers in
-`docs/references/README.md`): NSA (2502.11089), FlashAttention-3 (2407.08608), Muon/Moonlight
-(2502.16982), FlexAttention (2412.05496); repos: fla-org/native-sparse-attention,
-lucidrains/{native-sparse-attention,ring-attention,local-attention}-pytorch,
-KellerJordan/Muon + MoonshotAI/Moonlight, Dao-AILab/flash-attention.
+Cached in `docs/references/` (papers in `docs/references/papers/`, repo pointers + index in
+`docs/references/README.md`). Papers: NSA (2502.11089), FlashAttention-3 (2407.08608),
+Muon/Moonlight (2502.16982), FlexAttention (2412.05496), **DeepSeek-V3.2/DSA (2512.02556)**,
+**MoBA (2502.13189)**, **FlashMoBA (2511.11571)**, **AdEMAMix (2409.03137)**, **Dion (2504.05295)**,
+**Kimi-K2/MuonClip (2507.20534)**, **DeepSeek-V2/MLA (2405.04434)**. Repos:
+fla-org/native-sparse-attention, mit-han-lab/flash-moba, MoonshotAI/{MoBA,Moonlight},
+lucidrains/{native-sparse-attention,ring-attention,local-attention}-pytorch, KellerJordan/Muon,
+Dao-AILab/flash-attention, apple/ml-ademamix.
 
 ---
 
-*Cost figures: `analysis/attention_cost_analysis.py`. Prior-art verdicts: deep-research passes
-(2026-05-30). v1: `docs/archive/unified-attention-architecture-v1.md`.*
+*Cost figures: `analysis/attention_cost_analysis.py`. Prior-art verdicts: five deep-research passes
+(2026-05-30; all open loose ends resolved). v1: `docs/archive/unified-attention-architecture-v1.md`.*
