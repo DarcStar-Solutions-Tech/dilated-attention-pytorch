@@ -317,7 +317,11 @@ def report(c: Config, contexts: list[int]) -> None:
         f"  GPUs: ~{total_gpus:,} (max of {gpus_for_state(c):,} for state, {p:,} for KV) x data-parallel"
     )
     print(
-        f"  compute: training step (fwd+2bwd) dense {human_time(ds)} vs sparse {human_time(ss)}  -> {ds / ss:.0f}x"
+        f"  compute: 1-GPU-equiv step (fwd+2bwd) dense {human_time(ds)} vs sparse {human_time(ss)} ({ds / ss:.0f}x);"
+    )
+    print(
+        f"           ideal cluster step over {total_gpus:,} GPUs ≈ {human_time(ss / total_gpus)}/seq "
+        f"(strong-scaling lower bound; ignores comm, pipeline bubbles, and expert-offload disk I/O)"
     )
     if p > 1:
         # comm without pruning (dense ring) vs with pruning (sparse ring)
