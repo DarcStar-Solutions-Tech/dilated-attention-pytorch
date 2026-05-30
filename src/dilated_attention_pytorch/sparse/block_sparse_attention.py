@@ -40,17 +40,30 @@ def _merge_block_attention(acc_out, acc_lse, blk_out, blk_lse):
 
     Shapes: ``out`` is [..., q, d], ``lse`` is [..., q]. ``acc_out``/``acc_lse`` may be ``None``
     for the first partial.
+
+    Robust to fully-masked partials: a query row whose entire key set is masked has
+    ``lse = -inf`` and ``out = NaN`` (softmax over all ``-inf``). Such a partial carries zero
+    weight, so its NaN is zeroed before combining; a row masked in *both* partials yields
+    ``out = 0``/``lse = -inf``. (The single-GPU caller never produces this — it skips
+    future-only blocks and always keeps the diagonal — but the documented cross-node use can.)
     """
     if acc_out is None:
-        return blk_out, blk_lse
+        return torch.nan_to_num(blk_out), blk_lse
     new_lse = torch.maximum(acc_lse, blk_lse)
     alpha = torch.exp(acc_lse - new_lse)
     beta = torch.exp(blk_lse - new_lse)
     denom = alpha + beta
+    # A masked partial contributes weight 0; zero its NaN values so 0 * NaN does not poison.
     out = (
-        acc_out * alpha.unsqueeze(-1) + blk_out * beta.unsqueeze(-1)
+        torch.nan_to_num(acc_out) * alpha.unsqueeze(-1)
+        + torch.nan_to_num(blk_out) * beta.unsqueeze(-1)
     ) / denom.unsqueeze(-1)
     lse = new_lse + torch.log(denom)
+    # Rows masked in BOTH partials (new_lse == -inf) give 0/NaN above: define out=0, lse=-inf.
+    both_masked = torch.isneginf(new_lse)
+    if both_masked.any():
+        out = torch.where(both_masked.unsqueeze(-1), torch.zeros_like(out), out)
+        lse = torch.where(both_masked, torch.full_like(lse, float("-inf")), lse)
     return out, lse
 
 
@@ -177,7 +190,10 @@ class BlockSparseAttention(torch.nn.Module):
 
         Args:
             sparse_config: Configuration for sparse patterns
-            enable_batched_ops: Whether to use batched operations
+            enable_batched_ops: Deprecated / no-op. The former batched fast path summed
+                independently-normalized per-block softmaxes (incorrect) and was removed;
+                all computation now uses the joint-softmax grouped path. Retained for
+                backward-compatible construction only.
             pattern_cache_size: Size of pattern cache
             **kwargs: Additional arguments (for compatibility)
         """
@@ -385,12 +401,16 @@ class BlockSparseAttention(torch.nn.Module):
         row_indices, col_indices = block_indices
 
         # Group selected key blocks by query block (dict preserves pattern order).
+        # De-duplicate (row, col) pairs: a key block must be counted once in the joint
+        # softmax denominator, otherwise a repeated pair would be weighted ~2x.
         groups: dict[int, list[int]] = {}
         for r, c in zip(row_indices.tolist(), col_indices.tolist()):
             if is_causal and r < c:
                 # Query block is entirely before this key block: all keys are future. Skip.
                 continue
-            groups.setdefault(r, []).append(c)
+            cols = groups.setdefault(r, [])
+            if c not in cols:
+                cols.append(c)
 
         weight_values: list[Tensor] = []
         weight_row_indices: list[Tensor] = []
@@ -433,17 +453,21 @@ class BlockSparseAttention(torch.nn.Module):
 
             if collect_weights:
                 # True joint weights = exp(scores - final_lse); 0 in masked positions.
+                # w is [b, h, q, k]; flattened row-major the query index varies slowest
+                # (repeat_interleave) and the key index fastest (repeat).
                 for col_idx, scores in pair_scores:
                     col_start = col_idx * bs
                     w = torch.exp(scores - acc_lse.unsqueeze(-1))
                     weight_values.append(w.detach())
                     weight_row_indices.append(
-                        torch.arange(row_start, row_end, device=q.device).repeat(bs)
+                        torch.arange(
+                            row_start, row_end, device=q.device
+                        ).repeat_interleave(bs)
                     )
                     weight_col_indices.append(
-                        torch.arange(
-                            col_start, col_start + bs, device=q.device
-                        ).repeat_interleave(bs)
+                        torch.arange(col_start, col_start + bs, device=q.device).repeat(
+                            bs
+                        )
                     )
 
         if not collect_weights:
