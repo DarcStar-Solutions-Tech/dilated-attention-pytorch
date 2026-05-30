@@ -1,282 +1,183 @@
-# Unified Attention Architecture
+# Unified Attention Architecture (v2)
 
-> **Status:** design proposal / RFC. Forward-looking; not yet implemented beyond the
-> foundational pieces noted under "What already exists."
-> **Scope:** how to unify block-sparse, dilated, Flash, and ring attention into one correct,
-> composable engine — and the math that says what it can and cannot guarantee.
-> **Goal of the library:** reduce the training cost of transformer-based networks by making
-> long-context attention sub-quadratic in compute and bounded in memory, without a forced
-> quality ceiling.
+> **Status:** design proposal / RFC — **v2**, revised after a prior-art research pass.
+> Supersedes **v1** (`docs/archive/unified-attention-architecture-v1.md`).
+> **What changed from v1:** v1 proposed hand-writing a Triton Flash kernel and inventing a
+> content-adaptive sparse policy. Research showed both are **already solved** by mature work —
+> PyTorch **FlexAttention** + **FlashAttention-3** (the kernel/static-pattern substrate) and
+> **DeepSeek NSA** (the trainable content-adaptive policy). v2 is a **build-vs-buy** design:
+> depend on / port the solved layers, and concentrate our originality on the one piece nobody
+> has shipped — **correct sparse *distributed/ring* attention** — plus a **Muon** training recipe.
+> **Goal (unchanged):** reduce transformer TRAINING cost at long context — sub-quadratic
+> compute + O(n/p) memory with no forced quality ceiling.
+> **Evidence base:** `docs/references/` (cached papers + repo pointers); cost model in
+> `analysis/attention_cost_analysis.py`. Confidence per item is marked ✓ (fact-checked) or
+> ◐ (background / pending fact-check) in §9.
 
 ---
 
-## 1. Motivation
+## 1. Motivation (unchanged)
 
-A correctness audit of this codebase (`docs/reports/correctness-audit-main-2026-05-30-0219-UTC.md`)
-found that nearly every long-sequence attention variant — ring SDPA, the ring autograd
-`Function`, the Triton kernels, and all four block-sparse classes — failed in the **same
-place**: combining attention computed over *pieces* of the key space without a shared softmax
-denominator (summing independently-normalized softmaxes, dividing by the wrong term, or
-masking whole rows to `-inf`).
+A correctness audit (`docs/reports/correctness-audit-main-2026-05-30-0219-UTC.md`) found that
+nearly every long-sequence attention variant in this repo failed in the **same place**:
+combining attention computed over *pieces* of the key space without a shared softmax
+denominator. The fix — and the foundation — is one correct **online softmax** (FlashAttention's
+running-max `m` / running-denominator `ℓ` / rescaled output `O`), which is **associative and
+commutative** and therefore unifies block-sparse, dilated, Flash, and ring attention. That
+insight stands. What v2 changes is **who builds each layer.**
 
-That is not a coincidence. It tells us what the foundation must be: **one numerically-correct
-way to attend over a key set split into pieces, reused everywhere.** That operator is the
-**online softmax** (Flash Attention's running-max `m`, running-denominator `ℓ`, rescaled
-output `O`), and it is **associative and commutative** — which is the deep reason it unifies
-all of these variants.
+## 2. Prior art — what is already solved (the v2 pivot)
 
-## 2. Core insight
+| Layer / component | Already solved by | Our action | Conf. |
+|---|---|---|---|
+| Fused Flash kernel for **static/structured** patterns (L1, static L2) | **FlexAttention** (`torch.compile` → fused FA kernel, `BlockMask`, fwd+bwd, ~90% FA2) + **FlashAttention-3** backend | **DEPEND-ON** — do not hand-roll | ✓ |
+| **Trainable content-adaptive** sparse policy (L2 adaptive) | **DeepSeek NSA** (compression + learned top-k selection + sliding window; 9×/6× @64k; quality ≥ full attn) | **PORT / LEARN-FROM** (fla-org / lucidrains, both MIT) | ✓ |
+| Dense/long-context kernel speed | **FA3** (Hopper, beta) / **FA4** (Blackwell, alpha) | **ADOPT** FA3 / **TRACK** FA4 | ✓ |
+| Optimizer efficiency (orthogonal to attention) | **Muon** (2D-matrix Newton–Schulz; ~52% AdamW FLOPs; 1T-scale via MuonClip) | **ADOPT** in the training recipe | ✓ |
+| Online-softmax accumulator (L0) | standard math; we already have a correct one (`_merge_block_attention`) | **KEEP** (ours) | ✓ |
+| **Sparse cross-device ring / distributed** reduction (L3) | **nobody** (NSA/FlexAttention are effectively single-device; rely on framework context-parallel) | **BUILD** — our distinct contribution | ✓ (gap confirmed) |
 
-| "Variant" | What the *pieces* are | Combination |
+**Net repositioning:** the library's value moves from *"build the kernels and invent a policy"*
+(now commodity) to *"compose the published best-in-class policy (NSA-family) on FlexAttention/FA3,
+add the genuinely-missing piece — correct **sparse distributed/ring** attention — and ship a
+Muon-based long-context training recipe."* Smaller scope, sharper, more defensible.
+
+> **The one decision-relevant nuance** (◐ pending direct fact-check, §9): the NSA reference
+> impls (fla-org, lucidrains) ship **dedicated Triton top-k *selection* kernels**. That strongly
+> implies FlexAttention alone is **not** efficient for *data-dependent learned* selection — it
+> covers **static** masks well, but the **adaptive** path needs NSA-style custom kernels. So:
+> **FlexAttention for static patterns; ported NSA kernels for learned selection.**
+
+## 3. Core insight (unchanged)
+
+| "Variant" | The *pieces* | Combination |
 |---|---|---|
 | Block-sparse | selected KV blocks | online softmax |
 | Dilated (LongNet) | strided KV subsets | online softmax |
-| Flash | KV tiles streamed through SRAM | online softmax **is** Flash |
-| Ring / sequence-parallel | KV shards owned by different ranks | online softmax across the network |
+| Flash | KV tiles in SRAM | online softmax **is** Flash |
+| Ring / sequence-parallel | KV shards per rank | online softmax across the network |
 
-So the design is **not** "make block-sparse and dilated talk to each other." It is:
+Build one correct online-softmax engine; make block-sparsity, dilation, causality, and ring
+all **descriptors of which KV pieces a query block sees.** Associativity is why the same engine
+scales from a single-GPU sparse kernel to a multi-node ring with no change to the math.
 
-> **Build one correct online-softmax engine, and make block-sparsity, dilation, causality, and
-> ring all just *descriptors of which KV pieces a query block sees*.**
-
-Because the combination operator is associative, the *same* engine scales from a single-GPU
-sparse kernel to a multi-node ring with no change to the math — only a communication wrapper.
-
-### 2.1 Reframing dilation as a block pattern
-
-`BlockSparseDilatedAttention` conflated two mechanisms because it treated dilation as
-*token-scatter inside a block*. Don't. **Express LongNet dilation as a multi-resolution
-block-selection pattern**: at scale level `ℓ`, a query block attends to KV blocks at block
-stride `2^ℓ` (near blocks densely, far blocks sparsely, different heads at different scales).
-This gives dilation's logarithmic long-range reach at *block* granularity — hardware-friendly
-(dense tile matmuls, no gather/scatter), and it drops straight into a block-sparse Flash
-kernel. The two mechanisms collapse into one: **a pattern over blocks.**
-
-## 3. The proposed variant: Multi-Scale Adaptive Block-Sparse Flash Attention
-
-Combine the strengths and design out the weaknesses by feeding **one Flash core** the **union
-of two block-selection policies**:
-
-1. **Structured multi-scale skeleton** — local dense window + exponentially-strided coarse
-   blocks. Cheap, deterministic; gives every token a full-sequence receptive field in
-   `O(log n)` block hops. *(Dilation's strength: guaranteed coverage + long range.)*
-2. **Content-adaptive top-k blocks** — mean-pool each KV block to a centroid, score
-   query-block-centroid · key-block-centroid, take top-k. Recovers the *relevant* far tokens a
-   fixed stride would skip. *(Block-sparse's strength: content flexibility — and it fixes
-   dilation's biggest weakness, content-blindness.)*
+## 4. The architecture (v2 — build-vs-buy per layer)
 
 ```
-active_blocks(q) = skeleton(q) ∪ top_k_routed(q)      # deduped
+L0  AttentionAccumulator   online-softmax merge (m, ℓ, O); associative; the ONLY place
+   [BUILD — ours]          softmax-combination lives. Pure, gradcheck-tested.
+                           Seed exists: _merge_block_attention (PR #29).
+
+L1  Flash kernel           STATIC patterns -> DEPEND-ON FlexAttention (+ FA3/FA4 backend).
+   [BUY: FlexAttention]    LEARNED selection -> PORT NSA Triton kernels (fla-org).
+   [PORT: NSA kernels]     Do NOT hand-write a general Flash kernel.
+
+L2  SparsityPolicy         Canonical policy = NSA's 3 branches:
+   [PORT: NSA + BUILD]       (a) coarse token/block COMPRESSION,
+                             (b) fine-grained learned top-k block SELECTION,
+                             (c) SLIDING WINDOW (local).
+                           Static skeletons (local/dilated-stride/global) -> FlexAttention
+                           BlockMask. Our additions: a clean policy interface + multi-scale
+                           dilated-as-block-stride skeleton unioned with NSA selection.
+
+L3  ExecutionStrategy      single-GPU (loop) | RING / sequence-parallel: rotate KV shards,
+   [BUILD — ours, the      reduce partials via L0; use the block index to SKIP communicating
+    distinct value]        KV shards no local query selects (sparse ring). Global-position
+                           causal masking. This is the unsolved, high-value layer.
+
+L4  Module API + factory   nn.Module wrappers, MAGNETO init, the existing factory.
+   [BUILD — ours]
 ```
 
-One Flash kernel consumes the index, loops each query block's active KV blocks, accumulates
-with online softmax, and applies a per-block mask flag (causal diagonal triangular, skip
-future). Causality, dilation, sparsity, adaptivity all live in the **index + a tiny mask
-flag** — never in the combination math.
+Then: dense/static = `Flash(policy=Static, backend=FlexAttention+FA3)`; NSA-style =
+`Flash(policy=NSA)`; **sparse ring** = `Flash(policy=NSA|Static, strategy=Ring)`. One correct
+substrate, many configs.
 
-## 4. Layered architecture (the library)
+## 5. Flagship variant: NSA-policy × sparse-ring
 
-The payoff is that every future variant becomes a *configuration*, not a new (buggy)
-reimplementation:
+Adopt **NSA's three-branch policy** (compression + learned selection + sliding window) as the
+canonical content-adaptive policy — it is published, trainable end-to-end, and validated at
+quality ≥ full attention. Optionally union it with a **multi-scale dilated block-stride
+skeleton** (our LongNet heritage) for guaranteed `O(log n)` long-range coverage. Run it on the
+FlexAttention/FA3 backend for static branches and ported NSA kernels for the learned-selection
+branch, and wrap it in our **L3 sparse-ring** strategy for multi-node scale. This is the
+combination no single existing project ships.
 
-```
-L0  AttentionAccumulator     online-softmax merge (m, ℓ, O); associative; the ONLY place
-                             softmax-combination lives. Pure, gradcheck-tested.
-L1  Flash kernels (Triton)   fwd + bwd over (query_block, [KV blocks], mask_flags), fp32
-                             accumulation, autotuned; eager fallback with identical results.
-L2  SparsityPolicy           builds the BSR block index. Plugins: local_window, global,
-                             dilated (= multi-scale strides), content_adaptive (top-k),
-                             and unions.   <-- block-sparse & dilated UNIFY here
-L3  ExecutionStrategy        single-GPU (loop) | ring/distributed (rotate KV shards, reduce
-                             via L0). The sparse index prunes which shards to communicate.
-L4  Module API               nn.Module wrappers, MAGNETO init, the factory.
-```
+## 6. Cost model (unchanged; corroborated by NSA)
 
-Then: dilated = `Flash(policy=Dilated)`; block-sparse = `Flash(policy=LocalWindow|Adaptive)`;
-**ring dilated** = `Flash(policy=Dilated, strategy=Ring)`; the new variant =
-`Flash(policy=MultiScale ∪ Adaptive)`. **One correct engine, many configs.**
-
-### 4.1 How Flash and Ring compose for free
-
-- **Flash is not a separate class** — L1 *is* Flash. Every variant is Flash-backed by
-  construction (no `n²` score materialization).
-- **Ring** is L3 wrapping L1: each rank runs the same kernel over the KV it currently holds,
-  accumulates `(O, m, ℓ)`, rotates KV via `isend/irecv`, and after the full ring the
-  accumulator *is* the exact global softmax — no new math, no `all_gather`. And the block
-  index tells ring **which KV shards a rank's queries actually need → skip unneeded shards** =
-  sparse ring attention with reduced communication. Block-sparsity makes ring *cheaper*.
-
-## 5. Strengths / weaknesses scorecard (candid)
-
-| Variant | Strength kept | Weakness fixed | How |
-|---|---|---|---|
-| Block-sparse | hardware tiles, FLOP-skipping, flexible/adaptive | coarse all-or-nothing + broken cross-block softmax | selection policy over the Flash core |
-| Dilated | cheap multi-scale, guaranteed long-range | content-blindness; gather/scatter traffic | block pattern (no scatter) ∪ adaptive top-k |
-| Ring | O(n/p) memory, multi-node scale | `all_gather` blowups, wrong cross-chunk combine/causal | accumulator associativity; sparse comm pruning |
-
-### 5.1 Genuine tensions the design does NOT erase
-
-These are managed, not solved by elegance — treat them as first-class engineering:
-
-1. **Load imbalance.** Sparse/causal patterns are irregular (different query blocks attend to
-   different numbers of KV blocks); ring assumes uniform per-shard work → stragglers. Needs
-   **workload-aware block→rank assignment**.
-2. **Adaptivity vs. ring communication.** Top-k routing must *score* a KV block to select it,
-   but in ring a query hasn't seen all KV yet. Mitigation (exchange tiny per-block centroids
-   first, then prune the full rotation) works but adds a round and **softens** comm savings.
-3. **Block granularity loses token-level dilation resolution.** Finest stride is one block
-   (~64–128 tokens), not 1 token. Fine for long context; a fidelity reduction vs. true
-   token-stride dilation.
-4. **Enable ≠ guarantee.** The architecture *enables* cost reduction; the realized
-   FLOP/quality tradeoff is empirical (§7).
-
-## 6. What is mathematically determinable a priori
-
-### 6.1 Compute — YES, exact
-
-Standard attention costs `≈ 4·n²·d_model·L` FLOPs (the QKᵀ and A·V matmuls, all heads, all
-layers). A pattern allowing a per-query budget of `W` keys costs `≈ 4·n·W·d_model·L`. Hence:
+Reproduce with `python analysis/attention_cost_analysis.py`. For a 7B-class model (`d_model=4096`,
+32 layers, bf16) with a context-independent per-query budget `W=4096` on one H100:
 
 ```
-attention compute speedup  =  n / W            (exact, fixed by the pattern, a priori)
-```
-
-The realized (wall-clock) speedup is bounded below this by `MFU_sparse / MFU_dense` and the
-routing overhead (`≈ n²·d / b²` to score block-pairs — quadratic in *blocks*; keep the router
-hierarchical to stay sub-quadratic asymptotically).
-
-A separate **linear term** (QKVO + FFN, the "2N" rule) `≈ 2·params·n` does *not* grow with
-context. The two attention terms cross it at:
-
-```
-4·n²·d·L = 2·P·n   ⇒   n* = P / (2·d·L)
-```
-
-**Beyond `n*`, dense attention costs more than the entire rest of the model**, and keeps
-doubling each time `n` doubles. For the 7B config below, `n* ≈ 26,700`.
-
-### 6.2 Memory — YES, exact
-
-- **Non-Flash scores:** `n²·heads·bytes` *per layer* — the wall. Flash removes it (running
-  state is `O(n)`).
-- **KV working set:** `2·n·d_model·bytes·L` total — `O(n)`. **Sparsity does not reduce this**
-  (training keeps all K,V; adaptive routing may select any block). Ring shards it to `O(n/p)`
-  per device.
-
-So peak attention memory is a closed form of (Flash on/off, ring `p`, block size, dtype).
-
-### 6.3 Quality — NO tight a-priori number; YES structural + conditional guarantees
-
-This cannot be a tight a-priori floor, for reasons intrinsic to deep learning, not to this
-design:
-
-- **Expressivity (provable, qualitative).** Universal-approximation results for sparse
-  attention show that a **connected** pattern — every token reaches every other in a bounded
-  number of hops — retains the full representational class of dense attention. Our multi-scale
-  skeleton gives `O(log n)` reachability, so **no representational ceiling is imposed**;
-  degradation is not *structurally forced*. (Says "expressible," not "loss ≤ Z".)
-- **Approximation error (conditional).** For a fixed model, dropping keys causes per-token
-  error bounded by the **dropped softmax mass** `δ_q = Σ_{j∉S} p_qj`:
-
-  ```
-  ‖o_q − õ_q‖ ≤ 2·δ_q·max_j‖v_j‖
-  ```
-
-  `δ` depends on learned weights + data, so it is boundable only *under a concentration
-  assumption* (attention mass on ≤ m keys/query). The adaptive top-k is precisely what makes
-  that assumption hold in practice.
-- **End-task loss (not provable a priori).** The model *trains with* the pattern — it learns a
-  constrained function, not an approximation of dense attention; and Lipschitz error
-  propagation through many layers is mathematically valid but vacuously loose. So loss parity
-  must be **measured**, not assumed.
-- **Runtime certificate (achievable).** The block-centroid routing scores upper-bound the max
-  score of every *unselected* block → an upper bound on `δ̂` per forward. Each step can emit:
-  *"dropped ≤ δ̂ of the attention mass."* Not a static guarantee, but an auditable quality
-  signal (and an early warning that a pattern is too aggressive for an input distribution).
-
-## 7. Cost model — worked example
-
-Reproduce with `python analysis/attention_cost_analysis.py` (pass flags to size your own
-config). Config: 7B-class — `d_model=4096`, `32` layers, `32` heads, bf16; sparse budget
-`W=4096` attended keys/query (context-independent); one H100 (≈989 TFLOP/s peak, 50% dense /
-40% sparse MFU, 80 GB).
-
-```
-   context n |  dense attn | sparse attn | attn x | model x | KV (all L) | scores/L* | ring p
+   context n |  dense attn | sparse attn | attn x | model x | KV (all L) | scores/L | ring p
        8,192 | 35.18 TFLOP | 17.59 TFLOP |     2x |    1.1x |     4.0 GB |    4.0 GB |     1
       32,768 |   563 TFLOP | 70.37 TFLOP |     8x |    1.9x |    16.0 GB |   64.0 GB |     1
      131,072 |  9.01 PFLOP |   281 TFLOP |    32x |    5.1x |    64.0 GB |    1.0 TB |     1
    1,048,576 |   576 PFLOP |  2.25 PFLOP |   256x |   34.9x |   512.0 GB |   64.0 TB |     8
-   * scores/L = non-Flash score matrix per layer (the wall Flash removes).
 ```
 
-**Wall-clock at 1M tokens (attention only, one forward, this GPU):** dense ≈ **1166 s** (and
-you must first shard 512 GB of KV) vs sparse ≈ **5.7 s**. A training step is ~3× a forward
-(fwd + 2× bwd), over many steps — so dense 1M-context training is simply not viable.
+- **Crossover ≈ 27K tokens:** beyond it, dense attention exceeds the entire rest of the model.
+- **Compute (sparse) and memory (ring) are solved by different layers** — sparse cuts the `n²`
+  FLOPs, ring shards the `O(n)` KV; Flash is the prerequisite. Need all three for 1M context.
+- **External corroboration:** NSA reports **9.0× fwd / 6.0× bwd / 11.6× decode @64k** — real
+  fwd+bwd compute reduction (not just masking), consistent with our `n/W` model. Recalibrate
+  `W` and MFU floors against NSA's measured numbers during Phase 2.
 
-### Reading the table
+## 7. What is determinable a priori (unchanged; condensed)
 
-1. **Sparsity's payoff scales with context** — 2× at 8K → 256× (attention) at 1M. Below
-   ~16K, don't bother; the win is entirely in the long-context regime.
-2. **The crossover (~27K) is the headline.** Past it, dense attention is the *majority* of
-   forward FLOPs (97% at 1M); the sparse pattern drops it to ~13%, restoring near-linear
-   scaling and a **~35× whole-model forward speedup** at 1M.
-3. **Flash is mandatory, not optional** — non-Flash scores are 64 GB/layer at 32K and 1 TB/
-   layer at 128K. Flash is a *memory enabler*, not a speedup.
-4. **Compute and memory are solved by different members of the trio:** **sparse → compute**
-   (the `n²` FLOPs), **ring → memory** (the `O(n)` KV storage), **Flash → prerequisite**.
-   Drop any one and you hit a different wall — which is exactly why the unified design wants
-   all three composable.
+- **Compute — exact.** attention speedup `= n/W`; whole-model folds in the linear (QKVO+FFN) term.
+- **Memory — exact.** non-Flash scores `O(n²)` per layer (Flash removes); KV `O(n)` → `O(n/p)` via ring.
+- **Quality — not a tight a-priori number.** Provable: a **connected** pattern (our skeleton gives
+  `O(log n)` reach) retains universal approximation (no forced ceiling). Per-token error bounded by
+  dropped softmax mass: `‖o−õ‖ ≤ 2·δ·max‖v‖` (boundable only under a concentration assumption, which
+  learned top-k makes hold). End-task loss is empirical → gate with loss parity + a **runtime
+  dropped-mass certificate** (`δ̂` from routing scores). NSA's "+0.032 LongBench over full attention"
+  is empirical evidence that trainable top-k need not degrade quality.
 
-## 8. Phased build plan (with validation gates)
+## 8. Revised phased build plan (build-vs-buy + gates)
 
-Invert the mistake the audit found (kernels optimized before they were correct): **correct
-eager reference first, kernel second, distribution last.** Each phase has a hard gate.
+| Phase | Deliverable | Build / Buy | Gate |
+|---|---|---|---|
+| **0. Core** | `AttentionAccumulator` (L0) — promote `_merge_block_attention` to a standalone module | **BUILD** | property tests: associativity, equals-one-joint-softmax, masked-partial safe, fp16/fp32 |
+| **1. Static backend** | Wire L1 static patterns to **FlexAttention** (+ FA3 when available); local/dilated-stride/global skeletons as `BlockMask` builders | **BUY** | parity vs dense masked-softmax ref; FlexAttention fwd+bwd `gradcheck`; MFU floor |
+| **2. NSA policy** | **Port** NSA (compression + learned top-k selection + sliding window) from fla-org; expose as an L2 policy with our interface | **PORT** | parity vs the NSA reference; selection actually skips compute (fwd+bwd); quality parity on a small LM |
+| **3. Sparse ring (the differentiator)** | L3 ring/sequence-parallel reduction via L0; **skip communicating KV shards no local query selects**; global-position causal masking | **BUILD** | multi-GPU (`torchrun`) parity vs single-GPU; measured comm-volume reduction + load balance |
+| **4. Training recipe** | **Muon** (2D matrices) + AdamW (embeddings/norms/head) split; long-context benchmark harness | **ADOPT** | loss-curve parity vs AdamW baseline; throughput; the audit's no-silent-cap discipline |
+| **5. Consolidation** | Route existing variants through the engine; deprecate the broken bespoke classes | **BUILD** | benchmark-suite parity (tokens/s, peak mem/GPU, loss parity) |
 
-| Phase | Deliverable | Gate (must pass to proceed) |
-|---|---|---|
-| **0. Core** | `AttentionAccumulator` (L0) — promote `_merge_block_attention` to a standalone, documented module | property tests: associativity, equals one joint softmax, masked-partial safe, fp16/fp32 |
-| **1. Eager Flash reference** | L1 reference in pure PyTorch: per-query-block loop over KV blocks via L0 (the merged `BlockSparseAttention` grouped path is the template) | `allclose` to a dense masked-softmax ref ≤ 1e-10 across patterns × causal × dtype; **`gradcheck`-passing backward** (float64) |
-| **2. Policies** | L2 `SparsityPolicy` interface + plugins: `local_window`, `global`, `dilated` (block-stride), `content_adaptive` (top-k), unions | each policy's index → identical output to a dense reference restricted to the same allowed set; routing accuracy check |
-| **3. Triton kernel** | L1 Triton fwd + bwd consuming the BSR index, fp32 accum, autotuned; FP8/Hopper later | `allclose` + `gradcheck` vs the Phase-1 eager reference *before* any autotuning; MFU floor on target GPU |
-| **4. Ring strategy** | L3 ring/sequence-parallel wrapper using L0 to reduce shard partials; sparse comm pruning; global-position causal masking | multi-GPU (`torchrun`) parity vs single-GPU; comm-volume + load-balance measured |
-| **5. Consolidation** | route the existing variants through the engine; deprecate/fold the broken standalone classes | benchmark-suite parity (tokens/s, peak mem/GPU, loss-curve parity on a small LM) |
+**Foundation already on `main`:** L0 seed (`_merge_block_attention`, #29), ring K/V-aliasing fix
+(#27), the audit + cost calculator. The old v1 "Phase 3: hand-write a Triton Flash kernel" is
+**deleted** — replaced by Phases 1–2 above (buy + port).
 
-### 8.1 What already exists (foundation merged to `main`)
-- `_merge_block_attention` (the L0 online-softmax primitive) + the correct grouped
-  block-sparse path in `BlockSparseAttention` (PR #29) — the Phase-0/1 seed.
-- `RingCommunicationMixin` buffer-aliasing fix (PR #27) — correct ring K/V exchange for L3.
-- The audit + cost calculator (`analysis/attention_cost_analysis.py`) — the justification and
-  the sizing tool.
+## 9. Confidence ledger & open loose ends
 
-### 8.2 Disposition of the current classes
-- `BlockSparseAttention` (+ Hilbert/Adaptive subclasses, Multihead wrapper) → become
-  `Flash(policy=…)` configurations.
-- `BlockSparseDilatedAttention` → **deprecate / fold in** as `Flash(policy=MultiScale)`
-  (its within-block token dilation reaches only intra-block distances and adds little over a
-  dilated *block* pattern — see §2.1; the standalone class is not worth a bespoke fix).
-- Ring variants → `Flash(strategy=Ring, policy=…)`; retire the bug-prone bespoke paths.
+**✓ Fact-checked (3-vote adversarial, 2 research passes):** FlexAttention mechanism (fused
+score_mod/mask_mod + BlockMask, fwd+bwd); NSA design + 9×/6× + quality; fla-org/lucidrains repos
+(MIT, Triton kernels, port-ready); FA3 (beta) / FA4 (alpha); Muon (adopt; ~52% AdamW FLOPs,
+1T-scale via MuonClip, low integration cost).
 
-## 9. Acceptance metrics (every new variant must meet)
+**◐ Not yet fact-checked — Phase-2 follow-up (in progress):**
+1. **FlexAttention content-adaptive crux** — can `create_block_mask` cheaply support *data-dependent*
+   top-k selection per forward, or only static masks? (Determines L1/L2 boundary.)
+2. **DeepSeek-V3.2 DSA** ("lightning indexer") — the production NSA successor; what it changes.
+3. **DeepSeek V4** — does it improve on V3.2's attention?
+4. **MLA** (low-rank latent KV compression) — training vs inference benefit; composability.
+5. **MoBA** — alternative trainable block-sparse router.
+6. **Muon variants + AdEMAMix** — variant landscape and AdEMAMix (and Muon×AdEMAMix) as optimizer options.
 
-- **Correctness:** `allclose` ≤ 1e-10 (fp64) to a dense masked reference; `gradcheck` passes;
-  multi-GPU parity vs single-GPU.
-- **Compute:** realized attention speedup ≥ target fraction of the `n/W` ceiling; MFU ≥ floor.
-- **Memory:** peak/GPU within the closed-form budget for the chosen Flash/ring/block config.
-- **Quality:** loss-curve parity vs dense within tolerance on a small LM, gated by the runtime
-  dropped-mass certificate `δ̂ ≤` threshold.
+**Caveats:** Muon's "~2×" is first-party and shrinks at scale (~1.4×→~1.1× at 1.2B independently);
+frontier stability needed MuonClip, not vanilla Muon. NSA headline numbers are first-party (27B),
+not independently reproduced at scale. FA3 beta / FA4 alpha.
 
-## 10. Risks & open questions
+## 10. Reference materials
 
-- A correct *and* fast Triton block-sparse Flash **backward** is the hard part (where the
-  repo's autograd bugs lived) — budget for it explicitly and gate on `gradcheck`.
-- Content-adaptive top-k is non-differentiable — start with the fixed multi-scale skeleton;
-  add adaptivity via straight-through / learned-but-fixed centroids once the core is proven.
-- Routing must stay hierarchical to keep the whole thing sub-quadratic asymptotically.
-- Backward must cache the selected index so gradients match the forward selection.
-- The sparsity↔quality tradeoff (the `W` budget) is empirical and model-dependent — the
-  calculator sizes compute/memory; only training pins quality.
+Cached in `docs/references/` (papers in `docs/references/papers/`, repo pointers in
+`docs/references/README.md`): NSA (2502.11089), FlashAttention-3 (2407.08608), Muon/Moonlight
+(2502.16982), FlexAttention (2412.05496); repos: fla-org/native-sparse-attention,
+lucidrains/{native-sparse-attention,ring-attention,local-attention}-pytorch,
+KellerJordan/Muon + MoonshotAI/Moonlight, Dao-AILab/flash-attention.
 
 ---
 
-*Cost model and all figures in §7 are produced by `analysis/attention_cost_analysis.py`.*
+*Cost figures: `analysis/attention_cost_analysis.py`. Prior-art verdicts: deep-research passes
+(2026-05-30). v1: `docs/archive/unified-attention-architecture-v1.md`.*
