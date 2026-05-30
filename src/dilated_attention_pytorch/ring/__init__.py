@@ -26,7 +26,6 @@ from .factory import (
 from .utils import (
     all_ring_pass,
     split_by_rank,
-    RingAttentionFunction,
     StableRingAccumulator,
 )
 
@@ -98,7 +97,6 @@ __all__ = [
     # Utils (still supported)
     "all_ring_pass",
     "split_by_rank",
-    "RingAttentionFunction",
     "StableRingAccumulator",
     # Aliases
     "RingDilatedAttention",
