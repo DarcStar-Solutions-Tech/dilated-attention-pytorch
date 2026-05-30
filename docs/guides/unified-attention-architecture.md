@@ -224,6 +224,10 @@ pruning, density `6e-5`), i.e. **compute-bound** at ~47 s/GPU/forward. *Reading:
 (~6×) alone leaves you comm-bound; it's **sparse-ring pruning** (only sending selected blocks) that
 actually makes the regime — and the "~90% of optimal" assumption — reachable. (`--params 500e12
 --active-params 1e12 --selection hierarchical --kv-compression 64 --contexts 1073741824`.)
+With attention thus handled, the **binding constraint becomes the weight memory** (the ~133k-GPU
+state floor) — addressed by the §11 weight-side levers: hierarchical fidelity (INT4-resident /
+full-on-disk experts) + offload cuts it to **~9.8k GPUs (~13.5×)** (`--expert-frac 0.95
+--weight-quant-bits 4 --expert-offload-ratio 0.9`).
 
 ## 7. What is determinable a priori (refined post-research)
 
@@ -233,7 +237,10 @@ actually makes the regime — and the "~90% of optimal" assumption — reachable
   NSA's measured 9×/6× @64k and DSA's `O(L²)→O(Lk)`.
 - **Memory — exact, with a second lever.** non-Flash scores `O(n²)` per layer (Flash removes); KV
   `O(n)` → `O(n/p)` via ring → `O(n/(p·r))` with an MLA latent compression ratio `r`. Selection
-  does **not** shrink KV; only representation compression does.
+  does **not** shrink KV; only representation compression does. The separate **weight** memory wall
+  (the binding constraint at extreme scale) is attacked by the §11 levers — hierarchical fidelity
+  (quantized-resident / full-on-disk experts), offload, and overlapping/compositional experts —
+  **orthogonal** to all attention-map sparsity.
 - **Communication — modeled, tiered, prunable.** Ring rotates KV/device per forward; three levers:
   **(1) hierarchical ring** keeps the dense rotation on fast intra-node links, sparse fraction on slow
   inter-node; **(2) sparse-ring pruning** — only the KV blocks some local query *selects* are sent, so
@@ -327,6 +334,54 @@ Dao-AILab/flash-attention, apple/ml-ademamix.
 detection) and `docs/guides/hierarchical-patterns-guide.md`. The topology mapping is lifted into the
 hierarchical sparse-ring; the consuming class (`BlockSparseRingDistributedDilatedAttention`) needs the
 audited correctness fixes before reuse.
+
+## 11. Weight-side sparsity & expert design (research track — orthogonal to attention)
+
+Everything above (§2–§9) addresses the **attention map** (which token *pairs* interact) — that
+governs compute, activation memory, and communication. It does **not** touch the **model weights**,
+which at extreme scale are the *binding* memory constraint (a 500T model = 7.1 PB of state →
+~133k GPUs just to hold it). Attention sparsity ≠ weight sparsity; these are independent levers, and
+the weight side is currently **unexploited** in our design. This section is a research track for it.
+
+**The real weight-side sparsity is *usage*, not zeros.** A 500T model is necessarily **MoE**: for any
+token only a small active set of experts fires (we model this for *compute* via `active_params`, but
+still *store* all 500T). So "vast sections are unused per token" is true — they're **cold, not zero** —
+and the opportunity is to stop keeping cold weights in fast, full-precision memory.
+
+**Lever A — hierarchical fidelity (quantized-resident / full-on-disk) + offload.** Apply the hierarchy
+principle to *precision*: keep a **low-precision (e.g. INT4) copy of hot experts in HBM** and the
+**full-precision copy on NVMe/disk**, fetched only when a topic needs deep, high-fidelity processing;
+park rarely-used experts entirely on disk. Modeled in the calculator (`expert_frac`,
+`weight_quant_bits`, `expert_offload_ratio`): at 500T with 95%-expert / INT4-resident / 90%-offloaded,
+the GPU state floor drops **7.1 PB → 537 TB → ~133k → ~9.8k GPUs (~13.5×)**, with ~778 TB on disk.
+This directly attacks the binding constraint, complementary to MLA (which compresses KV, not weights).
+
+**Lever B — heterogeneous (variable-size) experts.** Nothing fixes a uniform expert size (the "1T" in
+earlier estimates was *total active* params — backbone + shared + `k` routed experts — not one
+expert). Experts can be **sized by specialization**: broad/common domains get higher-capacity experts,
+niche ones less — or, tying into the novelty theme, **capacity-follows-surprisal**: allocate *more*
+parameters to the rare/high-information concentrations of knowledge (where novelty = utility) and
+fewer to the predictable bulk. Cost: load-balancing and ragged-shape kernels (standard MoE uses
+uniform size for batched matmul simplicity); surmountable via grouping/capacity factors. Under-explored.
+
+**Lever C — overlapping / compositional experts.** Experts need not be disjoint. Forms that *reduce*
+memory while covering multi-facet knowledge: **shared-base + specialized-delta** experts (a common
+low-rank base stored once + per-expert LoRA-style deltas — overlap by construction, big memory win);
+**shared experts** (always-on common knowledge + routed specialists, à la DeepSeek); and
+**hierarchical experts** (a coarse expert for a broad facet + fine experts for sub-facets). Overlap =
+parameter sharing = less total state *and* better coverage of a knowledge concentration's facets.
+
+**Lever D — novelty-weighted routing.** Select/weight blocks or experts by **surprisal/information
+gain**, not only similarity. Information-theoretically sound (rare co-occurrences carry more bits), and
+it could let a *smaller* budget `W` hit a target quality (spend it on high-value rare links). But it is
+**contrarian** — every validated method (NSA/DSA/MoBA, H2O heavy-hitters) selects by *similarity/mass*,
+keeping the dominant connections — and risks amplifying noise. Treat as a **research bet** (a surprisal
+term in the router), not a foundation.
+
+**Status & caveats.** Lever A is engineering-ready (offload/quant are mature; the calculator quantifies
+it). Levers B–D are genuine, under-explored research directions, *not* validated at scale — they are
+deliberately separated from the validated attention architecture above. All four are **orthogonal to
+the attention work**: they shrink the *weight* memory wall that sparse attention does not.
 
 ---
 

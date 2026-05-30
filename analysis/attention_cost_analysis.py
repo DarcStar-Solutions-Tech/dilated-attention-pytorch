@@ -87,6 +87,17 @@ class Config:
     num_super_selected: int = 8
     kv_compression_ratio: float = 1.0  # MLA latent KV compression
     comm_pruning: bool = True  # sparse-ring: only move selected KV blocks
+    # weight-side memory levers: hierarchical fidelity (quantized-resident / full-on-disk) + offload
+    expert_frac: float = (
+        0.0  # fraction of TOTAL params that are offloadable/quantizable experts
+    )
+    weight_quant_bits: float = (
+        16.0  # resident expert precision (bf16=16, FP8=8, INT4=4)
+    )
+    expert_offload_ratio: float = (
+        0.0  # fraction of experts parked on NVMe/disk (0 GPU bytes)
+    )
+    disk_bytes_per_param: float = 2.0  # precision of the full expert copy on disk
     # hardware
     gpu_peak_flops: float = 989e12
     gpu_mem_bytes: float = 80 * 1024**3
@@ -149,14 +160,33 @@ def crossover_n(c: Config) -> float:
 
 # --- memory: SHARDED model state + sequence-parallel KV --------------------
 def model_state_bytes(c: Config) -> float:
-    """Weights + grads + optimizer + master, for the TOTAL params (sharded across the cluster)."""
+    """Full weights+grads+optimizer+master for the TOTAL params, all-resident at bf16 (the 'before')."""
     return c.params * c.state_bytes_per_param
 
 
+def resident_state_bytes(c: Config) -> float:
+    """GPU-resident state after the weight-side levers: dense backbone full; experts optionally
+    quantized (weight_quant_bits) and partially offloaded (expert_offload_ratio) to disk."""
+    dense = (1.0 - c.expert_frac) * c.params * c.state_bytes_per_param
+    experts_resident = (
+        c.expert_frac
+        * c.params
+        * (1.0 - c.expert_offload_ratio)
+        * c.state_bytes_per_param
+        * (c.weight_quant_bits / 16.0)
+    )
+    return dense + experts_resident
+
+
+def offloaded_disk_bytes(c: Config) -> float:
+    """Full-precision expert copies parked on NVMe/disk (off the GPU)."""
+    return c.expert_frac * c.expert_offload_ratio * c.params * c.disk_bytes_per_param
+
+
 def gpus_for_state(c: Config) -> int:
-    """Min GPUs to hold the sharded model state (FSDP/ZeRO-3/expert-parallel)."""
+    """Min GPUs to hold the (resident) sharded model state (FSDP/ZeRO-3/expert-parallel)."""
     return max(
-        1, math.ceil(model_state_bytes(c) / (c.gpu_mem_bytes * c.static_mem_frac))
+        1, math.ceil(resident_state_bytes(c) / (c.gpu_mem_bytes * c.static_mem_frac))
     )
 
 
@@ -235,10 +265,18 @@ def report(c: Config, contexts: list[int]) -> None:
         f"  hw: peak={human_flops(c.gpu_peak_flops)}/s mem={human_bytes(c.gpu_mem_bytes)} "
         f"state={c.state_bytes_per_param:g}B/param | BW intra={c.bw_intra_gbps:g}/inter={c.bw_inter_gbps:g} GB/s node={c.node_size}"
     )
+    disk = offloaded_disk_bytes(c)
     print(
-        f"  model state (sharded): {human_bytes(model_state_bytes(c))} -> {gpus_for_state(c):,} GPUs to hold it; "
-        f"crossover n ~= {crossover_n(c):,.0f}"
+        f"  model state: full {human_bytes(model_state_bytes(c))} (all-resident bf16) -> "
+        f"resident {human_bytes(resident_state_bytes(c))} -> {gpus_for_state(c):,} GPUs"
+        + (
+            f"  (+ {human_bytes(disk)} on disk; experts={c.expert_frac:g}, "
+            f"quant={c.weight_quant_bits:g}b, offload={c.expert_offload_ratio:g})"
+            if (c.expert_frac > 0 and (disk > 0 or c.weight_quant_bits != 16))
+            else ""
+        )
     )
+    print(f"  crossover n ~= {crossover_n(c):,.0f}")
     print("=" * 112)
     hdr = (
         f"{'context n':>13} | {'dense attn':>11} | {'sparse core':>11} | {'selection':>11} | "
@@ -340,6 +378,25 @@ def parse_args() -> tuple[Config, list[int]]:
     p.add_argument("--gpu-peak-flops", type=float, default=989e12)
     p.add_argument("--gpu-mem-gb", type=float, default=80.0)
     p.add_argument("--state-bytes-per-param", type=float, default=16.0)
+    p.add_argument(
+        "--expert-frac",
+        type=float,
+        default=0.0,
+        help="fraction of params that are experts",
+    )
+    p.add_argument(
+        "--weight-quant-bits",
+        type=float,
+        default=16.0,
+        help="resident expert precision",
+    )
+    p.add_argument(
+        "--expert-offload-ratio",
+        type=float,
+        default=0.0,
+        help="fraction of experts on disk",
+    )
+    p.add_argument("--disk-bytes-per-param", type=float, default=2.0)
     p.add_argument("--mfu-dense", type=float, default=0.50)
     p.add_argument("--mfu-sparse-fwd", type=float, default=0.45)
     p.add_argument("--mfu-sparse-bwd", type=float, default=0.38)
@@ -364,6 +421,10 @@ def parse_args() -> tuple[Config, list[int]]:
         num_super_selected=a.num_super_selected,
         kv_compression_ratio=a.kv_compression,
         comm_pruning=not a.no_comm_pruning,
+        expert_frac=a.expert_frac,
+        weight_quant_bits=a.weight_quant_bits,
+        expert_offload_ratio=a.expert_offload_ratio,
+        disk_bytes_per_param=a.disk_bytes_per_param,
         gpu_peak_flops=a.gpu_peak_flops,
         gpu_mem_bytes=a.gpu_mem_gb * 1024**3,
         state_bytes_per_param=a.state_bytes_per_param,
