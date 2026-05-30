@@ -20,10 +20,38 @@ from dataclasses import dataclass
 from typing import Tuple
 
 import torch
-import torch.nn.functional as F
 from torch import Tensor
 
 from ..core.constants import HAS_FLASH_ATTN_3, GPU_TYPE
+
+
+def _merge_block_attention(acc_out, acc_lse, blk_out, blk_lse):
+    """Associatively merge two partial softmax-attention results via the log-sum-exp trick.
+
+    Each partial is ``(out, lse)`` where ``out = softmax(scores) @ v`` is normalized over *its
+    own* key set and ``lse = logsumexp(scores, dim=-1)`` is that set's log-denominator. The
+    merge returns the result of a single joint softmax over the union of both key sets, so
+    summing independently-normalized block outputs (which over-counts the denominator ~N x for
+    N blocks) is avoided.
+
+    This is also the cross-node reduction primitive: each rank computes a partial ``(out, lse)``
+    over the key blocks it owns, and ranks combine partials with this associative/commutative
+    merge -- no rank ever needs the full key set.
+
+    Shapes: ``out`` is [..., q, d], ``lse`` is [..., q]. ``acc_out``/``acc_lse`` may be ``None``
+    for the first partial.
+    """
+    if acc_out is None:
+        return blk_out, blk_lse
+    new_lse = torch.maximum(acc_lse, blk_lse)
+    alpha = torch.exp(acc_lse - new_lse)
+    beta = torch.exp(blk_lse - new_lse)
+    denom = alpha + beta
+    out = (
+        acc_out * alpha.unsqueeze(-1) + blk_out * beta.unsqueeze(-1)
+    ) / denom.unsqueeze(-1)
+    lse = new_lse + torch.log(denom)
+    return out, lse
 
 
 @dataclass
@@ -291,16 +319,15 @@ class BlockSparseAttention(torch.nn.Module):
         block_indices: Tuple[Tensor, Tensor],
         is_causal: bool,
     ) -> None:
-        """Compute sparse attention using appropriate method."""
-        if self.enable_batched_ops and len(block_indices[0]) > 16:
-            self._compute_sparse_attention_batched(
-                q, k, v, output, block_indices, is_causal
-            )
-        else:
-            self._compute_sparse_attention_sequential(
-                q, k, v, output, block_indices, is_causal
-            )
+        """Compute block-sparse attention with a correct joint softmax per query block."""
+        self._compute_sparse_attention_grouped(
+            q, k, v, output, block_indices, is_causal
+        )
 
+    # The previous _batched / _sequential split summed independently-normalized per-block
+    # softmaxes (mathematically wrong) and the batched causal path produced NaNs from
+    # fully-masked rows. Both now delegate to the LSE-accumulating implementation below;
+    # they are kept as named entry points for backward compatibility.
     def _compute_sparse_attention_batched(
         self,
         q: Tensor,
@@ -310,69 +337,10 @@ class BlockSparseAttention(torch.nn.Module):
         block_indices: Tuple[Tensor, Tensor],
         is_causal: bool,
     ) -> None:
-        """Compute sparse attention using batched block operations."""
-        batch, seq_len, num_heads, head_dim = q.shape
-        num_blocks = seq_len // self.block_size
-        scale = 1.0 / math.sqrt(head_dim)
-
-        row_indices, col_indices = block_indices
-        num_active_blocks = len(row_indices)
-
-        # Reshape tensors for block access
-        q_blocks = q.view(batch, num_blocks, self.block_size, num_heads, head_dim)
-        k_blocks = k.view(batch, num_blocks, self.block_size, num_heads, head_dim)
-        v_blocks = v.view(batch, num_blocks, self.block_size, num_heads, head_dim)
-
-        # Gather all active blocks at once
-        # Shape: [batch, num_active_blocks, block_size, num_heads, head_dim]
-        q_active = q_blocks[:, row_indices]
-        k_active = k_blocks[:, col_indices]
-        v_active = v_blocks[:, col_indices]
-
-        # Reshape for batched matmul
-        # [batch * num_active_blocks * num_heads, block_size, head_dim]
-        q_active = q_active.permute(0, 1, 3, 2, 4).reshape(
-            -1, self.block_size, head_dim
+        """Deprecated alias; delegates to the correct grouped implementation."""
+        self._compute_sparse_attention_grouped(
+            q, k, v, output, block_indices, is_causal
         )
-        k_active = k_active.permute(0, 1, 3, 2, 4).reshape(
-            -1, self.block_size, head_dim
-        )
-        v_active = v_active.permute(0, 1, 3, 2, 4).reshape(
-            -1, self.block_size, head_dim
-        )
-
-        # Batched attention computation
-        # [batch * num_active_blocks * num_heads, block_size, block_size]
-        scores = torch.bmm(q_active, k_active.transpose(-2, -1)) * scale
-
-        # Apply causal mask if needed (batched)
-        if is_causal:
-            # Create batched causal mask
-            causal_mask = self._get_batched_causal_mask(
-                row_indices, col_indices, batch, num_heads
-            )
-            scores = scores.masked_fill(causal_mask, float("-inf"))
-
-        # Batched softmax
-        attn_weights = F.softmax(scores, dim=-1)
-
-        # Batched value computation
-        # [batch * num_active_blocks * num_heads, block_size, head_dim]
-        block_outputs = torch.bmm(attn_weights, v_active)
-
-        # Reshape back and scatter to output
-        block_outputs = block_outputs.view(
-            batch, num_active_blocks, num_heads, self.block_size, head_dim
-        ).permute(0, 1, 3, 2, 4)
-
-        # Scatter blocks to output
-        output_blocks = output.view(
-            batch, num_blocks, self.block_size, num_heads, head_dim
-        )
-
-        # Use index_add for efficient scattering
-        for i, row_idx in enumerate(row_indices):
-            output_blocks[:, row_idx] += block_outputs[:, i]
 
     def _compute_sparse_attention_sequential(
         self,
@@ -383,51 +351,111 @@ class BlockSparseAttention(torch.nn.Module):
         block_indices: Tuple[Tensor, Tensor],
         is_causal: bool,
     ) -> None:
-        """Sequential implementation for small patterns or debugging."""
+        """Deprecated alias; delegates to the correct grouped implementation."""
+        self._compute_sparse_attention_grouped(
+            q, k, v, output, block_indices, is_causal
+        )
+
+    def _compute_sparse_attention_grouped(
+        self,
+        q: Tensor,
+        k: Tensor,
+        v: Tensor,
+        output: Tensor,
+        block_indices: Tuple[Tensor, Tensor],
+        is_causal: bool,
+        collect_weights: bool = False,
+    ) -> "dict[str, Tensor] | None":
+        """Block-sparse attention via per-query-block online-softmax (LSE) accumulation.
+
+        For each query block, its selected key blocks are combined under a single shared softmax
+        denominator using the log-sum-exp merge (``_merge_block_attention``) instead of summing
+        independently-normalized per-block softmaxes. Causal masking skips entirely-future
+        (above-diagonal) key blocks and applies an upper-triangular mask only on the diagonal
+        block, so the sequential future-token leak and the batched all-``-inf`` NaN are both
+        avoided.
+
+        The per-block ``(output, lse)`` partials and their associative merge are exactly the
+        primitive needed to parallelize across nodes: each rank attends over the key blocks it
+        owns and the partials are reduced with ``_merge_block_attention``.
+        """
         batch, seq_len, num_heads, head_dim = q.shape
         scale = 1.0 / math.sqrt(head_dim)
-
+        bs = self.block_size
         row_indices, col_indices = block_indices
 
-        # Process each block pair
-        for row_idx, col_idx in zip(row_indices, col_indices):
-            # Get block boundaries
-            row_start = row_idx * self.block_size
-            row_end = row_start + self.block_size
-            col_start = col_idx * self.block_size
-            col_end = col_start + self.block_size
+        # Group selected key blocks by query block (dict preserves pattern order).
+        groups: dict[int, list[int]] = {}
+        for r, c in zip(row_indices.tolist(), col_indices.tolist()):
+            if is_causal and r < c:
+                # Query block is entirely before this key block: all keys are future. Skip.
+                continue
+            groups.setdefault(r, []).append(c)
 
-            # Extract blocks
-            q_block = q[
-                :, row_start:row_end
-            ]  # [batch, block_size, num_heads, head_dim]
-            k_block = k[:, col_start:col_end]
-            v_block = v[:, col_start:col_end]
+        weight_values: list[Tensor] = []
+        weight_row_indices: list[Tensor] = []
+        weight_col_indices: list[Tensor] = []
 
-            # Compute attention for this block
-            # [batch, num_heads, block_size, head_dim]
-            q_block = q_block.transpose(1, 2)
-            k_block = k_block.transpose(1, 2)
-            v_block = v_block.transpose(1, 2)
+        for row_idx, cols in groups.items():
+            row_start = row_idx * bs
+            row_end = row_start + bs
+            q_block = q[:, row_start:row_end].transpose(1, 2)  # [b, h, bs, d]
 
-            # [batch, num_heads, block_size, block_size]
-            scores = torch.matmul(q_block, k_block.transpose(-2, -1)) * scale
+            acc_out: "Tensor | None" = None
+            acc_lse: "Tensor | None" = None
+            pair_scores: list = []
 
-            # Apply causal mask if needed
-            if is_causal and row_idx >= col_idx:
-                mask = self._get_causal_mask_for_block(
-                    row_idx, col_idx, self.block_size, scores.device
+            for col_idx in cols:
+                col_start = col_idx * bs
+                col_end = col_start + bs
+                k_block = k[:, col_start:col_end].transpose(1, 2)  # [b, h, bs, d]
+                v_block = v[:, col_start:col_end].transpose(1, 2)
+
+                scores = torch.matmul(q_block, k_block.transpose(-2, -1)) * scale
+                if is_causal and row_idx == col_idx:
+                    diag_mask = torch.triu(
+                        torch.ones(bs, bs, dtype=torch.bool, device=scores.device),
+                        diagonal=1,
+                    )
+                    scores = scores.masked_fill(diag_mask, float("-inf"))
+
+                blk_lse = torch.logsumexp(scores, dim=-1)  # [b, h, bs]
+                blk_out = torch.matmul(torch.softmax(scores, dim=-1), v_block)
+                acc_out, acc_lse = _merge_block_attention(
+                    acc_out, acc_lse, blk_out, blk_lse
                 )
-                scores = scores.masked_fill(mask, float("-inf"))
+                if collect_weights:
+                    pair_scores.append((col_idx, scores))
 
-            # Softmax and apply to values
-            attn_weights = F.softmax(scores, dim=-1)
-            block_output = torch.matmul(
-                attn_weights, v_block
-            )  # [batch, num_heads, block_size, head_dim]
+            if acc_out is None:
+                continue  # query block has no selected key blocks
+            output[:, row_start:row_end] = acc_out.transpose(1, 2)  # -> [b, bs, h, d]
 
-            # Add to output
-            output[:, row_start:row_end] += block_output.transpose(1, 2)
+            if collect_weights:
+                # True joint weights = exp(scores - final_lse); 0 in masked positions.
+                for col_idx, scores in pair_scores:
+                    col_start = col_idx * bs
+                    w = torch.exp(scores - acc_lse.unsqueeze(-1))
+                    weight_values.append(w.detach())
+                    weight_row_indices.append(
+                        torch.arange(row_start, row_end, device=q.device).repeat(bs)
+                    )
+                    weight_col_indices.append(
+                        torch.arange(
+                            col_start, col_start + bs, device=q.device
+                        ).repeat_interleave(bs)
+                    )
+
+        if not collect_weights:
+            return None
+        return {
+            "values": weight_values,
+            "indices": (weight_row_indices, weight_col_indices),
+            "row_indices": weight_row_indices,
+            "col_indices": weight_col_indices,
+            "shape": (batch, num_heads, seq_len, seq_len),
+            "block_size": bs,
+        }
 
     def _compute_sparse_attention_with_weights(
         self,
@@ -438,73 +466,10 @@ class BlockSparseAttention(torch.nn.Module):
         block_indices: Tuple[Tensor, Tensor],
         is_causal: bool,
     ) -> dict[str, Tensor]:
-        """Compute sparse attention and return attention weights."""
-        # For simplicity, we'll use the sequential method to collect weights
-        batch, seq_len, num_heads, head_dim = q.shape
-        scale = 1.0 / math.sqrt(head_dim)
-
-        row_indices, col_indices = block_indices
-
-        # Storage for sparse attention weights
-        weight_values = []
-        weight_row_indices = []
-        weight_col_indices = []
-
-        # Process each block pair
-        for row_idx, col_idx in zip(row_indices, col_indices):
-            # Get block boundaries
-            row_start = row_idx * self.block_size
-            row_end = row_start + self.block_size
-            col_start = col_idx * self.block_size
-            col_end = col_start + self.block_size
-
-            # Extract blocks
-            q_block = q[:, row_start:row_end]
-            k_block = k[:, col_start:col_end]
-            v_block = v[:, col_start:col_end]
-
-            # Compute attention for this block
-            q_block = q_block.transpose(1, 2)
-            k_block = k_block.transpose(1, 2)
-            v_block = v_block.transpose(1, 2)
-
-            scores = torch.matmul(q_block, k_block.transpose(-2, -1)) * scale
-
-            # Apply causal mask if needed
-            if is_causal and row_idx >= col_idx:
-                mask = self._get_causal_mask_for_block(
-                    row_idx, col_idx, self.block_size, scores.device
-                )
-                scores = scores.masked_fill(mask, float("-inf"))
-
-            # Softmax and apply to values
-            attn_weights = F.softmax(scores, dim=-1)
-            block_output = torch.matmul(attn_weights, v_block)
-
-            # Add to output
-            output[:, row_start:row_end] += block_output.transpose(1, 2)
-
-            # Store attention weights in sparse format
-            weight_values.append(attn_weights.detach())
-            weight_row_indices.append(
-                torch.arange(row_start, row_end, device=q.device).repeat(
-                    self.block_size
-                )
-            )
-            weight_col_indices.append(
-                torch.arange(col_start, col_end, device=q.device).repeat_interleave(
-                    self.block_size
-                )
-            )
-
-        return {
-            "values": weight_values,
-            "indices": (weight_row_indices, weight_col_indices),
-            "row_indices": weight_row_indices,
-            "col_indices": weight_col_indices,
-            "shape": (batch, num_heads, seq_len, seq_len),
-            "block_size": self.block_size,
-        }
+        """Compute sparse attention and return (joint-normalized) attention weights."""
+        return self._compute_sparse_attention_grouped(
+            q, k, v, output, block_indices, is_causal, collect_weights=True
+        )
 
     def _generate_local_window_pattern(
         self, num_blocks: int, device: torch.device
