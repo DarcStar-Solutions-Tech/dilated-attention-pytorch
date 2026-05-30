@@ -212,8 +212,18 @@ Three refinements the research forced (all in the calculator):
 
 - **Crossover ≈ 27K tokens** unchanged: beyond it, dense attention exceeds the whole linear term.
 - **Compute (sparse + hierarchical selection), memory (ring × KV-compression), and communication
-  (hierarchical ring) are solved by *different* levers** — you need all three at scale. Externally
-  corroborated: NSA 9×/6× @64k; DSA `O(L²)→O(Lk)` at 1T scale.
+  (hierarchical ring + sparse-ring pruning) are solved by *different* levers** — you need all of them
+  at scale. Externally corroborated: NSA 9×/6× @64k; DSA `O(L²)→O(Lk)` at 1T scale.
+
+**Extreme-scale sanity check (500T-total / 1T-active MoE, 1B-token context).** The calculator now
+shards weights+optimizer (7.1 PB → ~133k GPUs to hold the state) and models sparse-ring pruning, so
+it is valid here. With hierarchical routing + MLA-64× + sparse-ring pruning: the selection wall is
+gone (18 EFLOP, eff attn 15,887×), and communication — the binding constraint — collapses from
+**dense-ring ~23 min/forward** (flat) → **~3.6 min** (hierarchical) → **~0.01 s** (hierarchical +
+pruning, density `6e-5`), i.e. **compute-bound** at ~47 s/GPU/forward. *Reading:* hierarchical ring
+(~6×) alone leaves you comm-bound; it's **sparse-ring pruning** (only sending selected blocks) that
+actually makes the regime — and the "~90% of optimal" assumption — reachable. (`--params 500e12
+--active-params 1e12 --selection hierarchical --kv-compression 64 --contexts 1073741824`.)
 
 ## 7. What is determinable a priori (refined post-research)
 
@@ -224,10 +234,12 @@ Three refinements the research forced (all in the calculator):
 - **Memory — exact, with a second lever.** non-Flash scores `O(n²)` per layer (Flash removes); KV
   `O(n)` → `O(n/p)` via ring → `O(n/(p·r))` with an MLA latent compression ratio `r`. Selection
   does **not** shrink KV; only representation compression does.
-- **Communication — modeled, tiered (§5.1).** Ring rotates ~`O(n)` KV/device per forward; a **flat**
-  ring serializes it on the slow inter-node link, a **hierarchical** ring keeps it mostly on fast
-  intra-node links (only the sparse inter-node fraction crosses slowly, `O(n·frac/BW_inter)`). Comm
-  grows with context and eventually dominates compute — the binding constraint at extreme scale.
+- **Communication — modeled, tiered, prunable.** Ring rotates KV/device per forward; three levers:
+  **(1) hierarchical ring** keeps the dense rotation on fast intra-node links, sparse fraction on slow
+  inter-node; **(2) sparse-ring pruning** — only the KV blocks some local query *selects* are sent, so
+  comm volume is `~W/n` of the KV, **not** the whole KV; **(3) MLA** shrinks what is moved. Pruning is
+  the dominant lever and is what **flips an extreme-context run from comm-bound to compute-bound**
+  (§6). (Model assumes weights/optimizer are **sharded** across the cluster, not replicated.)
 - **Quality — still not a tight a-priori number, but the priors hardened.** Provable: a **connected**
   pattern (our skeleton gives `O(log n)` reach) retains universal approximation — no forced ceiling.
   Per-token error bounded by dropped softmax mass: `‖o−õ‖ ≤ 2·δ·max‖v‖`, useful only *if* mass
