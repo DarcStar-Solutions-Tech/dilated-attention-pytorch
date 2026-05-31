@@ -63,6 +63,23 @@ extrapolation to 50T/500B is flagged in the doc.
 |---|---|---|---|
 | `turboquant-2504.19874.pdf` | **TurboQuant: Online VQ with Near-Optimal Distortion** — Zandieh et al. (Google Research / DeepMind), ICLR 2026 | arXiv [2504.19874](https://arxiv.org/abs/2504.19874) | Data-oblivious, **online**, bounds MSE *and* inner-product distortion (~2.7× off optimal); ~3.5-bit KV quality-neutral, ≥6× memory. Evaluated for our training stack: best fit = **read-only offloaded-expert fetch I/O** (~4.5× on the §11 Lever A disk→HBM term); KV-ring / routing-index / gradient codecs are **research bets** (the walls they attack are mostly already closed by sparse-ring pruning + MLA); inference KV-cache for *serving* the trained model is the free, no-regret win. |
 
+## Compute-operation levers — beyond dense matmul (cached in `papers/`) — supports §11.4
+
+Surveyed for "can we do better than dense FP matmul?" Verdict for the B300 training target: **none beats
+dense FMA in wall-clock today** — each is inference-only, ~break-even at frontier quality, or needs new
+silicon — and low-bit hurts *more* at our heavy token budget. The realizable lever stays tensor-core-native
+**precision** (FP8 → NVFP4); co-designed hardware (ternary/LUT/analog) is the only path that flips it.
+
+| File | Title / what it is | Source | Why it matters to us |
+|---|---|---|---|
+| `bitnet-b1.58-era-of-1bit-2402.17764.pdf` | **The Era of 1-bit LLMs (BitNet b1.58)** — Ma et al. 2024 | arXiv [2402.17764](https://arxiv.org/abs/2402.17764) | Ternary {−1,0,+1} weights turn the FFN multiply into a signed **add** (~71× per-op energy). But it's an inference weight format — TRAINING keeps FP master weights + grads, and B300 has no ternary datapath → §11.4 "research, not adopt." |
+| `bitnet-b1.58-2b4t-2504.12285.pdf` | **BitNet b1.58 2B4T Technical Report** — 2025 | arXiv [2504.12285](https://arxiv.org/abs/2504.12285) | Largest *natively-trained* ternary parity datapoint (2B/4T, ~1 pt of Qwen2.5-1.5B) — and it tops out at 2B, ~4 orders below our target: the scale-extrapolation risk. |
+| `matmul-free-lm-2406.02528.pdf` | **Scalable MatMul-free Language Modeling** — Zhu et al. 2024 | arXiv [2406.02528](https://arxiv.org/abs/2406.02528) | Whole-model matmul-free (ternary BitLinear + MLGRU mixer); 13 W FPGA @ 1B params. Win is memory/energy on FPGA/CPU, not a B300 training-FLOP cut; validated ≤2.7B. |
+| `monarch-structured-matrices-2204.00595.pdf` | **Monarch: Expressive Structured Matrices** — Dao et al. 2022 | arXiv [2204.00595](https://arxiv.org/abs/2204.00595) | Butterfly-block factorization → `O(d^1.5)` FFN, GEMM-friendly (can hit tensor cores). Most plausible structured FFN lever → §11.4 "research." |
+| `monarch-mixer-m2-2310.12109.pdf` | **Monarch Mixer (M2)** — Fu et al. 2023 | arXiv [2310.12109](https://arxiv.org/abs/2310.12109) | Sub-quadratic in seq *and* model dim. Source of the ~25.6% naive FLOP-util datapoint — structured ops under-fill MMA tiles, so FLOP-cut ≠ wall-clock. |
+| `maddness-multiply-without-multiplying-2106.10860.pdf` | **Multiplying Matrices Without Multiplying (MADDNESS)** — Blalock & Guttag, ICML 2021 | arXiv [2106.10860](https://arxiv.org/abs/2106.10860) | PQ + LUT approximate matmul, no multiplies, 10–100× on CPU. LUT gathers strand tensor cores; inference/small-model only → §11.4 "track." |
+| `low-bit-favors-undertrained-2411.17691.pdf` | **Low-Bit Quantization Favors Undertrained LLMs (scaling laws, 100T tokens)** — Ouyang et al. 2024 | arXiv [2411.17691](https://arxiv.org/abs/2411.17691) | **The decisive constraint:** quantization degradation *rises* with tokens/param. Our heavy over-training (100–500T tokens) is exactly where ternary / aggressive-FP4 hurt MOST → prefer FP8 over NVFP4/ternary. |
+
 ## Repos (pointers — not vendored)
 
 | Repo | License | Form | Disposition | Notes |
@@ -103,3 +120,8 @@ Non-arXiv sources behind the §11.1 frontier-comparison caveat (no PDF to vendor
   `docs/guides/unified-attention-architecture.md` §9. **DeepSeek V4** is a recent (~Apr 2026)
   *preview* — treat its specifics as time-sensitive. **DeepSeek V4** has no cached PDF here
   (preview tech report is on HuggingFace, not arXiv); see the model card linked in §9 discussion.
+- **Third batch (2026-05-31):** 7 papers on compute-operation levers beyond dense matmul (BitNet b1.58 +
+  2B4T, MatMul-free LM, Monarch + M2, MADDNESS, Low-Bit-Favors-Undertrained), supporting §11.4 — all
+  validated as PDFs. Every one is small-model / inference / non-B300 evidence; the §11.4 verdict is that
+  none beats dense FMA in B300 *training* wall-clock today, and (per 2411.17691) low-bit hurts *more* at
+  our heavy token budget.

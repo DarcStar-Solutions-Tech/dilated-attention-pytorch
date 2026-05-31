@@ -567,6 +567,36 @@ for the already-parked routing-quant research item, and two negatives that save 
 stays an *inference-side adopt* (KV-cache when serving) + a *training-side research* lever, not a primary
 training-cost reducer. External refs: QJL (arXiv 2406.03482), SpinQuant (2405.16406), QES (2602.03120).
 
+### 11.4 Compute-operation levers — beyond dense matmul
+
+The compute bound (≈ `6·N_active·D`; per-step forward ≈ **64% FFN/linear matmul + 35% attention matmul + 1%
+selection**) is *dense multiply-accumulate*. "Can we beat matmul?" is a real research axis — the bound is not
+algorithmically irreducible, but it is **irreducible on B300 tensor cores at frontier quality**: the hardware
+delivers 3.5 PFLOP/s *only* for dense FMA, so a FLOP cut on a non-tensor-core operation becomes a wall-clock
+*slowdown*. Three classes, surveyed + adversarially verified (refs cached in `docs/references/`):
+
+| Class | Replaces matmul with | Theoretical | B300 wall-clock | Frontier quality | Verdict |
+|---|---|---|---|---|---|
+| Matmul-free / ternary (BitNet b1.58, MatMul-free LM) | signed **add** (ternary {−1,0,+1}) | ~71× per-op energy | **no** — no ternary datapath; unpacks to INT8 = the FP8 lever | unproven (native parity ≤2B) | research |
+| Structured weights (Monarch / M2) | `O(d log d)` butterfly blocks | 2–8× FFN FLOPs | ~break-even — GEMM-friendly but ~25% naive util; quality-matched ≈ dense | ≤1.3B only | research |
+| Approximate / sub-cubic (MADDNESS, Strassen, AlphaTensor) | LUT gathers / fewer MACs | 10–100× (CPU) | **no** — strands tensor cores; unstable; tiny sizes | none at scale | track |
+
+Three findings:
+1. **FLOP-cut ≠ wall-clock.** At training the FFN GEMM is compute-bound (above the B300 roofline ridge) — the
+   only regime where a cheaper op *could* help, and only if it is tensor-core-native. Ternary adds, LUT
+   gathers, and butterfly permutes are not, so they go memory-bound and lose.
+2. **Low-bit favors *under*-trained models** (Ouyang et al., arXiv 2411.17691): quantization degradation rises
+   with tokens/param. Our heavy over-training (100–500T tokens, §6.1/§11.1) is precisely where ternary and
+   aggressive FP4 hurt *most* — a direct tension with low-bit compute. **Prefer FP8 over NVFP4/ternary** at our
+   token budget.
+3. **The only tensor-core-native "cheaper op" is precision** (FP8 ~2×, NVFP4 up to ~4× if quality holds) — a
+   *precision* trade, not an operation change. Otherwise "better than matmul" = a different op approximating the
+   same linear map at a quality cost, i.e. the same quality↔compute frontier as sparsity/precision, not a free lunch.
+
+**The one path that flips this: hardware–software co-design** — a ternary / LUT / in-memory-analog accelerator
+where add- or table-based compute is the *native* op. Out of scope for a B300 plan (**track**), but at
+50T/500B / billion-token scale a custom training ASIC is exactly the bet that would rewrite this table.
+
 ---
 
 *Cost figures: `analysis/attention_cost_analysis.py`. Prior-art verdicts: five deep-research passes
