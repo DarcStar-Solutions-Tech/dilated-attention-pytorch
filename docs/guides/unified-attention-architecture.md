@@ -470,6 +470,39 @@ compute comparison is not possible. Net: train-FLOP is a **weak capability proxy
 pre-training bet must be paired with a modern post-training stack (see below) to be frontier-relevant,
 and "22× GPT-4" should be read as scale context, not a capability claim.
 
+### 11.2 Post-training extrapolation (reaching the base's ceiling)
+
+The 2025–26 frontier lesson (GPT-5 ≈ GPT-4.5 at ~10× less pre-training, via post-training) has a precise
+implication for this base. **RLVR / reasoning-RL mostly *elicit* latent capability — raising pass@1
+toward the base's existing pass@k ceiling — rather than *adding* new capability** (Yue et al. 2025;
+ProRL's prolonged-RL expansion is the contested margin). So post-training is a ceiling-*reacher*, not a
+ceiling-*raiser*: the pre-training run sets the ceiling, and a 500B-active / 50T-knowledge base sets an
+unusually high one. **This resolves the §11.1 frontier worry — the pivot to post-training does not make
+the pre-training bet obsolete; a strong base is the prerequisite that makes post-training pay.**
+
+Win / saturate (corrected anchors; all extrapolation — no model post-trained near this scale):
+
+| Lever | Anchor (real models) | Effect on 50T/500B |
+|---|---|---|
+| RLVR / reasoning-RL | R1 vs *its base* V3: AIME 39→80, MATH-500 90→97, GPQA-D 59→72; o1 AIME ~12→**74% pass@1** | Largest lift; higher floor → near-saturates verifiable math/code |
+| Test-time compute | ~log-linear vs inference compute (o1/o3; Snell 2024) | **1B context is the real multiplier** (whole search trees / agent transcripts); per-query *expensive* |
+| Agentic / long-horizon RL | SWE-bench agents ~80% today | **The standout** — 50T shell cuts missing-fact hallucination, 1B context kills eviction; the two base properties *compound* |
+| Preference-RLHF / open-ended | diminishing (4.4%→1.9% gain, 9B→200B policy) | Modest; no verifier → formatting-level lift only |
+
+**Compute-equivalent.** Post-training is plausibly worth **~5–15× effective pre-training compute**
+(extrapolating the ~10× GPT-5 anecdote), so 4.5e26 + a full stack would operate as if pre-trained at
+**~2e27–7e27-equivalent** — frontier-leading *on the dimensions post-training can reach*. The
+differentiated payoff is **agentic / knowledge-grounded long-horizon work** (the 50T-shell + 1B-context +
+agentic-RL stack compounding), *not* open-ended reasoning, which stays bounded by the base.
+
+**Caveats.** All extrapolation: the cleanest anchor (V3→R1) is ~75× smaller in total / ~13× in active
+params, and parameter count does not *provably* raise the pass@k ceiling (more knowledge ≠ more
+compositional reasoning). RL cannot conjure what the 150T pre-training tokens didn't store — coverage gaps
+are permanent (the data wall, again); distillation self-cancels at the frontier (no superior teacher). The
+binding ceiling may be **inference economics** (500B-active × long-CoT × best-of-N) or **alignment**
+(weak-to-strong: naive RLHF scales poorly to stronger models; oversight harder), not latent capability.
+Benchmark step-functions are partly metric artifacts (Schaeffer 2023; AIME = 30 problems).
+
 ---
 
 *Cost figures: `analysis/attention_cost_analysis.py`. Prior-art verdicts: five deep-research passes
