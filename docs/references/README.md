@@ -21,6 +21,48 @@ the license and the specific files of interest instead).
 | `dion-2504.05295.pdf` | **Dion: distributed orthonormalized updates** — Microsoft Research | arXiv [2504.05295](https://arxiv.org/abs/2504.05295) | Sharded-weight Muon successor (power iteration, FSDP/TP-friendly, ~3B-validated). **TRACK** for ring/distributed training. |
 | `kimi-k2-muonclip-2507.20534.pdf` | **Kimi K2 / MuonClip** — Moonshot AI | arXiv [2507.20534](https://arxiv.org/abs/2507.20534) | QK-clip stabilizes Muon at 1T scale (15.5T tokens, zero loss spikes). **ADOPT** MuonClip at scale. |
 
+## Scaling laws, data limits & capability (cached in `papers/`) — supports §6.1, §11.1
+
+Gathered for the 500T/50T training-cost and capability analyses (the token-budget sweep and the
+active-param/sparsity sweet-spot). Magnitudes were adversarially fact-checked in the workflows behind
+those sections; several papers sit **outside** the regimes they measured (sparsity ≤50×, bases ≤~1T), so
+extrapolation to 50T/500B is flagged in the doc.
+
+| File | Title / what it is | Source | Why it matters to us |
+|---|---|---|---|
+| `scaling-laws-kaplan-2001.08361.pdf` | **Scaling Laws for Neural LMs** — Kaplan et al. 2020 | arXiv [2001.08361](https://arxiv.org/abs/2001.08361) | Power-law loss + "compute-optimal stops *before* convergence" → §6.1 "no crisp *completely-trained* point." |
+| `chinchilla-hoffmann-2203.15556.pdf` | **Training Compute-Optimal LLMs (Chinchilla)** — Hoffmann et al. 2022 | arXiv [2203.15556](https://arxiv.org/abs/2203.15556) | ~20 tokens/param compute-optimal — the **floor** anchor for the §6.1 token budget (D ≈ 20×active), explicitly *not* "completely trained." |
+| `chinchilla-replication-epoch-2404.10102.pdf` | **Chinchilla Scaling: A Replication Attempt** — Besiroglu/Epoch 2024 | arXiv [2404.10102](https://arxiv.org/abs/2404.10102) | Re-fit confirms ~20:1 and the loss form `L=E+A/Nᵃ+B/Dᵇ` used in §6.1. |
+| `beyond-chinchilla-inference-2401.00448.pdf` | **Beyond Chinchilla-Optimal (inference-aware)** — Sardana et al. 2024 | arXiv [2401.00448](https://arxiv.org/abs/2401.00448) | Loss keeps falling far past 20:1 → rationale for the §6.1 frontier-overtraining 100–500T band. |
+| `routed-lm-scaling-clark-2202.01169.pdf` | **Unified Scaling Laws for Routed (MoE) LMs** — Clark et al. 2022 | arXiv [2202.01169](https://arxiv.org/abs/2202.01169) | Effective-param count **saturates** (~80–900B dense-equiv) → debunks the unbounded √(N·a) heuristic in §11.1; routing gains diminish. |
+| `fine-grained-moe-scaling-2402.07871.pdf` | **Scaling Laws for Fine-Grained MoE** — Krajewski/Ludziejewski et al. 2024 | arXiv [2402.07871](https://arxiv.org/abs/2402.07871) | MoE data-exponent β > dense (needs longer training); granularity scaling → §6.1 MoE-scaling lane. |
+| `optimal-sparsity-moe-abnar-2501.12370.pdf` | **Parameters vs FLOPs: Optimal Sparsity for MoE** — Abnar et al. 2025 | arXiv [2501.12370](https://arxiv.org/abs/2501.12370) | Compute-optimal D anchors to **active** params; over-sparsifying a small-for-compute model *hurts*; max tested ~50× → the key §11.1 sparsity-risk source (100–1000× is extrapolation). |
+| `moe-leverage-scaling-ling-2507.17702.pdf` | **Towards Greater Leverage: Scaling Laws for Efficient MoE** — Ling Team 2025 | arXiv [2507.17702](https://arxiv.org/abs/2507.17702) | MoE allocation law (compute-optimal MoE is smaller but trained on more data); activation ratios 0.8–10.9% (500× far beyond). |
+| `optimal-sparsity-reasoning-nakamura-2508.18672.pdf` | **Optimal Sparsity of MoE for Reasoning** — Nakamura et al. 2025 | arXiv [2508.18672](https://arxiv.org/abs/2508.18672) | At matched loss, more **active** compute → higher *reasoning*; low loss can *mask* weak reasoning at high sparsity → §11.1 "active is the capability axis." |
+| `will-we-run-out-of-data-2211.04325.pdf` | **Will We Run Out of Data?** — Villalobos/Epoch 2022/24 | arXiv [2211.04325](https://arxiv.org/abs/2211.04325) | ~300T-token human-text stock (CI 100–1000T) — the **data wall** binding §6.1 (capacity-fill at ~1e16 tokens is infeasible). |
+| `data-constrained-scaling-2305.16264.pdf` | **Scaling Data-Constrained LMs** — Muennighoff et al. 2023 | arXiv [2305.16264](https://arxiv.org/abs/2305.16264) | ~4 epochs near-lossless (decays by ~16) → bounds repetition; §6.1/§11.1 data-feasibility of the 100–500T band. |
+| `lm-memorization-morris-2505.24832.pdf` | **How Much Do LMs Memorize?** — Morris et al. 2025 | arXiv [2505.24832](https://arxiv.org/abs/2505.24832) | ~3.6 bits/param capacity (dense, ≤1.5B — flagged as extrapolation) → §11.1 knowledge-ceiling. |
+| `emergent-abilities-wei-2206.07682.pdf` | **Emergent Abilities of LLMs** — Wei et al. 2022 | arXiv [2206.07682](https://arxiv.org/abs/2206.07682) | Emergence onset thresholds (~1e23 FLOP) → §11.1/§11.2 "all configs clear onset." |
+| `emergence-mirage-schaeffer-2304.15004.pdf` | **Are Emergent Abilities a Mirage?** — Schaeffer et al. 2023 | arXiv [2304.15004](https://arxiv.org/abs/2304.15004) | >92% of "emergence" is a metric artifact → §11.1/§11.2 "ceiling is a smooth gradient, not a cliff." |
+| `deepseek-v3-2412.19437.pdf` | **DeepSeek-V3 Technical Report** — 2024 | arXiv [2412.19437](https://arxiv.org/abs/2412.19437) | 671B/37B (18×), 14.8T tok → ~400 tok/active anchor used throughout §6.1/§11.1; aux-loss-free load balancing (Lever C). |
+| `llama-3-herd-2407.21783.pdf` | **The Llama 3 Herd of Models** — Meta 2024 | arXiv [2407.21783](https://arxiv.org/abs/2407.21783) | Dense over-training + FLOP anchor (405B / 15.6T ≈ 38×; ~3.8e25 FLOP). |
+
+## Post-training & test-time compute (cached in `papers/`) — supports §11.2
+
+| File | Title / what it is | Source | Why it matters to us |
+|---|---|---|---|
+| `deepseek-r1-2501.12948.pdf` | **DeepSeek-R1** — 2025 | arXiv [2501.12948](https://arxiv.org/abs/2501.12948) | Cleanest same-base RLVR A/B (V3→R1: AIME 39→80, MATH-500 90→97); §11.2 anchor; reasoning is distillable/portable. |
+| `rl-reasoning-boundary-yue-2504.13837.pdf` | **Does RL Incentivize Reasoning Beyond the Base Model?** — Yue et al. 2025 | arXiv [2504.13837](https://arxiv.org/abs/2504.13837) | RLVR **elicits** (pass@1 → base pass@k ceiling), doesn't add → §11.2 "post-training is a ceiling-*reacher*; a strong base is the prerequisite." |
+| `prorl-nvidia-2505.24864.pdf` | **ProRL** — NVIDIA 2025 | arXiv [2505.24864](https://arxiv.org/abs/2505.24864) | The contested **expansion** margin: prolonged RL can extend the boundary, scaling with base competence → §11.2. |
+| `test-time-compute-snell-2408.03314.pdf` | **Scaling LLM Test-Time Compute Optimally** — Snell et al. 2024 | arXiv [2408.03314](https://arxiv.org/abs/2408.03314) | Inference-vs-pretrain compute tradeoff (`M + 3(D_pre/D_inf)(M−1)`); §11.2 test-time row + the 1B-context multiplier. |
+| `weak-to-strong-burns-2312.09390.pdf` | **Weak-to-Strong Generalization** — Burns et al. 2023 | arXiv [2312.09390](https://arxiv.org/abs/2312.09390) | Naive RLHF scales **poorly** to stronger models → §11.2 alignment caveat. |
+
+## Quantization (cached in `papers/`) — TurboQuant evaluation
+
+| File | Title / what it is | Source | Why it matters to us |
+|---|---|---|---|
+| `turboquant-2504.19874.pdf` | **TurboQuant: Online VQ with Near-Optimal Distortion** — Zandieh et al. (Google Research / DeepMind), ICLR 2026 | arXiv [2504.19874](https://arxiv.org/abs/2504.19874) | Data-oblivious, **online**, bounds MSE *and* inner-product distortion (~2.7× off optimal); ~3.5-bit KV quality-neutral, ≥6× memory. Evaluated for our training stack: best fit = **read-only offloaded-expert fetch I/O** (~4.5× on the §11 Lever A disk→HBM term); KV-ring / routing-index / gradient codecs are **research bets** (the walls they attack are mostly already closed by sparse-ring pruning + MLA); inference KV-cache for *serving* the trained model is the free, no-regret win. |
+
 ## Repos (pointers — not vendored)
 
 | Repo | License | Form | Disposition | Notes |
@@ -35,8 +77,24 @@ the license and the specific files of interest instead).
 | [apple/ml-ademamix](https://github.com/apple/ml-ademamix) | MIT | PyTorch + JAX/Optax | **EXPERIMENT** | AdEMAMix optimizer; basis for the novel Muon×AdEMAMix combination (no published precedent). |
 | DeepSeek DSA kernels: [FlashMLA](https://github.com/deepseek-ai/FlashMLA) · [DeepGEMM](https://github.com/deepseek-ai/DeepGEMM) · [DeepSeek-V3.2-Exp](https://github.com/deepseek-ai/DeepSeek-V3.2-Exp) | MIT | CUDA / TileLang | **TRACK / port-if-token-level** | Lightning-indexer + top-k token selection kernels (DeepGEMM indexer logits, FlashMLA sparse attention). For the optional DSA token-level policy. |
 
+## Web sources (pointers — not cached)
+
+Non-arXiv sources behind the §11.1 frontier-comparison caveat (no PDF to vendor; recorded as links).
+
+| Source | URL | Why it matters to us |
+|---|---|---|
+| Epoch AI — frontier training-compute trend | [epoch.ai/data-insights/open-models-threshold](https://epoch.ai/data-insights/open-models-threshold) | Frontier crossed **~1e26 FLOP** in 2025 (Grok-3 first), scaling **~4.7×/yr** → §11.1 "22× GPT-4 is a stale, 2023-era baseline." |
+| Anthropic — Claude Opus 4.8 (2026-05-28) | [anthropic.com/news/claude-opus-4-8](https://www.anthropic.com/news/claude-opus-4-8) | Discloses **no** parameter/compute figures → §11.1 "a direct compute comparison is not possible." |
+| OpenAI GPT-5.5 (2026-04-23; secondary coverage) | [o-mega.ai/articles/gpt-5-5-the-complete-guide-2026](https://o-mega.ai/articles/gpt-5-5-the-complete-guide-2026) | First full retrain since GPT-4.5; reportedly matched/beat it at **~10× less** pre-training via post-training; no official specs → §11.1/§11.2 "train-FLOP is a weak capability proxy." |
+
 ## Provenance
 - Papers downloaded from arXiv on 2026-05-30. arXiv IDs are stable; PDFs are the cited versions.
+- **Second batch (2026-05-30):** 22 papers across scaling laws / data limits / capability (§6.1, §11.1),
+  post-training & test-time compute (§11.2), and quantization (TurboQuant) — all validated as PDFs and the
+  cited versions. The 2025-class items (Abnar 2501.12370, Ling 2507.17702, Morris 2505.24832, Nakamura
+  2508.18672, Yue 2504.13837, ProRL 2505.24864, TurboQuant 2504.19874) were adversarially fact-checked in
+  the workflows behind §6.1/§11.x, but several measure regimes **far below** 50T/500B (sparsity ≤50×, bases
+  ≤~1T); treat their application to our scale as the *flagged extrapolations* the doc marks, not validated results.
 - Repo dispositions are from the deep-research passes summarized in
   `docs/guides/unified-attention-architecture.md` §"Prior art". Repo maturity can drift —
   re-check before depending on a specific commit.
