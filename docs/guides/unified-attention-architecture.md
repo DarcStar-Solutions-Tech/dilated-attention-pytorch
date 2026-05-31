@@ -417,6 +417,47 @@ it). Levers B–D are genuine, under-explored research directions, *not* validat
 deliberately separated from the validated attention architecture above. All four are **orthogonal to
 the attention work**: they shrink the *weight* memory wall that sparse attention does not.
 
+### 11.1 Reference variant — 50T total / 500B active (the capability-vs-cost sweet spot)
+
+The §6 extreme case (500T/1T) is a *limit* study; for a buildable target the open levers above are the
+total-params, active-params and sparsity knobs. Sweeping them (`--params 50e12 --active-params <a>`,
+data-matched `D ≈ 300 × a` tokens) shows **active params, not total, are the capability axis**: total
+sets the knowledge *ceiling* (identical for any active count), active×data sets reasoning depth and
+*how fully* the shell is filled. The sweet spot is **50T total / 500B active (100× sparsity)**:
+
+| Property | 250B (200×) | **500B (100×)** | 1T (50×) |
+|---|---|---|---|
+| Train compute (data-matched) | 1.1e26 (~6× GPT-4) | **4.5e26 (~22× GPT-4, ~12× Llama-3-405B)** | 1.8e27 (~90× GPT-4) |
+| Per-token compute | ~GPT-4 class | **> Llama-3-405B / GPT-4** | unprecedented |
+| Token budget D | 75T (0.25 ep) | **150T (0.5 epochs of ~300T stock)** | 300T (1 ep — at the data wall) |
+| Per-expert exposure | ~375B | **~1,500B (richly trained)** | saturated/over-trained |
+| Sparsity vs validated (Kimi 48×) | ~4× beyond | **~2× beyond (safest aggressive)** | ~1× (at frontier) |
+| Full run @ ~3.7k-B300 floor | ~1.5 yr | **~4.3 yr ideal (×1.5–3 real)** | ~14 yr |
+
+**Why 500B is the build target.** It is the first config where *both* halves are strong at once:
+reasoning **above the current frontier** (per-token compute exceeds any deployed model; 22× GPT-4 total
+compute), *and* the 50T knowledge shell is **actually realized** (150T tokens, ~1,500B/expert clears the
+training floor — broad recall/multilingual/long-tail written in, not merely provisioned). Sparsity 100×
+is the lowest-risk of the aggressive options (~2× past Kimi-K2's validated 48×, manageable with
+DeepSeek-style aux-loss-free balancing + shared experts, Lever C), and 0.5 epochs leaves data headroom
+(1T-active would consume the *entire* human-text stock). Contrast the naive "middle" **50T/50B (1000×)**:
+~15B tokens/expert leaves experts *below* their training floor, and total train compute is **4.5e24 —
+below GPT-4** — a sub-frontier brain in an unfillable shell at full 50T systems cost. The capability axis
+is active params; do not chase a low active count to save cost.
+
+**Cost scales with GPUs (compute-bound).** The ~4.3 yr is the *minimum* 3.7k-GPU (memory-floor) figure;
+the run is compute-bound and data-parallel scales it near-linearly — ~15k GPUs → ~1.1 yr, ~37k GPUs →
+**~5 months** — so on a frontier-scale cluster 50T/500B is a months-to-a-year run. (`--params 50e12
+--active-params 500e9 --train-tokens 150e12`.)
+
+**Caveats (carry from the capability analysis).** Every placement past ~48× sparsity / ~1T total is
+**extrapolation** beyond any trained model; capability is **empirical**, not a-priori. All configs clear
+emergence *onset* (CoT/ICL/instruction-following) — the difference is *ceiling*, a smooth gradient
+(Schaeffer 2023), not a cliff. The √(total·active) ≈ 5T "effective params" is a heuristic that likely
+**saturates lower** (Clark 2022 caps effective size ~80–900B dense-equivalent), and per-expert figures
+assume an (unfixed) expert granularity. Treat 50T/500B as the best-justified *bet*, validated bottom-up
+from 250B before committing the full budget.
+
 ---
 
 *Cost figures: `analysis/attention_cost_analysis.py`. Prior-art verdicts: five deep-research passes
