@@ -458,6 +458,18 @@ emergence *onset* (CoT/ICL/instruction-following) — the difference is *ceiling
 assume an (unfixed) expert granularity. Treat 50T/500B as the best-justified *bet*, validated bottom-up
 from 250B before committing the full budget.
 
+**Frontier-comparison caveat (read the "22× GPT-4" with care).** The GPT-4 (~2e25 FLOP, ~280B active)
+and Llama-3-405B anchors are **leaked/estimated, 2023-era** figures, not disclosed numbers. Two
+corrections follow. (1) **Stale baseline:** frontier training compute has scaled **~4.7×/yr** (Epoch
+AI); the frontier crossed **~1e26 FLOP** in 2025 (Grok-3 first), so 4.5e26 is only **low-single-digit×
+the *current* frontier, not 22×**. (2) **Wrong axis:** the 2025–26 frontier shifted from raw
+pre-training scale to **post-training efficiency** — GPT-5 reportedly matched/beat GPT-4.5 at **~10×
+less** pre-training compute via RLHF/RLVR/reasoning-distillation + test-time compute. Recent frontier
+models (Claude Opus 4.8, GPT-5.5) **disclose no parameter or compute figures at all**, so a direct
+compute comparison is not possible. Net: train-FLOP is a **weak capability proxy** here; a 4.5e26-FLOP
+pre-training bet must be paired with a modern post-training stack (see below) to be frontier-relevant,
+and "22× GPT-4" should be read as scale context, not a capability claim.
+
 ---
 
 *Cost figures: `analysis/attention_cost_analysis.py`. Prior-art verdicts: five deep-research passes
