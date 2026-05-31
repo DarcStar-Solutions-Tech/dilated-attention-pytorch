@@ -1,38 +1,47 @@
 #!/usr/bin/env python3
-"""Attention cost model: a-priori compute/memory bounds for dense vs. sparse attention.
+"""Attention cost model: a-priori compute / memory / communication for dense vs. sparse attention.
 
-This is the cost model behind ``docs/guides/unified-attention-architecture.md``. It
-quantifies, *before* any training run, the two quantities that are mathematically
-determinable a priori:
+The cost model behind ``docs/guides/unified-attention-architecture.md``. It quantifies, before any
+training run, what is determinable a priori, reflecting both architectural hierarchies (§5.1 ring,
+§5.2 routing) and now valid into the extreme (petabyte / billion-token) regime:
 
-  * COMPUTE  -- the attention-matrix term scales O(n^2) dense vs O(n * W) sparse, where
-               W is the (context-independent) per-query attended-key budget. The exact
-               attention speedup is n / W; the whole-model speedup folds in the linear
-               (QKVO + FFN) term that does NOT grow with context.
-  * MEMORY   -- non-Flash scores are O(n^2) per layer (the wall Flash removes); the KV
-               working set is O(n) and is sharded to O(n / p) by ring/sequence parallelism.
+  * COMPUTE  -- core attention O(n^2) dense vs O(n*W) sparse. SELECTION (routing) cost by granularity:
+                 token        -> O(n^2)              (DeepSeek DSA lightning indexer)
+                 block        -> O(n^2 / b)          (MoBA / FlashMoBA, flat block-centroid top-k)
+                 hierarchical -> O(n^2/(b*S)) + O(n)  (§5.2 multi-level routing; sub-quadratic)
+  * MEMORY   -- model state (weights+grads+optimizer+master) is SHARDED across GPUs (FSDP/ZeRO/expert),
+               not replicated; KV is O(n) and sharded O(n/p) by the ring, shrinkable by MLA ratio r.
+  * COMM     -- the ring rotates KV per forward. Three levers: (1) HIERARCHICAL ring keeps the dense
+               rotation on fast intra-node links, sparse fraction on slow inter-node (§5.1);
+               (2) SPARSE-RING PRUNING only moves the KV blocks some local query selects
+               (volume ~ W/n, not the whole KV); (3) MLA compression shrinks what is moved.
+               At extreme context, pruning is what flips the run from comm-bound to compute-bound.
 
-Quality (the third quantity) is deliberately NOT modeled here: it is not predeterminable
-as a tight a-priori number (see the design doc). Treat compute/memory as bankable bounds
-and gate quality empirically (loss parity + the runtime dropped-mass certificate).
+Quality is NOT modeled (not a tight a-priori number; gated by loss parity + a dropped-mass certificate).
 
-Run with no arguments to reproduce the worked example in the design doc, or pass flags to
-size your own config:
-
+Examples:
     python analysis/attention_cost_analysis.py
-    python analysis/attention_cost_analysis.py --d-model 8192 --layers 80 --params 70e9 \
-        --pattern-budget 8192 --contexts 8192,65536,524288
+    python analysis/attention_cost_analysis.py --selection hierarchical --contexts 1073741824
+    python analysis/attention_cost_analysis.py --params 500e12 --active-params 1e12 \
+        --d-model 16384 --layers 128 --pattern-budget 65536 --block-size 128 \
+        --selection hierarchical --kv-compression 64 --contexts 1073741824
+    python analysis/attention_cost_analysis.py --no-comm-pruning   # dense ring, for comparison
+    python analysis/attention_cost_analysis.py --params 500e12 --active-params 1e12 \
+        --d-model 16384 --layers 128 --pattern-budget 65536 --block-size 128 \
+        --selection hierarchical --kv-compression 64 --contexts 1073741824 \
+        --train-tokens 300e12   # full-run wall-clock at a 300T-token budget
 """
 
 from __future__ import annotations
 
 import argparse
+import math
 from dataclasses import dataclass
 
 
-# --- units -----------------------------------------------------------------
 def human_flops(x: float) -> str:
     for unit, scale in (
+        ("ZFLOP", 1e21),
         ("EFLOP", 1e18),
         ("PFLOP", 1e15),
         ("TFLOP", 1e12),
@@ -45,6 +54,7 @@ def human_flops(x: float) -> str:
 
 def human_bytes(x: float) -> str:
     for unit, scale in (
+        ("PB", 1024**5),
         ("TB", 1024**4),
         ("GB", 1024**3),
         ("MB", 1024**2),
@@ -55,148 +65,376 @@ def human_bytes(x: float) -> str:
     return f"{x:.0f} B"
 
 
-# --- configuration ---------------------------------------------------------
+def human_time(s: float) -> str:
+    if s >= 86400:
+        return f"{s / 86400:.1f} d"
+    if s >= 3600:
+        return f"{s / 3600:.1f} h"
+    if s >= 60:
+        return f"{s / 60:.1f} min"
+    return f"{s:.2f} s"
+
+
 @dataclass
 class Config:
     d_model: int = 4096
     n_layers: int = 32
-    n_heads: int = 32  # informational; d_model already captures the head FLOPs
-    params: float = 7e9
-    bytes_per_elem: int = 2  # bf16/fp16
-    pattern_budget: int = (
-        4096  # W: attended keys per query (local + dilated + adaptive top-k)
+    n_heads: int = 32
+    params: float = 7e9  # TOTAL params (memory)
+    active_params: float = 0.0  # ACTIVE params (compute); 0 -> dense, use params
+    bytes_per_elem: int = 2
+    pattern_budget: int = 4096  # W: attended keys/query in the CORE attention
+    block_size: int = 64
+    selection_mode: str = "block"  # block | token | hierarchical | none
+    index_dim: int = 128
+    super_block_blocks: int = 16  # S
+    num_super_selected: int = 8
+    kv_compression_ratio: float = 1.0  # MLA latent KV compression
+    comm_pruning: bool = True  # sparse-ring: only move selected KV blocks
+    # weight-side memory levers: hierarchical fidelity (quantized-resident / full-on-disk) + offload
+    expert_frac: float = (
+        0.0  # fraction of TOTAL params that are offloadable/quantizable experts
     )
-    # hardware (defaults ~ one H100, bf16 tensor cores, realistic MFU)
-    gpu_peak_flops: float = 989e12
-    gpu_mem_bytes: float = 80 * 1024**3
-    dense_mfu: float = 0.50
-    sparse_mfu: float = 0.40
-    train_multiplier: float = 3.0  # fwd + 2x bwd for a full training step
+    weight_quant_bits: float = (
+        16.0  # resident expert precision (bf16=16, FP8=8, INT4=4)
+    )
+    expert_offload_ratio: float = (
+        0.0  # fraction of experts parked on NVMe/disk (0 GPU bytes)
+    )
+    disk_bytes_per_param: float = 2.0  # precision of the full expert copy on disk
+    # hardware
+    gpu_peak_flops: float = (
+        3.5e15  # NVIDIA B300 (Blackwell Ultra) bf16 dense; H100=989e12, B200=2.25e15
+    )
+    gpu_mem_bytes: float = 288 * 1024**3  # B300 HBM3e (H100=80, B200=192)
+    state_bytes_per_param: float = (
+        16.0  # Adam mixed (2 wt + 2 grad + 4 master + 4 m + 4 v); Muon ~12
+    )
+    kv_mem_frac: float = 0.5  # GPU memory fraction available to the KV shard
+    static_mem_frac: float = (
+        0.7  # GPU memory fraction available to the sharded model state
+    )
+    mfu_dense: float = 0.50
+    mfu_sparse_fwd: float = 0.45
+    mfu_sparse_bwd: float = 0.38
+    # communication
+    node_size: int = 72  # NVL72 NVLink domain (B300); H100 node = 8
+    bw_intra_gbps: float = 1800.0  # NVLink-5 per GPU (B300); H100 NVLink ~900
+    bw_inter_gbps: float = 100.0  # inter-rack InfiniBand (per GPU)
+    inter_node_attn_frac: float = 0.05
+    # expert-offload disk I/O
+    nvme_bw_per_gpu_gbps: float = 6.0  # local NVMe Gen5 effective read BW per GPU
+    offload_fetch_frac: float = (
+        1.0  # frac of offloaded experts fetched/step (~1.0: long ctx touches all)
+    )
+    offload_write_back: bool = (
+        False  # True if offloaded experts are TRAINED (read+write doubles I/O)
+    )
+
+    def compute_params(self) -> float:
+        return self.active_params if self.active_params > 0 else self.params
 
 
-# --- compute (FLOPs per forward pass) --------------------------------------
+# --- compute (FORWARD FLOPs; backward ~= 2x forward) -----------------------
 def dense_attn_flops(n: int, c: Config) -> float:
-    """QK^T + A.V matmuls, all heads, all layers: 4 * n^2 * d_model * L."""
     return 4.0 * n * n * c.d_model * c.n_layers
 
 
-def sparse_attn_flops(n: int, c: Config) -> float:
-    """Same, but each query attends to W keys instead of n: 4 * n * W * d_model * L."""
+def sparse_core_flops(n: int, c: Config) -> float:
     return 4.0 * n * c.pattern_budget * c.d_model * c.n_layers
 
 
+def selection_flops(n: int, c: Config) -> float:
+    L, d = c.n_layers, c.index_dim
+    if c.selection_mode == "none":
+        return 0.0
+    if c.selection_mode == "token":
+        return 2.0 * n * n * d * L
+    if c.selection_mode == "block":
+        return 2.0 * n * (n / c.block_size) * d * L
+    if c.selection_mode == "hierarchical":
+        n_super = n / (c.block_size * c.super_block_blocks)
+        coarse = 2.0 * n * n_super * d * L
+        fine = 2.0 * n * (c.num_super_selected * c.super_block_blocks) * d * L
+        return coarse + fine
+    raise ValueError(f"unknown selection_mode: {c.selection_mode}")
+
+
+def sparse_attn_flops(n: int, c: Config) -> float:
+    return sparse_core_flops(n, c) + selection_flops(n, c)
+
+
 def linear_flops(n: int, c: Config) -> float:
-    """QKVO projections + FFN -- the 2N rule. Grows LINEARLY with context."""
-    return 2.0 * c.params * n
+    return 2.0 * c.compute_params() * n
 
 
 def crossover_n(c: Config) -> float:
-    """Context length where dense attention FLOPs == the entire linear term.
-
-    4 n^2 d L = 2 P n  ->  n = P / (2 d L).
-    Beyond this, dense attention costs more than the rest of the model combined.
-    """
-    return c.params / (2.0 * c.d_model * c.n_layers)
+    return c.compute_params() / (2.0 * c.d_model * c.n_layers)
 
 
-# --- memory (bytes) --------------------------------------------------------
+# --- memory: SHARDED model state + sequence-parallel KV --------------------
+def model_state_bytes(c: Config) -> float:
+    """Full weights+grads+optimizer+master for the TOTAL params, all-resident at bf16 (the 'before')."""
+    return c.params * c.state_bytes_per_param
+
+
+def resident_state_bytes(c: Config) -> float:
+    """GPU-resident state after the weight-side levers: dense backbone full; experts optionally
+    quantized (weight_quant_bits) and partially offloaded (expert_offload_ratio) to disk."""
+    dense = (1.0 - c.expert_frac) * c.params * c.state_bytes_per_param
+    experts_resident = (
+        c.expert_frac
+        * c.params
+        * (1.0 - c.expert_offload_ratio)
+        * c.state_bytes_per_param
+        * (c.weight_quant_bits / 16.0)
+    )
+    return dense + experts_resident
+
+
+def offloaded_disk_bytes(c: Config) -> float:
+    """Full-precision expert copies parked on NVMe/disk (off the GPU)."""
+    return c.expert_frac * c.expert_offload_ratio * c.params * c.disk_bytes_per_param
+
+
+def gpus_for_state(c: Config) -> int:
+    """Min GPUs to hold the (resident) sharded model state (FSDP/ZeRO-3/expert-parallel)."""
+    return max(
+        1, math.ceil(resident_state_bytes(c) / (c.gpu_mem_bytes * c.static_mem_frac))
+    )
+
+
+def offload_io_seconds(c: Config, total_gpus: int) -> float:
+    """Per-step disk->HBM time to fetch offloaded experts. Offloaded bytes are sharded across the
+    cluster (parallel local NVMe). At long context the routed-expert union saturates, so ~all
+    offloaded experts are fetched per step (offload_fetch_frac ~ 1.0); write-back doubles it if
+    those experts are trained rather than frozen."""
+    io_bytes = (
+        offloaded_disk_bytes(c)
+        * c.offload_fetch_frac
+        * (2.0 if c.offload_write_back else 1.0)
+    )
+    return (io_bytes / max(1, total_gpus)) / (c.nvme_bw_per_gpu_gbps * 1e9)
+
+
 def kv_bytes(n: int, c: Config) -> float:
-    """K and V across all layers: 2 * n * d_model * bytes * L. Sparse does NOT reduce this."""
-    return 2.0 * n * c.d_model * c.bytes_per_elem * c.n_layers
+    return 2.0 * n * c.d_model * c.bytes_per_elem * c.n_layers / c.kv_compression_ratio
+
+
+def ring_degree(n: int, c: Config) -> int:
+    """Sequence-parallel / ring degree p so each KV shard fits the per-GPU KV budget."""
+    return max(1, math.ceil(kv_bytes(n, c) / (c.gpu_mem_bytes * c.kv_mem_frac)))
 
 
 def dense_scores_bytes_per_layer(n: int, c: Config) -> float:
-    """The n^2 score matrix per layer that Flash avoids materializing."""
     return float(n) * n * c.n_heads * c.bytes_per_elem
 
 
-def weight_bytes(c: Config) -> float:
-    return c.params * c.bytes_per_elem
+# --- communication (ring KV rotation per forward, §5.1 + sparse pruning) ---
+def comm_density(n: int, c: Config) -> float:
+    """Fraction of the KV a device must RECEIVE. Dense ring = 1.0; sparse ring only moves the
+    selected blocks (~W/n) — the §5.1 sparse-comm-pruning lever (optimistic; real union is larger)."""
+    if not c.comm_pruning:
+        return 1.0
+    return min(1.0, c.pattern_budget / n)
 
 
-def ring_p_to_fit(n: int, c: Config) -> int:
-    """Smallest power-of-two ring/sequence-parallel degree p so KV/p + weights fit one GPU."""
-    budget = c.gpu_mem_bytes - weight_bytes(c)
-    if budget <= 0:
-        return -1  # weights alone exceed the GPU
-    kv = kv_bytes(n, c)
-    p = 1
-    while kv / p > budget and p < 4096:
-        p *= 2
-    return p if kv / p <= budget else -1
+def ring_recv_bytes(n: int, c: Config, p: int) -> float:
+    if p <= 1:
+        return 0.0
+    return kv_bytes(n, c) * (p - 1) / p * comm_density(n, c)
 
 
-def wallclock_s(flops: float, peak: float, mfu: float) -> float:
-    return flops / (peak * mfu)
+def comm_time_flat(n: int, c: Config, p: int) -> float:
+    return ring_recv_bytes(n, c, p) / (c.bw_inter_gbps * 1e9)
+
+
+def comm_time_hier(n: int, c: Config, p: int) -> float:
+    b = ring_recv_bytes(n, c, p)
+    if p <= c.node_size:
+        return b / (c.bw_intra_gbps * 1e9)
+    f = c.inter_node_attn_frac
+    return b * (1 - f) / (c.bw_intra_gbps * 1e9) + b * f / (c.bw_inter_gbps * 1e9)
+
+
+def fwd_attn_seconds(n: int, c: Config) -> float:
+    return sparse_attn_flops(n, c) / (c.gpu_peak_flops * c.mfu_sparse_fwd)
+
+
+def train_step_seconds(n: int, c: Config, sparse: bool) -> float:
+    fwd = linear_flops(n, c) + (
+        sparse_attn_flops(n, c) if sparse else dense_attn_flops(n, c)
+    )
+    bwd = 2.0 * fwd
+    if sparse:
+        return fwd / (c.gpu_peak_flops * c.mfu_sparse_fwd) + bwd / (
+            c.gpu_peak_flops * c.mfu_sparse_bwd
+        )
+    return (fwd + bwd) / (c.gpu_peak_flops * c.mfu_dense)
+
+
+# --- full training run (steps x per-sequence cluster step) -----------------
+def cluster_step_seconds(n: int, c: Config) -> dict:
+    """Ideal per-sequence wall-clock on the full cluster, decomposed. Strong-scaling lower bound:
+    the cluster collaborates on one sequence, so compute (fwd+2bwd) spreads over all GPUs;
+    expert-offload disk I/O OVERLAPS compute (max, not sum); exposed sparse-pruned ring comm adds
+    on top. Ignores pipeline bubbles, optimizer/all-reduce, data stalls, and restart overhead."""
+    p = ring_degree(n, c)
+    total_gpus = max(gpus_for_state(c), p)
+    ss = train_step_seconds(n, c, sparse=True)
+    compute = ss / total_gpus
+    io = offload_io_seconds(c, total_gpus) if offloaded_disk_bytes(c) > 0 else 0.0
+    comm = (
+        3.0 * comm_time_hier(n, c, p) if p > 1 else 0.0
+    )  # fwd + 2 bwd, hier sparse-pruned ring
+    return {
+        "total_gpus": total_gpus,
+        "compute": compute,
+        "io": io,
+        "comm": comm,
+        "step": max(compute, io) + comm,
+    }
+
+
+def full_run_seconds(n: int, c: Config, tokens: float) -> dict:
+    """Wall-clock to train on `tokens` total tokens at context length n: (tokens / n) sequences,
+    each one ideal cluster step. Aggregate compute is the classic 6·N_active·D plus sparse
+    attention; the token budget D is the dominant (and least a-priori) assumption."""
+    cs = cluster_step_seconds(n, c)
+    n_steps = tokens / n
+    wall = n_steps * cs["step"]
+    return {**cs, "n_steps": n_steps, "tokens": tokens, "wall_seconds": wall}
 
 
 # --- report ----------------------------------------------------------------
-def report(c: Config, contexts: list[int]) -> None:
-    print("=" * 100)
-    print("Attention cost model")
+def report(c: Config, contexts: list[int], train_tokens: float = 0.0) -> None:
+    print("=" * 112)
     print(
-        f"  model: d_model={c.d_model}  layers={c.n_layers}  heads={c.n_heads}  "
-        f"params={c.params:.2g}  dtype={c.bytes_per_elem}B"
+        "Attention cost model (v4 — sharded state + sparse-ring comm pruning; extreme-scale valid)"
+    )
+    cp = c.compute_params()
+    print(
+        f"  model: d_model={c.d_model} layers={c.n_layers} params(total)={c.params:.2g} "
+        f"active={cp:.2g} dtype={c.bytes_per_elem}B"
     )
     print(
-        f"  sparse pattern: W={c.pattern_budget} attended keys/query (context-independent)"
+        f"  sparse: W={c.pattern_budget}, selection='{c.selection_mode}' (b={c.block_size}, S={c.super_block_blocks}), "
+        f"kv_compression={c.kv_compression_ratio:g}x, comm_pruning={c.comm_pruning}"
     )
     print(
-        f"  hardware: peak={human_flops(c.gpu_peak_flops)}/s  mem={human_bytes(c.gpu_mem_bytes)}  "
-        f"MFU dense={c.dense_mfu:.0%} sparse={c.sparse_mfu:.0%}"
+        f"  hw: peak={human_flops(c.gpu_peak_flops)}/s mem={human_bytes(c.gpu_mem_bytes)} "
+        f"state={c.state_bytes_per_param:g}B/param | BW intra={c.bw_intra_gbps:g}/inter={c.bw_inter_gbps:g} GB/s node={c.node_size}"
     )
-    xover = crossover_n(c)
+    disk = offloaded_disk_bytes(c)
     print(
-        f"  crossover: dense attention exceeds the whole linear term beyond "
-        f"n ~= {xover:,.0f} tokens"
+        f"  model state: full {human_bytes(model_state_bytes(c))} (all-resident bf16) -> "
+        f"resident {human_bytes(resident_state_bytes(c))} -> {gpus_for_state(c):,} GPUs"
+        + (
+            f"  (+ {human_bytes(disk)} on disk; experts={c.expert_frac:g}, "
+            f"quant={c.weight_quant_bits:g}b, offload={c.expert_offload_ratio:g})"
+            if (c.expert_frac > 0 and (disk > 0 or c.weight_quant_bits != 16))
+            else ""
+        )
     )
-    print(f"  weights resident: {human_bytes(weight_bytes(c))}")
-    print("=" * 100)
-
+    print(f"  crossover n ~= {crossover_n(c):,.0f}")
+    print("=" * 112)
     hdr = (
-        f"{'context n':>12} | {'dense attn':>11} | {'sparse attn':>11} | {'attn x':>7} | "
-        f"{'model x':>8} | {'KV (all L)':>11} | {'scores/L*':>11} | {'ring p':>7}"
+        f"{'context n':>13} | {'dense attn':>11} | {'sparse core':>11} | {'selection':>11} | "
+        f"{'eff attn x':>10} | {'KV/seq':>10} | {'ring deg':>8}"
     )
     print(hdr)
     print("-" * len(hdr))
     for n in contexts:
-        da, sa, lin = (
+        da, core, sel = (
             dense_attn_flops(n, c),
-            sparse_attn_flops(n, c),
-            linear_flops(n, c),
+            sparse_core_flops(n, c),
+            selection_flops(n, c),
         )
-        attn_x = da / sa
-        model_x = (lin + da) / (lin + sa)
-        kv = kv_bytes(n, c)
-        scores = dense_scores_bytes_per_layer(n, c)
-        p = ring_p_to_fit(n, c)
-        p_str = "OOM" if p < 0 else (f"{p}" if p > 1 else "1")
         print(
-            f"{n:>12,} | {human_flops(da):>11} | {human_flops(sa):>11} | {attn_x:>6.0f}x | "
-            f"{model_x:>7.1f}x | {human_bytes(kv):>11} | {human_bytes(scores):>11} | {p_str:>7}"
+            f"{n:>13,} | {human_flops(da):>11} | {human_flops(core):>11} | {human_flops(sel):>11} | "
+            f"{da / (core + sel):>9.0f}x | {human_bytes(kv_bytes(n, c)):>10} | {ring_degree(n, c):>8,}"
         )
     print("-" * len(hdr))
-    print("  * scores/L = non-Flash score matrix per layer (the wall Flash removes).")
     print(
-        "  attn x = attention-only speedup (= n/W); model x = whole-model forward speedup."
+        "  eff attn x = dense / (sparse core + selection); ring deg = seq-parallel degree to shard KV."
     )
-    print("  ring p = min sequence-parallel degree so KV/p + weights fit one GPU.")
 
-    # Wall-clock illustration on the largest context.
     n = max(contexts)
-    da, sa = dense_attn_flops(n, c), sparse_attn_flops(n, c)
-    print("=" * 100)
-    print(f"Wall-clock (attention only, one forward) at n={n:,} on the configured GPU:")
+    p = ring_degree(n, c)
+    total_gpus = max(gpus_for_state(c), p)
+    print("=" * 112)
     print(
-        f"  dense:  {wallclock_s(da, c.gpu_peak_flops, c.dense_mfu):>8.1f} s   "
-        f"(+ must shard {human_bytes(kv_bytes(n, c))} of KV first)"
+        f"At n={n:,}  (ring degree p={p:,}, {'spans nodes' if p > c.node_size else 'fits 1 node'}):"
     )
-    print(f"  sparse: {wallclock_s(sa, c.gpu_peak_flops, c.sparse_mfu):>8.1f} s")
+    ds, ss = train_step_seconds(n, c, False), train_step_seconds(n, c, True)
+    # per-GPU forward compute (full fwd FLOPs spread over the cluster) — the honest comm-bound basis
+    t_comp = (
+        (linear_flops(n, c) + sparse_attn_flops(n, c))
+        / total_gpus
+        / (c.gpu_peak_flops * c.mfu_sparse_fwd)
+    )
     print(
-        f"  a full training step is ~{c.train_multiplier:g}x a forward pass "
-        f"(fwd + 2x bwd), over many steps."
+        f"  GPUs: ~{total_gpus:,} (max of {gpus_for_state(c):,} for state, {p:,} for KV) x data-parallel"
     )
-    print("=" * 100)
+    print(
+        f"  compute: 1-GPU-equiv step (fwd+2bwd) dense {human_time(ds)} vs sparse {human_time(ss)} ({ds / ss:.0f}x);"
+    )
+    print(
+        f"           ideal cluster step over {total_gpus:,} GPUs ≈ {human_time(ss / total_gpus)}/seq "
+        f"(strong-scaling lower bound; ignores comm, pipeline bubbles, and expert-offload disk I/O)"
+    )
+    if p > 1:
+        # comm without pruning (dense ring) vs with pruning (sparse ring)
+        dens = c.comm_pruning
+        c.comm_pruning = False
+        dense_flat, dense_hier = comm_time_flat(n, c, p), comm_time_hier(n, c, p)
+        c.comm_pruning = True
+        spr_flat, spr_hier = comm_time_flat(n, c, p), comm_time_hier(n, c, p)
+        c.comm_pruning = dens
+        print(f"  comm /forward (per-GPU fwd compute ≈ {human_time(t_comp)}):")
+        print(
+            f"    dense ring : flat {human_time(dense_flat)} | hierarchical {human_time(dense_hier)}"
+        )
+        print(
+            f"    sparse ring: flat {human_time(spr_flat)} | hierarchical {human_time(spr_hier)}  "
+            f"(density {min(1.0, c.pattern_budget / n):.2g})"
+        )
+        bound = "COMPUTE-bound ✓" if spr_hier <= t_comp else "still COMM-bound"
+        print(
+            f"    -> with hierarchical ring + sparse pruning + {c.kv_compression_ratio:g}x KV compression: {bound}"
+        )
+    else:
+        print("  comm: p=1, no ring communication.")
+    if offloaded_disk_bytes(c) > 0:
+        io = offload_io_seconds(c, total_gpus)
+        step = ss / total_gpus
+        verdict = (
+            "hidden behind compute ✓"
+            if io <= step
+            else f"I/O-BOUND (+{human_time(io - step)}/step)"
+        )
+        print(
+            f"  expert-offload I/O: {human_bytes(offloaded_disk_bytes(c) * c.offload_fetch_frac)}/step "
+            f"over {total_gpus:,} GPUs @ {c.nvme_bw_per_gpu_gbps:g} GB/s/GPU -> {human_time(io)}/step "
+            f"vs {human_time(step)} compute -> {verdict}"
+        )
+    print("=" * 112)
+    if train_tokens > 0:
+        fr = full_run_seconds(n, c, train_tokens)
+        yrs = fr["wall_seconds"] / 3.15576e7  # Julian year of seconds
+        print(
+            f"FULL RUN to D={train_tokens:.3g} tokens @ context {n:,}  "
+            f"({fr['n_steps']:,.0f} sequences over {fr['total_gpus']:,} GPUs):"
+        )
+        print(
+            f"  per-seq cluster step = max(compute {human_time(fr['compute'])}, "
+            f"I/O {human_time(fr['io'])}) + comm {human_time(fr['comm'])} = {human_time(fr['step'])}"
+        )
+        print(
+            f"  total wall-clock ≈ {human_time(fr['wall_seconds'])}  (~{yrs:,.2f} years)  "
+            f"[ideal strong-scaling floor; real runs 1.5-3x this from bubbles/stalls/restarts]"
+        )
+        print("=" * 112)
 
 
 def parse_args() -> tuple[Config, list[int]]:
@@ -206,38 +444,140 @@ def parse_args() -> tuple[Config, list[int]]:
     p.add_argument("--d-model", type=int, default=4096)
     p.add_argument("--layers", type=int, default=32)
     p.add_argument("--heads", type=int, default=32)
-    p.add_argument("--params", type=float, default=7e9)
-    p.add_argument("--bytes", type=int, default=2, dest="bytes_per_elem")
+    p.add_argument("--params", type=float, default=7e9, help="total params (memory)")
     p.add_argument(
-        "--pattern-budget", type=int, default=4096, help="W: attended keys/query"
+        "--active-params",
+        type=float,
+        default=0.0,
+        help="active params (compute); 0=dense",
     )
-    p.add_argument("--gpu-peak-flops", type=float, default=989e12)
-    p.add_argument("--gpu-mem-gb", type=float, default=80.0)
-    p.add_argument("--dense-mfu", type=float, default=0.50)
-    p.add_argument("--sparse-mfu", type=float, default=0.40)
+    p.add_argument("--bytes", type=int, default=2, dest="bytes_per_elem")
+    p.add_argument("--pattern-budget", type=int, default=4096)
+    p.add_argument("--block-size", type=int, default=64)
     p.add_argument(
-        "--contexts",
-        type=str,
-        default="8192,32768,131072,1048576",
-        help="comma-separated context lengths",
+        "--selection",
+        choices=["block", "token", "hierarchical", "none"],
+        default="block",
+    )
+    p.add_argument("--index-dim", type=int, default=128)
+    p.add_argument("--super-block-blocks", type=int, default=16)
+    p.add_argument("--num-super-selected", type=int, default=8)
+    p.add_argument("--kv-compression", type=float, default=1.0)
+    p.add_argument(
+        "--no-comm-pruning",
+        action="store_true",
+        help="model a dense ring (no sparse-comm pruning)",
+    )
+    p.add_argument(
+        "--gpu",
+        choices=["h100", "b200", "b300"],
+        default="b300",
+        help="hardware preset",
+    )
+    p.add_argument(
+        "--gpu-peak-flops",
+        type=float,
+        default=None,
+        help="override preset bf16 dense FLOP/s",
+    )
+    p.add_argument(
+        "--gpu-mem-gb", type=float, default=None, help="override preset HBM GB"
+    )
+    p.add_argument("--state-bytes-per-param", type=float, default=16.0)
+    p.add_argument(
+        "--expert-frac",
+        type=float,
+        default=0.0,
+        help="fraction of params that are experts",
+    )
+    p.add_argument(
+        "--weight-quant-bits",
+        type=float,
+        default=16.0,
+        help="resident expert precision",
+    )
+    p.add_argument(
+        "--expert-offload-ratio",
+        type=float,
+        default=0.0,
+        help="fraction of experts on disk",
+    )
+    p.add_argument("--disk-bytes-per-param", type=float, default=2.0)
+    p.add_argument("--mfu-dense", type=float, default=0.50)
+    p.add_argument("--mfu-sparse-fwd", type=float, default=0.45)
+    p.add_argument("--mfu-sparse-bwd", type=float, default=0.38)
+    p.add_argument(
+        "--node-size", type=int, default=None, help="override preset NVLink-domain size"
+    )
+    p.add_argument(
+        "--bw-intra", type=float, default=None, help="override preset intra-node GB/s"
+    )
+    p.add_argument("--bw-inter", type=float, default=100.0)
+    p.add_argument("--inter-node-frac", type=float, default=0.05)
+    p.add_argument(
+        "--nvme-bw", type=float, default=6.0, help="local NVMe read GB/s per GPU"
+    )
+    p.add_argument("--offload-fetch-frac", type=float, default=1.0)
+    p.add_argument(
+        "--offload-write-back",
+        action="store_true",
+        help="offloaded experts trained (2x I/O)",
+    )
+    p.add_argument("--contexts", type=str, default="8192,32768,131072,1048576")
+    p.add_argument(
+        "--train-tokens",
+        type=float,
+        default=0.0,
+        help="if >0, estimate full-run wall-clock to train on this many total tokens",
     )
     a = p.parse_args()
+    # (bf16 dense FLOP/s, HBM GB, NVLink GB/s, NVLink-domain size); explicit flags override the preset
+    presets = {
+        "h100": (989e12, 80.0, 900.0, 8),
+        "b200": (2.25e15, 192.0, 1800.0, 72),
+        "b300": (3.5e15, 288.0, 1800.0, 72),
+    }
+    pk, mem, nvl, node = presets[a.gpu]
+    peak = a.gpu_peak_flops if a.gpu_peak_flops is not None else pk
+    mem_gb = a.gpu_mem_gb if a.gpu_mem_gb is not None else mem
+    bw_intra = a.bw_intra if a.bw_intra is not None else nvl
+    node_size = a.node_size if a.node_size is not None else node
     cfg = Config(
         d_model=a.d_model,
         n_layers=a.layers,
         n_heads=a.heads,
         params=a.params,
+        active_params=a.active_params,
         bytes_per_elem=a.bytes_per_elem,
         pattern_budget=a.pattern_budget,
-        gpu_peak_flops=a.gpu_peak_flops,
-        gpu_mem_bytes=a.gpu_mem_gb * 1024**3,
-        dense_mfu=a.dense_mfu,
-        sparse_mfu=a.sparse_mfu,
+        block_size=a.block_size,
+        selection_mode=a.selection,
+        index_dim=a.index_dim,
+        super_block_blocks=a.super_block_blocks,
+        num_super_selected=a.num_super_selected,
+        kv_compression_ratio=a.kv_compression,
+        comm_pruning=not a.no_comm_pruning,
+        expert_frac=a.expert_frac,
+        weight_quant_bits=a.weight_quant_bits,
+        expert_offload_ratio=a.expert_offload_ratio,
+        disk_bytes_per_param=a.disk_bytes_per_param,
+        gpu_peak_flops=peak,
+        gpu_mem_bytes=mem_gb * 1024**3,
+        state_bytes_per_param=a.state_bytes_per_param,
+        mfu_dense=a.mfu_dense,
+        mfu_sparse_fwd=a.mfu_sparse_fwd,
+        mfu_sparse_bwd=a.mfu_sparse_bwd,
+        node_size=node_size,
+        bw_intra_gbps=bw_intra,
+        bw_inter_gbps=a.bw_inter,
+        inter_node_attn_frac=a.inter_node_frac,
+        nvme_bw_per_gpu_gbps=a.nvme_bw,
+        offload_fetch_frac=a.offload_fetch_frac,
+        offload_write_back=a.offload_write_back,
     )
-    contexts = [int(x) for x in a.contexts.split(",")]
-    return cfg, contexts
+    return cfg, [int(x) for x in a.contexts.split(",")], a.train_tokens
 
 
 if __name__ == "__main__":
-    cfg, contexts = parse_args()
-    report(cfg, contexts)
+    cfg, contexts, train_tokens = parse_args()
+    report(cfg, contexts, train_tokens)
