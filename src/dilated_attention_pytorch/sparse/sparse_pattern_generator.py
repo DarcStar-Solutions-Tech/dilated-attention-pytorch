@@ -255,18 +255,23 @@ class HierarchicalSparsePatternGenerator:
         Returns:
             Adjusted patterns
         """
-        if not self.load_stats["computation_times"]:
-            return patterns  # No history for balancing yet
+        times = self.load_stats["computation_times"]
+        if len(times) < 2:
+            return patterns  # need at least a short history to detect drift
 
-        # Calculate load imbalance
-        recent_times = self.load_stats["computation_times"][
-            -10:
-        ]  # Last 10 measurements
-        avg_time = sum(recent_times) / len(recent_times)
+        # Compare this rank's RECENT load window against its longer-term
+        # baseline. A rank trending slower than its own baseline is locally
+        # overloaded and sheds work (more sparsity); trending faster, it takes
+        # on more. (Per-rank adaptive regulation from local history only — true
+        # cross-rank balancing via cost-based block->rank assignment is a
+        # separate L3 concern and needs a collective the generator lacks.)
+        recent = times[-10:]  # last 10 measurements
+        recent_avg = sum(recent) / len(recent)
+        baseline_avg = sum(times) / len(times)
 
-        # Check if this rank is overloaded
-        is_overloaded = avg_time > (1 + self.config.load_balance_threshold) * avg_time
-        is_underloaded = avg_time < (1 - self.config.load_balance_threshold) * avg_time
+        thr = self.config.load_balance_threshold
+        is_overloaded = recent_avg > (1 + thr) * baseline_avg
+        is_underloaded = recent_avg < (1 - thr) * baseline_avg
 
         if is_overloaded:
             # Reduce computation by increasing sparsity
