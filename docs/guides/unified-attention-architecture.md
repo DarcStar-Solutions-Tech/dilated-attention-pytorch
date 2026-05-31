@@ -303,6 +303,17 @@ the ~4-epoch near-lossless repetition window (Muennighoff 2023), giving **~0.5�
 (#27), the audit + cost calculator. The old v1 "Phase 3: hand-write a Triton Flash kernel" is
 **deleted** — replaced by Phases 1–2 above (buy + port).
 
+**Kernel correctness guardrail (Phases 1–2, L2 selection/routing).** Any low-precision score reduction that
+feeds a `top-k`/`argmax` — block-centroid selection, MoE routing (`sparse/block_sparse_adaptive.py` already
+`torch.topk`s over inner-product scores; the FlashMoBA / NSA ports are Triton/CUDA) — must **accumulate in
+high precision (fp32/fp64) or integer space and must not enable fast-math float reassociation.** Float
+addition is non-associative, so reassociation perturbs a dot product by ~ULP·√D; when the reduction is
+consumed as a *rank* rather than a value, near-tied candidates flip. A sibling project (`gide`) saw top-k
+recall collapse **0.996 → 0.030** purely from `-ffast-math` f32 reassociation in an inner-product kernel,
+fixed by reverting to fp64 / integer-space comparison. Add a ranking-stability regression test (top-k under
+fast-math == top-k under strict-fp). This is *orthogonal to* the quantizer's own order-preservation
+(§11.3): even a correct quantizer rank-flips if the kernel reassociates.
+
 ## 9. Research resolutions & confidence ledger
 
 Five deep-research passes (2026-05-30, 3-vote adversarial) resolved every v1/v2 open item:
@@ -502,6 +513,59 @@ are permanent (the data wall, again); distillation self-cancels at the frontier 
 binding ceiling may be **inference economics** (500B-active × long-CoT × best-of-N) or **alignment**
 (weak-to-strong: naive RLHF scales poorly to stronger models; oversight harder), not latent capability.
 Benchmark step-functions are partly metric artifacts (Schaeffer 2023; AIME = 30 problems).
+
+### 11.3 External-technique evaluation — TurboQuant (and the `gide` cross-project findings)
+
+**TurboQuant** (Zandieh et al., Google Research/DeepMind, ICLR 2026, arXiv 2504.19874) is a *data-oblivious,
+online* vector quantizer bounding **both** MSE *and* inner-product distortion (random rotation → per-
+coordinate optimal scalar quant + a 1-bit QJL residual; ~2.7× off the information-theoretic limit; ~3.5-bit
+KV quality-neutral). Sold as an inference/KV technique; evaluated here as a *training-cost* lever.
+
+**Direct verdicts.**
+- **Offloaded-expert fetch I/O (Lever A) — best fit (~4.5×).** Disk copy is bf16; compressing it cuts the
+  disk→HBM fetch term (~52 s → ~11 s/step at 500T). Read-only, no backward pass, no calibration — its home
+  turf. *Not* for trained/write-back experts (lossy master accumulates error) or resident weights
+  (calibrated GPTQ/AWQ win).
+- **Routing / selection-index quantization — research, with a top-k rank-flip risk** (mitigation below).
+- **KV-ring wire codec — research/insurance.** Inner-product preservation is right for ring QK^T, but
+  sparse-ring pruning + MLA already make comm compute-bound; sits in the autograd path (untested); does
+  *not* compose multiplicatively with MLA.
+- **Gradient/activation-comm codec — research.** Needs error-feedback, which we **already implement**
+  (`sparse/distributed_memory_optimization.py`, top-k + EF residual carry); real blockers (biased-compressor
+  convergence at 1B-activation scale, per-tensor EF state in EP/TP all-to-all) are untouched.
+
+**`gide` cross-project findings** (`../gide/docs/research/turboquant-cognitive-infrastructure.md` — the
+sibling project generalized TurboQuant's `rotation + Lloyd-Max + QJL + PQ/OPQ + rerank` toolkit; only the
+inner-product/quantization primitives transfer, not its gradient-free evolutionary applications):
+- **Prescreen + exact re-rank** promotes the routing-quant item from "open risk" to "candidate mitigation
+  with a validation gate." Raw low-bit inner products do *not* preserve top-k at scale (gide 4-bit HNSW
+  recall **0.21** @ DIM=1536/N=2048); an oversampled cheap-sketch prescreen + **full-precision re-rank**
+  recovers recall **1.0** (gide `searchForRerank`, oversample=10 — the FAISS/ScaNN pattern). Final routing
+  scores are FP, so the margin rank-flip is structurally removed. Caveats: validated for **PQ-ADC + scalar**
+  re-rank, *not* QJL (QJL-prescreen recall unmeasured); all gide numbers are *static, isotropic-Gaussian,
+  read-only*, whereas our router is **gradient-trained with the sketch in the loop on clustered, drifting
+  centroids** — a stale prescreen can persistently exclude a centroid that drifts into the true top-k,
+  **starving its gradient**. **Gate:** a training-trajectory study of top-k recall + per-expert selection
+  frequency on real (anisotropic, moving) centroids, oversample recalibrated across the run, before adopt.
+- **OPQ** (one-time learned Jacobi-eigendecomposition rotation) beats data-free random rotation on
+  correlated vectors (+2.3%, understated on low-correlation data) — the right rotation if we quantize the
+  routing/KV index. **SRHT** is the rotation *implementation* (≈40× storage, ≈9× speed vs dense Gaussian;
+  **sparse-Rademacher is slower than dense — avoid**); gide's numbers are CPU-Zig, so the GPU/bf16 win needs
+  re-measuring. **Dual-chirality** variance reduction is a **negative result** in gide (can't move the
+  quantization-set recall ceiling) — drop.
+
+**Negative results — do *not* pursue (saved by `gide`'s own experiments):**
+- **QJL weight-space expert-diversity signal — DROP.** Tempting for the dead/redundant-expert concern at
+  100–1000× sparsity, but gide's pre-registered study found weight-space Hamming **does not correlate with
+  functional/behavioral diversity** (ρ ≈ 0). Worse for us: our experts are full FFN sub-networks with exact
+  **hidden-neuron permutation symmetry** — functionally identical experts can be maximally far in
+  weight-Hamming. Expert redundancy is a *functional* problem; weight-space distance is the wrong notion.
+- **Delta-Sigma "error feedback" — already have it** (classic EF under a signal-processing name).
+
+**Net:** one adoptable correctness guardrail (§8), a validated de-risking pattern (prescreen+re-rank + OPQ)
+for the already-parked routing-quant research item, and two negatives that save build effort. TurboQuant
+stays an *inference-side adopt* (KV-cache when serving) + a *training-side research* lever, not a primary
+training-cost reducer. External refs: QJL (arXiv 2406.03482), SpinQuant (2405.16406), QES (2602.03120).
 
 ---
 
