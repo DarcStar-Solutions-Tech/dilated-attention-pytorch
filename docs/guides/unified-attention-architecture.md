@@ -66,8 +66,12 @@ scales from a single-GPU sparse kernel to a multi-node ring with no change to th
 
 ```
 L0  AttentionAccumulator   online-softmax merge (m, ℓ, O); associative; the ONLY place
-   [BUILD — ours]          softmax-combination lives. Pure, gradcheck-tested.
-                           Seed exists: _merge_block_attention (PR #29).
+   [BUILD — ours]          softmax-combination lives. Pure, TO BE gradcheck-tested (the seed
+                           has NO gradcheck coverage yet — it is a Phase-0 gate, not a current
+                           property). Seed: _merge_block_attention (sparse/block_sparse_attention.py,
+                           PR #29). L0 should also consolidate the two existing LSE accumulators
+                           — StableRingAccumulator (ring/utils/ring_attention_lse.py) and
+                           StableAttentionAccumulator (ring/hilbert/…) — or supersede them.
 
 L1  Flash kernel           STATIC patterns -> DEPEND-ON FlexAttention (+ FA3/FA4 backend).
    [BUY: FlexAttention]    LEARNED block selection -> PORT FlashMoBA (mit-han-lab, BSD-3): a
@@ -84,8 +88,9 @@ L2  SparsityPolicy         Canonical (block-level) policy = MoBA-style content-a
                              + sliding window, block-level) and DSA (token-level lightning-indexer
                              top-k on MLA — the DeepSeek production path; finer-grained, MLA-coupled).
                            Routing is HIERARCHICAL-capable: flat top-k for moderate context,
-                             multi-level (super-block -> block, log-depth) at extreme scale to keep
-                             SELECTION itself sub-quadratic (§5.2).
+                             multi-level (super-block -> block) at extreme scale to cut SELECTION's
+                             quadratic term (two-level = large constant factor; genuine sub-quadratic
+                             needs the unbuilt log-depth recursion, §5.2).
 
 L3  ExecutionStrategy      single-GPU (loop) | HIERARCHICAL RING / sequence-parallel: a
    [BUILD — ours, the      topology-aware multi-level ring — DENSE intra-node ring, SPARSE
@@ -123,19 +128,33 @@ L3 is **hierarchical** — it maps attention density onto the physical communica
 - **Inter-node ring (sparse):** cross-node hops are expensive → attend across nodes only sparsely,
   so the slow links carry little traffic. The sparse block index does double duty here: it *prunes
   inter-node communication* to only the shards a node's queries actually select.
-- **Load-balanced block→rank assignment:** sparse/causal patterns are irregular (query blocks attend
-  to differing numbers of key blocks), which would create ring-step stragglers; assign blocks to
-  ranks by measured compute/comm cost to keep steps balanced.
+- **Load-balanced block→rank assignment (a BUILD item, not reused):** content-adaptive sparse/causal
+  patterns are irregular *and data-dependent* — which blocks each rank's queries select changes every
+  step — so query blocks attend to differing, time-varying numbers of key blocks and create *dynamic*
+  ring-step stragglers. The remedy is a **per-step (or per-window) rebalancing** of selected-block→rank
+  assignment driven by the live routing scores. This needs a cross-rank collective the existing
+  generator does **not** have (see below); it is the hardest unbuilt piece of L3, not prior art.
 
-This **reuses the project's existing `HierarchicalSparsePatternGenerator`**
-(`sparse/sparse_pattern_generator.py`; guide: `docs/guides/hierarchical-patterns-guide.md`), which
-already implements the local / global / inter-node levels + load balancing and auto-detects node
-size — we lift its topology mapping into L3 and pair it with the corrected online-softmax reduction
-(L0). It is the direct answer to the two tensions a flat sparse-ring leaves open — **interconnect
-cost** and **load imbalance** — and is the layer that most distinguishes this library from
-single-device NSA/DSA/FlexAttention. *Caveat: the class that currently consumes the generator,
-`BlockSparseRingDistributedDilatedAttention`, carries audited correctness bugs — the topology
-mapping is reusable, but the consuming path must be rebuilt on the corrected L0/L1.*
+This **partially reuses the project's existing `HierarchicalSparsePatternGenerator`**
+(`sparse/sparse_pattern_generator.py`; guide: `docs/guides/hierarchical-patterns-guide.md`). Be precise
+about what it does and does not provide: it gives the **local / global / inter-node pattern levels**,
+**per-rank sparsity self-regulation** (each rank raises/lowers its own pattern density from its local
+timing history — *not* cross-rank balancing), and **node-size detection** (default **8**, which must be
+reconfigured to the **NVL72 domain = 72** for the §6 hierarchical-ring comm model to hold). We lift its
+**topology mapping** into L3 and pair it with the corrected online-softmax reduction (L0). It is *part*
+of the answer to the two tensions a flat sparse-ring leaves open — **interconnect cost** and **load
+imbalance** — but the **cost-based cross-rank block→rank assignment is a genuine BUILD item** (§8 Phase
+3): the generator self-regulates per-rank sparsity, it does not assign blocks to ranks, and a static
+once-measured assignment cannot track data-dependent selection. *Caveat: the class that currently
+consumes the generator, `BlockSparseRingDistributedDilatedAttention`, carries audited correctness bugs
+— the topology mapping is reusable, but the consuming path must be rebuilt on the corrected L0/L1.*
+
+**Causal-centroid correctness under the ring.** MoBA notes that mean-pooling a block to a centroid can
+leak *future* tokens for the boundary block straddling a query's causal frontier (it force-routes and
+specially masks the current block). Under the sparse ring that boundary block's centroid may live on a
+*different* rank than the querying rank, so masking the pooled-future contribution requires the
+centroid-computing rank to know the querying rank's **global** causal position — a cross-rank
+correctness requirement that "global-position causal masking" must explicitly discharge (Phase-3 gate).
 
 Hierarchical *ring* (communication, §5.1) and hierarchical *routing* (selection, §5.2 below) are
 the two extreme-scale extensions of this design.
@@ -144,15 +163,21 @@ the two extreme-scale extensions of this design.
 
 Content-adaptive selection must *score* candidates to pick the top-k, and that scoring is not free
 (§6). **Flat** routing — score every (query, key-block) pair — is `O(n²/b)`: fine at ≤1M tokens
-(~6% overhead), but at extreme context it becomes the dominant cost and a *new* quadratic wall (at
-1B tokens our cost model shows selection rivalling the core attention even block-level). So L2's
-routing is **multi-level**, mirroring the hierarchical ring on the selection side:
+(~6% overhead), but at extreme context it becomes a large, *new* quadratic term. (How large is
+config-dependent: at 1B tokens for the 500T/1T config, block-level selection grows to **~half the core
+attention** — 295 vs 590 EFLOP, same order of magnitude; at smaller model dims, where the core is
+cheaper, it *dominates* the core outright. Either way it stops being negligible.) So L2's routing is
+**multi-level**, mirroring the hierarchical ring on the selection side:
 
 - **Coarse prefilter:** group blocks into *super-blocks*, score query against super-block centroids,
   keep the top few super-blocks — `O(n²/b²)` or less.
 - **Fine selection:** run block-level top-k *only within* the surviving super-blocks.
-- Recurse for more levels at higher context → **log-depth** routing, keeping total selection
-  sub-quadratic instead of `O(n²/b)`.
+- **What the cost model actually computes is the two fixed levels above:** `O(n²/(b·S)) + O(n)` —
+  still **quadratic** in `n`, but with the constant divisor `b·S` (≈16× smaller selection term:
+  295 → 18 EFLOP at 1B; the headline 15,887× is this *single*-prefilter result). Genuinely
+  *sub-quadratic* selection needs **true log-depth recursion** (recurse the prefilter for `~log_S n`
+  levels) — described here but **not yet implemented or costed**. A constant-factor reduction of a
+  quadratic is not an asymptotic-class change; the doc distinguishes the two.
 
 This is a natural extension of mechanisms already in the field: **NSA's coarse token/block
 *compression* branch is itself a one-level coarsening** that a hierarchical router generalizes, and
@@ -164,9 +189,35 @@ context length. *Quality note:* coarsening risks missing a relevant block whose 
 low — mitigated by training the router end-to-end (and the dense-imitation distillation in §7), and
 bounded by the same dropped-mass certificate.
 
-Symmetry to remember: **hierarchical ring keeps *communication* sub-quadratic; hierarchical routing
-keeps *selection* sub-quadratic.** Both are required to actually reach the extreme-context regime
-the cost model describes; the flat versions are correct and sufficient up to ~1M tokens.
+Symmetry to remember: the **hierarchical ring** cuts *communication* and the **multi-level router**
+cuts *selection* — as modeled, each by a large **constant factor** (the two-level forms), with true
+sub-quadratic behavior available only from the unbuilt recursive variants. Both levers are required
+to reach the extreme-context regime the cost model describes; the flat versions are correct and
+sufficient up to ~1M tokens.
+
+### 5.3 Selector gradient flow — how the router is actually trained
+
+The whole quality case (§7) rests on training the selector end-to-end, yet **top-k block selection is
+non-differentiable** and the design must say how gradient reaches the score head. The validated
+references each solve this a *specific* way, and we must pick one explicitly rather than assume it:
+
+- **NSA** states plainly that top-k selection is non-differentiable and that an auxiliary-loss
+  importance head "often degrades performance"; it sidesteps this by deriving selection scores from
+  the **differentiable compression-branch softmax** — gradient flows into the compression MLP, not
+  through the discrete top-k.
+- **MoBA** uses a **hard 0/1 gate** `g = 1[s ∈ Topk]` with parameter-less centroid scores and **no**
+  straight-through estimator and **no** aux loss; it trains only because the same Q/K that produce the
+  scores also produce the attention over the *selected* blocks — unselected blocks simply receive zero
+  gradient (gradient starvation is accepted, not fixed).
+
+Our default (FlashMoBA-style centroid top-k) inherits MoBA's mechanism. But the **bespoke pieces have
+no such free ride** and need a stated mechanism: the **multi-level router** (§5.2) prunes whole
+super-blocks *before* scoring their members (those members get no gradient at all), and **novelty-
+weighted routing** (§11 Lever D) adds a learned surprisal term to the score head. For both, specify:
+is the score head differentiable, is there a straight-through estimator or an MoE-style
+load-balancing aux loss, and **how do non-selected candidates receive gradient**. The Phase-2 gate
+must check the router *moves* selections during training (per-block selection-frequency drift), not
+only final-loss parity — a router that never changes its picks has silently stopped learning.
 
 ## 6. Cost model (refined post-research)
 
@@ -178,8 +229,8 @@ communication**. 7B-class model (`d_model=4096`, 32 layers, bf16), core budget `
 
 ```
    context n |  dense attn | sparse core |   selection | eff attn x |     KV/seq | ring deg
-     131,072 |  9.01 PFLOP | 281.47 TFLOP |  2.20 TFLOP |        32x |    64.0 GB |        1
-   1,048,576 | 576.46 PFLOP |  2.25 PFLOP | 140.74 TFLOP |       241x |   512.0 GB |        4
+     131,072 |  9.01 PFLOP | 281.47 TFLOP |  2.20 TFLOP |        32x |   64.0 GiB |        1
+   1,048,576 | 576.46 PFLOP |  2.25 PFLOP | 140.74 TFLOP |       241x |  512.0 GiB |        4
 ```
 Training step (fwd + 2·bwd) at 1M: dense **16.9 min** vs sparse **36.5 s** → **~28×/step**
 (1-GPU-equiv FLOPs/MFU; the B300's 288 GB HBM also drops the KV ring degree **13→4** vs the 80 GB H100).
@@ -202,7 +253,8 @@ Three refinements the research forced (all in the calculator):
    training step. Net: realized speedup is *closer* to the `n/W` ceiling than the old conservative
    40% guess — but backward, not forward, is the efficiency floor to engineer.
 3. **MLA KV compression is a second, multiplicative memory lever.** `--kv-compression 8` shrinks KV
-   512 GB → 64 GB at 1M, dropping the ring degree **p = 8 → 1** (fits one GPU), compute unchanged.
+   512 GiB → 64 GiB at 1M, dropping the ring degree **p = 4 → 1** (fits one GPU; 4 is the B300
+   uncompressed degree at 1M, matching the table above and the 13→4 drop vs H100), compute unchanged.
    Inference-oriented (deprioritized for training *compute*), but it directly attacks the *memory*
    wall that otherwise forces ring sharding.
 4. **Communication is the real long-context bottleneck — the hierarchical ring attacks it (§5.1).**
@@ -219,17 +271,28 @@ Three refinements the research forced (all in the calculator):
   at scale. Externally corroborated: NSA 9×/6× @64k; DSA `O(L²)→O(Lk)` at 1T scale.
 
 **Extreme-scale sanity check (500T-total / 1T-active MoE, 1B-token context, on B300s).** The
-calculator now shards weights+optimizer (7.1 PB → **~37k B300s** to hold the state) and models
+calculator now shards weights+optimizer (7.1 PiB → **~37k B300s** to hold the state) and models
 sparse-ring pruning, so it is valid here. With hierarchical routing + MLA-64× + sparse-ring pruning:
-the selection wall is gone (18 EFLOP, eff attn 15,887×), and communication — the binding constraint —
-collapses from **dense-ring ~23 min/forward** (flat) → **~2.4 min** (hierarchical) → **~0.01 s**
-(hierarchical + pruning, density `6e-5`), i.e. **compute-bound** at ~47 s/GPU/forward (ideal cluster
-step ~2.7 min/seq over the 37k GPUs). *Reading:* hierarchical ring alone leaves you comm-bound; it's
-**sparse-ring pruning** (only sending selected blocks) that actually makes the regime — and the
-"~90% of optimal" assumption — reachable. (`--params 500e12 --active-params 1e12 --selection
-hierarchical --kv-compression 64 --contexts 1073741824`.) With attention thus handled, the **binding
-constraint becomes the weight memory** (the ~37k-GPU state floor) — addressed by the §11 weight-side
-levers, which trade GPU count for wall-clock and keep expert-offload disk I/O hidden behind compute.
+the selection wall shrinks **~16×** (295 → 18 EFLOP, eff attn 10,923× → 15,887×), and communication —
+the binding constraint — collapses from **dense-ring ~23 min/forward** (flat) → **~2.4 min**
+(hierarchical) → **~0.01 s** (hierarchical + pruning), i.e. **compute-bound** at ~47 s/GPU/forward
+(ideal cluster step ~2.7 min/seq over the 37k GPUs).
+**Caveat — the `0.01 s` assumes *clustered* selection.** That density (`6e-5`) holds only if all of a
+rank's ~1.18M local queries select the *same* blocks. Under **independent** selection the received
+union saturates (`1−(1−W/n)^(n/p) → 1.0`) and the hierarchical ring reverts to its **~2.4 min**
+rotation — **comm-bound** at the 37k-GPU floor. Reality is between the two; "compute-bound" at this
+floor *requires* selections to cluster strongly (`--comm-clustering clustered|independent` brackets
+it). Notably the §11 **offload lever incidentally de-risks this**: at the 2.7k-GPU floor per-GPU
+compute (~10.7 min) exceeds even the independent-selection ~2.4 min comm, so that configuration stays
+compute-bound *regardless* of clustering.
+*Reading:* hierarchical ring alone leaves you comm-bound; it's **sparse-ring pruning** (only sending
+selected blocks) — when selection clusters — that makes the regime, and the "~90% of optimal"
+assumption, reachable. (`--params 500e12 --active-params 1e12 --d-model 16384 --layers 128
+--pattern-budget 65536 --block-size 128 --selection hierarchical --kv-compression 64 --contexts
+1073741824` — the model-dimension flags are required; without them the calculator runs the default
+7B dims and prints different numbers.) With attention thus handled, the **binding constraint becomes
+the weight memory** (the ~37k-GPU state floor) — addressed by the §11 weight-side levers, which trade
+GPU count for wall-clock and keep expert-offload disk I/O hidden behind compute.
 
 ### 6.1 Full training run — wall-clock vs. token budget
 
@@ -259,12 +322,44 @@ realistic budget (~100–500T tokens, anchored to DeepSeek-V3 ≈400 / Kimi K2 �
 the ~4-epoch near-lossless repetition window (Muennighoff 2023), giving **~0.5–2.4 yr on ~37k B300s**
 (×1.5–3 real-world). Offload trades that for ~6–32 yr on ~2.7k GPUs — a capex-vs-wall-clock knob.
 
+### 6.2 What the ideal floor omits (the ×1.5–3 factor, unpacked)
+
+The per-seq step is a strong-scaling *lower bound*; the blanket "×1.5–3 real" folds several
+unmodeled, load-bearing realities a real run must budget explicitly — it is asserted, not derived.
+
+- **Global batch & data-parallelism — the scaling story is incomplete.** The model fixes **one
+  sequence per optimizer step** (`n_steps = D/context`); at 1B context that is a ~1B-token global
+  batch, **~50–500× the empirical critical batch size**, so most of that step's gradient signal is
+  wasted (gradient-noise saturation). The §11.1 "more GPUs → near-linear" speedup is **data-parallel**
+  — replicating the whole state floor across many strong-scaling groups — a *different* axis the cost
+  model has no term for (`n_steps` is context-only). "~37k GPUs → ~5 months" means **~10 DP replicas of
+  the 3.7k-GPU group**, not 37k GPUs on one sequence. A real recipe sets a sane global batch (a few M
+  tokens), which fixes the optimizer-step count independently of context; reconcile the two before
+  trusting any wall-clock.
+- **Fault tolerance is first-order here, not a rounding factor.** A multi-year run on thousands of GPUs
+  sees continuous failures; with **727 TiB+ resident state (+ ~778 TiB offloaded experts)** to
+  checkpoint and re-shard, the checkpoint interval vs cluster MTBF, lost-work-per-restart, and
+  offloaded-shard re-replication are first-order costs. Needs an explicit checkpoint / elastic-restart
+  design and a "resume to bit-exact optimizer state; checkpoint overhead < X% of step" gate.
+- **TCO & power are unpriced.** The framework optimizes "GPUs × wall-clock" but never the two axes that
+  decide fundability: **capex** (dollars for 2.7k–37k B300s) and **energy** (tens of MW, power +
+  cooling). The "capex-vs-wall-clock knob" has neither axis priced — it needs at least order-of-magnitude
+  bands to be a real choice.
+- **The frontier moves during the run.** At the doc's own cited rate (**~4.7×/yr**, Epoch AI), a ~3-yr
+  ideal run is lapped ~70× and an ~8-yr one by hundreds× at completion, on hardware 1–2 generations
+  stale. A fixed multi-year target needs an obsolescence / time-value argument (or a reason the 50T
+  knowledge shell is durable while the moving frontier is not).
+
+(Two further unmodeled load-bearers — MoE expert-routing comm/balancing, and data-corpus
+quality/governance — are covered in §11 and §11.1.)
+
 ## 7. What is determinable a priori (refined post-research)
 
 - **Compute — exact, minus a now-quantified selection term.** Core attention speedup `= n/W`; the
   realized ceiling subtracts the selection cost — `O(n²)` token, `O(n²/b)` flat-block, or
-  `O(n²/(b·S))+O(n)` **hierarchical** (sub-quadratic, §5.2) — scaled by fwd/bwd MFU. Validated by
-  NSA's measured 9×/6× @64k and DSA's `O(L²)→O(Lk)`.
+  `O(n²/(b·S))+O(n)` **two-level hierarchical** (as modeled: still *quadratic*, reduced by the
+  constant `b·S`; genuinely sub-quadratic only with the unbuilt recursion, §5.2) — scaled by fwd/bwd
+  MFU. Validated by NSA's measured 9×/6× @64k and DSA's `O(L²)→O(Lk)`.
 - **Memory — exact, with a second lever.** non-Flash scores `O(n²)` per layer (Flash removes); KV
   `O(n)` → `O(n/p)` via ring → `O(n/(p·r))` with an MLA latent compression ratio `r`. Selection
   does **not** shrink KV; only representation compression does. The separate **weight** memory wall
@@ -283,7 +378,15 @@ the ~4-epoch near-lossless repetition window (Muennighoff 2023), giving **~0.5�
   concentrates — and **that assumption is now empirically validated**: NSA/DSA/MoBA match-or-beat
   dense at frontier scale (NSA +0.032 LongBench; DSA ≈-parity at 1T). End-task loss stays **empirical**
   (the model trains *with* the pattern), gated by loss parity + a **runtime dropped-mass certificate**
-  (`δ̂` from routing scores). New active lever: **train the router/indexer to imitate dense top-k**
+  (`δ̂` from routing scores). *Caveat — `δ̂` is not self-validating:* it is estimated from the router's
+  own scores over the blocks the router *chose to score*, so it is structurally blind to mass in
+  blocks pruned before scoring (and, under hierarchical routing, to entire super-blocks never scored at
+  the fine level) — and it is the very quantity the router is trained to make look small. A low `δ̂`
+  therefore does not by itself upper-bound the true dropped mass `δ`. To be an actionable gate it must
+  (a) be **calibrated against periodic dense (or large-`W`) spot-checks** so it is a true upper bound,
+  (b) carry a **separate super-block-level estimate** for the coarse-prefilter blind spot, and (c)
+  define a **pass/fail threshold and remediation** (roll back / shrink `b` / widen `W`). New active
+  lever: **train the router/indexer to imitate dense top-k**
   (DSA's warm-up distillation) — turning `δ` from something we merely *certify* into something we
   *minimize*. **Native end-to-end training is the key** (post-hoc sparsification degrades; trained-in
   does not). Block size `b` is a quality↔compute knob (smaller → finer selection, more routing cost).
@@ -292,10 +395,10 @@ the ~4-epoch near-lossless repetition window (Muennighoff 2023), giving **~0.5�
 
 | Phase | Deliverable | Build / Buy | Gate |
 |---|---|---|---|
-| **0. Core** | `AttentionAccumulator` (L0) — promote `_merge_block_attention` to a standalone module | **BUILD** | property tests: associativity, equals-one-joint-softmax, masked-partial safe, fp16/fp32 |
+| **0. Core** | `AttentionAccumulator` (L0) — promote `_merge_block_attention` to a standalone module (consolidating the existing `StableRingAccumulator` / `StableAttentionAccumulator`) | **BUILD** | property tests: associativity, equals-one-joint-softmax, masked-partial safe, fp16/fp32; **fwd+bwd `gradcheck`** (none exists today — this is the gate, not a current property) |
 | **1. Static backend** | Wire L1 static patterns to **FlexAttention** (+ FA3 when available); local/dilated-stride/global skeletons as `BlockMask` builders | **BUY** | parity vs dense masked-softmax ref; FlexAttention fwd+bwd `gradcheck`; MFU floor |
 | **2. Adaptive policy** | **Port FlashMoBA** (mit-han-lab, BSD-3) for **flat** block-centroid top-k (canonical L2); expose NSA (fla-org) + DSA token-level as alternative policies behind one interface designed to also admit a **multi-level (hierarchical) router** (§5.2) for the scale-out path | **PORT** (flat) / **BUILD** (hierarchical) | parity vs the reference kernel; selection skips real fwd+bwd compute; quality parity on a small LM |
-| **3. Hierarchical sparse ring (the differentiator)** | L3 **topology-aware** ring via L0: dense intra-node + sparse inter-node levels, prune shards no local query selects, load-balanced block→rank assignment (reuse `HierarchicalSparsePatternGenerator`); global-position causal masking | **BUILD** (reuse prior pattern generator) | multi-GPU (`torchrun`) parity vs single-GPU; measured **inter-node** comm reduction + balanced ring steps |
+| **3. Hierarchical sparse ring (the differentiator)** | L3 **topology-aware** ring via L0: dense intra-node + sparse inter-node levels, prune shards no local query selects; **BUILD** the cost-based, *per-step (data-dependent)* cross-rank block→rank assignment (a new collective the generator lacks — it only self-regulates per-rank sparsity); reuse the generator's *topology mapping + node-size detection* (reconfigure default 8 → NVL72 **72**); global-position causal masking incl. boundary-centroid future-leak | **BUILD** (topology mapping reused; block→rank assignment + collective are new) | multi-GPU (`torchrun`) parity vs single-GPU; measured **inter-node** comm reduction; **ring-step load imbalance < X% on a real *learned* (not static) pattern**; cross-rank causal-centroid correctness |
 | **4. Training recipe** | **Muon** (2D matrices) + AdamW (embeddings/norms/head); add **MuonClip** QK-clip for large-scale stability; **AdEMAMix** + the novel (no-precedent) **Muon×AdEMAMix** as experimental options; **Dion** tracked for sharded-weight ring/FSDP settings | **ADOPT** Muon/MuonClip; **EXPERIMENT** AdEMAMix | loss-curve parity vs AdamW; throughput; QK-logit stability |
 | **5. Consolidation** | Route existing variants through the engine; deprecate the broken bespoke classes | **BUILD** | benchmark-suite parity (tokens/s, peak mem/GPU, loss parity) |
 
@@ -304,9 +407,12 @@ the ~4-epoch near-lossless repetition window (Muennighoff 2023), giving **~0.5�
 **deleted** — replaced by Phases 1–2 above (buy + port).
 
 **Kernel correctness guardrail (Phases 1–2, L2 selection/routing).** Any low-precision score reduction that
-feeds a `top-k`/`argmax` — block-centroid selection, MoE routing (`sparse/block_sparse_adaptive.py` already
-`torch.topk`s over inner-product scores; the FlashMoBA / NSA ports are Triton/CUDA) — must **accumulate in
-high precision (fp32/fp64) or integer space and must not enable fast-math float reassociation.** Float
+feeds a `top-k`/`argmax` — the **block-centroid inner-product** scores in the **ported FlashMoBA / NSA
+Triton/CUDA kernels** (the at-risk sites; `q · mean(keys_in_block)` reduced over `d_model`) — must
+**accumulate in high precision (fp32/fp64) or integer space and must not enable fast-math float
+reassociation.** (Note: the in-repo `sparse/block_sparse_adaptive.py` is *not* such a site — its
+`ImportanceScorer` `torch.topk`s over a **learned MLP** on `cat(q, k)`, with no dot-product reduction, so
+the reassociation hazard does not apply to it; it applies to the inner-product centroid kernels we port.) Float
 addition is non-associative, so reassociation perturbs a dot product by ~ULP·√D; when the reduction is
 consumed as a *rank* rather than a value, near-tied candidates flip. A sibling project (`gide`) saw top-k
 recall collapse **0.996 → 0.030** purely from `-ffast-math` f32 reassociation in an inner-product kernel,
@@ -316,7 +422,9 @@ fast-math == top-k under strict-fp). This is *orthogonal to* the quantizer's own
 
 ## 9. Research resolutions & confidence ledger
 
-Five deep-research passes (2026-05-30, 3-vote adversarial) resolved every v1/v2 open item:
+Five deep-research passes (2026-05-30, 3-vote adversarial) resolved every *fact-checkable* prior-art
+item; the one genuinely-novel combination (**Muon×AdEMAMix**) has no published precedent and stays an
+explicit open research question (see Optimizers below):
 
 **FlexAttention adaptive crux — RESOLVED.** It *does* support data-dependent learned selection:
 `mask_mod(b,h,q,kv)` + a `BlockMask` built from learned top-k indices skips **real fwd+bwd compute**
@@ -331,13 +439,17 @@ to 14.7× vs FA2; 7.4× / 6.1× less memory at 64K vs reference MoBA). → **POR
 canonical learned-selection kernel; **LEARN-FROM** MoBA's gating. Block-level, so it composes with our
 sparse-ring L3 — unlike DSA's token-level path.
 
-**DeepSeek line: NSA → DSA → V4 (all verified, primary sources).** DSA (V3.2-Exp, Sept 2025; report
-arXiv 2512.02556) is the production NSA successor: a lightweight "lightning indexer" scores all prior
-tokens → top-k (k=2048) → core attention over selected only, O(L²)→O(Lk), built **on MLA** (token-level;
-the indexer itself stays O(L²) but is cheap). **DeepSeek V4** verifiably exists (preview ~Apr 2026;
-V4-Pro 1.6T/49B, V4-Flash 284B/13B, 1M default context) and layers **token-wise KV compression on top
-of DSA** ("CSA+HCA"). → **TRACK; offer DSA as a token-level policy option.** The field is converging on
-learned selection; we differ by staying **block-level** (hardware- and ring-friendly), DSA as advanced option.
+**DeepSeek line: NSA → DSA → V4 (all verified, primary sources).** DSA (introduced in **V3.2-Exp,
+Sept 2025**; documented in the **DeepSeek-V3.2 report, arXiv 2512.02556, Dec 2025**) is the production
+NSA successor: a lightweight "lightning indexer" scores all prior tokens → top-k (k=2048) → core
+attention over selected only, O(L²)→O(Lk), built **on MLA** (token-level; the indexer itself stays
+O(L²) but is cheap). **DeepSeek V4** verifiably exists (preview ~Apr 2026; V4-Pro 1.6T/49B, V4-Flash
+284B/13B, 1M default context); its attention is a **hybrid interleaved across layers** of **CSA**
+(Compressed Sparse Attention: KV compression + DSA-style top-k selection) and **HCA** (Heavily
+Compressed Attention: aggressive ~128× compression with **dense** attention, sparse selection dropped)
+— *not* simply "compression layered on DSA". → **TRACK; offer DSA as a token-level policy option.** The
+field is converging on learned selection; we differ by staying **block-level** (hardware- and
+ring-friendly), DSA as advanced option. *(V4 is a ~1-mo preview — treat specifics as time-sensitive.)*
 
 **MLA — deprioritize for *training* cost.** MLA's big win (~57× KV-cache; 14%/4% of MHA) is
 **inference**-side; the training benefit is only modest activation memory (offset by extra matmuls), and
@@ -370,17 +482,19 @@ fla-org/native-sparse-attention, mit-han-lab/flash-moba, MoonshotAI/{MoBA,Moonli
 lucidrains/{native-sparse-attention,ring-attention,local-attention}-pytorch, KellerJordan/Muon,
 Dao-AILab/flash-attention, apple/ml-ademamix.
 
-**Internal prior art (reused by L3, §5.1):** `src/dilated_attention_pytorch/sparse/sparse_pattern_generator.py`
-(`HierarchicalSparsePatternGenerator` — local/global/inter-node levels + load balancing + node-size
-detection) and `docs/guides/hierarchical-patterns-guide.md`. The topology mapping is lifted into the
-hierarchical sparse-ring; the consuming class (`BlockSparseRingDistributedDilatedAttention`) needs the
-audited correctness fixes before reuse.
+**Internal prior art (partially reused by L3, §5.1):** `src/dilated_attention_pytorch/sparse/sparse_pattern_generator.py`
+(`HierarchicalSparsePatternGenerator` — local/global/inter-node pattern levels, **per-rank sparsity
+self-regulation** (*not* cross-rank balancing), and node-size detection (default 8 → set to 72)) and
+`docs/guides/hierarchical-patterns-guide.md`. Only the **topology mapping** is lifted into the
+hierarchical sparse-ring; the **cost-based cross-rank block→rank assignment is a Phase-3 BUILD item**
+(it needs a collective the generator lacks). The consuming class
+(`BlockSparseRingDistributedDilatedAttention`) needs the audited correctness fixes before reuse.
 
 ## 11. Weight-side sparsity & expert design (research track — orthogonal to attention)
 
 Everything above (§2–§9) addresses the **attention map** (which token *pairs* interact) — that
 governs compute, activation memory, and communication. It does **not** touch the **model weights**,
-which at extreme scale are the *binding* memory constraint (a 500T model = 7.1 PB of state →
+which at extreme scale are the *binding* memory constraint (a 500T model = 7.1 PiB of state →
 ~37k B300s just to hold it). Attention sparsity ≠ weight sparsity; these are independent levers, and
 the weight side is currently **unexploited** in our design. This section is a research track for it.
 
@@ -394,12 +508,19 @@ principle to *precision*: keep a **low-precision (e.g. INT4) copy of hot experts
 **full-precision copy on NVMe/disk**, fetched only when a topic needs deep, high-fidelity processing;
 park rarely-used experts entirely on disk. Modeled in the calculator (`expert_frac`,
 `weight_quant_bits`, `expert_offload_ratio`): at 500T with 95%-expert / INT4-resident / 90%-offloaded,
-the GPU state floor drops **7.1 PB → 537 TB resident → ~37k → ~2.7k B300s (~13.6×)**, with ~778 TB on
+the GPU state floor drops **7.1 PiB → 537 TiB resident → ~37k → ~2.7k B300s (~13.6×)**, with ~778 TiB on
 disk. The trade is wall-clock for GPU count — the same fixed work now rides ~13.6× fewer GPUs, so the
 ideal cluster step stretches **~2.7 min → ~36 min/seq** — but the **offload disk I/O stays hidden
-behind compute**: ~778 TB fetched/step ÷ 2,726 GPUs @ 6 GB/s ≈ **52 s**, vs ~10.7 min/GPU/forward
+behind compute**: ~778 TiB fetched/step ÷ 2,726 GPUs @ 6 GB/s ≈ **52 s**, « the 36-min compute step
 (modeled by `offload_io_seconds`; tune with `--nvme-bw` / `--offload-fetch-frac` / `--offload-write-back`).
 This directly attacks the binding constraint, complementary to MLA (which compresses KV, not weights).
+*Quant-safety caveat (over-credits trained experts):* the calculator's `resident_state_bytes` applies
+the INT4 factor to the experts' **whole** state (weights + grads + **optimizer + master**), and
+`state_bytes_per_param=16` is a flat blob (≈ 2 wt + 2 grad + 4 master + 4 m + 4 v; Muon ~12). But
+optimizer moments and master weights of *trained* experts are **not** validly INT4 (§11.3: lossy master
+accumulates error) — only frozen, inference-side weight copies are. So the 13.6× holds for **cold /
+frozen** experts; for any expert actively trained at INT4-resident it is optimistic, and the per-param
+breakdown should quantize only the components that are safe.
 
 **Lever B — heterogeneous (variable-size) experts.** Nothing fixes a uniform expert size (the "1T" in
 earlier estimates was *total active* params — backbone + shared + `k` routed experts — not one
@@ -423,6 +544,22 @@ it could let a *smaller* budget `W` hit a target quality (spend it on high-value
 keeping the dominant connections — and risks amplifying noise. Treat as a **research bet** (a surprisal
 term in the router), not a foundation.
 
+**MoE routing mechanics — the unmodeled comm + balancing (a gap, not a solved part).** The whole
+"500B-active-of-50T" premise rests on expert routing, yet the cost model reduces all of MoE to the
+single scalar `active_params`. Two first-order costs are absent: (1) **expert-parallel all-to-all**
+dispatch/combine — at 50T params across thousands of GPUs this is a major comm term *and* a major
+straggler source, none of which appears in `cluster_step`; (2) **capacity factor / token-drop** —
+over-capacity wastes FLOPs, under-capacity drops tokens and erodes the very "~1,500B/expert exposure"
+the §11.1 case rests on. The "manageable with aux-loss-free balancing + shared experts" claim (§11.1)
+has no balancing analysis behind it (no capacity factor, no dead-expert/utilization-variance plan).
+There is also a **consistency tension to resolve**: the calculator's `offload_fetch_frac≈1.0` assumes
+the routed-expert union *saturates* per step — but if the union is ~all experts, the weight side is not
+sparse either, contradicting the sparsity premise (and the Lever-A 13.6×). Either the per-step union is
+sparse (`fetch_frac « 1`, and offload I/O is even cheaper) or it saturates (and "sparse MoE" is
+overstated) — not both. **Needs:** a routing-algorithm + capacity-factor + all-to-all-comm subsection
+with a balancing gate (expert-utilization variance, fraction tokens dropped) before "manageable" is
+earned.
+
 **Status & caveats.** Lever A is engineering-ready (offload/quant are mature; the calculator quantifies
 it). Levers B–D are genuine, under-explored research directions, *not* validated at scale — they are
 deliberately separated from the validated attention architecture above. All four are **orthogonal to
@@ -443,7 +580,7 @@ sets the knowledge *ceiling* (identical for any active count), active×data sets
 | Token budget D | 75T (0.25 ep) | **150T (0.5 epochs of ~300T stock)** | 300T (1 ep — at the data wall) |
 | Per-expert exposure | ~375B | **~1,500B (richly trained)** | saturated/over-trained |
 | Sparsity vs validated (Kimi 48×) | ~4× beyond | **~2× beyond (safest aggressive)** | ~1× (at frontier) |
-| Full run @ ~3.7k-B300 floor | ~1.5 yr | **~4.3 yr ideal (×1.5–3 real)** | ~14 yr |
+| Full run @ ~3.7k floor, **1B ctx, clustered ideal** | ~0.9 yr | **~3.1 yr** | ~11.8 yr |
 
 **Why 500B is the build target.** It is the first config where *both* halves are strong at once:
 reasoning **above the current frontier** (per-token compute exceeds any deployed model; 22× GPT-4 total
@@ -456,10 +593,15 @@ DeepSeek-style aux-loss-free balancing + shared experts, Lever C), and 0.5 epoch
 below GPT-4** — a sub-frontier brain in an unfillable shell at full 50T systems cost. The capability axis
 is active params; do not chase a low active count to save cost.
 
-**Cost scales with GPUs (compute-bound).** The ~4.3 yr is the *minimum* 3.7k-GPU (memory-floor) figure;
-the run is compute-bound and data-parallel scales it near-linearly — ~15k GPUs → ~1.1 yr, ~37k GPUs →
-**~5 months** — so on a frontier-scale cluster 50T/500B is a months-to-a-year run. (`--params 50e12
---active-params 500e9 --train-tokens 150e12`.)
+**Cost scales with GPUs (compute-bound, *if* selection clusters).** At the true **1B target context** the
+**~3.7k-GPU memory-floor** ideal run is **~3.1 yr** (clustered selection); under *independent* selection it
+is comm-bound at **~8.3 yr** (the §6 #4 bracket), and **×1.5–3** further for real-world (§6.2). Otherwise
+compute-bound, so adding **data-parallel replicas** of the 3.7k-GPU group scales near-linearly — ~15k GPUs
+(≈4 replicas) → **~0.8 yr**, ~37k (≈10 replicas) → **~3.7 months** — making 50T/500B a months-to-a-year run
+on a frontier-scale cluster. (This is the data-parallel axis, **not** 37k GPUs on one sequence; the global
+batch must be reconciled per §6.2.) Reproduce: `--params 50e12 --active-params 500e9 --train-tokens 150e12
+--contexts 1073741824` (the default 1M context gives **~2.8 yr**; the old "4.3 yr" reproduced from no single
+setting — it landed mid-bracket).
 
 **Caveats (carry from the capability analysis).** Every placement past ~48× sparsity / ~1T total is
 **extrapolation** beyond any trained model; capability is **empirical**, not a-priori. All configs clear
@@ -481,6 +623,17 @@ compute comparison is not possible. Net: train-FLOP is a **weak capability proxy
 pre-training bet must be paired with a modern post-training stack (see below) to be frontier-relevant,
 and "22× GPT-4" should be read as scale context, not a capability claim.
 
+**Data is the binding constraint as *quality*, not just *quantity* (an unaddressed dimension).** §6.1
+declares data binding but treats it purely as stock size (does ~150–300T tokens exist?). At 0.5–4 epochs
+over essentially the entire scraped human-text corpus, **corpus integrity becomes load-bearing** and is
+nowhere in the plan: **dedup + benchmark-contamination control** (leakage directly poisons the §11.2
+AIME/MATH/GPQA anchors the capability case rests on), **poisoning/adversarial-content defense** (a
+multi-month run on a near-exhaustive web crawl is a prime target), **licensing / copyright / PII
+governance** at this scale, and **quality filtering** (the "~1,500B/expert clears the floor" claim
+presupposes the tokens carry usable signal, not duplicated/low-quality text). Realistic post-dedup yield
+also lowers the effective epoch count. A data-engineering/governance subsection (and a contamination gate)
+is required before "data-matched 150T" is a usable target, not just a count.
+
 ### 11.2 Post-training extrapolation (reaching the base's ceiling)
 
 The 2025–26 frontier lesson (GPT-5 ≈ GPT-4.5 at ~10× less pre-training, via post-training) has a precise
@@ -500,11 +653,16 @@ Win / saturate (corrected anchors; all extrapolation — no model post-trained n
 | Agentic / long-horizon RL | SWE-bench agents ~80% today | **The standout** — 50T shell cuts missing-fact hallucination, 1B context kills eviction; the two base properties *compound* |
 | Preference-RLHF / open-ended | diminishing (4.4%→1.9% gain, 9B→200B policy) | Modest; no verifier → formatting-level lift only |
 
-**Compute-equivalent.** Post-training is plausibly worth **~5–15× effective pre-training compute**
-(extrapolating the ~10× GPT-5 anecdote), so 4.5e26 + a full stack would operate as if pre-trained at
-**~2e27–7e27-equivalent** — frontier-leading *on the dimensions post-training can reach*. The
-differentiated payoff is **agentic / knowledge-grounded long-horizon work** (the 50T-shell + 1B-context +
-agentic-RL stack compounding), *not* open-ended reasoning, which stays bounded by the base.
+**What post-training buys (not a compute multiplier).** The GPT-5 anecdote is a **substitution rate** —
+*same quality at ~10× less pre-training* — i.e. post-training lets you *reach* a fixed quality with a
+smaller base. It is **not** a multiplier you can stack *on top of* an already-large base to manufacture a
+"~2e27–7e27-equivalent, frontier-leading" figure: a substitution rate and an additive bonus are different
+regimes, and post-training that *elicits a fixed ceiling* cannot multiply a base that already sits at a
+high ceiling. So treat post-training as a **fixed-budget capability-elicitation lever on specific axes**
+(verifiable math/code, agentic/long-horizon), not as extra effective pre-training FLOPs. The differentiated
+payoff is **agentic / knowledge-grounded long-horizon work** (the 50T-shell + 1B-context + agentic-RL
+stack compounding); open-ended reasoning stays bounded by the base. (This is also consistent with the
+table above — the lifts are axis-specific, not a uniform scale-up.)
 
 **Caveats.** All extrapolation: the cleanest anchor (V3→R1) is ~75× smaller in total / ~13× in active
 params, and parameter count does not *provably* raise the pass@k ceiling (more knowledge ≠ more
@@ -565,19 +723,31 @@ inner-product/quantization primitives transfer, not its gradient-free evolutiona
 **Net:** one adoptable correctness guardrail (§8), a validated de-risking pattern (prescreen+re-rank + OPQ)
 for the already-parked routing-quant research item, and two negatives that save build effort. TurboQuant
 stays an *inference-side adopt* (KV-cache when serving) + a *training-side research* lever, not a primary
-training-cost reducer. External refs: QJL (arXiv 2406.03482), SpinQuant (2405.16406), QES (2602.03120).
+training-cost reducer. External refs (now cached in `docs/references/papers/`): QJL (arXiv 2406.03482),
+SpinQuant (2405.16406), QES (2602.03120).
+
+*Provenance caveat:* unlike every other claim in this doc (each backed by a cached, arXiv-stable PDF),
+the `gide` de-risking evidence is an **out-of-repo, unversioned** sibling project
+(`../gide/docs/research/turboquant-cognitive-infrastructure.md`) whose numbers cannot be re-verified from
+this repo — and its regime differs from ours (**CPU-Zig, static, isotropic-Gaussian, read-only** vs. our
+gradient-trained, anisotropic, drifting-centroid router with the sketch in the loop). So the "open risk →
+candidate mitigation with a validation gate" promotion is **pending in-repo replication**, not settled;
+the training-trajectory gate flagged just above (top-k recall + per-expert selection frequency on real
+anisotropic, moving centroids, oversample recalibrated across the run) is the thing that would settle it.
 
 ### 11.4 Compute-operation levers — beyond dense matmul
 
-The compute bound (≈ `6·N_active·D`; per-step forward ≈ **64% FFN/linear matmul + 35% attention matmul + 1%
-selection**) is *dense multiply-accumulate*. "Can we beat matmul?" is a real research axis — the bound is not
+The compute bound (≈ `6·N_active·D`; per-step forward for the **50T/500B build target** ≈ **99.8%
+FFN/linear matmul + 0.2% attention + 0.01% selection** — the attention share rises toward ~20% only at the
+500T/1T extreme dims, and is never the ~35% an earlier draft asserted; if anything this *strengthens* the
+"FFN GEMM is the bound" thesis) is *dense multiply-accumulate*. "Can we beat matmul?" is a real research axis — the bound is not
 algorithmically irreducible, but it is **irreducible on B300 tensor cores at frontier quality**: the hardware
 delivers 3.5 PFLOP/s *only* for dense FMA, so a FLOP cut on a non-tensor-core operation becomes a wall-clock
 *slowdown*. Three classes, surveyed + adversarially verified (refs cached in `docs/references/`):
 
 | Class | Replaces matmul with | Theoretical | B300 wall-clock | Frontier quality | Verdict |
 |---|---|---|---|---|---|
-| Matmul-free / ternary (BitNet b1.58, MatMul-free LM) | signed **add** (ternary {−1,0,+1}) | ~71× per-op energy | **no** — no ternary datapath; unpacks to INT8 = the FP8 lever | unproven (native parity ≤2B) | research |
+| Matmul-free / ternary (BitNet b1.58, MatMul-free LM) | signed **add** (ternary {−1,0,+1}) | ~71× per-op energy | **no** — no ternary datapath; unpacks to INT8 (**integer MMA**), a *distinct* datapath from the FP8 precision lever (finding 3) — no ternary-specific speedup | unproven (native parity ≤2B) | research |
 | Structured weights (Monarch / M2) | `O(d log d)` butterfly blocks | 2–8× FFN FLOPs | ~break-even — GEMM-friendly but ~25% naive util; quality-matched ≈ dense | ≤1.3B only | research |
 | Approximate / sub-cubic (MADDNESS, Strassen, AlphaTensor) | LUT gathers / fewer MACs | 10–100× (CPU) | **no** — strands tensor cores; unstable; tiny sizes | none at scale | track |
 
@@ -599,5 +769,8 @@ where add- or table-based compute is the *native* op. Out of scope for a B300 pl
 
 ---
 
-*Cost figures: `analysis/attention_cost_analysis.py`. Prior-art verdicts: five deep-research passes
-(2026-05-30; all open loose ends resolved). v1: `docs/archive/unified-attention-architecture-v1.md`.*
+*Cost figures: `analysis/attention_cost_analysis.py` (re-derived 2026-06-04; numbers in §6/§6.1/§11.1
+reproduce from the cited commands — note the §6 extreme case needs its model-dimension flags). Prior-art
+verdicts: five deep-research passes (2026-05-30; every fact-checkable item resolved, Muon×AdEMAMix left
+open). Pressure-tested 2026-06-04 (41 findings; corrections applied). v1:
+`docs/archive/unified-attention-architecture-v1.md`.*

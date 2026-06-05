@@ -62,6 +62,9 @@ extrapolation to 50T/500B is flagged in the doc.
 | File | Title / what it is | Source | Why it matters to us |
 |---|---|---|---|
 | `turboquant-2504.19874.pdf` | **TurboQuant: Online VQ with Near-Optimal Distortion** — Zandieh et al. (Google Research / DeepMind), ICLR 2026 | arXiv [2504.19874](https://arxiv.org/abs/2504.19874) | Data-oblivious, **online**, bounds MSE *and* inner-product distortion (~2.7× off optimal); ~3.5-bit KV quality-neutral, ≥6× memory. Evaluated for our training stack: best fit = **read-only offloaded-expert fetch I/O** (~4.5× on the §11 Lever A disk→HBM term); KV-ring / routing-index / gradient codecs are **research bets** (the walls they attack are mostly already closed by sparse-ring pruning + MLA); inference KV-cache for *serving* the trained model is the free, no-regret win. |
+| `qjl-2406.03482.pdf` | **QJL: 1-Bit Quantized JL Transform for KV Cache** — Zandieh et al. | arXiv [2406.03482](https://arxiv.org/abs/2406.03482) | The 1-bit JL residual TurboQuant builds on; cited in §11.3 as a routing/KV-index quant primitive (QJL-prescreen recall is *unmeasured* in the `gide` study — flagged as a gap). |
+| `spinquant-2405.16406.pdf` | **SpinQuant: LLM Quantization with Learned Rotations** — Liu et al. (Meta), ICLR 2025 | arXiv [2405.16406](https://arxiv.org/abs/2405.16406) | Learned-rotation quantization; §11.3 contrasts data-free random rotation vs learned (OPQ/SpinQuant) for the routing/KV index. |
+| `qes-2602.03120.pdf` | **Quantized Evolution Strategies** — Xu, Miikkulainen, Qiu | arXiv [2602.03120](https://arxiv.org/abs/2602.03120) | High-precision fine-tuning of quantized LLMs at low-precision cost; §11.3 reference for the routing-quant research item. |
 
 ## Compute-operation levers — beyond dense matmul (cached in `papers/`) — supports §11.4
 
@@ -102,7 +105,7 @@ Non-arXiv sources behind the §11.1 frontier-comparison caveat (no PDF to vendor
 |---|---|---|
 | Epoch AI — frontier training-compute trend | [epoch.ai/data-insights/open-models-threshold](https://epoch.ai/data-insights/open-models-threshold) | Frontier crossed **~1e26 FLOP** in 2025 (Grok-3 first), scaling **~4.7×/yr** → §11.1 "22× GPT-4 is a stale, 2023-era baseline." |
 | Anthropic — Claude Opus 4.8 (2026-05-28) | [anthropic.com/news/claude-opus-4-8](https://www.anthropic.com/news/claude-opus-4-8) | Discloses **no** parameter/compute figures → §11.1 "a direct compute comparison is not possible." |
-| OpenAI GPT-5.5 (2026-04-23; secondary coverage) | [o-mega.ai/articles/gpt-5-5-the-complete-guide-2026](https://o-mega.ai/articles/gpt-5-5-the-complete-guide-2026) | First full retrain since GPT-4.5; reportedly matched/beat it at **~10× less** pre-training via post-training; no official specs → §11.1/§11.2 "train-FLOP is a weak capability proxy." |
+| OpenAI GPT-5 / GPT-5.5 (2026; secondary coverage) | [o-mega.ai/articles/gpt-5-5-the-complete-guide-2026](https://o-mega.ai/articles/gpt-5-5-the-complete-guide-2026); [epoch.ai gradient-updates](https://epoch.ai/gradient-updates/why-gpt5-used-less-training-compute-than-gpt45) | Keep the two facts distinct: the **~10×-less-pre-training-for-same-quality** result is **GPT-5** (via post-training; Epoch AI) — which is what §11.1/§11.2 attribute it to. **GPT-5.5** (2026-04-23) is the *first full retrain since GPT-4.5* and by definition *required* significant new pre-training, so it is **not** the ~10×-less model. No official specs for either → §11.1/§11.2 "train-FLOP is a weak capability proxy." |
 
 ## Provenance
 - Papers downloaded from arXiv on 2026-05-30. arXiv IDs are stable; PDFs are the cited versions.
@@ -125,3 +128,8 @@ Non-arXiv sources behind the §11.1 frontier-comparison caveat (no PDF to vendor
   validated as PDFs. Every one is small-model / inference / non-B300 evidence; the §11.4 verdict is that
   none beats dense FMA in B300 *training* wall-clock today, and (per 2411.17691) low-bit hurts *more* at
   our heavy token budget.
+- **Fourth batch (2026-06-04):** 3 quantization-primitive papers cited by §11.3 — QJL (2406.03482),
+  SpinQuant (2405.16406), QES (2602.03120) — added during the 2026-06-04 architecture-doc pressure-test
+  (41 findings) so §11.3's evidence base is fully cached. Note §11.3 also leans on out-of-repo `gide`
+  findings, which remain **unversioned and un-cacheable**; the doc flags that promotion as pending in-repo
+  replication.

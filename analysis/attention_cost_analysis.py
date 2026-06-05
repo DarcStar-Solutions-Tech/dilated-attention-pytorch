@@ -14,8 +14,13 @@ training run, what is determinable a priori, reflecting both architectural hiera
   * COMM     -- the ring rotates KV per forward. Three levers: (1) HIERARCHICAL ring keeps the dense
                rotation on fast intra-node links, sparse fraction on slow inter-node (§5.1);
                (2) SPARSE-RING PRUNING only moves the KV blocks some local query selects
-               (volume ~ W/n, not the whole KV); (3) MLA compression shrinks what is moved.
-               At extreme context, pruning is what flips the run from comm-bound to compute-bound.
+               (volume ~ W/n if all local queries select the SAME blocks — see below; not the whole
+               KV); (3) MLA compression shrinks what is moved.
+               At extreme context, pruning is what *can* flip the run from comm-bound to
+               compute-bound -- but ONLY if selections cluster. A rank receives the UNION of blocks
+               all its ~n/p local queries select; under independent selection that union saturates
+               toward the whole KV (1-(1-W/n)^(n/p) -> 1), i.e. a dense ring. comm_clustering knob:
+               "clustered" (W/n, optimistic floor) vs "independent" (union, upper bound).
 
 Quality is NOT modeled (not a tight a-priori number; gated by loss parity + a dropped-mass certificate).
 
@@ -53,12 +58,14 @@ def human_flops(x: float) -> str:
 
 
 def human_bytes(x: float) -> str:
+    # Binary units (powers of 1024) with honest IEC labels — a 727.6 TiB figure is 727.6·1024^4
+    # bytes (= 800 TB decimal), NOT 727.6e12. The model is binary throughout; label it as such.
     for unit, scale in (
-        ("PB", 1024**5),
-        ("TB", 1024**4),
-        ("GB", 1024**3),
-        ("MB", 1024**2),
-        ("KB", 1024),
+        ("PiB", 1024**5),
+        ("TiB", 1024**4),
+        ("GiB", 1024**3),
+        ("MiB", 1024**2),
+        ("KiB", 1024),
     ):
         if x >= scale:
             return f"{x / scale:.1f} {unit}"
@@ -91,6 +98,11 @@ class Config:
     num_super_selected: int = 8
     kv_compression_ratio: float = 1.0  # MLA latent KV compression
     comm_pruning: bool = True  # sparse-ring: only move selected KV blocks
+    comm_clustering: str = (
+        "clustered"  # selection-clustering assumption for sparse-ring density:
+        #   "clustered"    -> W/n  (all local queries select the SAME blocks; optimistic floor)
+        #   "independent"  -> union 1-(1-W/n)^(n/p) (queries select independently; upper bound)
+    )
     # weight-side memory levers: hierarchical fidelity (quantized-resident / full-on-disk) + offload
     expert_frac: float = (
         0.0  # fraction of TOTAL params that are offloadable/quantizable experts
@@ -232,17 +244,37 @@ def dense_scores_bytes_per_layer(n: int, c: Config) -> float:
 
 # --- communication (ring KV rotation per forward, §5.1 + sparse pruning) ---
 def comm_density(n: int, c: Config) -> float:
-    """Fraction of the KV a device must RECEIVE. Dense ring = 1.0; sparse ring only moves the
-    selected blocks (~W/n) — the §5.1 sparse-comm-pruning lever (optimistic; real union is larger)."""
+    """Fraction of the KV a device must RECEIVE under the OPTIMISTIC (perfectly clustered) selection
+    assumption: all of a rank's local queries select the SAME blocks, so the rank needs only ~W/n of
+    the KV. Dense ring = 1.0. This is a LOWER bound — see comm_density_union() for the upper bound."""
     if not c.comm_pruning:
         return 1.0
     return min(1.0, c.pattern_budget / n)
 
 
+def comm_density_union(n: int, c: Config, p: int) -> float:
+    """UPPER bound on the received-KV fraction when a rank's local queries select INDEPENDENTLY
+    (uniform). A rank holds ~n/p queries; each picks ~W/n of the KV blocks, so the UNION they
+    collectively require saturates: 1 - (1 - W/n)^(n/p). This is the opposite extreme from
+    comm_density()'s W/n. Reality is data-dependent and lies BETWEEN the two; the 'compute-bound at
+    extreme scale' verdict holds only if selections cluster strongly toward the optimistic end. With
+    independent selection the union saturates toward 1.0 (effectively a dense ring) at high n/p."""
+    if not c.comm_pruning:
+        return 1.0
+    per_query = min(1.0, c.pattern_budget / n)
+    q = max(1, math.ceil(n / max(1, p)))
+    return 1.0 - (1.0 - per_query) ** q
+
+
 def ring_recv_bytes(n: int, c: Config, p: int) -> float:
     if p <= 1:
         return 0.0
-    return kv_bytes(n, c) * (p - 1) / p * comm_density(n, c)
+    density = (
+        comm_density_union(n, c, p)
+        if c.comm_clustering == "independent"
+        else comm_density(n, c)
+    )
+    return kv_bytes(n, c) * (p - 1) / p * density
 
 
 def comm_time_flat(n: int, c: Config, p: int) -> float:
@@ -384,24 +416,37 @@ def report(c: Config, contexts: list[int], train_tokens: float = 0.0) -> None:
         f"(strong-scaling lower bound; ignores comm, pipeline bubbles, and expert-offload disk I/O)"
     )
     if p > 1:
-        # comm without pruning (dense ring) vs with pruning (sparse ring)
-        dens = c.comm_pruning
+        # comm without pruning (dense ring) vs with pruning (sparse ring), and — for the pruned
+        # ring — the optimistic CLUSTERED density (W/n) vs the INDEPENDENT-selection union bound.
+        dens, clk = c.comm_pruning, c.comm_clustering
         c.comm_pruning = False
         dense_flat, dense_hier = comm_time_flat(n, c, p), comm_time_hier(n, c, p)
         c.comm_pruning = True
+        c.comm_clustering = "clustered"
         spr_flat, spr_hier = comm_time_flat(n, c, p), comm_time_hier(n, c, p)
-        c.comm_pruning = dens
+        d_clustered = comm_density(n, c)
+        c.comm_clustering = "independent"
+        uni_hier = comm_time_hier(n, c, p)
+        d_union = comm_density_union(n, c, p)
+        c.comm_pruning, c.comm_clustering = dens, clk
         print(f"  comm /forward (per-GPU fwd compute ≈ {human_time(t_comp)}):")
         print(
             f"    dense ring : flat {human_time(dense_flat)} | hierarchical {human_time(dense_hier)}"
         )
         print(
-            f"    sparse ring: flat {human_time(spr_flat)} | hierarchical {human_time(spr_hier)}  "
-            f"(density {min(1.0, c.pattern_budget / n):.2g})"
+            f"    sparse ring, CLUSTERED selection (density {d_clustered:.2g}): "
+            f"flat {human_time(spr_flat)} | hierarchical {human_time(spr_hier)}"
         )
-        bound = "COMPUTE-bound ✓" if spr_hier <= t_comp else "still COMM-bound"
         print(
-            f"    -> with hierarchical ring + sparse pruning + {c.kv_compression_ratio:g}x KV compression: {bound}"
+            f"    sparse ring, INDEPENDENT selection (union density {d_union:.2g}): "
+            f"hierarchical {human_time(uni_hier)}"
+        )
+        bound_c = "COMPUTE-bound ✓" if spr_hier <= t_comp else "still COMM-bound"
+        bound_u = "COMPUTE-bound ✓" if uni_hier <= t_comp else "COMM-bound"
+        print(
+            f"    -> hier ring + pruning + {c.kv_compression_ratio:g}x KV compression: "
+            f"clustered {bound_c} | independent-selection {bound_u}  "
+            f"(reality is between; compute-bound REQUIRES selection to cluster)"
         )
     else:
         print("  comm: p=1, no ring communication.")
@@ -467,6 +512,13 @@ def parse_args() -> tuple[Config, list[int]]:
         "--no-comm-pruning",
         action="store_true",
         help="model a dense ring (no sparse-comm pruning)",
+    )
+    p.add_argument(
+        "--comm-clustering",
+        choices=["clustered", "independent"],
+        default="clustered",
+        help="sparse-ring density assumption: clustered=W/n (optimistic floor), "
+        "independent=union 1-(1-W/n)^(n/p) (upper bound)",
     )
     p.add_argument(
         "--gpu",
@@ -557,6 +609,7 @@ def parse_args() -> tuple[Config, list[int]]:
         num_super_selected=a.num_super_selected,
         kv_compression_ratio=a.kv_compression,
         comm_pruning=not a.no_comm_pruning,
+        comm_clustering=a.comm_clustering,
         expert_frac=a.expert_frac,
         weight_quant_bits=a.weight_quant_bits,
         expert_offload_ratio=a.expert_offload_ratio,
