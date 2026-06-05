@@ -517,8 +517,9 @@ def parse_args() -> tuple[Config, list[int]]:
         "--comm-clustering",
         choices=["clustered", "independent"],
         default="clustered",
-        help="sparse-ring density assumption: clustered=W/n (optimistic floor), "
-        "independent=union 1-(1-W/n)^(n/p) (upper bound)",
+        help="sparse-ring density assumption for the FULL-RUN line (--train-tokens): "
+        "clustered=W/n (optimistic floor), independent=union 1-(1-W/n)^(n/p) (upper bound). "
+        "The per-context comm block always prints BOTH extremes regardless of this flag.",
     )
     p.add_argument(
         "--gpu",

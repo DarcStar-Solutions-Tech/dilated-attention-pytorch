@@ -11,8 +11,8 @@
 > **Goal (unchanged):** reduce transformer TRAINING cost at long context — sub-quadratic
 > compute + O(n/p) memory with no forced quality ceiling.
 > **Evidence base:** `docs/references/` (cached papers + repo pointers); cost model in
-> `analysis/attention_cost_analysis.py`. Confidence per item is marked ✓ (fact-checked) or
-> ◐ (background / pending fact-check) in §9.
+> `analysis/attention_cost_analysis.py`. Prior-art confidence is marked ✓ in the §2 table; §9 is the
+> per-item resolution ledger (every fact-checkable item resolved; Muon×AdEMAMix left open).
 
 ---
 
@@ -332,12 +332,12 @@ unmodeled, load-bearing realities a real run must budget explicitly — it is as
   batch, **~50–500× the empirical critical batch size**, so most of that step's gradient signal is
   wasted (gradient-noise saturation). The §11.1 "more GPUs → near-linear" speedup is **data-parallel**
   — replicating the whole state floor across many strong-scaling groups — a *different* axis the cost
-  model has no term for (`n_steps` is context-only). "~37k GPUs → ~5 months" means **~10 DP replicas of
+  model has no term for (`n_steps` is context-only). "~37k GPUs → ~3.7 months" means **~10 DP replicas of
   the 3.7k-GPU group**, not 37k GPUs on one sequence. A real recipe sets a sane global batch (a few M
   tokens), which fixes the optimizer-step count independently of context; reconcile the two before
   trusting any wall-clock.
 - **Fault tolerance is first-order here, not a rounding factor.** A multi-year run on thousands of GPUs
-  sees continuous failures; with **727 TiB+ resident state (+ ~778 TiB offloaded experts)** to
+  sees continuous failures; with **537 TiB resident state (+ ~778 TiB offloaded experts)** to
   checkpoint and re-shard, the checkpoint interval vs cluster MTBF, lost-work-per-restart, and
   offloaded-shard re-replication are first-order costs. Needs an explicit checkpoint / elastic-restart
   design and a "resume to bit-exact optimizer state; checkpoint overhead < X% of step" gate.
@@ -346,9 +346,10 @@ unmodeled, load-bearing realities a real run must budget explicitly — it is as
   cooling). The "capex-vs-wall-clock knob" has neither axis priced — it needs at least order-of-magnitude
   bands to be a real choice.
 - **The frontier moves during the run.** At the doc's own cited rate (**~4.7×/yr**, Epoch AI), a ~3-yr
-  ideal run is lapped ~70× and an ~8-yr one by hundreds× at completion, on hardware 1–2 generations
-  stale. A fixed multi-year target needs an obsolescence / time-value argument (or a reason the 50T
-  knowledge shell is durable while the moving frontier is not).
+  ideal run is lapped ~**100×** (4.7³) and an ~8-yr one by **tens of thousands×** (4.7⁸ ≈ 4–5 orders of
+  magnitude) at completion, on hardware 1–2 generations stale. A fixed multi-year target needs an
+  obsolescence / time-value argument (or a reason the 50T knowledge shell is durable while the moving
+  frontier is not).
 
 (Two further unmodeled load-bearers — MoE expert-routing comm/balancing, and data-corpus
 quality/governance — are covered in §11 and §11.1.)
@@ -595,7 +596,7 @@ is active params; do not chase a low active count to save cost.
 
 **Cost scales with GPUs (compute-bound, *if* selection clusters).** At the true **1B target context** the
 **~3.7k-GPU memory-floor** ideal run is **~3.1 yr** (clustered selection); under *independent* selection it
-is comm-bound at **~8.3 yr** (the §6 #4 bracket), and **×1.5–3** further for real-world (§6.2). Otherwise
+is comm-bound at **~8.3 yr** (the §6 clustered-vs-independent comm bracket), and **×1.5–3** further for real-world (§6.2). Otherwise
 compute-bound, so adding **data-parallel replicas** of the 3.7k-GPU group scales near-linearly — ~15k GPUs
 (≈4 replicas) → **~0.8 yr**, ~37k (≈10 replicas) → **~3.7 months** — making 50T/500B a months-to-a-year run
 on a frontier-scale cluster. (This is the data-parallel axis, **not** 37k GPUs on one sequence; the global
@@ -726,8 +727,9 @@ stays an *inference-side adopt* (KV-cache when serving) + a *training-side resea
 training-cost reducer. External refs (now cached in `docs/references/papers/`): QJL (arXiv 2406.03482),
 SpinQuant (2405.16406), QES (2602.03120).
 
-*Provenance caveat:* unlike every other claim in this doc (each backed by a cached, arXiv-stable PDF),
-the `gide` de-risking evidence is an **out-of-repo, unversioned** sibling project
+*Provenance caveat:* unlike most claims in this doc (backed by cached, arXiv-stable PDFs — the §11.1
+frontier figures being the other exception, resting on uncached web sources per the README's web-sources
+section), the `gide` de-risking evidence is an **out-of-repo, unversioned** sibling project
 (`../gide/docs/research/turboquant-cognitive-infrastructure.md`) whose numbers cannot be re-verified from
 this repo — and its regime differs from ours (**CPU-Zig, static, isotropic-Gaussian, read-only** vs. our
 gradient-trained, anisotropic, drifting-centroid router with the sketch in the loop). So the "open risk →
@@ -737,9 +739,10 @@ anisotropic, moving centroids, oversample recalibrated across the run) is the th
 
 ### 11.4 Compute-operation levers — beyond dense matmul
 
-The compute bound (≈ `6·N_active·D`; per-step forward for the **50T/500B build target** ≈ **99.8%
-FFN/linear matmul + 0.2% attention + 0.01% selection** — the attention share rises toward ~20% only at the
-500T/1T extreme dims, and is never the ~35% an earlier draft asserted; if anything this *strengthens* the
+The compute bound (≈ `6·N_active·D`; per-step forward for the **50T/500B build target** ≈ **~99% FFN/linear
+matmul, ~0.2% attention, ~0.01–0.85% selection** — selection grows with context (~0.01% at ~1M → ~0.85% at
+the 1B target), the attention *core* stays ~0.2% and reaches ~20% only at the 500T/1T extreme dims, and is
+never the ~35% an earlier draft asserted; either way FFN GEMM dominates — if anything this *strengthens* the
 "FFN GEMM is the bound" thesis) is *dense multiply-accumulate*. "Can we beat matmul?" is a real research axis — the bound is not
 algorithmically irreducible, but it is **irreducible on B300 tensor cores at frontier quality**: the hardware
 delivers 3.5 PFLOP/s *only* for dense FMA, so a FLOP cut on a non-tensor-core operation becomes a wall-clock
@@ -747,7 +750,7 @@ delivers 3.5 PFLOP/s *only* for dense FMA, so a FLOP cut on a non-tensor-core op
 
 | Class | Replaces matmul with | Theoretical | B300 wall-clock | Frontier quality | Verdict |
 |---|---|---|---|---|---|
-| Matmul-free / ternary (BitNet b1.58, MatMul-free LM) | signed **add** (ternary {−1,0,+1}) | ~71× per-op energy | **no** — no ternary datapath; unpacks to INT8 (**integer MMA**), a *distinct* datapath from the FP8 precision lever (finding 3) — no ternary-specific speedup | unproven (native parity ≤2B) | research |
+| Matmul-free / ternary (BitNet b1.58, MatMul-free LM) | signed **add** (ternary {−1,0,+1}) | ~71× per-op energy | **no** — no ternary datapath; unpacks to INT8 (**integer MMA**), a *distinct* datapath from the FP8 precision lever (finding 3 below) — no ternary-specific speedup | unproven (native parity ≤2B) | research |
 | Structured weights (Monarch / M2) | `O(d log d)` butterfly blocks | 2–8× FFN FLOPs | ~break-even — GEMM-friendly but ~25% naive util; quality-matched ≈ dense | ≤1.3B only | research |
 | Approximate / sub-cubic (MADDNESS, Strassen, AlphaTensor) | LUT gathers / fewer MACs | 10–100× (CPU) | **no** — strands tensor cores; unstable; tiny sizes | none at scale | track |
 
