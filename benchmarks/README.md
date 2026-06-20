@@ -1,35 +1,85 @@
 # Dilated Attention PyTorch - Benchmark Suite
 
-This directory contains comprehensive benchmarks for all dilated attention implementations. The benchmarks are organized into core and specialized categories for easy navigation.
+This directory contains comprehensive benchmarks for all dilated attention implementations. The benchmarks have been recently reorganized to reflect the simplified kernel architecture.
 
 ## Directory Structure
 
 ```
 benchmarks/
-├── core/                              # Core benchmark suite
-│   ├── benchmark_implementations.py   # Compare all implementations
-│   ├── benchmark_distributed.py       # Multi-GPU distributed testing
-│   └── benchmark_backends.py          # Attention backend comparisons
-├── specialized/                       # Specialized benchmarks
-│   ├── benchmark_extreme_sequences.py # Test extreme sequence lengths
-│   ├── benchmark_flash_attention_3.py # Flash Attention 3 specific
-│   └── benchmark_ring_attention.py    # Ring Attention variants
+├── core/                               # Core benchmark infrastructure
+│   ├── base_benchmark.py              # Base classes for benchmarks
+│   ├── unified_runner.py              # Unified benchmark runner
+│   └── utils/                         # Shared utilities
+├── suites/                            # Organized benchmark suites
+│   ├── consolidated/                  # Consolidated benchmarks
+│   │   ├── benchmark_basic_comparison.py
+│   │   ├── benchmark_block_sparse.py
+│   │   └── benchmark_distributed.py
+│   └── specialized/                   # Specialized benchmarks
+│       ├── benchmark_flash_attention_3.py
+│       └── dynamic_segment_benchmark_*.txt
+├── ring/                              # Ring attention benchmarks
+│   ├── benchmark_all_ring_implementations.py
+│   ├── benchmark_multi_gpu_scaling.py
+│   └── extreme_sequence_benchmark.py
+├── results/                           # Benchmark results
+├── benchmark_hilbert_attention.py     # Unified Hilbert attention benchmark
+├── benchmark_block_sparse_ring_attention.py
+├── benchmark_block_sparse_ring_simple.py
+├── run_benchmark.py                   # Main benchmark runner
 └── README.md                          # This file
 ```
 
+## Recent Changes (July 2025)
+
+### Kernel Consolidation
+The project has undergone a major simplification where 10+ kernel implementations have been consolidated into a single `HilbertAttention` class that automatically optimizes based on inputs. As a result:
+
+- **Removed benchmarks**: Outdated benchmarks testing removed implementations have been deleted
+- **New unified benchmark**: `benchmark_hilbert_attention.py` now tests the consolidated implementation
+- **Test files moved**: Test files have been moved to `tests/kernels/` directory
+
+### Removed Files
+- `benchmark_hilbert_kernel_quick.py`
+- `benchmark_optimized_kernel.py`
+- `compare_kernel_implementations.py`
+- `compare_kernel_versions.py`
+- `benchmark_kernel_comprehensive.py`
+- `benchmark_triton_kernels.py`
+- `benchmark_triton_detailed.py`
+- `benchmark_triton_fp32_corrected.py`
+- `simple_kernel_optimization.py`
+- `benchmark_hilbert_dilated_attention.py`
+- `benchmark_dilated_attention_hilbert.py`
+- `benchmark_dilated_attention_hilbert_simple.py`
+- `compare_dilated_kernels.py`
+
 ## Quick Start
 
-### 1. Compare All Implementations
+### 1. Benchmark Hilbert Attention
 
 ```bash
-# Compare base, improved, and multihead variants
-python benchmarks/core/benchmark_implementations.py
+# Test the unified HilbertAttention implementation
+python benchmarks/benchmark_hilbert_attention.py
+
+# The benchmark automatically tests:
+# - Standard vs Hilbert ordering
+# - Different sequence lengths
+# - Various dilation rates
+# - Forward and backward pass performance
+```
+
+### 2. Compare All Implementations
+
+```bash
+# Use the consolidated benchmark suite
+python benchmarks/suites/consolidated/benchmark_basic_comparison.py
 
 # Options:
-# --batch-size: Batch size (default: 2)
-# --seq-length: Sequence length (default: 8192)
-# --num-heads: Number of attention heads (default: 8)
-# --head-dim: Head dimension (default: 64)
+# --preset: quick, standard, or comprehensive
+# --implementations: Which implementations to test
+# --batch-size: Override batch size
+# --seq-len: Override sequence length
 ```
 
 ### 2. Test Distributed Performance

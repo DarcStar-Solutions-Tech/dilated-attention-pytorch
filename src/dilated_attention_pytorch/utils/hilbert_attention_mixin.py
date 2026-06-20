@@ -1,5 +1,5 @@
 """
-Hilbert Attention Mixin for easy integration of HilbertAttentionCore.
+Hilbert Attention Mixin for easy integration of UnifiedHilbertAttention.
 
 This mixin provides a simple way to add Hilbert curve optimization to any
 attention implementation.
@@ -8,10 +8,7 @@ attention implementation.
 import torch
 from typing import Optional, Dict
 
-from ..kernels.hilbert_attention_core import (
-    HilbertAttentionCore,
-    create_hilbert_mapping,
-)
+from ..kernels.hilbert_attention_unified import UnifiedHilbertAttention
 
 
 class HilbertAttentionMixin:
@@ -20,7 +17,7 @@ class HilbertAttentionMixin:
 
     This can be used in two ways:
     1. Just for Hilbert ordering (using existing attention computation)
-    2. Full HilbertAttentionCore integration (Triton kernels + custom backward)
+    2. Full UnifiedHilbertAttention integration (Triton kernels + custom backward)
     """
 
     def setup_hilbert_attention(
@@ -42,7 +39,7 @@ class HilbertAttentionMixin:
             segment_size: Size of attention segments
             dilation_rate: Dilation rate for attention
             dropout: Dropout probability
-            use_hilbert_core: If True, use full HilbertAttentionCore
+            use_hilbert_core: If True, use full UnifiedHilbertAttention
             use_custom_backward: If True, use optimized backward pass
         """
         self._hilbert_cache: Dict[int, torch.Tensor] = {}
@@ -51,7 +48,7 @@ class HilbertAttentionMixin:
 
         if use_hilbert_core:
             # Full integration with Triton kernels
-            self.hilbert_attention = HilbertAttentionCore(
+            self.hilbert_attention = UnifiedHilbertAttention(
                 hidden_dim=hidden_dim,
                 num_heads=num_heads,
                 segment_size=segment_size,
@@ -63,7 +60,9 @@ class HilbertAttentionMixin:
     def get_hilbert_indices(self, seq_len: int, device: torch.device) -> torch.Tensor:
         """Get cached Hilbert indices for a given sequence length."""
         if seq_len not in self._hilbert_cache:
-            indices = create_hilbert_mapping(seq_len).to(device)
+            indices = UnifiedHilbertAttention._create_hilbert_mapping(seq_len).to(
+                device
+            )
             self._hilbert_cache[seq_len] = indices
 
             # Also cache inverse mapping
@@ -161,7 +160,7 @@ class HilbertAttentionMixin:
                 else:
                     return self._scaled_dot_product_attention(q, k, v, **kwargs)
         else:
-            # Use full HilbertAttentionCore
+            # Use full UnifiedHilbertAttention
             # Need to reshape if input is 4D
             if q.dim() == 4:
                 batch, seq_len, num_heads, head_dim = q.shape
@@ -170,7 +169,7 @@ class HilbertAttentionMixin:
                 # Combine heads dimension
                 q_3d = q.reshape(batch, seq_len, hidden_dim)
 
-                # Use query as input (HilbertAttentionCore handles QKV internally)
+                # Use query as input (UnifiedHilbertAttention handles QKV internally)
                 output = self.hilbert_attention(q_3d, use_hilbert=use_hilbert_ordering)
 
                 # Reshape back to 4D

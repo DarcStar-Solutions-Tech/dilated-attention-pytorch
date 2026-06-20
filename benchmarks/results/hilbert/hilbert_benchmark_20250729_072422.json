@@ -1,0 +1,226 @@
+[
+  {
+    "config": {
+      "batch_size": 2,
+      "seq_len": 512,
+      "hidden_dim": 768,
+      "num_heads": 12,
+      "segment_size": 128,
+      "dilation_rate": 1
+    },
+    "forward_time_ms": 1.7914527270477265,
+    "backward_time_ms": 8.261801645858213,
+    "total_time_ms": 10.05325437290594,
+    "memory_mb": 61.2666015625,
+    "use_hilbert": false,
+    "actual_backend": "pytorch"
+  },
+  {
+    "config": {
+      "batch_size": 2,
+      "seq_len": 512,
+      "hidden_dim": 768,
+      "num_heads": 12,
+      "segment_size": 128,
+      "dilation_rate": 1
+    },
+    "forward_time_ms": 1.7465671990066767,
+    "backward_time_ms": 12.325366289587691,
+    "total_time_ms": 14.071933488594368,
+    "memory_mb": 61.2666015625,
+    "use_hilbert": true,
+    "actual_backend": "triton"
+  },
+  {
+    "config": {
+      "batch_size": 2,
+      "seq_len": 1024,
+      "hidden_dim": 768,
+      "num_heads": 12,
+      "segment_size": 128,
+      "dilation_rate": 1
+    },
+    "forward_time_ms": 94.68402547645383,
+    "backward_time_ms": 91.61513374419883,
+    "total_time_ms": 186.29915922065265,
+    "memory_mb": 95.0322265625,
+    "use_hilbert": false,
+    "actual_backend": "pytorch"
+  },
+  {
+    "config": {
+      "batch_size": 2,
+      "seq_len": 1024,
+      "hidden_dim": 768,
+      "num_heads": 12,
+      "segment_size": 128,
+      "dilation_rate": 1
+    },
+    "forward_time_ms": 122.88584501948208,
+    "backward_time_ms": 76.73584853182547,
+    "total_time_ms": 199.62169355130754,
+    "memory_mb": 95.0322265625,
+    "use_hilbert": true,
+    "actual_backend": "triton"
+  },
+  {
+    "config": {
+      "batch_size": 2,
+      "seq_len": 2048,
+      "hidden_dim": 768,
+      "num_heads": 12,
+      "segment_size": 128,
+      "dilation_rate": 1
+    },
+    "forward_time_ms": 83.19185193977319,
+    "backward_time_ms": 490.7263792701997,
+    "total_time_ms": 573.9182312099729,
+    "memory_mb": 160.6884765625,
+    "use_hilbert": false,
+    "actual_backend": "pytorch"
+  },
+  {
+    "config": {
+      "batch_size": 2,
+      "seq_len": 2048,
+      "hidden_dim": 768,
+      "num_heads": 12,
+      "segment_size": 128,
+      "dilation_rate": 1
+    },
+    "forward_time_ms": 54.12339011672884,
+    "backward_time_ms": 98.85700326412916,
+    "total_time_ms": 152.980393380858,
+    "memory_mb": 250.1572265625,
+    "use_hilbert": true,
+    "actual_backend": "triton"
+  },
+  {
+    "config": {
+      "batch_size": 2,
+      "seq_len": 1024,
+      "hidden_dim": 768,
+      "num_heads": 12,
+      "segment_size": 128,
+      "dilation_rate": 2
+    },
+    "forward_time_ms": 81.35587198194116,
+    "backward_time_ms": 48.550205276114866,
+    "total_time_ms": 129.90607725805603,
+    "memory_mb": 91.37939453125,
+    "use_hilbert": false,
+    "actual_backend": "pytorch"
+  },
+  {
+    "config": {
+      "batch_size": 2,
+      "seq_len": 1024,
+      "hidden_dim": 768,
+      "num_heads": 12,
+      "segment_size": 128,
+      "dilation_rate": 2
+    },
+    "forward_time_ms": 13.761975336819887,
+    "backward_time_ms": 130.6606098660268,
+    "total_time_ms": 144.42258520284668,
+    "memory_mb": 91.37939453125,
+    "use_hilbert": true,
+    "actual_backend": "triton"
+  },
+  {
+    "config": {
+      "batch_size": 2,
+      "seq_len": 1024,
+      "hidden_dim": 768,
+      "num_heads": 12,
+      "segment_size": 128,
+      "dilation_rate": 4
+    },
+    "forward_time_ms": 5.377522495109588,
+    "backward_time_ms": 33.99180286214687,
+    "total_time_ms": 39.36932535725646,
+    "memory_mb": 88.1259765625,
+    "use_hilbert": false,
+    "actual_backend": "pytorch"
+  },
+  {
+    "config": {
+      "batch_size": 2,
+      "seq_len": 1024,
+      "hidden_dim": 768,
+      "num_heads": 12,
+      "segment_size": 128,
+      "dilation_rate": 4
+    },
+    "forward_time_ms": 45.951496227644384,
+    "backward_time_ms": 179.45291113574058,
+    "total_time_ms": 225.40440736338496,
+    "memory_mb": 88.1259765625,
+    "use_hilbert": true,
+    "actual_backend": "triton"
+  },
+  {
+    "config": {
+      "batch_size": 2,
+      "seq_len": 1024,
+      "hidden_dim": 768,
+      "num_heads": 12,
+      "segment_size": 64,
+      "dilation_rate": 2
+    },
+    "forward_time_ms": 8.87172159855254,
+    "backward_time_ms": 136.44385177758522,
+    "total_time_ms": 145.31557337613776,
+    "memory_mb": 90.57080078125,
+    "use_hilbert": false,
+    "actual_backend": "pytorch"
+  },
+  {
+    "config": {
+      "batch_size": 2,
+      "seq_len": 1024,
+      "hidden_dim": 768,
+      "num_heads": 12,
+      "segment_size": 64,
+      "dilation_rate": 2
+    },
+    "forward_time_ms": 23.722167999949306,
+    "backward_time_ms": 43.19120614673011,
+    "total_time_ms": 66.91337414667942,
+    "memory_mb": 90.57080078125,
+    "use_hilbert": true,
+    "actual_backend": "triton"
+  },
+  {
+    "config": {
+      "batch_size": 2,
+      "seq_len": 1024,
+      "hidden_dim": 768,
+      "num_heads": 12,
+      "segment_size": 256,
+      "dilation_rate": 2
+    },
+    "forward_time_ms": 75.14577548136003,
+    "backward_time_ms": 144.05516572878696,
+    "total_time_ms": 219.200941210147,
+    "memory_mb": 93.00439453125,
+    "use_hilbert": false,
+    "actual_backend": "pytorch"
+  },
+  {
+    "config": {
+      "batch_size": 2,
+      "seq_len": 1024,
+      "hidden_dim": 768,
+      "num_heads": 12,
+      "segment_size": 256,
+      "dilation_rate": 2
+    },
+    "forward_time_ms": 25.55757187656127,
+    "backward_time_ms": 77.0785218628589,
+    "total_time_ms": 102.63609373942018,
+    "memory_mb": 93.00439453125,
+    "use_hilbert": true,
+    "actual_backend": "triton"
+  }
+]

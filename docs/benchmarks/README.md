@@ -1,43 +1,63 @@
-# Benchmark Results
+# Benchmarks Directory
+
+This directory contains performance benchmark results for various dilated attention implementations.
+
+## Purpose
+- Store benchmark results with timestamps
+- Track performance improvements over time
+- Compare different implementations
+- Document configuration and hardware used
+
+## Directory Structure
+```
+benchmarks/
+├── latest/              # Most recent benchmark results
+├── YYYY-MM-DD-*/        # Date-specific benchmark runs  
+└── *.md/json/png        # Individual benchmark files
+```
+
+## File Types
+- `.json` - Raw benchmark data (timings, configurations)
+- `.md` - Human-readable benchmark reports
+- `.png` - Performance visualization charts
+- `.txt` - Additional benchmark outputs
+
+## Naming Convention
+Files follow the format: `{benchmark-type}-YYYY-MM-DD-HHMM-UTC.{ext}`
+
+Examples:
+- `ring-attention-comprehensive-2025-06-27-2150-UTC.md`
+- `benchmark-long-sequences-2025-06-27-1231-UTC.png`
+
+## Common Benchmark Types
+- **all-implementations**: Comparison across all implementations
+- **long-sequences**: Performance on long sequence lengths
+- **extreme-sequences**: Stress testing with very long sequences
+- **ring-attention**: Ring attention specific benchmarks
+- **block-sparse**: Block-sparse pattern benchmarks
+- **memory-pool**: Memory optimization benchmarks
+- **hilbert**: Hilbert curve optimization benchmarks
 
 ## Latest Results
+Check the `latest/` directory for the most recent benchmark results:
+- `billion-token.md` - Billion token processing benchmarks
+- `comprehensive.json/png` - All implementations comparison
+- `long-sequences.json/png` - Long sequence performance
+- `benchmark-all-implementations.json/png` - Detailed implementation comparison
 
-- [billion-token.md](latest/billion-token.md) → billion-token-benchmark-results-2025-06-26-1136-UTC.md
-- [comparison.md](latest/comparison.md) → benchmark-phase1-bugfix-analysis-2025-06-26-1730-UTC.md
-- [comprehensive.json](latest/comprehensive.json) → benchmark-all-implementations-2025-06-27-0618-UTC.json
-- [comprehensive.png](latest/comprehensive.png) → benchmark-all-implementations-2025-06-27-0618-UTC.png
-- [long-sequences.json](latest/long-sequences.json) → benchmark-long-sequences-2025-06-27-0653-UTC.json
-- [long-sequences.png](latest/long-sequences.png) → benchmark-long-sequences-2025-06-27-0653-UTC.png
+## Hardware Configurations
+Benchmarks are typically run on:
+- NVIDIA GTX 1080 (Consumer GPU testing)
+- NVIDIA A100 (Data center GPU testing)  
+- NVIDIA H100 (Latest data center GPU)
+- Multi-GPU setups (2-8 GPUs)
 
-## All Results by Type
+## Reading Benchmark Results
+1. Check `latest/` for most recent results
+2. Look for `.md` files for summaries
+3. View `.png` files for visual comparisons
+4. Use `.json` files for detailed analysis
 
-### Billion Token
-
-- **2025-06-26-1136-UTC**
-  - [billion-token-benchmark-results-2025-06-26-1136-UTC.md](by-type/billion-token/2025-06-26-1136-UTC/billion-token-benchmark-results-2025-06-26-1136-UTC.md)
-
-### Comparison
-
-- **2025-06-26-1730-UTC**
-  - [benchmark-phase1-bugfix-analysis-2025-06-26-1730-UTC.md](by-type/comparison/2025-06-26-1730-UTC/benchmark-phase1-bugfix-analysis-2025-06-26-1730-UTC.md)
-- **2025-06-26-1726-UTC**
-  - [benchmark-bugfix-comparison-2025-06-26-1726-UTC.md](by-type/comparison/2025-06-26-1726-UTC/benchmark-bugfix-comparison-2025-06-26-1726-UTC.md)
-
-### Comprehensive
-
-- **2025-06-27-0618-UTC**
-  - [benchmark-all-implementations-2025-06-27-0618-UTC.json](by-type/comprehensive/2025-06-27-0618-UTC/benchmark-all-implementations-2025-06-27-0618-UTC.json)
-  - [benchmark-all-implementations-2025-06-27-0618-UTC.png](by-type/comprehensive/2025-06-27-0618-UTC/benchmark-all-implementations-2025-06-27-0618-UTC.png)
-- **2025-06-26-1729-UTC**
-  - [benchmark-comprehensive-2025-06-26-1729-UTC.png](by-type/comprehensive/2025-06-26-1729-UTC/benchmark-comprehensive-2025-06-26-1729-UTC.png)
-  - [benchmark-comprehensive-results-2025-06-26-1729-UTC.md](by-type/comprehensive/2025-06-26-1729-UTC/benchmark-comprehensive-results-2025-06-26-1729-UTC.md)
-
-### Long Sequences
-
-- **2025-06-27-0653-UTC**
-  - [benchmark-long-sequences-2025-06-27-0653-UTC.json](by-type/long-sequences/2025-06-27-0653-UTC/benchmark-long-sequences-2025-06-27-0653-UTC.json)
-  - [benchmark-long-sequences-2025-06-27-0653-UTC.png](by-type/long-sequences/2025-06-27-0653-UTC/benchmark-long-sequences-2025-06-27-0653-UTC.png)
-- **2025-06-27-0638-UTC**
-  - [benchmark-long-sequences-2025-06-27-0638-UTC.json](by-type/long-sequences/2025-06-27-0638-UTC/benchmark-long-sequences-2025-06-27-0638-UTC.json)
-  - [benchmark-long-sequences-2025-06-27-0638-UTC.png](by-type/long-sequences/2025-06-27-0638-UTC/benchmark-long-sequences-2025-06-27-0638-UTC.png)
+## Running New Benchmarks
+See the main project documentation for benchmark scripts in the `benchmarks/` source directory.
 

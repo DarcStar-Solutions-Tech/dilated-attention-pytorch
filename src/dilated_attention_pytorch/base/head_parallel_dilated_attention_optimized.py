@@ -18,7 +18,7 @@ import torch.distributed as dist
 # Import optimization utilities
 from ..utils.attention_utils import optimize_attention_computation
 from ..core.constants import HAS_FLASH, HAS_XFORMERS
-from ..core.memory_pool import get_global_memory_pool
+from ..core.unified_memory_pool import get_global_memory_pool
 
 
 class HeadParallelDilatedAttentionOptimized(nn.Module):

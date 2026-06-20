@@ -1,0 +1,147 @@
+========================================================================================================================
+DETAILED BENCHMARK RESULTS
+========================================================================================================================
+Timestamp: 2025-07-29 16:19:22 UTC
+GPU: NVIDIA GeForce GTX 1080
+PyTorch: 2.7.1+cu126
+
+
+Configuration: (1024, 1, <OptimizationLevel.NONE: 0>, 4)
+  Enhanced mean: 1.94ms (std: 0.10)
+  Refactored mean: 3.55ms (std: 1.55)
+  Speedup: 0.55x
+  Memory - Enhanced: 64.1MB, Refactored: 72.1MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (1024, 1, <OptimizationLevel.BASIC: 1>, 4)
+  Enhanced mean: 28.09ms (std: 31.39)
+  Refactored mean: 7.27ms (std: 4.53)
+  Speedup: 3.86x
+  Memory - Enhanced: 64.1MB, Refactored: 72.1MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (2048, 1, <OptimizationLevel.BASIC: 1>, 4)
+  Enhanced mean: 34.98ms (std: 27.74)
+  Refactored mean: 36.06ms (std: 41.12)
+  Speedup: 0.97x
+  Memory - Enhanced: 112.1MB, Refactored: 128.1MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (4096, 1, <OptimizationLevel.BASIC: 1>, 2)
+  Enhanced mean: 25.16ms (std: 17.74)
+  Refactored mean: 24.79ms (std: 5.89)
+  Speedup: 1.01x
+  Memory - Enhanced: 112.2MB, Refactored: 128.2MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (4096, 1, <OptimizationLevel.AGGRESSIVE: 2>, 2)
+  Enhanced mean: 37.06ms (std: 28.51)
+  Refactored mean: 39.26ms (std: 40.31)
+  Speedup: 0.94x
+  Memory - Enhanced: 112.2MB, Refactored: 128.2MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (8192, 1, <OptimizationLevel.BASIC: 1>, 2)
+  Enhanced mean: 86.46ms (std: 63.27)
+  Refactored mean: 87.08ms (std: 85.96)
+  Speedup: 0.99x
+  Memory - Enhanced: 208.2MB, Refactored: 240.2MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (8192, 1, <OptimizationLevel.AGGRESSIVE: 2>, 2)
+  Enhanced mean: 97.89ms (std: 67.70)
+  Refactored mean: 103.14ms (std: 84.87)
+  Speedup: 0.95x
+  Memory - Enhanced: 208.2MB, Refactored: 240.2MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (16384, 1, <OptimizationLevel.BASIC: 1>, 1)
+  Enhanced mean: 118.70ms (std: 88.78)
+  Refactored mean: 111.88ms (std: 80.29)
+  Speedup: 1.06x
+  Memory - Enhanced: 208.2MB, Refactored: 240.2MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (2048, 2, <OptimizationLevel.BASIC: 1>, 4)
+  Enhanced mean: 73.60ms (std: 60.09)
+  Refactored mean: 54.02ms (std: 26.31)
+  Speedup: 1.36x
+  Memory - Enhanced: 112.1MB, Refactored: 128.1MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (4096, 2, <OptimizationLevel.BASIC: 1>, 2)
+  Enhanced mean: 41.87ms (std: 17.18)
+  Refactored mean: 63.49ms (std: 40.00)
+  Speedup: 0.66x
+  Memory - Enhanced: 112.2MB, Refactored: 128.2MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (4096, 2, <OptimizationLevel.AGGRESSIVE: 2>, 2)
+  Enhanced mean: 57.15ms (std: 34.30)
+  Refactored mean: 64.44ms (std: 30.62)
+  Speedup: 0.89x
+  Memory - Enhanced: 112.2MB, Refactored: 128.2MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (8192, 2, <OptimizationLevel.BASIC: 1>, 2)
+  Enhanced mean: 154.26ms (std: 93.59)
+  Refactored mean: 168.01ms (std: 100.27)
+  Speedup: 0.92x
+  Memory - Enhanced: 208.2MB, Refactored: 240.2MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (16384, 2, <OptimizationLevel.BASIC: 1>, 1)
+  Enhanced mean: 152.70ms (std: 103.82)
+  Refactored mean: 156.32ms (std: 89.53)
+  Speedup: 0.98x
+  Memory - Enhanced: 208.2MB, Refactored: 240.2MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (2048, 4, <OptimizationLevel.BASIC: 1>, 4)
+  Enhanced mean: 55.19ms (std: 33.29)
+  Refactored mean: 78.46ms (std: 42.26)
+  Speedup: 0.70x
+  Memory - Enhanced: 112.1MB, Refactored: 128.1MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (4096, 4, <OptimizationLevel.BASIC: 1>, 2)
+  Enhanced mean: 85.53ms (std: 42.98)
+  Refactored mean: 93.71ms (std: 42.13)
+  Speedup: 0.91x
+  Memory - Enhanced: 112.2MB, Refactored: 128.2MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (4096, 4, <OptimizationLevel.AGGRESSIVE: 2>, 2)
+  Enhanced mean: 96.58ms (std: 41.71)
+  Refactored mean: 93.29ms (std: 58.31)
+  Speedup: 1.04x
+  Memory - Enhanced: 112.2MB, Refactored: 128.2MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (8192, 4, <OptimizationLevel.BASIC: 1>, 2)
+  Enhanced mean: 222.44ms (std: 114.00)
+  Refactored mean: 229.38ms (std: 86.25)
+  Speedup: 0.97x
+  Memory - Enhanced: 208.2MB, Refactored: 240.2MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (16384, 4, <OptimizationLevel.BASIC: 1>, 1)
+  Enhanced mean: 252.99ms (std: 60.54)
+  Refactored mean: 223.55ms (std: 70.36)
+  Speedup: 1.13x
+  Memory - Enhanced: 208.2MB, Refactored: 240.2MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (8192, 8, <OptimizationLevel.BASIC: 1>, 2)
+  Enhanced mean: 235.45ms (std: 35.22)
+  Refactored mean: 237.41ms (std: 30.38)
+  Speedup: 0.99x
+  Memory - Enhanced: 208.2MB, Refactored: 240.2MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}
+
+Configuration: (16384, 8, <OptimizationLevel.BASIC: 1>, 1)
+  Enhanced mean: 236.41ms (std: 30.24)
+  Refactored mean: 228.33ms (std: 35.56)
+  Speedup: 1.04x
+  Memory - Enhanced: 208.2MB, Refactored: 240.2MB
+  Correctness: {'max_diff': 0.0, 'mean_diff': 0.0, 'correct': True}

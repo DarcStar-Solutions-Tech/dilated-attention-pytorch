@@ -12,7 +12,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dilated_attention_pytorch.kernels.hilbert_attention_core import (
-    HilbertAttentionCore as HilbertAttentionTritonFixed,
+    UnifiedHilbertAttention as HilbertAttentionTritonFixed,
     create_hilbert_mapping,
 )
 

@@ -1,0 +1,5 @@
+# Ignore Triton kernel files that require specific formatting
+hilbert_attention_core.py
+hilbert_attention_unified.py
+hilbert_attention_unified_optimized.py
+hilbert_attention_unified_optimized_enhanced.py
